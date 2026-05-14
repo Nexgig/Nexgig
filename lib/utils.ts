@@ -1,0 +1,53 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Combines class names using clsx and tailwind-merge.
+ * This ensures Tailwind classes are properly merged without conflicts.
+ *
+ * Usage:
+ * ```tsx
+ * cn("px-4 py-2", isActive && "bg-primary", className)
+ * ```
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+/**
+ * Returns the current local datetime as a comparable string: "YYYY-MM-DDTHH:MM"
+ * Used for upcoming/completed logic based on start time.
+ */
+export function nowLocalDateTimeStr(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${mo}-${day}T${h}:${min}`;
+}
+
+/**
+ * Returns a comparable datetime string "YYYY-MM-DDTHH:MM" from a date + optional startTime.
+ * If no startTime, defaults to "00:00" (start of day) — meaning date-only slots are
+ * treated as starting at midnight and become past after midnight.
+ */
+export function slotDateTimeStr(date: string, startTime?: string): string {
+  return `${date}T${startTime ?? '00:00'}`;
+}
+
+/**
+ * Returns true if the slot/booking has NOT yet started (i.e. it's upcoming).
+ * A booking is upcoming if its start datetime >= now.
+ */
+export function isUpcoming(date: string, startTime?: string): boolean {
+  return slotDateTimeStr(date, startTime) >= nowLocalDateTimeStr();
+}
+
+/**
+ * Returns true if the slot/booking has already started (i.e. it's past/completed).
+ */
+export function isPastStart(date: string, startTime?: string): boolean {
+  return slotDateTimeStr(date, startTime) < nowLocalDateTimeStr();
+}

@@ -1,0 +1,1 @@
+Screenshot shows Dashboard tab. The Calendar tab is the third tab in the bottom bar. TypeScript has 0 errors. The unified calendar view has been implemented with All Venues / By Venue toggle, venue-colored dots on calendar, DJ names on booked slots, and venue tags in all-venues mode. Slots grouped by venue in unified view.
