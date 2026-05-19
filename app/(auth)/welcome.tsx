@@ -39,6 +39,14 @@ export default function WelcomeScreen() {
             </Pressable>
 
             <Text style={styles.djNote}>Artists join by invitation only</Text>
+
+{/* TEMP TEST BUTTON — remove before launch */}
+<Pressable
+  style={({ pressed }) => [styles.testBtn, pressed && { opacity: 0.7 }]}
+  onPress={() => router.push('/(auth)/artist-invite?invite_id=PASTE_YOUR_INVITE_ID_HERE' as Href)}
+>
+  <Text style={styles.testBtnText}>Join via Invite</Text>
+</Pressable>
           </View>
         </View>
       </ScreenContainer>
@@ -103,5 +111,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 13,
     marginTop: 8,
+  },
+  testBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  testBtnText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
   },
 });

@@ -20,6 +20,7 @@ import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
 import { useFocusEffect } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 // Monday-first day labels
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -722,40 +723,66 @@ export default function CalendarScreen() {
     setActiveSlotMenu(null);
   };
 
-  const handleSaveSlot = (assignNow = false) => {
-    const targetVenueId = createSlotVenueId || (venueFilter !== 'all' ? venueFilter : '');
-    if (!targetVenueId) { Alert.alert('Required', 'Please select a venue.'); return; }
+  const handleSaveSlot = async (assignNow = false) => {
+  const targetVenueId = createSlotVenueId || (venueFilter !== 'all' ? venueFilter : '');
+  if (!targetVenueId) { Alert.alert('Required', 'Please select a venue.'); return; }
 
-    if (editingSlot) {
-      updateSlot(editingSlot.id, { name: slotForm.name, startTime: slotForm.startTime, endTime: slotForm.endTime });
-      setShowSlotModal(false);
-      setEditingSlot(null);
-      setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
-      setCreateSlotVenueId('');
-    } else {
-      const targetDate = (calendarMode === 'week' || calendarMode === 'today') ? createSlotDate : selectedDate;
-      const newSlotId = 'slot-' + Date.now();
-      const newSlot: Slot = {
-        id: newSlotId,
-        venueId: targetVenueId,
-        name: slotForm.name,
-        date: targetDate,
-        startTime: slotForm.startTime,
-        endTime: slotForm.endTime,
-        createdAt: new Date().toISOString(),
-      };
-      addSlot(newSlot);
-      setShowSlotModal(false);
-      setEditingSlot(null);
-      setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
-      setCreateSlotVenueId('');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) { Alert.alert('Error', 'Not authenticated.'); return; }
 
-      // Navigate to assign-artist if requested or if it's a past-date slot
-      if (assignNow || isPastStart(targetDate, slotForm.startTime)) {
-        router.push(`/(manager)/assign-artist?slotId=${newSlotId}` as Href);
-      }
+  if (editingSlot) {
+    // ✅ Update slot in Supabase
+    const { error } = await supabase.from('slots').update({
+      name: slotForm.name,
+      start_time: slotForm.startTime,
+      end_time: slotForm.endTime,
+      updated_at: new Date().toISOString(),
+    }).eq('id', editingSlot.id);
+
+    if (error) { Alert.alert('Error updating slot', error.message); return; }
+
+    updateSlot(editingSlot.id, { name: slotForm.name, startTime: slotForm.startTime, endTime: slotForm.endTime });
+    setShowSlotModal(false);
+    setEditingSlot(null);
+    setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
+    setCreateSlotVenueId('');
+  } else {
+    const targetDate = (calendarMode === 'week' || calendarMode === 'today') ? createSlotDate : selectedDate;
+
+    // ✅ Insert slot into Supabase
+    const { data: slotData, error } = await supabase.from('slots').insert({
+      venue_id: targetVenueId,
+      manager_id: user.id,
+      name: slotForm.name,
+      date: targetDate,
+      start_time: slotForm.startTime,
+      end_time: slotForm.endTime,
+      status: 'open',
+    }).select().single();
+
+    if (error) { Alert.alert('Error creating slot', error.message); return; }
+
+    const newSlot: Slot = {
+      id: slotData.id,
+      venueId: targetVenueId,
+      name: slotForm.name,
+      date: targetDate,
+      startTime: slotForm.startTime,
+      endTime: slotForm.endTime,
+      createdAt: new Date().toISOString(),
+    };
+
+    addSlot(newSlot);
+    setShowSlotModal(false);
+    setEditingSlot(null);
+    setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
+    setCreateSlotVenueId('');
+
+    if (assignNow || isPastStart(targetDate, slotForm.startTime)) {
+      router.push(`/(manager)/assign-artist?slotId=${slotData.id}` as Href);
     }
-  };
+  }
+};
 
   const handleDeleteSlot = (slot: Slot) => {
     setActiveSlotMenu(null);
@@ -764,7 +791,11 @@ export default function CalendarScreen() {
       `Are you sure you want to delete "${slot.name}"? Any associated bookings will be affected.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteSlot(slot.id) },
+        { text: 'Delete', style: 'destructive', onPress: async () => {
+  const { error } = await supabase.from('slots').delete().eq('id', slot.id);
+  if (error) { Alert.alert('Error deleting slot', error.message); return; }
+  deleteSlot(slot.id);
+}},
       ]
     );
   };

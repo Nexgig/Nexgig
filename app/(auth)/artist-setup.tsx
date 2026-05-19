@@ -5,12 +5,13 @@ import type { Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore } from '@/lib/store';
+import { useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType, Gender } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
 
@@ -35,7 +36,6 @@ export default function DJSetupScreen() {
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
-  const updateArtistProfile = useLineupStore((s) => s.updateArtistProfile);
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -43,10 +43,11 @@ export default function DJSetupScreen() {
   const [displayStep, setDisplayStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [form, setForm] = useState({
-    fullName: '', // Artist Name (stage name)
-    fullLegalName: '', // Legal name (private)
-    username: '', // Unique identifier (private)
-    email: '', // Email address
+    fullName: '',
+    fullLegalName: '',
+    username: '',
+    email: '',
+    password: '',
     bio: '',
     basedIn: '',
     nationality: '',
@@ -60,27 +61,9 @@ export default function DJSetupScreen() {
   });
   const [usernameError, setUsernameError] = useState('');
   const [emailError, setEmailError] = useState('');
-
-  const isEmailTaken = useLineupStore((s) => s.isEmailTaken);
-  const isUsernameTaken = useLineupStore((s) => s.isUsernameTaken);
-  const addArtistUser = useLineupStore((s) => s.addArtistUser);
-
-  // Username format validation
-  const usernameValid = useMemo(() => /^[a-z0-9_]+$/.test(form.username) || form.username === '', [form.username]);
-
-  // Generate username suggestions when taken
-  const usernameSuggestions = useMemo(() => {
-    if (!form.username || !isUsernameTaken(form.username)) return [];
-    const base = form.username.replace(/[0-9_]+$/, '');
-    const suggestions: string[] = [];
-    for (let i = 1; suggestions.length < 3; i++) {
-      const candidate = `${base}_${i}`;
-      if (!isUsernameTaken(candidate)) suggestions.push(candidate);
-      if (i > 20) break;
-    }
-    return suggestions;
-  }, [form.username, isUsernameTaken]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const usernameValid = useMemo(() => /^[a-z0-9_]+$/.test(form.username) || form.username === '', [form.username]);
 
   const translateX = useSharedValue(0);
 
@@ -126,41 +109,21 @@ export default function DJSetupScreen() {
     if (isAnimating) return;
 
     if (step === 1) {
-      if (!form.fullName.trim()) {
-        Alert.alert('Required', 'Please enter your artist name.');
-        return;
-      }
-      if (!form.fullLegalName.trim()) {
-        Alert.alert('Required', 'Please enter your full legal name.');
-        return;
-      }
-      if (!form.username.trim()) {
-        Alert.alert('Required', 'Please choose a username.');
-        return;
-      }
-      if (!usernameValid) {
-        Alert.alert('Invalid Username', 'Username can only contain lowercase letters, numbers, and underscores.');
-        return;
-      }
-      if (isUsernameTaken(form.username)) {
-        setUsernameError('This username is already taken.');
-        return;
-      }
-      if (!form.email.trim()) {
-        Alert.alert('Required', 'Please enter your email address.');
-        return;
-      }
-      if (isEmailTaken(form.email)) {
-        setEmailError('An account with this email already exists');
-        return;
-      }
+      if (!form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
+      if (!form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
+      if (!form.username.trim()) { Alert.alert('Required', 'Please choose a username.'); return; }
+      if (!usernameValid) { Alert.alert('Invalid Username', 'Lowercase letters, numbers, and underscores only.'); return; }
+      if (!form.email.trim()) { Alert.alert('Required', 'Please enter your email address.'); return; }
+      if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
       setUsernameError('');
       setEmailError('');
     }
+
     if (step === 2 && !form.primaryGenre) {
       Alert.alert('Required', 'Please select your primary genre.');
       return;
     }
+
     if (step < TOTAL_STEPS) {
       animateToStep(step + 1, 'forward');
       return;
@@ -173,12 +136,75 @@ export default function DJSetupScreen() {
     }
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
+
+    // ✅ Step 1 — sign up with Supabase auth
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+    });
+
+    if (signUpError) {
+      setIsLoading(false);
+      Alert.alert('Sign up failed', signUpError.message);
+      return;
+    }
+
+    const user = signUpData.user;
+    if (!user) {
+      setIsLoading(false);
+      Alert.alert('Error', 'Could not create account. Try again.');
+      return;
+    }
+
+    // ✅ Step 2 — insert into users table
+    const { error: userInsertError } = await supabase.from('users').insert({
+      id: user.id,
+      email: form.email.trim().toLowerCase(),
+      full_name: form.fullName.trim(),
+      account_type: 'artist',
+      phone: '',
+      is_phone_verified: false,
+      is_email_verified: false,
+    });
+
+    if (userInsertError) {
+      setIsLoading(false);
+      Alert.alert('Error saving profile', userInsertError.message);
+      return;
+    }
+
+    // ✅ Step 3 — insert into artists table
+    const { error: artistInsertError } = await supabase.from('artists').insert({
+      id: user.id,
+      email: form.email.trim().toLowerCase(),
+      full_name: form.fullName.trim(),
+      full_legal_name: form.fullLegalName.trim(),
+      username: form.username.trim().toLowerCase(),
+      bio: form.bio || null,
+      based_in: form.basedIn || null,
+      nationality: form.nationality || null,
+      gender: form.gender || null,
+      primary_genre: form.primaryGenre || null,
+      secondary_genres: form.secondaryGenres,
+      instruments: form.instruments,
+      min_rate: form.minRate ? parseFloat(form.minRate) : null,
+      years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
+      instagram_url: form.instagram || null,
+      soundcloud_url: form.soundcloud || null,
+      mixcloud_url: form.mixcloud || null,
+      spotify_url: form.spotify || null,
+    });
+
     setIsLoading(false);
 
-    const newDJId = 'dj-new-' + Date.now();
-    const newDJ: import('@/lib/types').User = {
-      id: newDJId,
+    if (artistInsertError) {
+      Alert.alert('Error saving artist profile', artistInsertError.message);
+      return;
+    }
+
+    // ✅ Set current user in store
+    setCurrentUser({
+      id: user.id,
       email: form.email.trim().toLowerCase(),
       phone: '',
       accountType: 'artist' as const,
@@ -187,39 +213,20 @@ export default function DJSetupScreen() {
       username: form.username.trim().toLowerCase(),
       bio: form.bio,
       location: undefined,
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience, 10) : undefined,
+      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
       isPhoneVerified: false,
-      isEmailVerified: true,
+      isEmailVerified: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
-    addArtistUser(newDJ);
-    setCurrentUser(newDJ);
-    updateArtistProfile(newDJId, {
-      userId: newDJId,
-      primaryGenre: form.primaryGenre as import('@/lib/types').GenreType,
-      secondaryGenres: form.secondaryGenres,
-      instruments: form.instruments,
-      gender: form.gender || undefined,
-      minRate: form.minRate ? parseFloat(form.minRate) : undefined,
-      basedIn: form.basedIn || undefined,
-      nationality: form.nationality || undefined,
-      instagramUrl: form.instagram || undefined,
-      soundcloudUrl: form.soundcloud || undefined,
-      mixcloudUrl: form.mixcloud || undefined,
-      spotifyUrl: form.spotify || undefined,
     });
+
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
     router.replace('/(artist)/(tabs)/home' as Href);
   };
 
   const handleBack = () => {
     if (isAnimating) return;
-    if (step > 1) {
-      animateToStep(step - 1, 'back');
-    } else {
-      router.back();
-    }
+    if (step > 1) { animateToStep(step - 1, 'back'); } else { router.back(); }
   };
 
   return (
@@ -249,60 +256,46 @@ export default function DJSetupScreen() {
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Artist Name *</Text>
-                <Text style={[styles.fieldHint, { color: colors.muted }]}>Your stage name — shown publicly in the app</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <Text style={[styles.fieldHint, { color: colors.muted }]}>Your stage name — shown publicly</Text>
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                   placeholder="DJ Kai" placeholderTextColor={colors.muted}
-                  value={form.fullName} onChangeText={(v) => update('fullName', v)} returnKeyType="next"
-                />
+                  value={form.fullName} onChangeText={(v) => update('fullName', v)} returnKeyType="next" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Full Legal Name *</Text>
-                <Text style={[styles.fieldHint, { color: colors.muted }]}>Your real name — kept private, used for future invoicing</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <Text style={[styles.fieldHint, { color: colors.muted }]}>Kept private, used for invoicing</Text>
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                   placeholder="Kai Nakamura" placeholderTextColor={colors.muted}
-                  value={form.fullLegalName} onChangeText={(v) => update('fullLegalName', v)} returnKeyType="next"
-                />
+                  value={form.fullLegalName} onChangeText={(v) => update('fullLegalName', v)} returnKeyType="next" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Username *</Text>
-                <Text style={[styles.fieldHint, { color: colors.muted }]}>Unique identifier — lowercase letters, numbers, underscores only</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: usernameError ? '#EF4444' : colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: usernameError ? '#EF4444' : colors.border, color: colors.foreground }]}
                   placeholder="kai_nakamura" placeholderTextColor={colors.muted}
-                  value={form.username} onChangeText={(v) => { update('username', v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(''); }} returnKeyType="next"
-                  autoCapitalize="none" autoCorrect={false}
-                />
+                  value={form.username} onChangeText={(v) => { update('username', v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(''); }}
+                  autoCapitalize="none" autoCorrect={false} returnKeyType="next" />
                 {usernameError ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{usernameError}</Text> : null}
-                {usernameSuggestions.length > 0 && (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    <Text style={{ color: colors.muted, fontSize: 12 }}>Try:</Text>
-                    {usernameSuggestions.map((s) => (
-                      <Pressable key={s} onPress={() => { update('username', s); setUsernameError(''); }}>
-                        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{s}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Email *</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: emailError ? '#EF4444' : colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: emailError ? '#EF4444' : colors.border, color: colors.foreground }]}
                   placeholder="kai@example.com" placeholderTextColor={colors.muted}
-                  value={form.email} onChangeText={(v) => { update('email', v); setEmailError(''); }} returnKeyType="next"
-                  keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
-                />
+                  value={form.email} onChangeText={(v) => { update('email', v); setEmailError(''); }}
+                  keyboardType="email-address" autoCapitalize="none" returnKeyType="next" />
                 {emailError ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{emailError}</Text> : null}
               </View>
               <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Password *</Text>
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  placeholder="Min. 6 characters" placeholderTextColor={colors.muted}
+                  value={form.password} onChangeText={(v) => update('password', v)}
+                  secureTextEntry autoCapitalize="none" returnKeyType="next" />
+              </View>
+              <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Bio (max 500 chars)</Text>
-                <TextInput
-                  style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="Tell venues about your style and experience..." placeholderTextColor={colors.muted}
-                  value={form.bio} onChangeText={(v) => update('bio', v)} multiline numberOfLines={4} maxLength={500}
-                />
+                <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  placeholder="Tell venues about your style..." placeholderTextColor={colors.muted}
+                  value={form.bio} onChangeText={(v) => update('bio', v)} multiline numberOfLines={4} maxLength={500} />
                 <Text style={[styles.charCount, { color: colors.muted }]}>{form.bio.length}/500</Text>
               </View>
               <View style={styles.fieldGroup}>
@@ -317,28 +310,18 @@ export default function DJSetupScreen() {
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Years of Experience (optional)</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                   placeholder="8" placeholderTextColor={colors.muted}
                   value={form.yearsOfExperience} onChangeText={(v) => update('yearsOfExperience', v.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad" returnKeyType="done"
-                />
+                  keyboardType="number-pad" returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Based In</Text>
-                <CountryPicker
-                  value={form.basedIn}
-                  onChange={(v) => update('basedIn', v)}
-                  placeholder="Select country"
-                />
+                <CountryPicker value={form.basedIn} onChange={(v) => update('basedIn', v)} placeholder="Select country" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Nationality</Text>
-                <CountryPicker
-                  value={form.nationality}
-                  onChange={(v) => update('nationality', v)}
-                  placeholder="Select nationality"
-                />
+                <CountryPicker value={form.nationality} onChange={(v) => update('nationality', v)} placeholder="Select nationality" />
               </View>
             </View>
           )}
@@ -374,20 +357,16 @@ export default function DJSetupScreen() {
             <View style={styles.form}>
               <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <MaterialIcons name="lock" size={16} color={colors.muted} />
-                <Text style={[styles.infoText, { color: colors.muted }]}>Your rate is only visible to managers — never to other artists.</Text>
+                <Text style={[styles.infoText, { color: colors.muted }]}>Your rate is only visible to managers.</Text>
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Minimum Rate (AED, optional)</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                   placeholder="3000" placeholderTextColor={colors.muted}
-                  value={form.minRate} onChangeText={(v) => update('minRate', v)}
-                  keyboardType="number-pad" returnKeyType="done"
-                />
+                  value={form.minRate} onChangeText={(v) => update('minRate', v)} keyboardType="number-pad" returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Instruments</Text>
-                <Text style={[styles.hint, { color: colors.muted }]}>Select all that apply</Text>
                 <View style={styles.chipGrid}>
                   {INSTRUMENTS.map((i) => (
                     <Pressable key={i} style={[styles.chip, { borderColor: form.instruments.includes(i) ? colors.primary : colors.border, backgroundColor: form.instruments.includes(i) ? colors.primary : colors.surface }]} onPress={() => toggleInstrument(i)}>
@@ -406,12 +385,10 @@ export default function DJSetupScreen() {
               {(['soundcloud', 'instagram', 'spotify', 'mixcloud'] as const).map((platform) => (
                 <View key={platform} style={styles.fieldGroup}>
                   <Text style={[styles.label, { color: colors.foreground }]}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                     placeholder={`https://${platform}.com/yourprofile`} placeholderTextColor={colors.muted}
                     value={form[platform]} onChangeText={(v) => update(platform, v)}
-                    autoCapitalize="none" keyboardType="url" returnKeyType="done"
-                  />
+                    autoCapitalize="none" keyboardType="url" returnKeyType="done" />
                 </View>
               ))}
             </View>
@@ -441,7 +418,6 @@ const styles = StyleSheet.create({
   form: { gap: 20, marginBottom: 32 },
   fieldGroup: { gap: 8 },
   label: { fontSize: 14, fontWeight: '600' },
-  hint: { fontSize: 12 },
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
   textarea: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 90, textAlignVertical: 'top' },
   charCount: { fontSize: 12, textAlign: 'right' },

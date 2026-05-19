@@ -9,6 +9,7 @@ import { useAuthStore, useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe } from '@/lib/types';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
 
 const VENUE_TYPES: VenueType[] = [
   'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Bar / Restaurant',
@@ -125,57 +126,100 @@ export default function CreateVenueScreen() {
   };
 
   const handleNext = async () => {
-    if (isAnimating) return;
+  if (isAnimating) return;
 
-    if (step === 1) {
-      if (!form.name.trim() || !form.venueType) {
-        Alert.alert('Required', 'Please enter venue name and type.'); return;
-      }
-      if (!form.address.trim()) {
-        Alert.alert('Required', 'Please enter and select a venue address.'); return;
-      }
+  if (step === 1) {
+    if (!form.name.trim() || !form.venueType) {
+      Alert.alert('Required', 'Please enter venue name and type.'); return;
     }
-
-    if (step < TOTAL_STEPS) {
-      animateToStep(step + 1, 'forward');
-      return;
+    if (!form.address.trim()) {
+      Alert.alert('Required', 'Please enter and select a venue address.'); return;
     }
+  }
 
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+  if (step < TOTAL_STEPS) {
+    animateToStep(step + 1, 'forward');
+    return;
+  }
+
+  setIsLoading(true);
+
+  // ✅ Get real Supabase auth user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
     setIsLoading(false);
+    Alert.alert('Error', 'Not authenticated. Please sign in again.');
+    return;
+  }
 
-    const newVenue: Venue = {
-      id: 'venue-' + Date.now(),
-      managerId: currentUser?.id ?? '',
-      name: form.name,
-      venueType: form.venueType as VenueType,
-      googleMapsLocation: { lat: addressCoords?.lat ?? 0, lng: addressCoords?.lng ?? 0, address: form.address || '' },
-      capacity: form.capacity || undefined,
-      vibeDescription: form.vibeDescription || undefined,
-      preferredEnergy: form.preferredEnergy as unknown as VenueEnergy[],
-      genrePreferences: form.genrePreferences,
-      audienceType: form.audienceType.length > 0 ? form.audienceType : undefined,
-      subVibe: form.subVibe.length > 0 ? form.subVibe : undefined,
-      rulesTemplate: form.rulesTemplate || undefined,
-      instagramUrl: form.instagramUrl || undefined,
-      musicLink: form.musicLink || undefined,
-      billing: (form.billingCompanyName.trim() || form.billingTrnNumber.trim()) ? {
-        companyName: form.billingCompanyName.trim(),
-        companyAddress: form.billingCompanyAddress.trim(),
-        trnNumber: form.billingTrnNumber.trim(),
-      } : undefined,
-      photoUrls: [],
-      color: form.color,
-      isHidden: false,
-      isComplete: true,
-      hasCompletedBooking: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    addVenue(newVenue);
-    router.replace('/(manager)/my-venues' as Href);
+  // ✅ Insert venue into Supabase
+  const { data: venueData, error: insertError } = await supabase.from('venues').insert({
+    manager_id: user.id,
+    name: form.name,
+    venue_type: form.venueType,
+    address: form.address,
+    lat: addressCoords?.lat ?? null,
+    lng: addressCoords?.lng ?? null,
+    capacity: form.capacity || null,
+    vibe_description: form.vibeDescription || null,
+    preferred_energy: form.preferredEnergy,
+    genre_preferences: form.genrePreferences,
+    audience_type: form.audienceType,
+    sub_vibe: form.subVibe,
+    rules_template: form.rulesTemplate || null,
+    instagram_url: form.instagramUrl ? `https://www.instagram.com/${form.instagramUrl}` : null,
+music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink : `https://${form.musicLink}`) : null,
+    color: form.color,
+    billing_company_name: form.billingCompanyName || null,
+    billing_company_address: form.billingCompanyAddress || null,
+    billing_trn_number: form.billingTrnNumber || null,
+    is_hidden: false,
+  }).select().single();
+
+  setIsLoading(false);
+
+  if (insertError) {
+  if (insertError.code === '23505') {
+    Alert.alert('Name taken', 'A venue with this name already exists. Please choose a different name.');
+  } else {
+    Alert.alert('Error creating venue', insertError.message);
+  }
+  return;
+}
+
+  // ✅ Also add to local store so it shows immediately without refetch
+  const newVenue: Venue = {
+    id: venueData.id,
+    managerId: user.id,
+    name: form.name,
+    venueType: form.venueType as VenueType,
+    googleMapsLocation: { lat: addressCoords?.lat ?? 0, lng: addressCoords?.lng ?? 0, address: form.address || '' },
+    capacity: form.capacity || undefined,
+    vibeDescription: form.vibeDescription || undefined,
+    preferredEnergy: form.preferredEnergy as unknown as VenueEnergy[],
+    genrePreferences: form.genrePreferences,
+    audienceType: form.audienceType.length > 0 ? form.audienceType : undefined,
+    subVibe: form.subVibe.length > 0 ? form.subVibe : undefined,
+    rulesTemplate: form.rulesTemplate || undefined,
+    instagramUrl: form.instagramUrl || undefined,
+    musicLink: form.musicLink || undefined,
+    billing: (form.billingCompanyName.trim() || form.billingTrnNumber.trim()) ? {
+      companyName: form.billingCompanyName.trim(),
+      companyAddress: form.billingCompanyAddress.trim(),
+      trnNumber: form.billingTrnNumber.trim(),
+    } : undefined,
+    photoUrls: [],
+    color: form.color,
+    isHidden: false,
+    isComplete: true,
+    hasCompletedBooking: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
+  addVenue(newVenue);
+  router.replace('/(manager)/my-venues' as Href);
+};
 
   const handleBack = () => {
     if (isAnimating) return;
@@ -366,21 +410,54 @@ export default function CreateVenueScreen() {
           )}
 
           {displayStep === 3 && (
-            <View style={styles.form}>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Venue Rules (optional)</Text>
-                <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. No explicit lyrics, set ends at 3am..." placeholderTextColor={colors.muted} value={form.rulesTemplate} onChangeText={(v) => update('rulesTemplate', v)} multiline numberOfLines={4} maxLength={500} />
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Instagram URL (optional)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="https://instagram.com/yourvenue" placeholderTextColor={colors.muted} value={form.instagramUrl} onChangeText={(v) => update('instagramUrl', v)} autoCapitalize="none" keyboardType="url" returnKeyType="done" />
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Spotify / SoundCloud / Mixcloud (optional)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="https://open.spotify.com/..." placeholderTextColor={colors.muted} value={form.musicLink} onChangeText={(v) => update('musicLink', v)} autoCapitalize="none" keyboardType="url" returnKeyType="done" />
-              </View>
-            </View>
-          )}
+  <View style={styles.form}>
+    <View style={styles.fieldGroup}>
+      <Text style={[styles.label, { color: colors.foreground }]}>Venue Rules (optional)</Text>
+      <TextInput
+        style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+        placeholder="e.g. No explicit lyrics, set ends at 3am..."
+        placeholderTextColor={colors.muted}
+        value={form.rulesTemplate}
+        onChangeText={(v) => update('rulesTemplate', v)}
+        multiline numberOfLines={4} maxLength={500}
+      />
+    </View>
+
+    {/* Instagram */}
+    <View style={styles.fieldGroup}>
+      <Text style={[styles.label, { color: colors.foreground }]}>Instagram (optional)</Text>
+      <View style={[styles.prefixInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.prefix, { color: colors.muted }]}>instagram.com/</Text>
+        <TextInput
+          style={[styles.prefixTextInput, { color: colors.foreground }]}
+          placeholder="username"
+          placeholderTextColor={colors.muted}
+          value={form.instagramUrl}
+          onChangeText={(v) => update('instagramUrl', v.replace('@', '').replace(/\s/g, '').toLowerCase())}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+        />
+      </View>
+    </View>
+
+    {/* Music link */}
+    <View style={styles.fieldGroup}>
+      <Text style={[styles.label, { color: colors.foreground }]}>Spotify / SoundCloud / Mixcloud (optional)</Text>
+      <Text style={[{ color: colors.muted, fontSize: 12 }]}>Paste the full link</Text>
+      <TextInput
+        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+        placeholder="https://open.spotify.com/..."
+        placeholderTextColor={colors.muted}
+        value={form.musicLink}
+        onChangeText={(v) => update('musicLink', v)}
+        autoCapitalize="none"
+        keyboardType="url"
+        returnKeyType="done"
+      />
+    </View>
+  </View>
+)}
 
           {displayStep === 4 && (
             <View style={styles.form}>
@@ -433,4 +510,7 @@ const styles = StyleSheet.create({
   nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   placesContainer: { borderWidth: 1, borderRadius: 10, overflow: 'hidden', position: 'relative' },
   clearAddressBtn: { position: 'absolute', right: 10, top: 14, zIndex: 10 },
+  prefixInput: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
+prefix: { paddingLeft: 12, fontSize: 15 },
+prefixTextInput: { flex: 1, padding: 12, fontSize: 15 },
 });

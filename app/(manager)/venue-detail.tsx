@@ -131,7 +131,7 @@ export default function VenueDetailScreen() {
               <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>Preferred Energy</Text>
                 <View style={styles.chipRow}>
-                  {venue.preferredEnergy.map((e) => (
+                  {(venue.preferredEnergy ?? []).map((e) => (
                     <View key={e} style={[styles.chip, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
                        <Text style={[styles.chipText, { color: colors.muted }]}>{e}</Text>
                     </View>
@@ -180,7 +180,10 @@ export default function VenueDetailScreen() {
                 {venue.instagramUrl && (
                   <Pressable
                     style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(venue.instagramUrl!)}
+                    onPress={() => {
+  const url = venue.instagramUrl!.startsWith('http') ? venue.instagramUrl! : `https://www.instagram.com/${venue.instagramUrl}`;
+Linking.openURL(url);
+}}
                   >
                     <MaterialIcons name="camera-alt" size={20} color="#E1306C" />
                     <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
@@ -190,7 +193,10 @@ export default function VenueDetailScreen() {
                 {venue.musicLink && (
                   <Pressable
                     style={({ pressed }) => [styles.linkRow, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(venue.musicLink!)}
+                    onPress={() => {
+  const url = venue.musicLink!.startsWith('http') ? venue.musicLink! : `https://${venue.musicLink}`;
+  Linking.openURL(url);
+}}
                   >
                     <MaterialIcons name="music-note" size={20} color="#1DB954" />
                     <Text style={[styles.linkRowText, { color: colors.foreground }]}>Music</Text>

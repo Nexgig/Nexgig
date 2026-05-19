@@ -6,17 +6,14 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
-import { MOCK_MANAGER, MOCK_ARTIST } from '@/lib/mock-data';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { signIn as supabaseSignIn } from '@/lib/auth';
-import { syncUserData } from '@/lib/sync';
-import { getUserProfile } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 export default function SignInScreen() {
   const router = useRouter();
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
-  const signIn = useAuthStore((s) => s.signIn);
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
 
   const [email, setEmail] = useState('');
@@ -25,44 +22,78 @@ export default function SignInScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = async () => {
-  if (!email.trim()) { Alert.alert('Error', 'Please enter your email'); return; }
-  if (!password.trim()) { Alert.alert('Error', 'Please enter your password'); return; }
-  
-  setIsLoading(true);
-  try {
-    const data = await supabaseSignIn(email.trim().toLowerCase(), password);
-    if (data.user) {
-      const profile = await getUserProfile(data.user.id);
-      setCurrentUser({
-        id: data.user.id,
-        email: profile.email,
-        phone: profile.phone ?? '',
-        accountType: profile.account_type,
-        fullName: profile.full_name,
-        profilePhotoUrl: profile.profile_photo_url ?? undefined,
-        isPhoneVerified: profile.is_phone_verified ?? false,
-        isEmailVerified: profile.is_email_verified ?? false,
-        createdAt: profile.created_at,
-        updatedAt: profile.updated_at,
-      });
-      await syncUserData(data.user.id, profile.account_type);
-      router.replace('/' as Href);
+    if (!email.trim()) { Alert.alert('Error', 'Please enter your email'); return; }
+    if (!password.trim()) { Alert.alert('Error', 'Please enter your password'); return; }
+
+    setIsLoading(true);
+    try {
+      const data = await supabaseSignIn(email.trim().toLowerCase(), password);
+      if (data.user && data.session) {
+
+        // ✅ Check managers table by email
+        const { data: managerProfile } = await supabase
+          .from('managers')
+          .select('*')
+          .eq('email', data.user.email ?? '')
+          .maybeSingle();
+
+        if (managerProfile) {
+          // ✅ Ensure users table has correct row for this auth ID
+          await supabase.from('users').upsert({
+            id: data.user.id,
+            email: managerProfile.email,
+            full_name: managerProfile.full_name,
+            account_type: 'manager',
+            phone: managerProfile.phone ?? '',
+            is_phone_verified: false,
+            is_email_verified: true,
+          }, { onConflict: 'id' });
+
+          setCurrentUser({
+            id: data.user.id,
+            email: managerProfile.email,
+            phone: managerProfile.phone ?? '',
+            accountType: 'manager',
+            fullName: managerProfile.full_name,
+            isPhoneVerified: false,
+            isEmailVerified: true,
+            createdAt: data.user.created_at,
+            updatedAt: data.user.created_at,
+          });
+          router.replace('/(manager)/(tabs)/dashboard' as Href);
+          return;
+        }
+
+        // ✅ Check artists table by email
+        const { data: artistProfile } = await supabase
+          .from('artists')
+          .select('*')
+          .eq('email', data.user.email ?? '')
+          .maybeSingle();
+
+        if (artistProfile) {
+          setCurrentUser({
+            id: data.user.id,
+            email: artistProfile.email,
+            phone: '',
+            accountType: 'artist',
+            fullName: artistProfile.full_name,
+            isPhoneVerified: false,
+            isEmailVerified: true,
+            createdAt: data.user.created_at,
+            updatedAt: data.user.created_at,
+          });
+          router.replace('/(artist)/(tabs)/home' as Href);
+          return;
+        }
+
+        Alert.alert('Error', 'Account not found. Please register first.');
+      }
+    } catch (error: any) {
+      Alert.alert('Sign In Failed', error.message ?? 'Something went wrong.');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error: any) {
-    Alert.alert('Sign In Failed', error.message ?? 'Something went wrong.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  const handleDemoManager = () => {
-    setCurrentUser(MOCK_MANAGER);
-    router.replace('/' as Href);
-  };
-
-  const handleDemoDJ = () => {
-    setCurrentUser(MOCK_ARTIST);
-    router.replace('/' as Href);
   };
 
   return (
@@ -132,27 +163,6 @@ export default function SignInScreen() {
             </Text>
           </Pressable>
         </View>
-
-        {/* Demo Shortcuts */}
-        <View style={[styles.demoSection, { borderTopColor: colors.border }]}>
-          <Text style={[styles.demoTitle, { color: colors.muted }]}>Demo Access</Text>
-          <View style={styles.demoButtons}>
-            <Pressable
-              style={({ pressed }) => [styles.demoBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-              onPress={handleDemoManager}
-            >
-              <MaterialIcons name="business" size={18} color={colors.primary} />
-              <Text style={[styles.demoBtnText, { color: colors.foreground }]}>Manager Demo</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.demoBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-              onPress={handleDemoDJ}
-            >
-              <MaterialIcons name="headset" size={18} color={colors.primary} />
-              <Text style={[styles.demoBtnText, { color: colors.foreground }]}>Artist Demo</Text>
-            </Pressable>
-          </View>
-        </View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -184,12 +194,4 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: 8,
   },
   signInBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  demoSection: { borderTopWidth: 1, paddingTop: 24, marginTop: 8 },
-  demoTitle: { fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 12 },
-  demoButtons: { flexDirection: 'row', gap: 12 },
-  demoBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, borderWidth: 1, borderRadius: 12, paddingVertical: 14,
-  },
-  demoBtnText: { fontSize: 14, fontWeight: '600' },
 });

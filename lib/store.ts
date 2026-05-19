@@ -6,12 +6,6 @@ import type {
   AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, DraftAssignment,
   Invoice, InvoiceStatus
 } from './types';
-import {
-  MOCK_MANAGER, MOCK_ARTIST, MOCK_ARTISTS, MOCK_ARTIST_PROFILES,
-  MOCK_VENUES, MOCK_LINEUPS, MOCK_SLOTS, MOCK_BOOKINGS,
-  MOCK_AVAILABILITY_BLOCKS,
-  MOCK_GLOBAL_LINEUP, MOCK_VENUE_ASSIGNMENTS, MOCK_DRAFTS
-} from './mock-data';
 
 // ─── Auth Store ──────────────────────────────────────────────────────────────
 
@@ -27,26 +21,10 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      currentUser: MOCK_MANAGER,
-      isAuthenticated: true,
-      signIn: (email, _password) => {
-        const saved = get().currentUser;
-        // Demo: sign in as manager or DJ based on email
-        if (email.includes('manager') || email === MOCK_MANAGER.email || email === 'alex@nexgigapp.com') {
-          // Merge saved profile on top of mock defaults if same user
-          const base = saved?.accountType === 'manager' ? saved : MOCK_MANAGER;
-          set({ currentUser: base, isAuthenticated: true });
-          return true;
-        }
-        if (email.includes('artist') || email === MOCK_ARTIST.email || email === 'kai@nexgigapp.com') {
-          const base = saved?.accountType === 'artist' ? saved : MOCK_ARTIST;
-          set({ currentUser: base, isAuthenticated: true });
-          return true;
-        }
-        // Default to manager for demo
-        const base = saved?.accountType === 'manager' ? saved : MOCK_MANAGER;
-        set({ currentUser: base, isAuthenticated: true });
-        return true;
+      currentUser: null,
+      isAuthenticated: false,
+      signIn: (_email, _password) => {
+        return false; // sign in handled by Supabase in sign-in.tsx
       },
       signOut: () => set({ currentUser: null, isAuthenticated: false }),
       setCurrentUser: (user) => set({ currentUser: user, isAuthenticated: true }),
@@ -74,11 +52,13 @@ interface VenueState {
   reorderVenues: (orderedIds: string[]) => void;
   getVenueById: (id: string) => Venue | undefined;
   getVenueName: (id: string) => string;
+  clearVenues: () => void;
 }
 
 export const useVenueStore = create<VenueState>((set, get) => ({
-  venues: MOCK_VENUES,
+  venues: [],
   addVenue: (venue) => set((state) => ({ venues: [...state.venues, venue] })),
+  clearVenues: () => set({ venues: [] }),
   updateVenue: (id, updates) => set((state) => ({
     venues: state.venues.map((v) => v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v),
   })),
@@ -148,11 +128,11 @@ interface LineupState {
 export const useLineupStore = create<LineupState>()(
   persist(
     (set, get) => ({
-  lineups: MOCK_LINEUPS,
-  globalLineup: MOCK_GLOBAL_LINEUP,
-  venueAssignments: MOCK_VENUE_ASSIGNMENTS,
-  artistProfiles: MOCK_ARTIST_PROFILES,
-  artistUsers: MOCK_ARTISTS,
+  lineups: [],
+globalLineup: [],
+venueAssignments: [],
+artistProfiles: {},
+artistUsers: [],
 
   // Legacy methods
   addLineup: (lineup) => set((state) => ({ lineups: [...state.lineups, lineup] })),
@@ -258,11 +238,13 @@ interface SlotState {
   getSlotsByDate: (venueId: string, date: string) => Slot[];
   getSlotsByMonth: (venueIds: string[], year: number, month: number) => Slot[];
   getSlotById: (id: string) => Slot | undefined;
+  clearSlots: () => void;
 }
 
 export const useSlotStore = create<SlotState>((set, get) => ({
-  slots: MOCK_SLOTS,
+  slots: [],
   addSlot: (slot) => set((state) => ({ slots: [...state.slots, slot] })),
+  clearSlots: () => set({ slots: [] }),
   bulkAddSlots: (slots) => set((state) => ({ slots: [...state.slots, ...slots] })),
   updateSlot: (id, updates) => set((state) => ({
     slots: state.slots.map((s) => s.id === id ? { ...s, ...updates } : s),
@@ -364,7 +346,7 @@ interface BookingState {
 }
 
 export const useBookingStore = create<BookingState>((set, get) => ({
-  bookings: MOCK_BOOKINGS,
+  bookings: [],
   addBooking: (booking) => set((state) => ({ bookings: [...state.bookings, booking] })),
   updateBookingStatus: (id, status, extra = {}) => set((state) => ({
     bookings: state.bookings.map((b) =>
@@ -409,7 +391,7 @@ interface AvailabilityState {
 }
 
 export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
-  blocks: MOCK_AVAILABILITY_BLOCKS,
+  blocks: [],
   addBlock: (block) => set((state) => ({ blocks: [...state.blocks, block] })),
   deleteBlock: (id) => set((state) => ({ blocks: state.blocks.filter((b) => b.id !== id) })),
   getBlocksByDJ: (artistId) => get().blocks.filter((b) => b.artistId === artistId),
@@ -446,7 +428,7 @@ interface DraftAssignmentState {
 }
 
 export const useDraftStore = create<DraftAssignmentState>((set, get) => ({
-  drafts: MOCK_DRAFTS,
+  drafts: [],
   setDraft: (slotId, venueId, artistId, managerId) => set((state) => {
     // If this DJ is already drafted for this slot, do nothing (no duplicates)
     const alreadyExists = state.drafts.find((d) => d.slotId === slotId && d.artistId === artistId);

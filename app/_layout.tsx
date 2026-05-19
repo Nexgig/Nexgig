@@ -18,6 +18,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { supabase } from "@/lib/supabase"; // ✅ adjust path if needed
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -36,6 +37,27 @@ export default function RootLayout() {
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
+  }, []);
+
+  // ✅ Clear stale/invalid session on app launch
+  useEffect(() => {
+    supabase.auth.getSession().then(({ error }) => {
+      if (error) {
+        supabase.auth.signOut();
+      }
+    });
+  }, []);
+
+  // ✅ Listen for auth state changes
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        // (auth) stack handles redirect to login automatically
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
@@ -82,7 +104,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="(manager)" />
             <Stack.Screen name="(artist)" />
             <Stack.Screen name="oauth/callback" />

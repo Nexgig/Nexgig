@@ -11,8 +11,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(manager)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 2;
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
 
@@ -27,12 +28,12 @@ export default function ManagerRegisterScreen() {
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     fullName: '',
     email: '',
+    password: '',
     phone: '',
-    emailOtp: '',
-    phoneOtp: '',
     basedIn: '',
     yearsOfExperience: '',
     bio: '',
@@ -47,21 +48,17 @@ export default function ManagerRegisterScreen() {
 
   const animateToStep = useCallback((newStep: number, direction: 'forward' | 'back') => {
     setIsAnimating(true);
-
     translateX.value = withTiming(direction === 'forward' ? -screenWidth : screenWidth, {
       duration: ANIM_DURATION,
       easing: ANIM_EASING,
     }, () => {
       runOnJS(setDisplayStep)(newStep);
       runOnJS(setStep)(newStep);
-
       translateX.value = direction === 'forward' ? screenWidth : -screenWidth;
-
       translateX.value = withTiming(0, { duration: ANIM_DURATION, easing: ANIM_EASING }, () => {
         runOnJS(setIsAnimating)(false);
       });
     });
-
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [screenWidth, translateX]);
 
@@ -70,50 +67,108 @@ export default function ManagerRegisterScreen() {
   const handleNext = async () => {
     if (isAnimating) return;
 
+    // ✅ Step 1 — sign up with email + password
     if (step === 1) {
-      if (!form.fullName.trim() || !form.email.trim() || !form.phone.trim()) {
+      if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
         Alert.alert('Required', 'Please fill in all fields.');
         return;
       }
-    }
-    if (step === 2) {
-      if (!form.emailOtp.trim()) {
-        Alert.alert('Required', 'Please enter the OTP sent to your email.');
+      if (form.password.length < 6) {
+        Alert.alert('Weak password', 'Password must be at least 6 characters.');
         return;
       }
-    }
-    if (step === 3) {
-      if (!form.phoneOtp.trim()) {
-        Alert.alert('Required', 'Please enter the OTP sent to your phone.');
+
+      setIsLoading(true);
+
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+
+      if (signUpError) {
+        setIsLoading(false);
+        Alert.alert('Sign up failed', signUpError.message);
         return;
       }
-    }
-    if (step < TOTAL_STEPS) {
-      animateToStep(step + 1, 'forward');
+
+      // Sign in immediately after signup so session is ready for Step 2
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+
+      setIsLoading(false);
+
+      if (signInError) {
+        Alert.alert('Sign in failed', signInError.message);
+        return;
+      }
+
+      animateToStep(2, 'forward');
       return;
     }
 
-    // Final step — create account
+    // ✅ Step 2 — insert manager profile into Supabase
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setIsLoading(false);
+      Alert.alert('Error', 'Session not found. Please restart registration.');
+      return;
+    }
+
+    // Insert into users table first
+    const { error: userInsertError } = await supabase.from('users').upsert({
+      id: user.id,
+      email: form.email.trim().toLowerCase(),
+      full_name: form.fullName.trim(),
+      account_type: 'manager',
+      phone: form.phone.trim(),
+      is_phone_verified: false,
+      is_email_verified: false,
+    }, { onConflict: 'id' });
+
+    if (userInsertError) {
+      setIsLoading(false);
+      Alert.alert('Error saving profile', userInsertError.message);
+      return;
+    }
+
+    // Insert into managers table
+    const { error: insertError } = await supabase.from('managers').upsert({
+      id: user.id,
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      full_name: form.fullName.trim(),
+      bio: form.bio || null,
+      based_in: form.basedIn || null,
+      years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
+    }, { onConflict: 'id' });
+
     setIsLoading(false);
 
-    const newManager = {
-      id: 'manager-new-' + Date.now(),
-      email: form.email,
-      phone: form.phone,
+    if (insertError) {
+      Alert.alert('Error saving profile', insertError.message);
+      return;
+    }
+
+    setCurrentUser({
+      id: user.id,
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
       accountType: 'manager' as const,
-      fullName: form.fullName,
+      fullName: form.fullName.trim(),
       bio: form.bio,
       location: undefined,
       yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
-      isPhoneVerified: true,
-      isEmailVerified: true,
+      isPhoneVerified: false,
+      isEmailVerified: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
-    setCurrentUser(newManager);
-    // Set Venue as the default calendar view for new users
+    });
+
     await AsyncStorage.setItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
     router.replace('/(manager)/(tabs)/dashboard' as Href);
   };
@@ -127,73 +182,99 @@ export default function ManagerRegisterScreen() {
     }
   };
 
+  const loadingLabel = () => {
+    if (!isLoading) return step < TOTAL_STEPS ? 'Continue' : 'Create Account';
+    if (step === 1) return 'Creating account...';
+    return 'Saving profile...';
+  };
+
   return (
     <ScreenContainer>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Animated.View style={animatedStyle}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
-          </Pressable>
-          <View style={styles.stepIndicator}>
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.stepDot,
-                  { backgroundColor: i + 1 <= step ? colors.primary : colors.border }
-                ]}
-              />
-            ))}
-          </View>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            {displayStep === 1 && 'Create Account'}
-            {displayStep === 2 && 'Verify Email'}
-            {displayStep === 3 && 'Verify Phone'}
-            {displayStep === 4 && 'Your Profile'}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>
-            {displayStep === 1 && 'Step 1 of 4 — Basic information'}
-            {displayStep === 2 && 'Step 2 of 4 — Check your inbox'}
-            {displayStep === 3 && 'Step 3 of 4 — Check your messages'}
-            {displayStep === 4 && 'Step 4 of 4 — Tell us about yourself'}
-          </Text>
-        </View>
 
-          {/* Step 1: Basic Info */}
+          {/* Header */}
+          <View style={styles.header}>
+            <Pressable onPress={handleBack} style={styles.backBtn}>
+              <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+            </Pressable>
+            <View style={styles.stepIndicator}>
+              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.stepDot,
+                    { backgroundColor: i + 1 <= step ? colors.primary : colors.border }
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[styles.title, { color: colors.foreground }]}>
+              {displayStep === 1 && 'Create Account'}
+              {displayStep === 2 && 'Your Profile'}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>
+              {displayStep === 1 && 'Step 1 of 2 — Basic information'}
+              {displayStep === 2 && 'Step 2 of 2 — Tell us about yourself'}
+            </Text>
+          </View>
+
+          {/* Step 1: Basic Info + Password */}
           {displayStep === 1 && (
             <View style={styles.form}>
-              <InputField label="Full Name" value={form.fullName} onChangeText={(v) => update('fullName', v)} placeholder="Alex Thompson" colors={colors} />
-              <InputField label="Email Address" value={form.email} onChangeText={(v) => update('email', v)} placeholder="alex@example.com" keyboardType="email-address" colors={colors} />
-              <InputField label="Phone Number" value={form.phone} onChangeText={(v) => update('phone', v)} placeholder="+971 50 123 4567" keyboardType="phone-pad" colors={colors} />
+              <InputField
+                label="Full Name"
+                value={form.fullName}
+                onChangeText={(v) => update('fullName', v)}
+                placeholder="Alex Thompson"
+                colors={colors}
+              />
+              <InputField
+                label="Email Address"
+                value={form.email}
+                onChangeText={(v) => update('email', v)}
+                placeholder="alex@example.com"
+                keyboardType="email-address"
+                colors={colors}
+              />
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
+                <View style={styles.passwordRow}>
+                  <TextInput
+                    style={[styles.passwordInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                    placeholder="Min. 6 characters"
+                    placeholderTextColor={colors.muted}
+                    value={form.password}
+                    onChangeText={(v) => update('password', v)}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                  />
+                  <Pressable
+                    onPress={() => setShowPassword((p) => !p)}
+                    style={[styles.eyeBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <MaterialIcons
+                      name={showPassword ? 'visibility-off' : 'visibility'}
+                      size={20}
+                      color={colors.muted}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+              <InputField
+                label="Phone Number (optional)"
+                value={form.phone}
+                onChangeText={(v) => update('phone', v)}
+                placeholder="+971 50 123 4567"
+                keyboardType="phone-pad"
+                colors={colors}
+              />
             </View>
           )}
 
-          {/* Step 2: Email OTP */}
+          {/* Step 2: Profile Details */}
           {displayStep === 2 && (
-            <View style={styles.form}>
-              <Text style={[styles.otpInfo, { color: colors.muted }]}>
-                We've sent a 6-digit code to {form.email}. Enter it below to verify your email.
-              </Text>
-              <InputField label="Email OTP" value={form.emailOtp} onChangeText={(v) => update('emailOtp', v)} placeholder="123456" keyboardType="number-pad" colors={colors} />
-              <Text style={[styles.demoHint, { color: colors.primary }]}>Demo: enter any 6 digits</Text>
-            </View>
-          )}
-
-          {/* Step 3: Phone OTP */}
-          {displayStep === 3 && (
-            <View style={styles.form}>
-              <Text style={[styles.otpInfo, { color: colors.muted }]}>
-                We've sent a 6-digit code to {form.phone}. Enter it below to verify your phone.
-              </Text>
-              <InputField label="Phone OTP" value={form.phoneOtp} onChangeText={(v) => update('phoneOtp', v)} placeholder="123456" keyboardType="number-pad" colors={colors} />
-              <Text style={[styles.demoHint, { color: colors.primary }]}>Demo: enter any 6 digits</Text>
-            </View>
-          )}
-
-          {/* Step 4: Profile Details */}
-          {displayStep === 4 && (
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Based In</Text>
@@ -203,7 +284,14 @@ export default function ManagerRegisterScreen() {
                   placeholder="Select country"
                 />
               </View>
-              <InputField label="Years of Experience (optional)" value={form.yearsOfExperience} onChangeText={(v) => update('yearsOfExperience', v)} placeholder="8" keyboardType="number-pad" colors={colors} />
+              <InputField
+                label="Years of Experience (optional)"
+                value={form.yearsOfExperience}
+                onChangeText={(v) => update('yearsOfExperience', v)}
+                placeholder="8"
+                keyboardType="number-pad"
+                colors={colors}
+              />
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Bio (optional)</Text>
                 <TextInput
@@ -220,15 +308,15 @@ export default function ManagerRegisterScreen() {
               </View>
             </View>
           )}
-        <Pressable
-          style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]}
-          onPress={handleNext}
-          disabled={isLoading || isAnimating}
-        >
-          <Text style={styles.nextBtnText}>
-            {isLoading ? 'Creating account...' : step < TOTAL_STEPS ? 'Continue' : 'Create Account'}
-          </Text>
-        </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]}
+            onPress={handleNext}
+            disabled={isLoading || isAnimating}
+          >
+            <Text style={styles.nextBtnText}>{loadingLabel()}</Text>
+          </Pressable>
+
         </Animated.View>
       </ScrollView>
     </ScreenContainer>
@@ -269,14 +357,11 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 8 },
   label: { fontSize: 14, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
+  passwordRow: { flexDirection: 'row', gap: 8 },
+  passwordInput: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
+  eyeBtn: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
   textarea: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 100, textAlignVertical: 'top' },
   charCount: { fontSize: 12, textAlign: 'right' },
-  otpInfo: { fontSize: 14, lineHeight: 22, marginBottom: 8 },
-  demoHint: { fontSize: 12, textAlign: 'center', fontStyle: 'italic' },
-  cityScroll: { marginHorizontal: -4 },
-  cityRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4, paddingVertical: 4 },
-  cityChip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  cityChipText: { fontSize: 13, fontWeight: '500' },
   nextBtn: { backgroundColor: '#2E75B6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

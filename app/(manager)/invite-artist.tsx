@@ -8,6 +8,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useAuthStore, useVenueStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 
 export default function InviteArtistScreen() {
   const router = useRouter();
@@ -26,8 +27,8 @@ export default function InviteArtistScreen() {
   const [invitedEmail, setInvitedEmail] = useState('');
   const [showAssignSheet, setShowAssignSheet] = useState(false);
   const [selectedVenueIds, setSelectedVenueIds] = useState<string[]>([]);
+  const [inviteId, setInviteId] = useState<string | null>(null);
 
-  // Delay focus until after the screen transition completes
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus();
@@ -36,28 +37,57 @@ export default function InviteArtistScreen() {
   }, []);
 
   const handleSend = async () => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) {
-      Alert.alert('Required', 'Please enter an email address.');
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
-      return;
-    }
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) {
+    Alert.alert('Required', 'Please enter an email address.');
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(trimmed)) {
+    Alert.alert('Invalid Email', 'Please enter a valid email address.');
+    return;
+  }
 
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
+  setIsLoading(true);
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
     setIsLoading(false);
+    Alert.alert('Error', 'Not authenticated. Please sign in again.');
+    return;
+  }
 
-    setInvitedEmail(trimmed);
-    setSelectedVenueIds([]);
-    setEmail('');
+  const { data, error } = await supabase.from('invites').insert({
+    manager_id: user.id,
+    artist_email: trimmed,
+    status: 'pending',
+  }).select().single();
 
-    // Auto-open the assign sheet
-    setShowAssignSheet(true);
-  };
+  if (error) {
+    setIsLoading(false);
+    Alert.alert('Error sending invite', error.message);
+    return;
+  }
+
+  // ✅ Send invite email via Edge Function
+  await supabase.functions.invoke('send-invite-email', {
+    body: {
+      artist_email: trimmed,
+      manager_name: currentUser?.fullName ?? 'A manager',
+      invite_id: data.id,
+    },
+  });
+
+  setIsLoading(false);
+  setInviteId(data.id);
+  setInvitedEmail(trimmed);
+  setSelectedVenueIds([]);
+  setEmail('');
+  setShowAssignSheet(true);
+};
+
+  ;
 
   const toggleVenue = (venueId: string) => {
     setSelectedVenueIds((prev) =>
@@ -65,7 +95,19 @@ export default function InviteArtistScreen() {
     );
   };
 
-  const handleAssignDone = () => {
+  const handleAssignDone = async () => {
+    // ✅ Save venue assignments to Supabase if any selected
+    if (selectedVenueIds.length > 0 && inviteId) {
+      const rows = selectedVenueIds.map((venueId) => ({
+        invite_id: inviteId,
+        venue_id: venueId,
+      }));
+      const { error } = await supabase.from('invite_venues').insert(rows);
+      if (error) {
+        Alert.alert('Warning', 'Invite sent but venue assignment failed: ' + error.message);
+      }
+    }
+
     setShowAssignSheet(false);
     const count = selectedVenueIds.length;
     const venueText = count > 0
@@ -118,7 +160,6 @@ export default function InviteArtistScreen() {
           </View>
         </View>
 
-        {/* Send Button */}
         <Pressable
           style={({ pressed }) => [styles.sendBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]}
           onPress={handleSend}
@@ -129,7 +170,6 @@ export default function InviteArtistScreen() {
         </Pressable>
       </ScrollView>
 
-      {/* ── Assign to Venue Sheet ─────────────────────────────────────────────── */}
       <Modal
         visible={showAssignSheet}
         transparent
@@ -138,10 +178,7 @@ export default function InviteArtistScreen() {
       >
         <View style={styles.overlay}>
           <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-            {/* Handle */}
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
-
-            {/* Sheet Header */}
             <View style={styles.sheetHeader}>
               <View style={[styles.sheetIconBg, { backgroundColor: colors.primary + '18' }]}>
                 <MaterialIcons name="check-circle" size={22} color={colors.primary} />
@@ -161,7 +198,6 @@ export default function InviteArtistScreen() {
               Select the venues you'd like to assign this artist to once they join. You can skip this and assign later.
             </Text>
 
-            {/* Venue List */}
             {venues.length === 0 ? (
               <View style={styles.emptyVenues}>
                 <MaterialIcons name="location-off" size={32} color={colors.muted} />
@@ -204,7 +240,6 @@ export default function InviteArtistScreen() {
               />
             )}
 
-            {/* Actions */}
             <View style={styles.sheetActions}>
               <Pressable
                 style={({ pressed }) => [styles.assignBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
@@ -246,8 +281,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB', borderRadius: 14, paddingVertical: 16,
   },
   sendBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-
-  // Sheet
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },

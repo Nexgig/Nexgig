@@ -470,19 +470,21 @@ export default function EditVenueScreen() {
           </View>
 
           {/* Instagram */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Instagram URL</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="https://instagram.com/..."
-              placeholderTextColor={colors.muted}
-              value={form.instagramUrl}
-              onChangeText={(v) => setForm((f) => ({ ...f, instagramUrl: v }))}
-              autoCapitalize="none"
-              keyboardType="url"
-              returnKeyType="done"
-            />
-          </View>
+<Text style={[styles.fieldLabel, { color: colors.foreground }]}>Instagram</Text>
+<View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, borderColor: colors.border, backgroundColor: colors.surface }}>
+  <Text style={{ paddingLeft: 12, color: colors.muted, fontSize: 15 }}>instagram.com/</Text>
+  <TextInput
+    style={{ flex: 1, padding: 12, fontSize: 15, color: colors.foreground }}
+    placeholder="username"
+    placeholderTextColor={colors.muted}
+    value={form.instagramUrl?.replace('https://www.instagram.com/', '').replace('https://instagram.com/', '') ?? ''}
+    onChangeText={(v) => setForm((f) => ({ ...f, instagramUrl: v.replace('@', '').replace(/\s/g, '').toLowerCase() }))}
+    autoCapitalize="none"
+    autoCorrect={false}
+    returnKeyType="done"
+  />
+</View>
+
 
           {/* Music Link */}
           <View style={styles.fieldGroup}>
