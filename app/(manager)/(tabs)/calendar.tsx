@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { syncBookingStatus } from '@/lib/booking-sync';
 
 // Monday-first day labels
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -1152,7 +1153,10 @@ export default function CalendarScreen() {
                   <TouchableOpacity
                     activeOpacity={0.6}
                     style={styles.removeDJBtn}
-                    onPress={() => hideFromManagerCalendar(booking.id)}
+                    onPress={() => {
+  hideFromManagerCalendar(booking.id);
+  syncBookingStatus(booking.id, booking.status as any, { hiddenFromManagerCalendar: true });
+}}
                   >
                     <MaterialIcons name="close" size={14} color={colors.muted} />
                   </TouchableOpacity>
@@ -1367,7 +1371,10 @@ export default function CalendarScreen() {
                   <TouchableOpacity
                     activeOpacity={0.6}
                     style={styles.removeDJBtn}
-                    onPress={() => hideFromManagerCalendar(booking.id)}
+                    onPress={() => {
+  hideFromManagerCalendar(booking.id);
+  syncBookingStatus(booking.id, booking.status as any, { hiddenFromManagerCalendar: true });
+}}
                   >
                     <MaterialIcons name="close" size={14} color={colors.muted} />
                   </TouchableOpacity>

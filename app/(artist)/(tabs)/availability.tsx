@@ -8,7 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { useColors } from '@/hooks/use-colors';
-import type { AvailabilityBlock, Booking } from '@/lib/types';
+import type { AvailabilityBlock, Booking, BookingStatus } from '@/lib/types';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(artist)/settings';
@@ -751,7 +751,13 @@ export default function DJAvailabilityScreen() {
         return (
           <TouchableOpacity
             style={[styles.slotMenuBtn, { borderWidth: 1, borderColor: colors.error, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 12 }]}
-            onPress={(e) => { e.stopPropagation?.(); hideFromCalendar(b.id); markRelatedNotificationsRead(b.id); }}
+                        onPress={(e) => { 
+              e.stopPropagation?.(); 
+              hideFromCalendar(b.id);
+              updateBookingStatus(b.id, b.status as BookingStatus, { cancellationAcknowledged: true });
+              markRelatedNotificationsRead(b.id);
+              syncBookingStatus(b.id, b.status as any, { hiddenFromCalendar: true, cancellationAcknowledged: true });
+            }}
             activeOpacity={0.6}
           >
             <Text style={{ fontSize: 12, fontWeight: '700', color: colors.error }}>Dismiss</Text>
@@ -808,6 +814,7 @@ export default function DJAvailabilityScreen() {
                         onPress: () => {
                           const booking = allBookings.find((x) => x.id === b.id);
                           updateBookingStatus(b.id, 'confirmed', { confirmedAt: new Date().toISOString(), artistRespondedFromRequests: true });
+                          syncBookingStatus(b.id, 'confirmed', { confirmedAt: new Date().toISOString() });
                           markRelatedNotificationsRead(b.id);
                           if (booking) { notifyManager('booking_confirmed', { ...b, managerId: booking.managerId }); }
                         },
