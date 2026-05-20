@@ -38,14 +38,11 @@ export default function WelcomeScreen() {
               <Text style={styles.secondaryBtnText}>Register as Manager</Text>
             </Pressable>
 
-            <Text style={styles.djNote}>Artists join by invitation only</Text>
-
-{/* TEMP TEST BUTTON — remove before launch */}
-<Pressable
-  style={({ pressed }) => [styles.testBtn, pressed && { opacity: 0.7 }]}
-  onPress={() => router.push('/(auth)/artist-invite?invite_id=PASTE_YOUR_INVITE_ID_HERE' as Href)}
+            <Pressable
+  style={({ pressed }) => [styles.secondaryBtn, { borderColor: 'rgba(255,255,255,0.5)' }, pressed && { opacity: 0.85 }]}
+  onPress={() => router.push('/(auth)/artist-setup' as Href)}
 >
-  <Text style={styles.testBtnText}>Join via Invite</Text>
+  <Text style={styles.secondaryBtnText}>Join as Artist</Text>
 </Pressable>
           </View>
         </View>

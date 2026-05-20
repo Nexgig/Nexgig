@@ -9,6 +9,7 @@ import type { Href } from 'expo-router';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import type { } from '@/lib/types';
+import { syncBookingStatus } from '@/lib/booking-sync';
 
 export default function DJBookingDetailScreen() {
   const router = useRouter();
@@ -74,6 +75,7 @@ export default function DJBookingDetailScreen() {
         text: 'Cancel Request', style: 'destructive', onPress: () => {
           // Set cancellationAcknowledged so booking goes directly to Cancelled tab (no Dismiss step)
           updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
+          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: booking.artistId,
@@ -104,6 +106,7 @@ export default function DJBookingDetailScreen() {
             slotEndTime: slot?.endTime ?? booking.slotEndTime,
             venueName: venue?.name ?? booking.venueName,
           });
+          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: booking.artistId,

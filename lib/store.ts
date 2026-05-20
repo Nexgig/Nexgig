@@ -123,6 +123,8 @@ interface LineupState {
   isEmailTaken: (email: string, excludeUserId?: string) => boolean;
   isUsernameTaken: (username: string, excludeUserId?: string) => boolean;
   getAllUsers: () => User[];
+  clearGlobalLineup: () => void;
+clearArtistUsers: () => void;
 }
 
 export const useLineupStore = create<LineupState>()(
@@ -147,9 +149,13 @@ artistUsers: [],
   getLineupByArtist: (artistId) => get().lineups.filter((r) => r.artistId === artistId && r.status === 'active'),
 
   // Global lineup methods
-  addToGlobalLineup: (entry) => set((state) => ({
-    globalLineup: [...state.globalLineup, entry],
-  })),
+  addToGlobalLineup: (entry) => set((state) => {
+  const exists = state.globalLineup.some(
+    (r) => r.managerId === entry.managerId && r.artistId === entry.artistId && r.status === 'active'
+  );
+  if (exists) return state;
+  return { globalLineup: [...state.globalLineup, entry] };
+}),
   removeFromGlobalLineup: (artistId) => set((state) => ({
     globalLineup: state.globalLineup.map((r) =>
       r.artistId === artistId ? { ...r, status: 'removed' as const, removedAt: new Date().toISOString() } : r
@@ -210,6 +216,8 @@ artistUsers: [],
     return get().artistUsers.some((u) => u.id !== excludeUserId && u.username?.toLowerCase().trim() === lower);
   },
   getAllUsers: () => get().artistUsers,
+  clearGlobalLineup: () => set({ globalLineup: [] }),
+clearArtistUsers: () => set({ artistUsers: [] }),
 }),
     {
       name: 'nexgig:lineup',
@@ -343,6 +351,7 @@ interface BookingState {
   hideFromManagerCalendar: (id: string) => void;
   acknowledgeCancellation: (id: string) => void;
   deleteBooking: (id: string) => void;
+  clearBookings: () => void;
 }
 
 export const useBookingStore = create<BookingState>((set, get) => ({
@@ -379,6 +388,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   deleteBooking: (id) => set((state) => ({
     bookings: state.bookings.filter((b) => b.id !== id),
   })),
+  clearBookings: () => set((state) => ({ bookings: [] })),
 }))
 
 // ─── Availability Store ───────────────────────────────────────────────────────

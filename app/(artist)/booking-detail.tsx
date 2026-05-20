@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useCalendarJumpStore, useReviewStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { syncBookingStatus } from '@/lib/booking-sync';
 
 export default function DJBookingDetailScreen() {
   const router = useRouter();
@@ -107,6 +108,7 @@ export default function DJBookingDetailScreen() {
                 slotEndTime: slot?.endTime ?? booking.slotEndTime,
                 venueName: venue?.name ?? booking.venueName,
               });
+              syncBookingStatus(booking.id, 'completed', { isCompleted: true, confirmedAt: now });
               markRelatedNotificationsRead(booking.id);
               notifyManager('booking_confirmed');
               router.back();
@@ -121,6 +123,7 @@ export default function DJBookingDetailScreen() {
         {
           text: 'Accept', onPress: () => {
             updateBookingStatus(booking.id, 'confirmed', { confirmedAt: new Date().toISOString(), artistRespondedFromRequests: true });
+            syncBookingStatus(booking.id, 'confirmed', { confirmedAt: new Date().toISOString() });
             markRelatedNotificationsRead(booking.id);
             notifyManager('booking_confirmed');
             router.back();
@@ -136,6 +139,7 @@ export default function DJBookingDetailScreen() {
       {
         text: 'Decline', style: 'destructive', onPress: () => {
           updateBookingStatus(booking.id, 'declined', { artistRespondedFromRequests: true });
+          syncBookingStatus(booking.id, 'declined');
           markRelatedNotificationsRead(booking.id);
           notifyManager('booking_declined');
           router.back();
@@ -150,6 +154,7 @@ export default function DJBookingDetailScreen() {
       {
         text: 'Cancel Booking', style: 'destructive', onPress: () => {
           updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledByArtist: true, artistRespondedFromRequests: true });
+          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
           markRelatedNotificationsRead(booking.id);
           notifyManager('booking_cancelled');
           router.back();

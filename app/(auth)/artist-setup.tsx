@@ -157,15 +157,15 @@ export default function DJSetupScreen() {
     }
 
     // ✅ Step 2 — insert into users table
-    const { error: userInsertError } = await supabase.from('users').insert({
-      id: user.id,
-      email: form.email.trim().toLowerCase(),
-      full_name: form.fullName.trim(),
-      account_type: 'artist',
-      phone: '',
-      is_phone_verified: false,
-      is_email_verified: false,
-    });
+    const { error: userInsertError } = await supabase.from('users').upsert({
+  id: user.id,
+  email: form.email.trim().toLowerCase(),
+  full_name: form.fullName.trim(),
+  account_type: 'artist',
+  phone: '',
+  is_phone_verified: false,
+  is_email_verified: false,
+}, { onConflict: 'id' });
 
     if (userInsertError) {
       setIsLoading(false);
@@ -174,26 +174,26 @@ export default function DJSetupScreen() {
     }
 
     // ✅ Step 3 — insert into artists table
-    const { error: artistInsertError } = await supabase.from('artists').insert({
-      id: user.id,
-      email: form.email.trim().toLowerCase(),
-      full_name: form.fullName.trim(),
-      full_legal_name: form.fullLegalName.trim(),
-      username: form.username.trim().toLowerCase(),
-      bio: form.bio || null,
-      based_in: form.basedIn || null,
-      nationality: form.nationality || null,
-      gender: form.gender || null,
-      primary_genre: form.primaryGenre || null,
-      secondary_genres: form.secondaryGenres,
-      instruments: form.instruments,
-      min_rate: form.minRate ? parseFloat(form.minRate) : null,
-      years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
-      instagram_url: form.instagram || null,
-      soundcloud_url: form.soundcloud || null,
-      mixcloud_url: form.mixcloud || null,
-      spotify_url: form.spotify || null,
-    });
+    const { error: artistInsertError } = await supabase.from('artists').upsert({
+  id: user.id,
+  email: form.email.trim().toLowerCase(),
+  full_name: form.fullName.trim(),
+  full_legal_name: form.fullLegalName.trim(),
+  username: form.username.trim().toLowerCase(),
+  bio: form.bio || null,
+  based_in: form.basedIn || null,
+  nationality: form.nationality || null,
+  gender: form.gender || null,
+  primary_genre: form.primaryGenre || null,
+  secondary_genres: form.secondaryGenres,
+  instruments: form.instruments,
+  min_rate: form.minRate ? parseFloat(form.minRate) : null,
+  years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
+  instagram_url: form.instagram || null,
+  soundcloud_url: form.soundcloud || null,
+  mixcloud_url: form.mixcloud || null,
+  spotify_url: form.spotify || null,
+}, { onConflict: 'id' });
 
     setIsLoading(false);
 

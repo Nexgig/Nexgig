@@ -1,8 +1,8 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useVenueStore, useSlotStore } from '@/lib/store';
-import type { Venue, Slot } from '@/lib/types';
+import type { Venue, Slot, Booking } from '@/lib/types';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore } from '@/lib/store';
 
 export default function ManagerLayout() {
 
@@ -62,8 +62,8 @@ export default function ManagerLayout() {
 
       if (!slotsError && slotsData) {
         const slotStore = useSlotStore.getState();
-slotStore.clearSlots();
-slotsData.forEach((s) => {
+        slotStore.clearSlots();
+        slotsData.forEach((s) => {
           const slot: Slot = {
             id: s.id,
             venueId: s.venue_id,
@@ -75,6 +75,111 @@ slotsData.forEach((s) => {
           };
           slotStore.addSlot(slot);
         });
+      }
+
+      // ✅ Fetch bookings from Supabase
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('manager_id', user.id);
+
+      if (!bookingsError && bookingsData) {
+        const bookingStore = useBookingStore.getState();
+        bookingStore.clearBookings();
+        bookingsData.forEach((b) => {
+          const booking: Booking = {
+            id: b.id,
+            slotId: b.slot_id,
+            venueId: b.venue_id,
+            artistId: b.artist_id,
+            managerId: b.manager_id,
+            status: b.status,
+            isCompleted: b.is_completed ?? false,
+            confirmedAt: b.confirmed_at ?? undefined,
+            cancelledAt: b.cancelled_at ?? undefined,
+            cancellationReason: b.cancellation_reason ?? undefined,
+            cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+            cancelledAsRequest: b.cancelled_as_request ?? false,
+            hiddenFromCalendar: b.hidden_from_calendar ?? false,
+            hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
+            slotDate: b.slot_date ?? undefined,
+            slotName: b.slot_name ?? undefined,
+            slotStartTime: b.slot_start_time ?? undefined,
+            slotEndTime: b.slot_end_time ?? undefined,
+            venueName: b.venue_name ?? undefined,
+            createdAt: b.created_at,
+            updatedAt: b.updated_at,
+          };
+          bookingStore.addBooking(booking);
+        });
+      }
+
+      // ✅ Fetch global lineup from Supabase
+      const { data: lineupData, error: lineupError } = await supabase
+        .from('global_lineup')
+        .select('artist_id, created_at')
+        .eq('manager_id', user.id)
+        .eq('status', 'active');
+
+      if (!lineupError && lineupData) {
+  const lineupStore = useLineupStore.getState();
+  lineupStore.clearGlobalLineup();
+  lineupStore.clearArtistUsers();
+  const artistIds = lineupData.map((l) => l.artist_id);
+        if (artistIds.length > 0) {
+          const { data: artistsData } = await supabase
+            .from('artists')
+            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, instagram_url, soundcloud_url, bio, min_rate, years_of_experience')
+            .in('id', artistIds);
+
+          if (artistsData) {
+            artistsData.forEach((a) => {
+              lineupStore.addArtistUser({
+                id: a.id,
+                email: a.email ?? '',
+                phone: '',
+                accountType: 'artist' as const,
+                fullName: a.full_name,
+                username: undefined,
+                profilePhotoUrl: a.profile_photo_url ?? undefined,
+                location: a.based_in ?? undefined,
+                isPhoneVerified: false,
+                isEmailVerified: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+
+              lineupStore.addToGlobalLineup({
+                id: `${user.id}-${a.id}`,
+                managerId: user.id,
+                artistId: a.id,
+                status: 'active' as const,
+                addedAt: new Date().toISOString(),
+              });
+            });
+          }
+        }
+
+        // ✅ Fetch venue assignments from Supabase
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+          .from('venue_assignments')
+          .select('id, artist_id, venue_id, manager_id, created_at')
+          .eq('manager_id', user.id)
+          .eq('status', 'active');
+
+        if (!assignmentsError && assignmentsData) {
+          const lineupStore2 = useLineupStore.getState();
+          assignmentsData.forEach((a) => {
+            lineupStore2.assignToVenue({
+              id: a.id,
+              globalLineupId: `${user.id}-${a.artist_id}`,
+              venueId: a.venue_id,
+              artistId: a.artist_id,
+              assignedAt: a.created_at,
+              status: 'active' as const,
+            });
+          });
+        }
       }
     };
 

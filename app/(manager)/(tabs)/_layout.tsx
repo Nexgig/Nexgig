@@ -32,6 +32,13 @@ export default function ManagerTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Explore',
+          tabBarIcon: ({ color }) => <MaterialIcons name="explore" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',

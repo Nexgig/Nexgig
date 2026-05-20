@@ -1165,6 +1165,22 @@ export default function CalendarScreen() {
                           text: 'Send',
                           onPress: () => {
                             const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
+                            if (newBookingId) {
+                              supabase.from('bookings').insert({
+                                id: newBookingId,
+                                slot_id: slot.id,
+                                venue_id: slot.venueId,
+                                artist_id: draft.artistId,
+                                manager_id: currentUser.id,
+                                status: 'requested',
+                                is_completed: false,
+                                slot_date: slot.date,
+                                slot_name: slot.name,
+                                slot_start_time: slot.startTime,
+                                slot_end_time: slot.endTime,
+                                venue_name: venue?.name ?? null,
+                              });
+                            }
                             addNotification({
                               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                               userId: draft.artistId,
@@ -1377,6 +1393,22 @@ export default function CalendarScreen() {
                           text: 'Send',
                           onPress: () => {
                             const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
+                            if (newBookingId) {
+                              supabase.from('bookings').insert({
+                                id: newBookingId,
+                                slot_id: slot.id,
+                                venue_id: slot.venueId,
+                                artist_id: draft.artistId,
+                                manager_id: currentUser.id,
+                                status: 'requested',
+                                is_completed: false,
+                                slot_date: slot.date,
+                                slot_name: slot.name,
+                                slot_start_time: slot.startTime,
+                                slot_end_time: slot.endTime,
+                                venue_name: venue?.name ?? null,
+                              });
+                            }
                             addNotification({
                               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                               userId: draft.artistId,
@@ -2003,6 +2035,22 @@ export default function CalendarScreen() {
                           const draftSlot = getSlotById(slotId);
                           const draftVenue = draftSlot ? getVenueById(draftSlot.venueId) : undefined;
                           const newBookingId = sendDraftByDJ(slotId, artistId, currentUser.id, addBooking);
+                          if (newBookingId && draftSlot) {
+                            supabase.from('bookings').insert({
+                              id: newBookingId,
+                              slot_id: slotId,
+                              venue_id: draftSlot.venueId,
+                              artist_id: artistId,
+                              manager_id: currentUser.id,
+                              status: 'requested',
+                              is_completed: false,
+                              slot_date: draftSlot.date,
+                              slot_name: draftSlot.name,
+                              slot_start_time: draftSlot.startTime,
+                              slot_end_time: draftSlot.endTime,
+                              venue_name: draftVenue?.name ?? null,
+                            });
+                          }
                           addNotification({
                             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                             userId: artistId,
