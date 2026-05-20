@@ -40,6 +40,7 @@ export async function syncBookingStatus(
     .from('bookings')
     .update(updates)
     .eq('id', bookingId);
+    console.log('syncBookingStatus:', bookingId, status, error?.message ?? 'success');
 
   if (error) {
     console.warn('Failed to sync booking status:', error.message);

@@ -121,10 +121,11 @@ export default function ManagerLayout() {
         .eq('manager_id', user.id)
         .eq('status', 'active');
 
-      if (!lineupError && lineupData) {
-  const lineupStore = useLineupStore.getState();
-  lineupStore.clearGlobalLineup();
-  lineupStore.clearArtistUsers();
+      const lineupStore = useLineupStore.getState();
+lineupStore.clearGlobalLineup();
+lineupStore.clearArtistUsers();
+
+if (!lineupError && lineupData) {
   const artistIds = lineupData.map((l) => l.artist_id);
         if (artistIds.length > 0) {
           const { data: artistsData } = await supabase
@@ -184,6 +185,34 @@ export default function ManagerLayout() {
     };
 
     fetchData();
+
+    // ✅ Realtime: listen for booking status changes
+    const subscription = supabase
+      .channel('bookings-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'bookings' },
+        (payload) => {
+  const b = payload.new as any;
+  console.log('realtime booking update:', b.id, b.status);
+  const bookingStore = useBookingStore.getState();
+  const existingBooking = bookingStore.bookings.find((bk) => bk.id === b.id);
+  console.log('existing booking found:', !!existingBooking);
+  bookingStore.updateBookingStatus(b.id, b.status, {
+            confirmedAt: b.confirmed_at ?? undefined,
+            cancelledAt: b.cancelled_at ?? undefined,
+            cancellationReason: b.cancellation_reason ?? undefined,
+            cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+            cancelledAsRequest: b.cancelled_as_request ?? false,
+            isCompleted: b.is_completed ?? false,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   return (

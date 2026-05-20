@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { useColors } from '@/hooks/use-colors';
 import type { AvailabilityBlock, Booking } from '@/lib/types';
 import { useFocusEffect } from 'expo-router';
@@ -858,6 +859,7 @@ export default function DJAvailabilityScreen() {
                     {
                       text: 'Cancel Booking', style: 'destructive', onPress: () => {
                         updateBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledByArtist: true, artistRespondedFromRequests: true });
+                        syncBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString() });
                         markRelatedNotificationsRead(b.id);
                         const booking = allBookings.find((x) => x.id === b.id);
                         if (booking) { notifyManager('booking_cancelled', { ...b, managerId: booking.managerId }); }

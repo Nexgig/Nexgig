@@ -118,6 +118,25 @@ export default function CalendarScreen() {
   const getBookingsBySlot = useBookingStore((s) => s.getBookingsBySlot);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const saveBookingToSupabase = async (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null) => {
+  console.log('saving booking, manager_id:', currentUser?.id);
+  const { error } = await supabase.from('bookings').insert({
+    id: bookingId,
+    slot_id: slotId,
+    venue_id: venueId,
+    artist_id: artistId,
+    manager_id: currentUser?.id,
+    status: 'requested',
+    is_completed: false,
+    slot_date: slotDate,
+    slot_name: slotName,
+    slot_start_time: slotStartTime,
+    slot_end_time: slotEndTime,
+    venue_name: venueName,
+  });
+  if (error) console.log('booking insert error:', JSON.stringify(error));
+  else console.log('booking saved to Supabase:', bookingId);
+};
 
   const managerVenueIds = useMemo(() => venues.map((v) => v.id), [venues]);
   const allManagerSlots = useMemo(
@@ -1166,21 +1185,8 @@ export default function CalendarScreen() {
                           onPress: () => {
                             const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
                             if (newBookingId) {
-                              supabase.from('bookings').insert({
-                                id: newBookingId,
-                                slot_id: slot.id,
-                                venue_id: slot.venueId,
-                                artist_id: draft.artistId,
-                                manager_id: currentUser.id,
-                                status: 'requested',
-                                is_completed: false,
-                                slot_date: slot.date,
-                                slot_name: slot.name,
-                                slot_start_time: slot.startTime,
-                                slot_end_time: slot.endTime,
-                                venue_name: venue?.name ?? null,
-                              });
-                            }
+  saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
+}
                             addNotification({
                               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                               userId: draft.artistId,
@@ -1393,22 +1399,9 @@ export default function CalendarScreen() {
                           text: 'Send',
                           onPress: () => {
                             const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
-                            if (newBookingId) {
-                              supabase.from('bookings').insert({
-                                id: newBookingId,
-                                slot_id: slot.id,
-                                venue_id: slot.venueId,
-                                artist_id: draft.artistId,
-                                manager_id: currentUser.id,
-                                status: 'requested',
-                                is_completed: false,
-                                slot_date: slot.date,
-                                slot_name: slot.name,
-                                slot_start_time: slot.startTime,
-                                slot_end_time: slot.endTime,
-                                venue_name: venue?.name ?? null,
-                              });
-                            }
+if (newBookingId) {
+  saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
+}
                             addNotification({
                               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                               userId: draft.artistId,
@@ -2036,21 +2029,8 @@ export default function CalendarScreen() {
                           const draftVenue = draftSlot ? getVenueById(draftSlot.venueId) : undefined;
                           const newBookingId = sendDraftByDJ(slotId, artistId, currentUser.id, addBooking);
                           if (newBookingId && draftSlot) {
-                            supabase.from('bookings').insert({
-                              id: newBookingId,
-                              slot_id: slotId,
-                              venue_id: draftSlot.venueId,
-                              artist_id: artistId,
-                              manager_id: currentUser.id,
-                              status: 'requested',
-                              is_completed: false,
-                              slot_date: draftSlot.date,
-                              slot_name: draftSlot.name,
-                              slot_start_time: draftSlot.startTime,
-                              slot_end_time: draftSlot.endTime,
-                              venue_name: draftVenue?.name ?? null,
-                            });
-                          }
+  saveBookingToSupabase(newBookingId, slotId, draftSlot.venueId, artistId, draftSlot.date, draftSlot.name, draftSlot.startTime, draftSlot.endTime, draftVenue?.name ?? null);
+}
                           addNotification({
                             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                             userId: artistId,

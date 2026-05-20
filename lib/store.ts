@@ -6,6 +6,13 @@ import type {
   AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, DraftAssignment,
   Invoice, InvoiceStatus
 } from './types';
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 // ─── Auth Store ──────────────────────────────────────────────────────────────
 
@@ -171,9 +178,13 @@ artistUsers: [],
     get().globalLineup.some((r) => r.managerId === managerId && r.artistId === artistId && r.status === 'active'),
 
   // Venue assignment methods
-  assignToVenue: (assignment) => set((state) => ({
-    venueAssignments: [...state.venueAssignments, assignment],
-  })),
+  assignToVenue: (assignment) => set((state) => {
+  const exists = state.venueAssignments.some(
+    (a) => a.venueId === assignment.venueId && a.artistId === assignment.artistId && a.status === 'active'
+  );
+  if (exists) return state;
+  return { venueAssignments: [...state.venueAssignments, assignment] };
+}),
   removeFromVenue: (venueId, artistId) => set((state) => ({
     venueAssignments: state.venueAssignments.map((a) =>
       a.venueId === venueId && a.artistId === artistId
@@ -201,9 +212,10 @@ artistUsers: [],
         : (updates as ArtistProfile),
     },
   })),
-  addArtistUser: (user) => set((state) => ({
-    artistUsers: [...state.artistUsers, user],
-  })),
+  addArtistUser: (user) => set((state) => {
+  if (state.artistUsers.some((u) => u.id === user.id)) return state;
+  return { artistUsers: [...state.artistUsers, user] };
+}),
   updateArtistUser: (userId, updates) => set((state) => ({
     artistUsers: state.artistUsers.map((u) => u.id === userId ? { ...u, ...updates } : u),
   })),
@@ -220,7 +232,7 @@ artistUsers: [],
 clearArtistUsers: () => set({ artistUsers: [] }),
 }),
     {
-      name: 'nexgig:lineup',
+      name: 'nexgig:lineup:v3',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         artistProfiles: state.artistProfiles,
@@ -474,7 +486,7 @@ export const useDraftStore = create<DraftAssignmentState>((set, get) => ({
     let skipped = 0;
     drafts.forEach((draft) => {
       const booking: Booking = {
-        id: 'booking-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+  id: generateUUID(),
         slotId: draft.slotId,
         venueId: draft.venueId,
         artistId: draft.artistId,
@@ -499,7 +511,7 @@ export const useDraftStore = create<DraftAssignmentState>((set, get) => ({
     const skipped = 0;
     drafts.forEach((draft) => {
       const booking: Booking = {
-        id: 'booking-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+  id: generateUUID(),
         slotId: draft.slotId,
         venueId: draft.venueId,
         artistId: draft.artistId,
@@ -521,7 +533,7 @@ export const useDraftStore = create<DraftAssignmentState>((set, get) => ({
     const draft = get().drafts.find((d) => d.slotId === slotId && d.artistId === artistId && d.managerId === managerId);
     if (!draft) return undefined;
     const booking: Booking = {
-      id: 'booking-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+  id: generateUUID(),
       slotId: draft.slotId,
       venueId: draft.venueId,
       artistId: draft.artistId,
