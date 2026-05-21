@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,7 +8,6 @@ import { useAuthStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
-import { useFocusEffect } from 'expo-router';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
 type NetworkTab = 'applications' | 'artists' | 'venues';
@@ -26,10 +25,11 @@ type Application = {
 export default function NetworkScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { tab: initialTab } = useLocalSearchParams<{ tab?: NetworkTab }>();
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
 
-  const [activeTab, setActiveTab] = useState<NetworkTab>('applications');
+  const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'artists' || initialTab === 'venues' ? initialTab : 'applications');
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -47,16 +47,10 @@ export default function NetworkScreen() {
   // ── Fetch applications on mount ───────────────────────────────────────────
   useEffect(() => { fetchApplications(); }, []);
 
-  // ── Re-fetch artists/venues every time the screen comes into focus ─────────
-  useFocusEffect(useCallback(() => {
-    if (activeTab === 'artists') fetchArtists();
-    if (activeTab === 'venues') fetchVenues();
-  }, [activeTab]));
-
-  // ── Lazy-fetch when switching tabs (first open) ────────────────────────────
+  // ── Fetch artists/venues only when switching to that tab and data is empty ─
   useEffect(() => {
-    if (activeTab === 'artists') fetchArtists();
-    if (activeTab === 'venues') fetchVenues();
+    if (activeTab === 'artists' && sbArtists.length === 0) fetchArtists();
+    if (activeTab === 'venues' && sbVenues.length === 0) fetchVenues();
   }, [activeTab]);
 
   const fetchApplications = async () => {

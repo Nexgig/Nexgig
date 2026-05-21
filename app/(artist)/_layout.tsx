@@ -137,16 +137,16 @@ export default function DJLayout() {
         }
       }
 
-      assignments.forEach((a: any) => {
-        lineupStore.assignToVenue({
-          id: a.id,
-          globalLineupId: `${a.manager_id}-${currentUser.id}`,
-          venueId: a.venue_id,
-          artistId: currentUser.id,
-          assignedAt: a.created_at,
-          status: 'active' as const,
-        });
-      });
+      // Reset artist's venue assignments with fresh data from Supabase
+      const freshAssignments = assignments.map((a: any) => ({
+        id: a.id,
+        globalLineupId: `${a.manager_id}-${currentUser.id}`,
+        venueId: a.venue_id,
+        artistId: currentUser.id,
+        assignedAt: a.created_at,
+        status: 'active' as const,
+      }));
+      lineupStore.resetVenueAssignmentsForArtist(currentUser.id, freshAssignments);
     };
     fetchVenueAssignments();
   }, [currentUser?.id]);
@@ -163,7 +163,6 @@ export default function DJLayout() {
       <Stack.Screen name="pending-requests" />
       <Stack.Screen name="my-venues" />
       <Stack.Screen name="venue-detail" />
-      <Stack.Screen name="discovery" />
       <Stack.Screen name="artist-profile-view" />
       <Stack.Screen name="invoices" />
       <Stack.Screen name="invoice-gigs" />

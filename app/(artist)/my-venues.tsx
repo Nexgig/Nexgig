@@ -1,11 +1,12 @@
-import { useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Image } from 'react-native';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, Image, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { supabase } from '@/lib/supabase';
 import type { Venue } from '@/lib/types';
 
 export default function ArtistMyVenuesScreen() {
@@ -18,6 +19,47 @@ export default function ArtistMyVenuesScreen() {
   const allNotifications = useNotificationStore((s) => s.notifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const [dismissedHighlight, setDismissedHighlight] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetched, setFetched] = useState(false);
+
+  // Fetch once on first open only
+  useEffect(() => {
+    if (!currentUser?.id || fetched) return;
+    setIsLoading(true);
+    const fetch = async () => {
+      const { data: assignments } = await supabase
+        .from('venue_assignments')
+        .select('*')
+        .eq('artist_id', currentUser.id)
+        .eq('status', 'active');
+      if (!assignments || assignments.length === 0) { setIsLoading(false); setFetched(true); return; }
+      const knownVenueIds = new Set(allVenues.map((v) => v.id));
+      const missingIds = assignments.map((a: any) => a.venue_id).filter((id: string) => !knownVenueIds.has(id));
+      if (missingIds.length > 0) {
+        const { data: venuesData } = await supabase.from('venues').select('*').in('id', missingIds);
+        if (venuesData) {
+          venuesData.forEach((v: any) => {
+            useVenueStore.getState().addVenue({
+              id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
+              description: v.description, photoUrls: v.photo_urls ?? [],
+              genrePreferences: v.genre_preferences ?? [], energyPreferences: v.energy_preferences ?? [],
+              googleMapsLocation: v.google_maps_location, isHidden: v.is_hidden ?? false,
+              createdAt: v.created_at, updatedAt: v.updated_at,
+            });
+          });
+        }
+      }
+      const freshAssignments = assignments.map((a: any) => ({
+        id: a.id, globalLineupId: `${a.manager_id}-${currentUser.id}`,
+        venueId: a.venue_id, artistId: currentUser.id,
+        assignedAt: a.created_at, status: 'active' as const,
+      }));
+      useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, freshAssignments);
+      setFetched(true);
+      setIsLoading(false);
+    };
+    fetch();
+  }, [currentUser?.id, fetched]);
 
   const myVenues = useMemo(() => {
     const activeAssignments = venueAssignments.filter(
@@ -55,15 +97,14 @@ export default function ArtistMyVenuesScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>My Venues</Text>
-        <Pressable
-          style={({ pressed }) => [styles.discoverBtn, { borderColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => router.push('/(artist)/discovery' as Href)}
-        >
-          <MaterialIcons name="explore" size={15} color={colors.primary} />
-          <Text style={[styles.discoverBtnText, { color: colors.primary }]}>Discover</Text>
-        </Pressable>
+        <View style={{ width: 36 }} />
       </View>
 
+      {isLoading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
       <FlatList
         data={myVenues}
         keyExtractor={(item) => item.id}
@@ -126,6 +167,7 @@ export default function ArtistMyVenuesScreen() {
           );
         }}
       />
+      )}
     </ScreenContainer>
   );
 }
@@ -155,6 +197,4 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
-  discoverBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7 },
-  discoverBtnText: { fontSize: 13, fontWeight: '700' },
 });

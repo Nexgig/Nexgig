@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Linking } from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Linking, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { useLineupStore, useBookingStore, useVenueStore, useSlotStore } from '@/
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
+import { supabase } from '@/lib/supabase';
 
 function formatMemberSince(createdAt?: string): string {
   if (!createdAt) return '';
@@ -26,8 +27,51 @@ export default function ArtistProfileViewScreen() {
   const allSlots = useSlotStore((s) => s.slots);
   const allVenues = useVenueStore((s) => s.venues);
 
-  const dj = getArtistUser(artistId ?? '');
-  const profile = getArtistProfile(artistId ?? '');
+  const djFromStore = getArtistUser(artistId ?? '');
+  const profileFromStore = getArtistProfile(artistId ?? '');
+
+  const [fetchedUser, setFetchedUser] = useState<any>(null);
+  const [fetchedProfile, setFetchedProfile] = useState<any>(null);
+  const [isFetching, setIsFetching] = useState(false);
+
+  useEffect(() => {
+    if (djFromStore || !artistId) return;
+    setIsFetching(true);
+    Promise.all([
+      supabase.from('users').select('*').eq('id', artistId).single(),
+      supabase.from('artists').select('*').eq('user_id', artistId).maybeSingle(),
+    ]).then(([userRes, profileRes]) => {
+      if (userRes.data) {
+        const u = userRes.data;
+        setFetchedUser({
+          id: u.id, email: u.email, phone: u.phone, accountType: u.account_type,
+          fullName: u.full_name, profilePhotoUrl: u.profile_photo_url,
+          bio: u.bio, location: u.location, yearsOfExperience: u.years_of_experience,
+          isPhoneVerified: u.is_phone_verified ?? false, isEmailVerified: u.is_email_verified ?? false,
+          createdAt: u.created_at, updatedAt: u.updated_at,
+        });
+      }
+      if (profileRes.data) {
+        const p = profileRes.data;
+        setFetchedProfile({
+          userId: p.user_id, primaryGenre: p.primary_genre,
+          secondaryGenres: p.secondary_genres ?? [], energyTypes: p.energy_types ?? [],
+          instruments: p.instruments ?? [], socialLinks: p.social_links,
+          ratePerHour: p.rate_per_hour, bio: p.bio,
+          basedIn: p.based_in, nationality: p.nationality,
+          isHistoryHidden: p.is_history_hidden ?? false,
+          mediaLinks: {
+            soundcloud: p.soundcloud_url, instagram: p.instagram_url, spotify: p.spotify_url,
+          },
+          createdAt: p.created_at, updatedAt: p.updated_at,
+        });
+      }
+      setIsFetching(false);
+    });
+  }, [artistId, djFromStore]);
+
+  const dj = djFromStore ?? fetchedUser;
+  const profile = profileFromStore ?? fetchedProfile;
 
   // All completed bookings for this artist (public gig history)
   const completedBookings = useMemo(() => {
@@ -54,6 +98,16 @@ export default function ArtistProfileViewScreen() {
     cutoff.setDate(cutoff.getDate() - 30);
     return completedBookings.filter((b) => b.slot?.date && new Date(b.slot.date) >= cutoff).length;
   }, [completedBookings]);
+
+  if (isFetching) {
+    return (
+      <ScreenContainer>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   if (!dj) {
     return (

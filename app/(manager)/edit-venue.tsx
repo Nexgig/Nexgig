@@ -265,6 +265,7 @@ export default function EditVenueScreen() {
           style: 'destructive',
           onPress: async () => {
             deleteVenue(venue.id);
+            await supabase.from('venue_assignments').delete().eq('venue_id', venue.id);
             await supabase.from('venues').delete().eq('id', venue.id);
             router.replace('/(manager)/(tabs)/profile' as any);
           },

@@ -114,8 +114,8 @@ export default function DJTabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="safari.fill" color={color} />,
+          title: 'Network',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.2.fill" color={color} />,
         }}
       />
       <Tabs.Screen

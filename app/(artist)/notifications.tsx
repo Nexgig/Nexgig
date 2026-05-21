@@ -116,36 +116,41 @@ export default function ArtistNotificationsScreen() {
       managerId: invite.manager_id, artistId: currentUser.id,
       status: 'active' as const, addedAt: new Date().toISOString(),
     });
-    // Add venue assignments to local store + fetch venue data if not already in store
-    if (invite.venue_ids && invite.venue_ids.length > 0) {
-      const missingVenueIds = invite.venue_ids.filter(
-        (id: string) => !allVenues.some((v) => v.id === id)
-      );
-      if (missingVenueIds.length > 0) {
-        const { data: venuesData } = await supabase
-          .from('venues')
-          .select('*')
-          .in('id', missingVenueIds);
-        if (venuesData) {
-          venuesData.forEach((v: any) => {
-            addVenue({
-              id: v.id, managerId: v.manager_id, name: v.name,
-              venueType: v.venue_type, description: v.description,
-              photoUrls: v.photo_urls ?? [],
-              genrePreferences: v.genre_preferences ?? [],
-              energyPreferences: v.energy_preferences ?? [],
-              googleMapsLocation: v.google_maps_location,
-              isHidden: v.is_hidden ?? false,
-              createdAt: v.created_at, updatedAt: v.updated_at,
-            });
+    // Add venue assignments — fetch ALL manager venues and assign
+    const { data: managerVenues } = await supabase
+      .from('venues')
+      .select('id, manager_id, name, venue_type, photo_urls, genre_preferences, energy_preferences, google_maps_location, is_hidden, created_at, updated_at')
+      .eq('manager_id', invite.manager_id)
+      .neq('is_hidden', true);
+
+    if (managerVenues && managerVenues.length > 0) {
+      const assignments = managerVenues.map((v: any) => ({
+        manager_id: invite.manager_id, artist_id: currentUser.id,
+        venue_id: v.id, status: 'active',
+      }));
+      await supabase.from('venue_assignments').upsert(assignments, { onConflict: 'venue_id,artist_id' });
+
+      // Add venues to local store if missing
+      managerVenues.forEach((v: any) => {
+        if (!allVenues.some((existing) => existing.id === v.id)) {
+          addVenue({
+            id: v.id, managerId: v.manager_id, name: v.name,
+            venueType: v.venue_type, description: v.description,
+            photoUrls: v.photo_urls ?? [],
+            genrePreferences: v.genre_preferences ?? [],
+            energyPreferences: v.energy_preferences ?? [],
+            googleMapsLocation: v.google_maps_location,
+            isHidden: v.is_hidden ?? false,
+            createdAt: v.created_at, updatedAt: v.updated_at,
           });
         }
-      }
-      invite.venue_ids.forEach((venueId: string, idx: number) => {
+      });
+
+      managerVenues.forEach((v: any, idx: number) => {
         assignToVenue({
           id: `va-${invite.id}-${idx}`,
           globalLineupId: `${invite.manager_id}-${currentUser.id}`,
-          venueId, artistId: currentUser.id,
+          venueId: v.id, artistId: currentUser.id,
           assignedAt: new Date().toISOString(),
           status: 'active' as const,
         });

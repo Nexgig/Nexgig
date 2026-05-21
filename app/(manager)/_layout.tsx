@@ -227,7 +227,6 @@ if (!lineupError && lineupData) {
       <Stack.Screen name="my-venues" />
       <Stack.Screen name="artists" />
       <Stack.Screen name="completed-gigs" />
-      <Stack.Screen name="discovery" />
       <Stack.Screen name="edit-profile" options={{ gestureEnabled: false }} />
       <Stack.Screen name="edit-venue" options={{ gestureEnabled: false }} />
       <Stack.Screen name="manager-artist-invoices" />

@@ -1,19 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
-import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
+
+type NetworkTab = 'applications' | 'venues' | 'artists';
 
 type VenueItem = {
   id: string;
   name: string;
   venue_type: string;
-  address: string;
+  address: string | null;
   genre_preferences: string[];
   manager_id: string;
 };
@@ -27,97 +28,146 @@ type ArtistItem = {
   secondary_genres: string[];
 };
 
-type ExploreTab = 'venues' | 'artists';
+type ApplicationItem = {
+  id: string;
+  venue_id: string;
+  status: string;
+  created_at: string;
+  venue: { name: string; venue_type: string } | null;
+};
 
-export default function ExploreScreen() {
+export default function ArtistNetworkScreen() {
   const colors = useColors();
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.currentUser);
 
-  const [activeTab, setActiveTab] = useState<ExploreTab>('venues');
-  const [venues, setVenues] = useState<VenueItem[]>([]);
-  const [artists, setArtists] = useState<ArtistItem[]>([]);
+  const addNotification = useNotificationStore((s) => s.addNotification);
+  const [activeTab, setActiveTab] = useState<NetworkTab>('applications');
   const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+
+  // ── Applications state ─────────────────────────────────────────────────────
+  const [applications, setApplications] = useState<ApplicationItem[]>([]);
+  const [appsLoading, setAppsLoading] = useState(true);
+
+  // ── Venues state ───────────────────────────────────────────────────────────
+  const [venues, setVenues] = useState<VenueItem[]>([]);
+  const [assignedVenueIds, setAssignedVenueIds] = useState<Set<string>>(new Set());
   const [appliedVenueIds, setAppliedVenueIds] = useState<Set<string>>(new Set());
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [venuesFetched, setVenuesFetched] = useState(false);
 
+  // ── Artists state ──────────────────────────────────────────────────────────
+  const [artists, setArtists] = useState<ArtistItem[]>([]);
+  const [artistsLoading, setArtistsLoading] = useState(false);
+  const [artistsFetched, setArtistsFetched] = useState(false);
+
+  // ── Fetch applications on mount + on focus ─────────────────────────────────
+  useFocusEffect(useCallback(() => {
+    fetchApplications();
+  }, [currentUser?.id]));
+
+  // ── Lazy-fetch venues/artists on first tab open ────────────────────────────
   useEffect(() => {
-    fetchVenues();
-    fetchArtists();
-    fetchExistingApplications();
-  }, []);
+    if (activeTab === 'venues' && !venuesFetched) fetchVenues();
+    if (activeTab === 'artists' && !artistsFetched) fetchArtists();
+  }, [activeTab]);
+
+  const fetchApplications = async () => {
+    if (!currentUser) return;
+    setAppsLoading(true);
+    const { data } = await supabase
+      .from('applications')
+      .select('id, venue_id, status, created_at')
+      .eq('artist_id', currentUser.id)
+      .in('status', ['pending', 'accepted'])
+      .order('created_at', { ascending: false });
+    if (data && data.length > 0) {
+      const venueIds = data.map((a: any) => a.venue_id);
+      const { data: venuesData } = await supabase
+        .from('venues')
+        .select('id, name, venue_type')
+        .in('id', venueIds);
+      const venueMap = Object.fromEntries((venuesData ?? []).map((v: any) => [v.id, v]));
+      setApplications(data.map((a: any) => ({ ...a, venue: venueMap[a.venue_id] ?? null })));
+    } else {
+      setApplications([]);
+    }
+    setAppsLoading(false);
+  };
 
   const fetchVenues = async () => {
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from('venues')
-      .select('id, name, venue_type, address, genre_preferences, manager_id')
-      .eq('is_hidden', false);
-    if (!error && data) setVenues(data);
-console.log('venues data:', data);
-console.log('venues error:', error);
-setIsLoading(false);
+    if (!currentUser) return;
+    setVenuesLoading(true);
+    const [venuesRes, assignmentsRes, appsRes] = await Promise.all([
+      supabase.from('venues').select('id, name, venue_type, address, genre_preferences, manager_id').neq('is_hidden', true),
+      supabase.from('venue_assignments').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'active'),
+      supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).in('status', ['pending', 'accepted']),
+    ]);
+    if (venuesRes.data) setVenues(venuesRes.data);
+    setAssignedVenueIds(new Set((assignmentsRes.data ?? []).map((a: any) => a.venue_id)));
+    setAppliedVenueIds(new Set((appsRes.data ?? []).map((a: any) => a.venue_id)));
+    setVenuesFetched(true);
+    setVenuesLoading(false);
   };
 
   const fetchArtists = async () => {
-    const { data, error } = await supabase
+    setArtistsLoading(true);
+    const { data } = await supabase
       .from('artists')
       .select('id, full_name, primary_genre, based_in, profile_photo_url, secondary_genres')
       .neq('id', currentUser?.id ?? '');
-    if (!error && data) setArtists(data);
+    if (data) setArtists(data);
+    setArtistsFetched(true);
+    setArtistsLoading(false);
   };
 
-  const fetchExistingApplications = async () => {
+  const handleJoin = async (venue: VenueItem) => {
     if (!currentUser) return;
-    const { data } = await supabase
-      .from('applications')
-      .select('venue_id')
-      .eq('artist_id', currentUser.id)
-      .in('status', ['pending', 'accepted']);
-    if (data) {
-      setAppliedVenueIds(new Set(data.map((a: any) => a.venue_id)));
-    }
-  };
-
-  const handleApply = async (venue: VenueItem) => {
-    if (!currentUser) return;
-    Alert.alert(
-      'Apply to Venue',
-      `Send an application to ${venue.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Apply',
-          onPress: async () => {
-            setApplyingId(venue.id);
-            const { error } = await supabase.from('applications').insert({
-              artist_id: currentUser.id,
-              manager_id: venue.manager_id,
-              venue_id: venue.id,
-              status: 'pending',
-            });
+    Alert.alert('Join Venue', `Send a request to join ${venue.name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Join',
+        onPress: async () => {
+          setApplyingId(venue.id);
+          const { error } = await supabase.from('applications').insert({
+            artist_id: currentUser.id,
+            manager_id: venue.manager_id,
+            venue_id: venue.id,
+            status: 'pending',
+          });
+          if (error) {
             setApplyingId(null);
-            if (error) {
-              Alert.alert('Error', error.message);
-            } else {
-              setAppliedVenueIds((prev) => new Set([...prev, venue.id]));
-              Alert.alert('Applied!', `Your application to ${venue.name} has been sent.`);
-            }
-          },
+            Alert.alert('Error', error.message);
+            return;
+          }
+          // Notify manager
+          addNotification({
+            id: `app-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            userId: venue.manager_id,
+            type: 'lineup_request' as any,
+            title: 'New Join Request',
+            body: `${currentUser.fullName ?? 'An artist'} wants to join ${venue.name}.`,
+            isRead: false,
+            relatedId: venue.id,
+            relatedType: 'venue',
+            createdAt: new Date().toISOString(),
+          });
+          setApplyingId(null);
+          setAppliedVenueIds((prev) => new Set([...prev, venue.id]));
+          fetchApplications();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
     const results = q
-      ? venues.filter(
-          (v) =>
-            v.name.toLowerCase().includes(q) ||
-            v.venue_type?.toLowerCase().includes(q) ||
-            v.address?.toLowerCase().includes(q)
+      ? venues.filter((v) =>
+          v.name.toLowerCase().includes(q) ||
+          v.venue_type?.toLowerCase().includes(q) ||
+          v.address?.toLowerCase().includes(q)
         )
       : venues;
     return [...results].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
@@ -126,11 +176,10 @@ setIsLoading(false);
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
     const results = q
-      ? artists.filter(
-          (a) =>
-            a.full_name?.toLowerCase().includes(q) ||
-            a.primary_genre?.toLowerCase().includes(q) ||
-            a.based_in?.toLowerCase().includes(q)
+      ? artists.filter((a) =>
+          a.full_name?.toLowerCase().includes(q) ||
+          a.primary_genre?.toLowerCase().includes(q) ||
+          a.based_in?.toLowerCase().includes(q)
         )
       : artists;
     return [...results].sort((a, b) => (a.full_name ?? '').toLowerCase().localeCompare((b.full_name ?? '').toLowerCase()));
@@ -140,187 +189,255 @@ setIsLoading(false);
     <ScreenContainer edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Explore</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>Venues & Artists</Text>
-        </View>
+        <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>Venues, artists & applications</Text>
       </View>
 
-      {/* Search */}
-      <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <MaterialIcons name="search" size={18} color={colors.muted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
-          placeholderTextColor={colors.muted}
-          value={search}
-          onChangeText={setSearch}
-          returnKeyType="search"
-          autoCapitalize="none"
-        />
-        {search.length > 0 && (
-          <Pressable onPress={() => setSearch('')} hitSlop={8}>
-            <MaterialIcons name="close" size={16} color={colors.muted} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* Tabs */}
+      {/* Sub-tabs */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {(['venues', 'artists'] as ExploreTab[]).map((tab) => (
+        {(['applications', 'venues', 'artists'] as NetworkTab[]).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
             onPress={() => { setActiveTab(tab); setSearch(''); }}
           >
             <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-              {tab === 'venues' ? `Venues (${filteredVenues.length})` : `Artists (${filteredArtists.length})`}
+              {tab === 'applications'
+                ? `Applications${applications.length > 0 ? ` (${applications.length})` : ''}`
+                : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
+      {/* Search bar for venues and artists */}
+      {(activeTab === 'venues' || activeTab === 'artists') && (
+        <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <MaterialIcons name="search" size={18} color={colors.muted} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
+            placeholderTextColor={colors.muted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+              <MaterialIcons name="close" size={16} color={colors.muted} />
+            </Pressable>
+          )}
         </View>
-      ) : activeTab === 'venues' ? (
-        <FlatList
-          data={filteredVenues}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <MaterialIcons name="place" size={48} color={colors.muted} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Venues Found</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                {search ? 'Try a different search term' : 'No venues available yet'}
-              </Text>
-            </View>
-          }
-          renderItem={({ item: venue }) => {
-            const hasApplied = appliedVenueIds.has(venue.id);
-            const isApplying = applyingId === venue.id;
-            return (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      )}
+
+      {/* Applications tab */}
+      {activeTab === 'applications' && (
+        appsLoading ? (
+          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : (
+          <FlatList
+            data={applications}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <MaterialIcons name="inbox" size={48} color={colors.muted} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Applications</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
+                  Your venue applications will appear here
+                </Text>
+              </View>
+            }
+            renderItem={({ item: app }) => (
+              <View style={[styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.cardLeft}>
                   <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
                     <MaterialIcons name="place" size={22} color={colors.muted} />
                   </View>
                   <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
-                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {venue.venue_type}{venue.address ? ` · ${venue.address}` : ''}
+                    <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>
+                      {app.venue?.name ?? 'Unknown Venue'}
                     </Text>
-                    {venue.genre_preferences && venue.genre_preferences.length > 0 && (
+                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                      {app.venue?.venue_type ?? 'Venue'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.statusBadge, {
+                  backgroundColor: app.status === 'accepted' ? colors.success + '15' : '#F59E0B15',
+                  borderColor: app.status === 'accepted' ? colors.success + '40' : '#F59E0B40',
+                }]}>
+                  <Text style={[styles.statusText, { color: app.status === 'accepted' ? colors.success : '#F59E0B' }]}>
+                    {app.status === 'accepted' ? 'Accepted' : 'Pending'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          />
+        )
+      )}
+
+      {/* Venues tab */}
+      {activeTab === 'venues' && (
+        venuesLoading ? (
+          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : (
+          <FlatList
+            data={filteredVenues}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <MaterialIcons name="place" size={48} color={colors.muted} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Venues Found</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
+                  {search ? 'Try a different search term' : 'No venues available yet'}
+                </Text>
+              </View>
+            }
+            renderItem={({ item: venue }) => {
+              const isConnected = assignedVenueIds.has(venue.id);
+              const hasApplied = appliedVenueIds.has(venue.id);
+              const isApplying = applyingId === venue.id;
+              return (
+                <Pressable
+                  style={({ pressed }) => [styles.rowCard, {
+                    backgroundColor: colors.surface,
+                    borderColor: isConnected ? colors.success + '40' : colors.border,
+                    opacity: pressed ? 0.85 : 1,
+                  }]}
+                  onPress={() => router.push((`/(artist)/venue-detail?id=` + venue.id) as Href)}
+                >
+                  <View style={styles.cardLeft}>
+                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                      <MaterialIcons name="place" size={22} color={colors.muted} />
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+                      <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                        {venue.venue_type}{venue.address ? ` · ${venue.address}` : ''}
+                      </Text>
+                      {venue.genre_preferences?.length > 0 && (
+                        <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
+                          {venue.genre_preferences.slice(0, 3).join(' · ')}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  {isConnected ? (
+                    <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
+                      <MaterialIcons name="check-circle" size={12} color={colors.success} />
+                      <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={[styles.applyBtn, {
+                        backgroundColor: hasApplied ? colors.surface : colors.primary,
+                        borderColor: hasApplied ? colors.border : colors.primary,
+                      }]}
+                      onPress={(e) => { e.stopPropagation(); !hasApplied && handleJoin(venue); }}
+                      disabled={hasApplied || isApplying}
+                    >
+                      {isApplying ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={[styles.applyBtnText, { color: hasApplied ? colors.muted : '#fff' }]}>
+                          {hasApplied ? 'Requested' : 'Join'}
+                        </Text>
+                      )}
+                    </Pressable>
+                  )}
+                </Pressable>
+              );
+            }}
+          />
+        )
+      )}
+
+      {/* Artists tab */}
+      {activeTab === 'artists' && (
+        artistsLoading ? (
+          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : (
+          <FlatList
+            data={filteredArtists}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <MaterialIcons name="people" size={48} color={colors.muted} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
+                  {search ? 'Try a different search term' : 'No artists available yet'}
+                </Text>
+              </View>
+            }
+            renderItem={({ item: artist }) => (
+              <Pressable
+                style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => router.push((`/(artist)/artist-profile-view?artistId=` + artist.id) as Href)}
+              >
+                <View style={styles.cardLeft}>
+                  {artist.profile_photo_url ? (
+                    <Image source={{ uri: artist.profile_photo_url }} style={styles.thumb} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                      <MaterialIcons name="person" size={22} color={colors.muted} />
+                    </View>
+                  )}
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{artist.full_name}</Text>
+                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                      {artist.primary_genre ?? 'Artist'}{artist.based_in ? ` · ${artist.based_in}` : ''}
+                    </Text>
+                    {artist.secondary_genres?.length > 0 && (
                       <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
-                        {venue.genre_preferences.slice(0, 3).join(' · ')}
+                        {artist.secondary_genres.slice(0, 3).join(' · ')}
                       </Text>
                     )}
                   </View>
                 </View>
-                <Pressable
-                  style={[
-                    styles.applyBtn,
-                    {
-                      backgroundColor: hasApplied ? colors.surface : colors.primary,
-                      borderColor: hasApplied ? colors.border : colors.primary,
-                    },
-                  ]}
-                  onPress={() => !hasApplied && handleApply(venue)}
-                  disabled={hasApplied || isApplying}
-                >
-                  {isApplying ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={[styles.applyBtnText, { color: hasApplied ? colors.muted : '#fff' }]}>
-                      {hasApplied ? 'Applied' : 'Apply'}
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-            );
-          }}
-        />
-      ) : (
-        <FlatList
-          data={filteredArtists}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <MaterialIcons name="people" size={48} color={colors.muted} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                {search ? 'Try a different search term' : 'No artists available yet'}
-              </Text>
-            </View>
-          }
-          renderItem={({ item: artist }) => (
-            <Pressable
-              style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push((`/(artist)/artist-profile-view?artistId=` + artist.id) as Href)}
-            >
-              <View style={styles.cardLeft}>
-                <AvatarImage uri={artist.profile_photo_url} name={artist.full_name} size={48} />
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{artist.full_name}</Text>
-                  <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                    {artist.primary_genre ?? 'Artist'}{artist.based_in ? ` · ${artist.based_in}` : ''}
-                  </Text>
-                  {artist.secondary_genres && artist.secondary_genres.length > 0 && (
-                    <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
-                      {artist.secondary_genres.slice(0, 3).join(' · ')}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
-            </Pressable>
-          )}
-        />
+                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+              </Pressable>
+            )}
+          />
+        )
       )}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    alignItems: 'center',
-    paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5,
-  },
-  headerCenter: { alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '700' },
-  subtitle: { fontSize: 12, marginTop: 1 },
+  header: { alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
+  title: { fontSize: 22, fontWeight: '800' },
+  subtitle: { fontSize: 12, marginTop: 2 },
+  tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  tabText: { fontSize: 13, fontWeight: '600' },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 12, marginBottom: 4,
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },
-  tabBar: {
-    flexDirection: 'row', borderBottomWidth: 0.5, marginTop: 8,
-  },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabText: { fontSize: 14, fontWeight: '600' },
-  list: { padding: 16, gap: 10, flexGrow: 1 },
-  card: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 14, borderWidth: 1, padding: 14,
-  },
+  list: { padding: 16, gap: 12, flexGrow: 1 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   thumb: { width: 48, height: 48, borderRadius: 12, borderWidth: 1 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   cardSub: { fontSize: 13, marginBottom: 2 },
   cardMeta: { fontSize: 12 },
-  applyBtn: {
-    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8,
-    borderWidth: 1, minWidth: 70, alignItems: 'center',
-  },
+  connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
+  connectedText: { fontSize: 11, fontWeight: '700' },
+  applyBtn: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, minWidth: 70, alignItems: 'center' },
   applyBtnText: { fontSize: 13, fontWeight: '700' },
+  statusBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  statusText: { fontSize: 12, fontWeight: '700' },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },

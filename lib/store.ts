@@ -116,6 +116,7 @@ interface LineupState {
   // Venue assignment methods
   assignToVenue: (assignment: VenueAssignment) => void;
   removeFromVenue: (venueId: string, artistId: string) => void;
+  resetVenueAssignmentsForArtist: (artistId: string, assignments: VenueAssignment[]) => void;
   getAssignmentsByVenue: (venueId: string) => VenueAssignment[];
   getAssignmentsByArtist: (artistId: string) => VenueAssignment[];
   getVenuesForArtist: (artistId: string) => string[];
@@ -191,6 +192,12 @@ artistUsers: [],
         ? { ...a, status: 'removed' as const, removedAt: new Date().toISOString() }
         : a
     ),
+  })),
+  resetVenueAssignmentsForArtist: (artistId, assignments) => set((state) => ({
+    venueAssignments: [
+      ...state.venueAssignments.filter((a) => a.artistId !== artistId),
+      ...assignments,
+    ],
   })),
   getAssignmentsByVenue: (venueId) =>
     get().venueAssignments.filter((a) => a.venueId === venueId && a.status === 'active'),

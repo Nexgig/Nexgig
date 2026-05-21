@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -42,8 +42,6 @@ export default function ArtistProfileViewScreen() {
 
   // ── Invite state ──────────────────────────────────────────────────────────
   const [inviteStatus, setInviteStatus] = useState<'none' | 'pending'>('none');
-  const [showInviteSheet, setShowInviteSheet] = useState(false);
-  const [selectedVenueIds, setSelectedVenueIds] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
 
   // Check if artist is connected or has a pending invite
@@ -66,45 +64,46 @@ export default function ArtistProfileViewScreen() {
       });
   }, [currentUser?.id, artistId, isConnected]);
 
-  const toggleVenue = (venueId: string) => {
-    setSelectedVenueIds((prev) =>
-      prev.includes(venueId) ? prev.filter((id) => id !== venueId) : [...prev, venueId]
-    );
-  };
 
   const handleSendInvite = async () => {
     if (!currentUser || !artistId || !dj) return;
-    setIsSending(true);
-    const { data, error } = await supabase
-      .from('invites')
-      .insert({ manager_id: currentUser.id, artist_id: artistId, venue_ids: selectedVenueIds, status: 'pending' })
-      .select('id')
-      .single();
-    if (error) {
-      setIsSending(false);
-      Alert.alert('Error', error.message);
-      return;
-    }
-    const venueNames = selectedVenueIds
-      .map((id) => myVenues.find((v) => v.id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
-    addNotification({
-      id: `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      userId: artistId,
-      type: 'manager_invite',
-      title: 'Lineup Invitation',
-      body: `${currentUser.fullName ?? 'A manager'} invited you to join their lineup${venueNames ? ` · ${venueNames}` : ''}.`,
-      isRead: false,
-      relatedId: data.id,
-      relatedType: 'invite',
-      createdAt: new Date().toISOString(),
-    });
-    setIsSending(false);
-    setInviteStatus('pending');
-    setShowInviteSheet(false);
-    setSelectedVenueIds([]);
-    Alert.alert('Invite Sent!', `${dj.fullName} will be notified in their app.`);
+    Alert.alert(
+      'Invite to Lineup',
+      `Send ${dj.fullName} an invitation to join your lineup? They will be added to all your venues upon acceptance.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Invite',
+          onPress: async () => {
+            setIsSending(true);
+            const { data, error } = await supabase
+              .from('invites')
+              .insert({ manager_id: currentUser.id, artist_id: artistId, venue_ids: [], status: 'pending' })
+              .select('id')
+              .single();
+            if (error) {
+              setIsSending(false);
+              Alert.alert('Error', error.message);
+              return;
+            }
+            addNotification({
+              id: `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: artistId,
+              type: 'manager_invite',
+              title: 'Lineup Invitation',
+              body: `${currentUser.fullName ?? 'A manager'} invited you to join their lineup.`,
+              isRead: false,
+              relatedId: data.id,
+              relatedType: 'invite',
+              createdAt: new Date().toISOString(),
+            });
+            setIsSending(false);
+            setInviteStatus('pending');
+            Alert.alert('Invite Sent!', `${dj.fullName} will be notified in their app.`);
+          },
+        },
+      ]
+    );
   };
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -376,11 +375,12 @@ export default function ArtistProfileViewScreen() {
                 </View>
               ) : (
                 <Pressable
-                  style={({ pressed }) => [styles.inviteBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => setShowInviteSheet(true)}
+                  style={({ pressed }) => [styles.inviteBtn, { backgroundColor: colors.primary, opacity: (pressed || isSending) ? 0.85 : 1 }]}
+                  onPress={handleSendInvite}
+                  disabled={isSending}
                 >
                   <MaterialIcons name="person-add" size={14} color="#fff" />
-                  <Text style={styles.inviteBtnText}>Invite to Lineup</Text>
+                  <Text style={styles.inviteBtnText}>{isSending ? 'Sending…' : 'Invite to Lineup'}</Text>
                 </Pressable>
               )
             )}
@@ -559,90 +559,6 @@ export default function ArtistProfileViewScreen() {
       </ScrollView>
 
 
-
-      {/* ── Invite Sheet ──────────────────────────────────────────────────────── */}
-      <Modal visible={showInviteSheet} transparent animationType="slide" onRequestClose={() => setShowInviteSheet(false)}>
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <View style={styles.sheetArtistRow}>
-              {dj.profilePhotoUrl ? (
-                <Image source={{ uri: dj.profilePhotoUrl }} style={styles.sheetPhoto} resizeMode="cover" />
-              ) : (
-                <View style={[styles.sheetPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                  <MaterialIcons name="person" size={18} color={colors.muted} />
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.sheetTitle, { color: colors.foreground }]} numberOfLines={1}>Invite {dj.fullName}</Text>
-                <Text style={[styles.sheetSub, { color: colors.muted }]}>Select venues to assign on acceptance</Text>
-              </View>
-            </View>
-            {myVenues.length === 0 ? (
-              <View style={{ alignItems: 'center', paddingVertical: 24, gap: 8 }}>
-                <MaterialIcons name="place" size={36} color={colors.muted} />
-                <Text style={[styles.sheetSub, { color: colors.muted }]}>No venues yet — invite will add to global lineup only</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={myVenues}
-                keyExtractor={(v) => v.id}
-                style={{ maxHeight: 320, marginBottom: 16 }}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item: v }) => {
-                  const selected = selectedVenueIds.includes(v.id);
-                  return (
-                    <Pressable
-                      style={({ pressed }) => [styles.venueRow, {
-                        borderColor: selected ? colors.primary : colors.border,
-                        backgroundColor: selected ? colors.primary + '10' : colors.background,
-                        opacity: pressed ? 0.8 : 1,
-                      }]}
-                      onPress={() => toggleVenue(v.id)}
-                    >
-                      <View style={[styles.venueRowIcon, { backgroundColor: selected ? colors.primary + '20' : colors.border + '60' }]}>
-                        <MaterialIcons name="location-on" size={18} color={selected ? colors.primary : colors.muted} />
-                      </View>
-                      <View style={styles.venueRowInfo}>
-                        <Text style={[styles.venueRowName, { color: colors.foreground }]}>{v.name}</Text>
-                        <Text style={[styles.venueRowType, { color: colors.muted }]}>{v.venueType}</Text>
-                      </View>
-                      <View style={[styles.checkbox, {
-                        borderColor: selected ? colors.primary : colors.border,
-                        backgroundColor: selected ? colors.primary : 'transparent',
-                      }]}>
-                        {selected && <MaterialIcons name="check" size={14} color="#fff" />}
-                      </View>
-                    </Pressable>
-                  );
-                }}
-              />
-            )}
-            <Pressable
-              style={[styles.sendInviteBtn, { backgroundColor: colors.primary, opacity: isSending ? 0.7 : 1 }]}
-              onPress={handleSendInvite}
-              disabled={isSending}
-            >
-              {isSending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <MaterialIcons name="person-add" size={18} color="#fff" />
-                  <Text style={styles.sendInviteBtnText}>
-                    {selectedVenueIds.length > 0 ? `Send Invite · ${selectedVenueIds.length} Venue${selectedVenueIds.length > 1 ? 's' : ''}` : 'Send Invite'}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-            <Pressable
-              style={[styles.doneBtn, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 44 }]}
-              onPress={() => setShowInviteSheet(false)}
-            >
-              <Text style={[styles.doneBtnText, { color: colors.muted }]}>Cancel</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       {/* ── Assign Venue Sheet ────────────────────────────────────────────────── */}
       <Modal visible={showAssignSheet} transparent animationType="slide" onRequestClose={() => setShowAssignSheet(false)}>
