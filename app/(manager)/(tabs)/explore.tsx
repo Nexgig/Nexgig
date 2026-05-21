@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -8,6 +8,7 @@ import { useAuthStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from 'expo-router';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
 type NetworkTab = 'applications' | 'artists' | 'venues';
@@ -25,10 +26,10 @@ type Application = {
 export default function NetworkScreen() {
   const router = useRouter();
   const colors = useColors();
+  const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>('applications');
-
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -38,20 +39,24 @@ export default function NetworkScreen() {
   const [sbArtists, setSbArtists] = useState<User[]>([]);
   const [sbProfiles, setSbProfiles] = useState<ArtistProfile[]>([]);
   const [artistsLoading, setArtistsLoading] = useState(false);
-  const [artistsFetched, setArtistsFetched] = useState(false);
 
   // ── Venues state ──────────────────────────────────────────────────────────
   const [sbVenues, setSbVenues] = useState<Venue[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(false);
-  const [venuesFetched, setVenuesFetched] = useState(false);
 
   // ── Fetch applications on mount ───────────────────────────────────────────
   useEffect(() => { fetchApplications(); }, []);
 
-  // ── Lazy-fetch artists/venues when tab is first opened ────────────────────
+  // ── Re-fetch artists/venues every time the screen comes into focus ─────────
+  useFocusEffect(useCallback(() => {
+    if (activeTab === 'artists') fetchArtists();
+    if (activeTab === 'venues') fetchVenues();
+  }, [activeTab]));
+
+  // ── Lazy-fetch when switching tabs (first open) ────────────────────────────
   useEffect(() => {
-    if (activeTab === 'artists' && !artistsFetched) fetchArtists();
-    if (activeTab === 'venues' && !venuesFetched) fetchVenues();
+    if (activeTab === 'artists') fetchArtists();
+    if (activeTab === 'venues') fetchVenues();
   }, [activeTab]);
 
   const fetchApplications = async () => {
@@ -102,7 +107,6 @@ export default function NetworkScreen() {
         createdAt: p.created_at, updatedAt: p.updated_at,
       })));
     }
-    setArtistsFetched(true);
     setArtistsLoading(false);
   };
 
@@ -118,7 +122,6 @@ export default function NetworkScreen() {
         createdAt: v.created_at, updatedAt: v.updated_at,
       })));
     }
-    setVenuesFetched(true);
     setVenuesLoading(false);
   };
 
@@ -286,13 +289,22 @@ export default function NetworkScreen() {
             }
             renderItem={({ item: user }) => {
               const profile = getProfile(user.id);
+              const isConnected = globalLineup.some(
+                (r) => r.artistId === user.id && r.managerId === currentUser?.id && r.status === 'active'
+              );
               return (
                 <Pressable
-                  style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                  style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: isConnected ? colors.success + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
                   onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id) as Href)}
                 >
-                  <View style={styles.cardTop}>
-                    <AvatarImage uri={user.profilePhotoUrl} name={user.fullName} size={48} />
+                  <View style={styles.cardLeft}>
+                    {user.profilePhotoUrl ? (
+                      <Image source={{ uri: user.profilePhotoUrl }} style={styles.thumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                        <MaterialIcons name="person" size={22} color={colors.muted} />
+                      </View>
+                    )}
                     <View style={styles.cardInfo}>
                       <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{user.fullName}</Text>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
@@ -305,7 +317,14 @@ export default function NetworkScreen() {
                       )}
                     </View>
                   </View>
-                  <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                  {isConnected ? (
+                    <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
+                      <MaterialIcons name="check-circle" size={12} color={colors.success} />
+                      <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
+                    </View>
+                  ) : (
+                    <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                  )}
                 </Pressable>
               );
             }}
@@ -332,10 +351,10 @@ export default function NetworkScreen() {
             }
             renderItem={({ item: venue }) => (
               <Pressable
-                style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
               >
-                <View style={styles.cardTop}>
+                <View style={styles.cardLeft}>
                   {venue.photoUrls && venue.photoUrls.length > 0 ? (
                     <Image source={{ uri: venue.photoUrls[0] }} style={styles.thumb} resizeMode="cover" />
                   ) : (
@@ -374,7 +393,8 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '600' },
   list: { padding: 16, gap: 12, flexGrow: 1 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14 },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   cardSub: { fontSize: 13, marginBottom: 2 },
@@ -390,4 +410,6 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
+  connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
+  connectedText: { fontSize: 11, fontWeight: '700' },
 });

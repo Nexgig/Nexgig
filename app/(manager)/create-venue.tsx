@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe } from '@/lib/types';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
@@ -56,6 +56,8 @@ export default function CreateVenueScreen() {
   const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
   const addVenue = useVenueStore((s) => s.addVenue);
+  const globalLineup = useLineupStore((s) => s.globalLineup);
+  const assignToVenue = useLineupStore((s) => s.assignToVenue);
   const placesRef = useRef<any>(null);
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
@@ -218,6 +220,33 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     updatedAt: new Date().toISOString(),
   };
   addVenue(newVenue);
+
+  // Assign all existing lineup artists to the new venue
+  const activeLineup = globalLineup.filter(
+    (r) => r.managerId === user.id && r.status === 'active'
+  );
+  if (activeLineup.length > 0) {
+    // Supabase bulk upsert
+    const assignments = activeLineup.map((r) => ({
+      manager_id: user.id,
+      artist_id: r.artistId,
+      venue_id: venueData.id,
+      status: 'active',
+    }));
+    await supabase.from('venue_assignments').upsert(assignments, { onConflict: 'venue_id,artist_id' });
+    // Local store
+    activeLineup.forEach((r) => {
+      assignToVenue({
+        id: `va-${venueData.id}-${r.artistId}`,
+        globalLineupId: r.id,
+        venueId: venueData.id,
+        artistId: r.artistId,
+        assignedAt: new Date().toISOString(),
+        status: 'active' as const,
+      });
+    });
+  }
+
   router.replace('/(manager)/my-venues' as Href);
 };
 

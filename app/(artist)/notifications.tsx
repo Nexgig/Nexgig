@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuthStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useLineupStore, useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { supabase } from '@/lib/supabase';
 import type { AppNotification } from '@/lib/types';
 
 const NOTIF_ICONS: Record<string, string> = {
@@ -25,6 +26,7 @@ const NOTIF_ICONS: Record<string, string> = {
   lineup_removed: 'group-remove',
   venue_assigned: 'place',
   venue_removed: 'location-off',
+  manager_invite: 'person-add',
 };
 
 const NOTIF_COLORS: Record<string, string> = {
@@ -43,6 +45,7 @@ const NOTIF_COLORS: Record<string, string> = {
   lineup_removed: '#EF4444',
   venue_assigned: '#8B5CF6',
   venue_removed: '#EF4444',
+  manager_invite: '#F59E0B',
 };
 
 function timeAgo(dateStr: string): string {
@@ -64,6 +67,104 @@ export default function ArtistNotificationsScreen() {
   const allNotifications = useNotificationStore((s) => s.notifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+  const removeNotification = useNotificationStore((s) => s.removeNotification);
+  const addToGlobalLineup = useLineupStore((s) => s.addToGlobalLineup);
+  const addArtistUser = useLineupStore((s) => s.addArtistUser);
+  const assignToVenue = useLineupStore((s) => s.assignToVenue);
+  const addVenue = useVenueStore((s) => s.addVenue);
+  const allVenues = useVenueStore((s) => s.venues);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleAcceptInvite = async (notif: AppNotification) => {
+    if (!currentUser || !notif.relatedId) return;
+    setProcessingId(notif.id);
+    // Fetch invite details
+    const { data: invite, error } = await supabase
+      .from('invites')
+      .select('*')
+      .eq('id', notif.relatedId)
+      .single();
+    if (error || !invite) {
+      setProcessingId(null);
+      Alert.alert('Error', 'Invite not found.');
+      return;
+    }
+    // Add to global lineup
+    await supabase.from('global_lineup').upsert(
+      { manager_id: invite.manager_id, artist_id: currentUser.id, status: 'active' },
+      { onConflict: 'manager_id,artist_id' }
+    );
+    // Assign to selected venues
+    if (invite.venue_ids && invite.venue_ids.length > 0) {
+      const assignments = invite.venue_ids.map((venueId: string) => ({
+        manager_id: invite.manager_id, artist_id: currentUser.id,
+        venue_id: venueId, status: 'active',
+      }));
+      await supabase.from('venue_assignments').upsert(assignments, { onConflict: 'venue_id,artist_id' });
+    }
+    // Update invite status
+    await supabase.from('invites').update({ status: 'accepted', updated_at: new Date().toISOString() }).eq('id', invite.id);
+    // Update local store
+    addArtistUser({
+      id: currentUser.id, email: currentUser.email ?? '', phone: currentUser.phone ?? '',
+      accountType: 'artist' as const, fullName: currentUser.fullName ?? '',
+      isPhoneVerified: false, isEmailVerified: true,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    addToGlobalLineup({
+      id: `${invite.manager_id}-${currentUser.id}`,
+      managerId: invite.manager_id, artistId: currentUser.id,
+      status: 'active' as const, addedAt: new Date().toISOString(),
+    });
+    // Add venue assignments to local store + fetch venue data if not already in store
+    if (invite.venue_ids && invite.venue_ids.length > 0) {
+      const missingVenueIds = invite.venue_ids.filter(
+        (id: string) => !allVenues.some((v) => v.id === id)
+      );
+      if (missingVenueIds.length > 0) {
+        const { data: venuesData } = await supabase
+          .from('venues')
+          .select('*')
+          .in('id', missingVenueIds);
+        if (venuesData) {
+          venuesData.forEach((v: any) => {
+            addVenue({
+              id: v.id, managerId: v.manager_id, name: v.name,
+              venueType: v.venue_type, description: v.description,
+              photoUrls: v.photo_urls ?? [],
+              genrePreferences: v.genre_preferences ?? [],
+              energyPreferences: v.energy_preferences ?? [],
+              googleMapsLocation: v.google_maps_location,
+              isHidden: v.is_hidden ?? false,
+              createdAt: v.created_at, updatedAt: v.updated_at,
+            });
+          });
+        }
+      }
+      invite.venue_ids.forEach((venueId: string, idx: number) => {
+        assignToVenue({
+          id: `va-${invite.id}-${idx}`,
+          globalLineupId: `${invite.manager_id}-${currentUser.id}`,
+          venueId, artistId: currentUser.id,
+          assignedAt: new Date().toISOString(),
+          status: 'active' as const,
+        });
+      });
+    }
+    markAsRead(notif.id);
+    removeNotification(notif.id);
+    setProcessingId(null);
+    Alert.alert('Accepted!', 'You have joined their lineup.');
+  };
+
+  const handleDeclineInvite = async (notif: AppNotification) => {
+    if (!notif.relatedId) return;
+    setProcessingId(notif.id);
+    await supabase.from('invites').update({ status: 'declined', updated_at: new Date().toISOString() }).eq('id', notif.relatedId);
+    markAsRead(notif.id);
+    removeNotification(notif.id);
+    setProcessingId(null);
+  };
 
   // Derive the filtered + sorted list with useMemo so the reference is stable
   const notifications = useMemo(
@@ -103,13 +204,15 @@ export default function ArtistNotificationsScreen() {
   const renderNotif = ({ item }: { item: AppNotification }) => {
     const icon = NOTIF_ICONS[item.type] ?? 'notifications';
     const iconColor = NOTIF_COLORS[item.type] ?? colors.primary;
+    const isInvite = item.type === 'manager_invite';
+    const isProcessing = processingId === item.id;
     return (
       <Pressable
         style={({ pressed }) => [
           styles.notifCard,
-          { backgroundColor: item.isRead ? colors.surface : colors.primary + '08', borderColor: item.isRead ? colors.border : colors.primary + '30', opacity: pressed ? 0.85 : 1 }
+          { backgroundColor: item.isRead ? colors.surface : colors.primary + '08', borderColor: item.isRead ? colors.border : colors.primary + '30', opacity: pressed && !isInvite ? 0.85 : 1 }
         ]}
-        onPress={() => handlePress(item)}
+        onPress={() => !isInvite && handlePress(item)}
       >
         <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
           <MaterialIcons name={icon as any} size={22} color={iconColor} />
@@ -121,8 +224,26 @@ export default function ArtistNotificationsScreen() {
           }]}>{item.title}</Text>
           <Text style={[styles.notifBody, { color: colors.muted }]} numberOfLines={2}>{item.body}</Text>
           <Text style={[styles.notifTime, { color: colors.muted }]}>{timeAgo(item.createdAt)}</Text>
+          {isInvite && (
+            <View style={styles.inviteActions}>
+              <Pressable
+                style={[styles.acceptBtn, { backgroundColor: colors.success }]}
+                onPress={() => handleAcceptInvite(item)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.actionBtnText}>Accept</Text>}
+              </Pressable>
+              <Pressable
+                style={[styles.declineBtn, { borderColor: colors.border }]}
+                onPress={() => handleDeclineInvite(item)}
+                disabled={isProcessing}
+              >
+                <Text style={[styles.actionBtnText, { color: colors.muted }]}>Decline</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
-        {!item.isRead && <View style={[styles.unreadDot, { backgroundColor:
+        {!item.isRead && !isInvite && <View style={[styles.unreadDot, { backgroundColor:
             item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' || item.type === 'venue_assigned' ? '#22C55E' :
             item.type === 'booking_cancelled' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' || item.type === 'venue_removed' ? '#EF4444' :
             colors.primary
@@ -173,4 +294,8 @@ const styles = StyleSheet.create({
   notifBody: { fontSize: 13, lineHeight: 18, marginBottom: 4 },
   notifTime: { fontSize: 11 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, marginTop: 4 },
+  inviteActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  acceptBtn: { flex: 1, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
+  declineBtn: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
+  actionBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 });

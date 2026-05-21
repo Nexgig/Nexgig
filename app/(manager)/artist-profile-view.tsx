@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal } from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -9,6 +9,7 @@ import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotSt
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
+import { supabase } from '@/lib/supabase';
 import type { VenueAssignment } from '@/lib/types';
 
 function formatMemberSince(createdAt?: string): string {
@@ -38,6 +39,73 @@ export default function ArtistProfileViewScreen() {
 
   // ── Assign Venue sheet state ──────────────────────────────────────────────
   const [showAssignSheet, setShowAssignSheet] = useState(false);
+
+  // ── Invite state ──────────────────────────────────────────────────────────
+  const [inviteStatus, setInviteStatus] = useState<'none' | 'pending'>('none');
+  const [showInviteSheet, setShowInviteSheet] = useState(false);
+  const [selectedVenueIds, setSelectedVenueIds] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
+
+  // Check if artist is connected or has a pending invite
+  const isConnected = useMemo(
+    () => globalLineup.some((r) => r.artistId === artistId && r.managerId === currentUser?.id && r.status === 'active'),
+    [globalLineup, artistId, currentUser?.id]
+  );
+
+  useEffect(() => {
+    if (!currentUser?.id || !artistId || isConnected) return;
+    supabase
+      .from('invites')
+      .select('id, status')
+      .eq('manager_id', currentUser.id)
+      .eq('artist_id', artistId)
+      .eq('status', 'pending')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setInviteStatus('pending');
+      });
+  }, [currentUser?.id, artistId, isConnected]);
+
+  const toggleVenue = (venueId: string) => {
+    setSelectedVenueIds((prev) =>
+      prev.includes(venueId) ? prev.filter((id) => id !== venueId) : [...prev, venueId]
+    );
+  };
+
+  const handleSendInvite = async () => {
+    if (!currentUser || !artistId || !dj) return;
+    setIsSending(true);
+    const { data, error } = await supabase
+      .from('invites')
+      .insert({ manager_id: currentUser.id, artist_id: artistId, venue_ids: selectedVenueIds, status: 'pending' })
+      .select('id')
+      .single();
+    if (error) {
+      setIsSending(false);
+      Alert.alert('Error', error.message);
+      return;
+    }
+    const venueNames = selectedVenueIds
+      .map((id) => myVenues.find((v) => v.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+    addNotification({
+      id: `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: artistId,
+      type: 'manager_invite',
+      title: 'Lineup Invitation',
+      body: `${currentUser.fullName ?? 'A manager'} invited you to join their lineup${venueNames ? ` · ${venueNames}` : ''}.`,
+      isRead: false,
+      relatedId: data.id,
+      relatedType: 'invite',
+      createdAt: new Date().toISOString(),
+    });
+    setIsSending(false);
+    setInviteStatus('pending');
+    setShowInviteSheet(false);
+    setSelectedVenueIds([]);
+    Alert.alert('Invite Sent!', `${dj.fullName} will be notified in their app.`);
+  };
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const myVenues = useMemo(
@@ -70,8 +138,53 @@ export default function ArtistProfileViewScreen() {
     [allBookings, artistId, currentUser?.id]
   );
 
-  const dj = getArtistUser(artistId ?? '');
-  const profile = getArtistProfile(artistId ?? '');
+  const djFromStore = getArtistUser(artistId ?? '');
+  const profileFromStore = getArtistProfile(artistId ?? '');
+
+  // If artist isn't in local store (not on lineup), fetch from Supabase
+  const [fetchedUser, setFetchedUser] = useState<any>(null);
+  const [fetchedProfile, setFetchedProfile] = useState<any>(null);
+  const [isFetching, setIsFetching] = useState(false);
+
+  useEffect(() => {
+    if (djFromStore || !artistId) return; // already in store
+    setIsFetching(true);
+    Promise.all([
+      supabase.from('users').select('*').eq('id', artistId).single(),
+      supabase.from('artists').select('*').eq('user_id', artistId).maybeSingle(),
+    ]).then(([userRes, profileRes]) => {
+      if (userRes.data) {
+        const u = userRes.data;
+        setFetchedUser({
+          id: u.id, email: u.email, phone: u.phone, accountType: u.account_type,
+          fullName: u.full_name, profilePhotoUrl: u.profile_photo_url,
+          bio: u.bio, location: u.location, yearsOfExperience: u.years_of_experience,
+          isPhoneVerified: u.is_phone_verified ?? false, isEmailVerified: u.is_email_verified ?? false,
+          createdAt: u.created_at, updatedAt: u.updated_at,
+        });
+      }
+      if (profileRes.data) {
+        const p = profileRes.data;
+        setFetchedProfile({
+          userId: p.user_id, primaryGenre: p.primary_genre,
+          secondaryGenres: p.secondary_genres ?? [], energyTypes: p.energy_types ?? [],
+          instruments: p.instruments ?? [], socialLinks: p.social_links,
+          ratePerHour: p.rate_per_hour, bio: p.bio,
+          basedIn: p.based_in, nationality: p.nationality,
+          minRate: p.min_rate, isHistoryHidden: p.is_history_hidden ?? false,
+          mediaLinks: {
+            soundcloud: p.soundcloud_url, mixcloud: p.mixcloud_url,
+            instagram: p.instagram_url, spotify: p.spotify_url,
+          },
+          createdAt: p.created_at, updatedAt: p.updated_at,
+        });
+      }
+      setIsFetching(false);
+    });
+  }, [artistId, djFromStore]);
+
+  const resolvedDj = djFromStore ?? fetchedUser;
+  const resolvedProfile = profileFromStore ?? fetchedProfile;
 
   // All completed bookings with slot/venue snapshot fallback
   const completedBookings = useMemo(() => {
@@ -181,7 +294,17 @@ export default function ArtistProfileViewScreen() {
     ]);
   };
 
-  if (!dj) {
+  if (isFetching) {
+    return (
+      <ScreenContainer>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!resolvedDj) {
     return (
       <ScreenContainer>
         <View style={styles.center}>
@@ -190,6 +313,9 @@ export default function ArtistProfileViewScreen() {
       </ScreenContainer>
     );
   }
+
+  const dj = resolvedDj;
+  const profile = resolvedProfile;
 
   const completedGigs = completedBookings.length;
   const last5Gigs = completedBookings.slice(0, 5);
@@ -220,7 +346,13 @@ export default function ArtistProfileViewScreen() {
         <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Top row: photo + name/flag */}
           <View style={styles.heroTopRow}>
-            <AvatarImage uri={dj.profilePhotoUrl} name={dj.fullName} size={80} />
+            {dj.profilePhotoUrl ? (
+              <Image source={{ uri: dj.profilePhotoUrl }} style={styles.heroPhoto} resizeMode="cover" />
+            ) : (
+              <View style={[styles.heroPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                <MaterialIcons name="person" size={36} color={colors.muted} />
+              </View>
+            )}
             <View style={styles.heroNameBlock}>
               <Text style={[styles.djName, { color: colors.foreground }]}>
                 {dj.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
@@ -228,15 +360,31 @@ export default function ArtistProfileViewScreen() {
               <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
             </View>
           </View>
-          {/* Bottom row: based in on the right */}
-          {basedInCountry ? (
-            <View style={[styles.heroBottomRow, { justifyContent: 'flex-end' }]}>
+          {/* Bottom row: based in + invite button (if not connected) */}
+          <View style={[styles.heroBottomRow, { justifyContent: basedInCountry ? 'space-between' : 'flex-end' }]}>
+            {basedInCountry && (
               <View style={styles.locationRow}>
                 <MaterialIcons name="location-on" size={13} color={colors.muted} />
                 <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
               </View>
-            </View>
-          ) : null}
+            )}
+            {!isConnected && (
+              inviteStatus === 'pending' ? (
+                <View style={[styles.connectedBadge, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
+                  <MaterialIcons name="schedule" size={13} color="#F59E0B" />
+                  <Text style={[styles.connectedBadgeText, { color: '#F59E0B' }]}>Invite Sent</Text>
+                </View>
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [styles.inviteBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => setShowInviteSheet(true)}
+                >
+                  <MaterialIcons name="person-add" size={14} color="#fff" />
+                  <Text style={styles.inviteBtnText}>Invite to Lineup</Text>
+                </Pressable>
+              )
+            )}
+          </View>
         </View>
 
         {/* Years Experience card — only if set */}
@@ -412,13 +560,103 @@ export default function ArtistProfileViewScreen() {
 
 
 
+      {/* ── Invite Sheet ──────────────────────────────────────────────────────── */}
+      <Modal visible={showInviteSheet} transparent animationType="slide" onRequestClose={() => setShowInviteSheet(false)}>
+        <View style={styles.overlay}>
+          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            <View style={styles.sheetArtistRow}>
+              {dj.profilePhotoUrl ? (
+                <Image source={{ uri: dj.profilePhotoUrl }} style={styles.sheetPhoto} resizeMode="cover" />
+              ) : (
+                <View style={[styles.sheetPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                  <MaterialIcons name="person" size={18} color={colors.muted} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.sheetTitle, { color: colors.foreground }]} numberOfLines={1}>Invite {dj.fullName}</Text>
+                <Text style={[styles.sheetSub, { color: colors.muted }]}>Select venues to assign on acceptance</Text>
+              </View>
+            </View>
+            {myVenues.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 24, gap: 8 }}>
+                <MaterialIcons name="place" size={36} color={colors.muted} />
+                <Text style={[styles.sheetSub, { color: colors.muted }]}>No venues yet — invite will add to global lineup only</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={myVenues}
+                keyExtractor={(v) => v.id}
+                style={{ maxHeight: 320, marginBottom: 16 }}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item: v }) => {
+                  const selected = selectedVenueIds.includes(v.id);
+                  return (
+                    <Pressable
+                      style={({ pressed }) => [styles.venueRow, {
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? colors.primary + '10' : colors.background,
+                        opacity: pressed ? 0.8 : 1,
+                      }]}
+                      onPress={() => toggleVenue(v.id)}
+                    >
+                      <View style={[styles.venueRowIcon, { backgroundColor: selected ? colors.primary + '20' : colors.border + '60' }]}>
+                        <MaterialIcons name="location-on" size={18} color={selected ? colors.primary : colors.muted} />
+                      </View>
+                      <View style={styles.venueRowInfo}>
+                        <Text style={[styles.venueRowName, { color: colors.foreground }]}>{v.name}</Text>
+                        <Text style={[styles.venueRowType, { color: colors.muted }]}>{v.venueType}</Text>
+                      </View>
+                      <View style={[styles.checkbox, {
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? colors.primary : 'transparent',
+                      }]}>
+                        {selected && <MaterialIcons name="check" size={14} color="#fff" />}
+                      </View>
+                    </Pressable>
+                  );
+                }}
+              />
+            )}
+            <Pressable
+              style={[styles.sendInviteBtn, { backgroundColor: colors.primary, opacity: isSending ? 0.7 : 1 }]}
+              onPress={handleSendInvite}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons name="person-add" size={18} color="#fff" />
+                  <Text style={styles.sendInviteBtnText}>
+                    {selectedVenueIds.length > 0 ? `Send Invite · ${selectedVenueIds.length} Venue${selectedVenueIds.length > 1 ? 's' : ''}` : 'Send Invite'}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable
+              style={[styles.doneBtn, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 44 }]}
+              onPress={() => setShowInviteSheet(false)}
+            >
+              <Text style={[styles.doneBtnText, { color: colors.muted }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Assign Venue Sheet ────────────────────────────────────────────────── */}
       <Modal visible={showAssignSheet} transparent animationType="slide" onRequestClose={() => setShowAssignSheet(false)}>
         <View style={styles.overlay}>
           <View style={[styles.sheet, { backgroundColor: colors.background }]}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             <View style={styles.sheetArtistRow}>
-              <AvatarImage uri={dj.profilePhotoUrl} name={dj.fullName} size={40} />
+              {dj.profilePhotoUrl ? (
+                <Image source={{ uri: dj.profilePhotoUrl }} style={styles.sheetPhoto} resizeMode="cover" />
+              ) : (
+                <View style={[styles.sheetPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                  <MaterialIcons name="person" size={18} color={colors.muted} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sheetTitle, { color: colors.foreground }]} numberOfLines={1}>{dj.fullName}</Text>
                 <Text style={[styles.sheetSub, { color: colors.muted }]} numberOfLines={1}>{profile?.primaryGenre ?? 'Artist'}</Text>
@@ -500,6 +738,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '800' },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  heroPhoto: { width: 80, height: 80, borderRadius: 16 },
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   djName: { fontSize: 22, fontWeight: '800' },
@@ -551,6 +790,7 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 0, maxHeight: '88%' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 18 },
   sheetArtistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+  sheetPhoto: { width: 40, height: 40, borderRadius: 10 },
   sheetTitle: { fontSize: 17, fontWeight: '700' },
   sheetSub: { fontSize: 13, marginTop: 1 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8 },
@@ -565,4 +805,12 @@ const styles = StyleSheet.create({
   emptyVenues: { textAlign: 'center', paddingVertical: 24, fontSize: 14 },
   doneBtn: { borderWidth: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14, marginBottom: 44 },
   doneBtnText: { fontSize: 15, fontWeight: '700' },
+  // Invite
+  connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
+  connectedBadgeText: { fontSize: 12, fontWeight: '700' },
+  inviteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  inviteBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  sendInviteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, marginBottom: 10 },
+  sendInviteBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

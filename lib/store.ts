@@ -561,6 +561,7 @@ interface NotificationState {
   addNotification: (notif: AppNotification) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: (userId: string) => void;
+  removeNotification: (id: string) => void;
   getByUser: (userId: string) => AppNotification[];
   getUnreadCount: (userId: string) => number;
 }
@@ -573,6 +574,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   })),
   markAllAsRead: (userId) => set((state) => ({
     notifications: state.notifications.map((n) => n.userId === userId ? { ...n, isRead: true } : n),
+  })),
+  removeNotification: (id) => set((state) => ({
+    notifications: state.notifications.filter((n) => n.id !== id),
   })),
   getByUser: (userId) => get().notifications.filter((n) => n.userId === userId).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

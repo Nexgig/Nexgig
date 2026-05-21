@@ -8,6 +8,7 @@ import { useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueType, EnergyType, GenreType, AudienceType, SubVibe } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { supabase } from '@/lib/supabase';
 
 // ── Option arrays — kept in sync with create-venue.tsx ───────────────────────
 const VENUE_TYPES: VenueType[] = [
@@ -197,43 +198,59 @@ export default function EditVenueScreen() {
   const handleSave = () => {
     if (!form.name.trim()) { Alert.alert('Required', 'Please enter a venue name.'); return; }
     if (!form.address.trim()) { Alert.alert('Required', 'Please enter an address.'); return; }
-    Alert.alert(
-      'Save Changes',
-      'Are you sure you want to save these changes?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Save',
-          onPress: () => {
-            updateVenue(venue.id, {
-              name: form.name.trim(),
-              venueType: form.venueType,
-              googleMapsLocation: { ...venue.googleMapsLocation, address: form.address.trim() },
-              capacity: form.capacity,
-              vibeDescription: form.vibeDescription,
-              preferredEnergy: form.preferredEnergy,
-              genrePreferences: form.genrePreferences,
-              audienceType: form.audienceType,
-              subVibe: form.subVibe,
-              rulesTemplate: form.rulesTemplate,
-              instagramUrl: form.instagramUrl,
-              musicLink: form.musicLink,
-              color: form.color,
-              billing: (form.billingCompanyName.trim() || form.billingTrnNumber.trim()) ? {
-                companyName: form.billingCompanyName.trim(),
-                companyAddress: form.billingCompanyAddress.trim(),
-                trnNumber: form.billingTrnNumber.trim(),
-              } : undefined,
-              photoUrls: photoUri ? [photoUri] : [],
-            });
-            originalForm.current = { ...form };
-            originalPhoto.current = photoUri;
-            Alert.alert('Saved', 'Venue info has been updated.');
-            router.back();
-          },
+    Alert.alert('Save Changes', 'Are you sure you want to save these changes?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Save',
+        onPress: async () => {
+          const updates = {
+            name: form.name.trim(),
+            venueType: form.venueType,
+            googleMapsLocation: { ...venue.googleMapsLocation, address: form.address.trim() },
+            capacity: form.capacity,
+            vibeDescription: form.vibeDescription,
+            preferredEnergy: form.preferredEnergy,
+            genrePreferences: form.genrePreferences,
+            audienceType: form.audienceType,
+            subVibe: form.subVibe,
+            rulesTemplate: form.rulesTemplate,
+            instagramUrl: form.instagramUrl,
+            musicLink: form.musicLink,
+            color: form.color,
+            billing: (form.billingCompanyName.trim() || form.billingTrnNumber.trim()) ? {
+              companyName: form.billingCompanyName.trim(),
+              companyAddress: form.billingCompanyAddress.trim(),
+              trnNumber: form.billingTrnNumber.trim(),
+            } : undefined,
+            photoUrls: photoUri ? [photoUri] : [],
+          };
+          updateVenue(venue.id, updates);
+          await supabase.from('venues').update({
+            name: form.name.trim(),
+            venue_type: form.venueType,
+            address: form.address.trim(),
+            capacity: form.capacity || null,
+            vibe_description: form.vibeDescription || null,
+            preferred_energy: form.preferredEnergy,
+            genre_preferences: form.genrePreferences,
+            audience_type: form.audienceType,
+            sub_vibe: form.subVibe,
+            rules_template: form.rulesTemplate || null,
+            instagram_url: form.instagramUrl || null,
+            music_link: form.musicLink || null,
+            color: form.color,
+            billing_company_name: form.billingCompanyName || null,
+            billing_company_address: form.billingCompanyAddress || null,
+            billing_trn_number: form.billingTrnNumber || null,
+            updated_at: new Date().toISOString(),
+          }).eq('id', venue.id);
+          originalForm.current = { ...form };
+          originalPhoto.current = photoUri;
+          Alert.alert('Saved', 'Venue info has been updated.');
+          router.back();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -246,8 +263,9 @@ export default function EditVenueScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             deleteVenue(venue.id);
+            await supabase.from('venues').delete().eq('id', venue.id);
             router.replace('/(manager)/(tabs)/profile' as any);
           },
         },

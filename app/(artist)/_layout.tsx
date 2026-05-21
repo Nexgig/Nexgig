@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useBookingStore, useAuthStore } from '@/lib/store';
+import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore } from '@/lib/store';
 import type { Booking } from '@/lib/types';
 
 export default function DJLayout() {
@@ -9,6 +9,7 @@ export default function DJLayout() {
 
   useEffect(() => {
     if (!currentUser?.id) return;
+
     const fetchBookings = async () => {
       const { data, error } = await supabase
         .from('bookings')
@@ -56,6 +57,98 @@ export default function DJLayout() {
       }
     };
     fetchBookings();
+
+    // Fetch pending invites and show as notifications
+    const fetchInvites = async () => {
+      const { data } = await supabase
+        .from('invites')
+        .select('id, manager_id, venue_ids, created_at')
+        .eq('artist_id', currentUser.id)
+        .eq('status', 'pending');
+      if (!data || data.length === 0) return;
+
+      // Fetch manager names
+      const managerIds = [...new Set(data.map((i: any) => i.manager_id))];
+      const { data: managers } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .in('id', managerIds);
+      const managerMap = Object.fromEntries((managers ?? []).map((m: any) => [m.id, m.full_name]));
+
+      const notifStore = useNotificationStore.getState();
+      data.forEach((invite: any) => {
+        const existingNotif = notifStore.notifications.find(
+          (n) => n.relatedId === invite.id && n.type === 'manager_invite'
+        );
+        if (existingNotif) return; // already in store
+        const managerName = managerMap[invite.manager_id] ?? 'A manager';
+        const venueCount = (invite.venue_ids ?? []).length;
+        notifStore.addNotification({
+          id: `invite-${invite.id}`,
+          userId: currentUser.id,
+          type: 'manager_invite',
+          title: 'Lineup Invitation',
+          body: `${managerName} invited you to join their lineup${venueCount > 0 ? ` · ${venueCount} venue${venueCount > 1 ? 's' : ''}` : ''}.`,
+          isRead: false,
+          relatedId: invite.id,
+          relatedType: 'invite',
+          createdAt: invite.created_at,
+        });
+      });
+    };
+    fetchInvites();
+
+    // Fetch venue assignments so artist sees their venues after reload
+    const fetchVenueAssignments = async () => {
+      const { data: assignments } = await supabase
+        .from('venue_assignments')
+        .select('*')
+        .eq('artist_id', currentUser.id)
+        .eq('status', 'active');
+      if (!assignments || assignments.length === 0) return;
+
+      const lineupStore = useLineupStore.getState();
+      const venueStore = useVenueStore.getState();
+
+      // Fetch venue data for any venues not already in store
+      const knownVenueIds = new Set(venueStore.venues.map((v) => v.id));
+      const missingIds = assignments
+        .map((a: any) => a.venue_id)
+        .filter((id: string) => !knownVenueIds.has(id));
+
+      if (missingIds.length > 0) {
+        const { data: venuesData } = await supabase
+          .from('venues')
+          .select('*')
+          .in('id', missingIds);
+        if (venuesData) {
+          venuesData.forEach((v: any) => {
+            venueStore.addVenue({
+              id: v.id, managerId: v.manager_id, name: v.name,
+              venueType: v.venue_type, description: v.description,
+              photoUrls: v.photo_urls ?? [],
+              genrePreferences: v.genre_preferences ?? [],
+              energyPreferences: v.energy_preferences ?? [],
+              googleMapsLocation: v.google_maps_location,
+              isHidden: v.is_hidden ?? false,
+              createdAt: v.created_at, updatedAt: v.updated_at,
+            });
+          });
+        }
+      }
+
+      assignments.forEach((a: any) => {
+        lineupStore.assignToVenue({
+          id: a.id,
+          globalLineupId: `${a.manager_id}-${currentUser.id}`,
+          venueId: a.venue_id,
+          artistId: currentUser.id,
+          assignedAt: a.created_at,
+          status: 'active' as const,
+        });
+      });
+    };
+    fetchVenueAssignments();
   }, [currentUser?.id]);
 
   return (

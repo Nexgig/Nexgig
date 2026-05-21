@@ -9,6 +9,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { supabase } from '@/lib/supabase';
 
 export default function VenueDetailScreen() {
   const router = useRouter();
@@ -49,7 +50,10 @@ export default function VenueDetailScreen() {
         `Are you sure you want to unhide "${venue.name}"? It will appear in your Venues tab again.`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Unhide', onPress: () => { unhideVenue(venue.id); } },
+          { text: 'Unhide', onPress: async () => {
+            unhideVenue(venue.id);
+            await supabase.from('venues').update({ is_hidden: false }).eq('id', venue.id);
+          }},
         ]
       );
     } else {
@@ -58,7 +62,11 @@ export default function VenueDetailScreen() {
         'This venue will be hidden from your active list. You can unhide it from your Profile tab.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Hide', style: 'destructive', onPress: () => { hideVenue(venue.id); router.back(); } },
+          { text: 'Hide', style: 'destructive', onPress: async () => {
+            hideVenue(venue.id);
+            await supabase.from('venues').update({ is_hidden: true }).eq('id', venue.id);
+            router.back();
+          }},
         ]
       );
     }
