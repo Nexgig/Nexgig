@@ -798,6 +798,7 @@ export default function DJAvailabilityScreen() {
                             slotEndTime: b.resolvedEnd,
                             venueName: b.resolvedVenueName,
                           });
+                          syncBookingStatus(b.id, 'completed', { isCompleted: true, confirmedAt: now });
                           markRelatedNotificationsRead(b.id);
                           if (booking) { notifyManager('booking_confirmed', { ...b, managerId: booking.managerId }); }
                         },

@@ -291,38 +291,7 @@ export default function CalendarScreen() {
     }, [])
   );
 
-  // Auto-cleanup: delete past drafts and past empty slots on every focus
-  useEffect(() => {
-    // Grace period: skip slots created within the last 15 seconds so that
-    // newly created past slots have time to navigate to assign-artist before cleanup fires.
-    const graceMs = 15_000;
-    const nowMs = Date.now();
 
-    // Step 1: Remove all drafts attached to past slots (date < today)
-    const pastDraftSlotIds = new Set(
-      allManagerSlots
-        .filter((s) => s.date < todayStr && nowMs - new Date(s.createdAt).getTime() > graceMs)
-        .map((s) => s.id)
-    );
-    const pastDrafts = allDrafts.filter(
-      (d) => pastDraftSlotIds.has(d.slotId)
-    );
-    pastDrafts.forEach((d) => removeDraft(d.slotId));
-
-    // Step 2: Delete past slots that have no bookings (drafts already removed above)
-    const pastEmptySlots = allManagerSlots.filter((s) => {
-      if (s.date >= todayStr) return false;
-      // Grace period: skip recently created slots
-      if (nowMs - new Date(s.createdAt).getTime() <= graceMs) return false;
-      // Protect slots with ANY booking (active or completed) — completed bookings are permanent records
-      const hasAnyBooking = allBookings.some((b) => b.slotId === s.id);
-      return !hasAnyBooking;
-    });
-    if (pastEmptySlots.length > 0) {
-      pastEmptySlots.forEach((s) => deleteSlot(s.id));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allManagerSlots.length, allDrafts.length, todayStr, allBookings.length]);
 
   // Venue color lookup — always reads fresh from allVenues (no memoization)
   const getVenueColor = useCallback((venueId: string): string => {
@@ -978,8 +947,33 @@ export default function CalendarScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Create',
-          onPress: () => {
-            bulkAddSlots(newSlots);
+          onPress: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { bulkAddSlots(newSlots); setShowBulkModal(false); return; }
+            const supabaseSlots = newSlots.map((s) => ({
+              venue_id: s.venueId,
+              manager_id: user.id,
+              name: s.name,
+              date: s.date,
+              start_time: s.startTime,
+              end_time: s.endTime,
+              status: 'open',
+            }));
+            const { data: inserted, error } = await supabase.from('slots').insert(supabaseSlots).select();
+            if (!error && inserted) {
+              const slotsWithUUIDs: Slot[] = inserted.map((s) => ({
+                id: s.id,
+                venueId: s.venue_id,
+                name: s.name,
+                date: s.date,
+                startTime: s.start_time,
+                endTime: s.end_time,
+                createdAt: s.created_at,
+              }));
+              bulkAddSlots(slotsWithUUIDs);
+            } else {
+              bulkAddSlots(newSlots);
+            }
             setShowBulkModal(false);
           },
         },

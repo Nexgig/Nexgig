@@ -8,6 +8,7 @@ import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailab
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, formatDate, formatTime } from '@/lib/conflict-detection';
 import { isPastStart } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import type { Booking, VenueAssignment } from '@/lib/types';
 
 export default function AssignDJScreen() {
@@ -306,17 +307,20 @@ export default function AssignDJScreen() {
           text: 'Send Completed Request',
           onPress: () => {
             const now = new Date().toISOString();
+            const bookingId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+              const r = Math.random() * 16 | 0;
+              return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
             const booking: Booking = {
-              id: 'booking-' + Date.now() + '-' + artistId,
+              id: bookingId,
               slotId: slot!.id,
               venueId: slot!.venueId,
               artistId,
               managerId: currentUser.id,
-              status: 'past_confirmation',
+              status: 'requested',
               isCompleted: false,
               createdAt: now,
               updatedAt: now,
-              // Snapshot so the record survives even if slot is deleted
               slotDate: slot!.date,
               slotName: slot!.name,
               slotStartTime: slot!.startTime,
@@ -324,6 +328,23 @@ export default function AssignDJScreen() {
               venueName: venue?.name,
             };
             addBooking(booking);
+            // Save to Supabase
+            supabase.from('bookings').insert({
+              id: bookingId,
+              slot_id: slot!.id,
+              venue_id: slot!.venueId,
+              artist_id: artistId,
+              manager_id: currentUser.id,
+              status: 'requested',
+              is_completed: false,
+              slot_date: slot!.date,
+              slot_name: slot!.name,
+              slot_start_time: slot!.startTime,
+              slot_end_time: slot!.endTime,
+              venue_name: venue?.name ?? null,
+            }).then(({ error }) => {
+              if (error) console.log('past booking insert error:', error.message);
+            });
             addNotification({
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               userId: artistId,
