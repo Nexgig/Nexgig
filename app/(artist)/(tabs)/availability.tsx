@@ -656,6 +656,7 @@ export default function DJAvailabilityScreen() {
           onPress: () => {
             const booking = allBookings.find((b) => b.id === bookingId);
             updateBookingStatus(bookingId, 'declined', { artistRespondedFromRequests: true });
+            syncBookingStatus(bookingId, 'declined', {});
             markRelatedNotificationsRead(bookingId);
             if (booking) {
               notifyManager('booking_declined', { id: booking.id, managerId: booking.managerId, resolvedVenueName: venueName, resolvedDate: booking.slotDate ?? allSlots.find((s) => s.id === booking.slotId)?.date });

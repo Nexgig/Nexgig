@@ -13,7 +13,8 @@ export default function DJLayout() {
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('artist_id', currentUser.id);
+        .eq('artist_id', currentUser.id)
+        .or('cancelled_as_request.is.null,cancelled_as_request.eq.false');
       if (!error && data) {
         const bookingStore = useBookingStore.getState();
         data.forEach((b) => {

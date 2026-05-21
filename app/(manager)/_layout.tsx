@@ -194,10 +194,7 @@ if (!lineupError && lineupData) {
         { event: 'UPDATE', schema: 'public', table: 'bookings' },
         (payload) => {
   const b = payload.new as any;
-  console.log('realtime booking update:', b.id, b.status);
   const bookingStore = useBookingStore.getState();
-  const existingBooking = bookingStore.bookings.find((bk) => bk.id === b.id);
-  console.log('existing booking found:', !!existingBooking);
   bookingStore.updateBookingStatus(b.id, b.status, {
             confirmedAt: b.confirmed_at ?? undefined,
             cancelledAt: b.cancelled_at ?? undefined,

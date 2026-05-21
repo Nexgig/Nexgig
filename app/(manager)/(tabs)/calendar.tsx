@@ -1090,6 +1090,7 @@ export default function CalendarScreen() {
                         { text: 'Keep', style: 'cancel' },
                         { text: 'Cancel Request', style: 'destructive', onPress: () => {
                           updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
+                          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledAsRequest: true, cancellationAcknowledged: true });
                           addNotification({
                             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                             userId: booking.artistId,
@@ -1129,6 +1130,7 @@ export default function CalendarScreen() {
                               slotEndTime: slotForBooking?.endTime,
                               venueName: venueForBooking?.name,
                             });
+                            syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
                             addNotification({
                               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                               userId: booking.artistId,
@@ -1308,6 +1310,7 @@ export default function CalendarScreen() {
                         { text: 'Keep', style: 'cancel' },
                         { text: 'Cancel Request', style: 'destructive', onPress: () => {
                           updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
+                          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledAsRequest: true, cancellationAcknowledged: true });
                           addNotification({
                             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                             userId: booking.artistId,
@@ -1347,6 +1350,7 @@ export default function CalendarScreen() {
                               slotEndTime: slotForBooking?.endTime,
                               venueName: venueForBooking?.name,
                             });
+                            syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
                             addNotification({
                               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                               userId: booking.artistId,
