@@ -39,6 +39,7 @@ export function detectConflicts(
     if (booking.status !== 'confirmed' && booking.status !== 'requested') continue;
     const bookingSlot = getSlotById(booking.slotId);
     if (!bookingSlot) continue;
+    if (booking.slotId === slot.id) continue; // skip self — same slot already has this booking
     if (timesOverlap(
       bookingSlot.startTime, bookingSlot.endTime,
       slot.startTime, slot.endTime,

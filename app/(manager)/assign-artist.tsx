@@ -379,7 +379,7 @@ export default function AssignDJScreen() {
   const renderDJ = (item: typeof djsWithConflicts[0]) => {
     const isAssigned = assignedDJIds.has(item.user.id);
     // For past slots: show pending if past_confirmation request sent, completed if confirmed
-    const isPastPending = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && b.status === 'past_confirmation');
+    const isPastPending = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && (b.status === 'requested' || b.status === 'past_confirmation'));
     const isCompleted = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && b.isCompleted);
     const isDrafted = !isPastSlot && isAssigned;
 

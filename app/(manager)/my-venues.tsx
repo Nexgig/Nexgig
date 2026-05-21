@@ -34,13 +34,7 @@ export default function ManagerMyVenuesScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>My Venues</Text>
-        <Pressable
-          style={({ pressed }) => [styles.discoverBtn, { borderColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => router.push('/(manager)/discovery' as Href)}
-        >
-          <MaterialIcons name="explore" size={15} color={colors.primary} />
-          <Text style={[styles.discoverBtnText, { color: colors.primary }]}>Discover</Text>
-        </Pressable>
+        <View style={{ width: 36 }} />
       </View>
 
       <FlatList

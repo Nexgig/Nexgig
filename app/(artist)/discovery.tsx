@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Image } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Image, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -7,6 +7,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { supabase } from '@/lib/supabase';
+import type { Venue, User, ArtistProfile } from '@/lib/types';
 
 type DiscoveryTab = 'venues' | 'artists';
 
@@ -17,22 +19,90 @@ export default function ArtistDiscoveryScreen() {
 
   const [activeTab, setActiveTab] = useState<DiscoveryTab>(initialTab === 'artists' ? 'artists' : 'venues');
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sbVenues, setSbVenues] = useState<Venue[]>([]);
+  const [sbArtists, setSbArtists] = useState<User[]>([]);
+  const [sbProfiles, setSbProfiles] = useState<ArtistProfile[]>([]);
 
   const currentUser = useAuthStore((s) => s.currentUser);
+  // Fallback to store data while Supabase fetch is in progress
   const allVenues = useVenueStore((s) => s.venues);
   const artistUsers = useLineupStore((s) => s.artistUsers);
-  const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  // All active (non-hidden) venues
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAll = async () => {
+      setLoading(true);
+      const [venuesRes, usersRes, profilesRes] = await Promise.all([
+        supabase.from('venues').select('*').neq('is_hidden', true),
+        supabase.from('users').select('*').eq('account_type', 'artist'),
+        supabase.from('artists').select('*'),
+      ]);
+      if (cancelled) return;
+      if (venuesRes.data) {
+        setSbVenues(venuesRes.data.map((v: any) => ({
+          id: v.id,
+          managerId: v.manager_id,
+          name: v.name,
+          venueType: v.venue_type,
+          description: v.description,
+          photoUrls: v.photo_urls ?? [],
+          genrePreferences: v.genre_preferences ?? [],
+          energyPreferences: v.energy_preferences ?? [],
+          googleMapsLocation: v.google_maps_location,
+          isHidden: v.is_hidden ?? false,
+          createdAt: v.created_at,
+          updatedAt: v.updated_at,
+        })));
+      }
+      if (usersRes.data) {
+        setSbArtists(usersRes.data.map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          phone: u.phone,
+          accountType: u.account_type,
+          fullName: u.full_name,
+          profilePhotoUrl: u.profile_photo_url,
+          bio: u.bio,
+          location: u.location,
+          yearsOfExperience: u.years_of_experience,
+          isPhoneVerified: u.is_phone_verified ?? false,
+          isEmailVerified: u.is_email_verified ?? false,
+          createdAt: u.created_at,
+          updatedAt: u.updated_at,
+        })));
+      }
+      if (profilesRes.data) {
+        setSbProfiles(profilesRes.data.map((p: any) => ({
+          userId: p.user_id,
+          primaryGenre: p.primary_genre,
+          secondaryGenres: p.secondary_genres ?? [],
+          energyTypes: p.energy_types ?? [],
+          instruments: p.instruments ?? [],
+          socialLinks: p.social_links,
+          ratePerHour: p.rate_per_hour,
+          bio: p.bio,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at,
+        })));
+      }
+      setLoading(false);
+    };
+    fetchAll();
+    return () => { cancelled = true; };
+  }, []);
+
+  const getProfile = (userId: string) => sbProfiles.find((p) => p.userId === userId);
+
+  // Use Supabase data if loaded, otherwise fall back to store
   const discoveryVenues = useMemo(
-    () => allVenues.filter((v) => !v.isHidden),
-    [allVenues]
+    () => (sbVenues.length > 0 ? sbVenues : allVenues.filter((v) => !v.isHidden)),
+    [sbVenues, allVenues]
   );
 
-  // All signed-up artists (excluding self)
   const discoveryArtists = useMemo(
-    () => artistUsers.filter((u) => u.id !== currentUser?.id),
-    [artistUsers, currentUser?.id]
+    () => (sbArtists.length > 0 ? sbArtists : artistUsers).filter((u) => u.id !== currentUser?.id),
+    [sbArtists, artistUsers, currentUser?.id]
   );
 
   const filteredVenues = useMemo(() => {
@@ -52,7 +122,7 @@ export default function ArtistDiscoveryScreen() {
     const q = search.trim().toLowerCase();
     const results = q
       ? discoveryArtists.filter((u) => {
-          const profile = getArtistProfile(u.id);
+          const profile = getProfile(u.id);
           return (
             u.fullName?.toLowerCase().includes(q) ||
             profile?.primaryGenre?.toLowerCase().includes(q) ||
@@ -61,7 +131,7 @@ export default function ArtistDiscoveryScreen() {
         })
       : discoveryArtists;
     return [...results].sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
-  }, [discoveryArtists, search, getArtistProfile]);
+  }, [discoveryArtists, search, sbProfiles]);
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -116,7 +186,12 @@ export default function ArtistDiscoveryScreen() {
       </View>
 
       {/* Content */}
-      {activeTab === 'venues' ? (
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.muted }]}>Loading...</Text>
+        </View>
+      ) : activeTab === 'venues' ? (
         <FlatList
           data={filteredVenues}
           keyExtractor={(item) => item.id}
@@ -176,7 +251,7 @@ export default function ArtistDiscoveryScreen() {
             </View>
           }
           renderItem={({ item: user }) => {
-            const profile = getArtistProfile(user.id);
+            const profile = getProfile(user.id);
             return (
               <Pressable
                 style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
@@ -240,4 +315,6 @@ const styles = StyleSheet.create({
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { fontSize: 14 },
 });

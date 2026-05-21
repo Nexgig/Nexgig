@@ -34,8 +34,8 @@ export default function ManagerTabsLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <MaterialIcons name="explore" size={24} color={color} />,
+          title: 'Network',
+          tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
