@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Image, ActivityIndicator } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -20,46 +20,49 @@ export default function ArtistMyVenuesScreen() {
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const [dismissedHighlight, setDismissedHighlight] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [fetched, setFetched] = useState(false);
 
-  // Fetch once on first open only
-  useEffect(() => {
-    if (!currentUser?.id || fetched) return;
+  const fetchVenues = useCallback(async () => {
+    if (!currentUser?.id) return;
     setIsLoading(true);
-    const fetch = async () => {
-      const { data: assignments } = await supabase
-        .from('venue_assignments')
-        .select('*')
-        .eq('artist_id', currentUser.id)
-        .eq('status', 'active');
-      if (!assignments || assignments.length === 0) { setIsLoading(false); setFetched(true); return; }
-      const knownVenueIds = new Set(allVenues.map((v) => v.id));
-      const missingIds = assignments.map((a: any) => a.venue_id).filter((id: string) => !knownVenueIds.has(id));
-      if (missingIds.length > 0) {
-        const { data: venuesData } = await supabase.from('venues').select('*').in('id', missingIds);
-        if (venuesData) {
-          venuesData.forEach((v: any) => {
-            useVenueStore.getState().addVenue({
-              id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
-              description: v.description, photoUrls: v.photo_urls ?? [],
-              genrePreferences: v.genre_preferences ?? [], energyPreferences: v.energy_preferences ?? [],
-              googleMapsLocation: v.google_maps_location, isHidden: v.is_hidden ?? false,
-              createdAt: v.created_at, updatedAt: v.updated_at,
-            });
-          });
-        }
-      }
-      const freshAssignments = assignments.map((a: any) => ({
-        id: a.id, globalLineupId: `${a.manager_id}-${currentUser.id}`,
-        venueId: a.venue_id, artistId: currentUser.id,
-        assignedAt: a.created_at, status: 'active' as const,
-      }));
-      useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, freshAssignments);
-      setFetched(true);
+    const { data: assignments } = await supabase
+      .from('venue_assignments')
+      .select('*')
+      .eq('artist_id', currentUser.id)
+      .eq('status', 'active');
+    if (!assignments || assignments.length === 0) {
+      useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, []);
       setIsLoading(false);
-    };
-    fetch();
-  }, [currentUser?.id, fetched]);
+      return;
+    }
+    const knownVenueIds = new Set(allVenues.map((v) => v.id));
+    const missingIds = assignments.map((a: any) => a.venue_id).filter((id: string) => !knownVenueIds.has(id));
+    if (missingIds.length > 0) {
+      const { data: venuesData } = await supabase.from('venues').select('*').in('id', missingIds);
+      if (venuesData) {
+        venuesData.forEach((v: any) => {
+          useVenueStore.getState().addVenue({
+            id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
+            description: v.description, photoUrls: v.photo_urls ?? [],
+            genrePreferences: v.genre_preferences ?? [], energyPreferences: v.energy_preferences ?? [],
+            googleMapsLocation: v.google_maps_location, isHidden: v.is_hidden ?? false,
+            createdAt: v.created_at, updatedAt: v.updated_at,
+          });
+        });
+      }
+    }
+    const freshAssignments = assignments.map((a: any) => ({
+      id: a.id, globalLineupId: `${a.manager_id}-${currentUser.id}`,
+      venueId: a.venue_id, artistId: currentUser.id,
+      assignedAt: a.created_at, status: 'active' as const,
+    }));
+    useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, freshAssignments);
+    setIsLoading(false);
+  }, [currentUser?.id]);
+
+  // Re-fetch every time the screen comes into focus
+  useFocusEffect(useCallback(() => {
+    fetchVenues();
+  }, [fetchVenues]));
 
   const myVenues = useMemo(() => {
     const activeAssignments = venueAssignments.filter(

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabase';
 import type {
   User, ArtistProfile, Venue, Lineup, Slot, Booking, BookingStatus,
   AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, DraftAssignment,
@@ -588,23 +589,57 @@ interface NotificationState {
   getUnreadCount: (userId: string) => number;
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: [],
-  addNotification: (notif) => set((state) => ({ notifications: [notif, ...state.notifications] })),
-  markAsRead: (id) => set((state) => ({
-    notifications: state.notifications.map((n) => n.id === id ? { ...n, isRead: true } : n),
-  })),
-  markAllAsRead: (userId) => set((state) => ({
-    notifications: state.notifications.map((n) => n.userId === userId ? { ...n, isRead: true } : n),
-  })),
-  removeNotification: (id) => set((state) => ({
-    notifications: state.notifications.filter((n) => n.id !== id),
-  })),
-  getByUser: (userId) => get().notifications.filter((n) => n.userId === userId).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  ),
-  getUnreadCount: (userId) => get().notifications.filter((n) => n.userId === userId && !n.isRead).length,
-}));
+export const useNotificationStore = create<NotificationState>()(
+  persist(
+    (set, get) => ({
+      notifications: [],
+      addNotification: (notif) => {
+        // Auto-fix non-UUID IDs so Supabase never rejects them
+        const genUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(notif.id);
+        const safeNotif = isUUID ? notif : { ...notif, id: genUUID() };
+        set((state) => ({ notifications: [safeNotif, ...state.notifications] }));
+        // Sync to Supabase for cross-device delivery
+        supabase.from('notifications').upsert({
+          id: safeNotif.id,
+          user_id: safeNotif.userId,
+          type: safeNotif.type,
+          title: safeNotif.title,
+          body: safeNotif.body,
+          is_read: safeNotif.isRead ?? false,
+          related_id: safeNotif.relatedId ?? null,
+          related_type: safeNotif.relatedType ?? null,
+          created_at: safeNotif.createdAt,
+        }, { onConflict: 'id' }).then(({ error }) => {
+          if (error) console.log('notification sync error:', error.message);
+        });
+      },
+      markAsRead: (id) => {
+        set((state) => ({
+          notifications: state.notifications.map((n) => n.id === id ? { ...n, isRead: true } : n),
+        }));
+        supabase.from('notifications').update({ is_read: true }).eq('id', id).then(() => {});
+      },
+      markAllAsRead: (userId) => {
+        set((state) => ({
+          notifications: state.notifications.map((n) => n.userId === userId ? { ...n, isRead: true } : n),
+        }));
+        supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).then(() => {});
+      },
+      removeNotification: (id) => set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id),
+      })),
+      getByUser: (userId) => get().notifications.filter((n) => n.userId === userId).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+      getUnreadCount: (userId) => get().notifications.filter((n) => n.userId === userId && !n.isRead).length,
+    }),
+    {
+      name: 'nexgig:notifications',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 
 // ─── Calendar Jump Store ──────────────────────────────────────────────────────
 // Used by booking detail screens to tell the Calendar tab to jump to a specific date.
@@ -687,7 +722,52 @@ export const useInvoiceStore = create<InvoiceState>()(
   )
 );
 
-// ─── Invoice Reminder Store ─────────────────────────────────────────────────
+// ─── Load notifications from Supabase (call on sign-in) ────────────────────
+export async function loadNotificationsFromSupabase(userId: string) {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error || !data) return;
+  const store = useNotificationStore.getState();
+  const existingIds = new Set(store.notifications.map((n) => n.id));
+  const newNotifs = data
+    .filter((n: any) => !existingIds.has(n.id))
+    .map((n: any) => ({
+      id: n.id,
+      userId: n.user_id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      isRead: n.is_read ?? false,
+      relatedId: n.related_id ?? undefined,
+      relatedType: n.related_type ?? undefined,
+      createdAt: n.created_at,
+    }));
+  if (newNotifs.length > 0) {
+    // Add directly to state without re-syncing to Supabase
+    useNotificationStore.setState((state) => ({
+      notifications: [...newNotifs, ...state.notifications],
+    }));
+  }
+}
+
+// ─── Global Reset (call on sign out) ────────────────────────────────────────
+export function resetAllStores() {
+  useVenueStore.getState().clearVenues();
+  useSlotStore.getState().clearSlots();
+  useBookingStore.getState().clearBookings();
+  useLineupStore.getState().clearGlobalLineup();
+  useLineupStore.getState().clearArtistUsers();
+  useLineupStore.setState({ venueAssignments: [], lineups: [] });
+  useDraftStore.setState({ drafts: [] });
+  useAvailabilityStore.setState({ blocks: [] });
+  useInvoiceStore.setState({ invoices: [] });
+  useInvoiceReminderStore.setState({ reminders: [] });
+  useCalendarJumpStore.setState({ pendingDate: null });
+}
 
 interface InvoiceReminderEntry {
   venueId: string;

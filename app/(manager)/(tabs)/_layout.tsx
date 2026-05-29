@@ -1,7 +1,7 @@
 import { Tabs, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 
@@ -10,15 +10,37 @@ export default function ManagerTabsLayout() {
   const currentUser = useAuthStore((s) => s.currentUser);
   const [pendingCount, setPendingCount] = useState(0);
 
-  useFocusEffect(useCallback(() => {
+  const fetchPendingCount = useCallback(async () => {
     if (!currentUser?.id) return;
-    supabase
+    const { count } = await supabase
       .from('applications')
       .select('id', { count: 'exact', head: true })
       .eq('manager_id', currentUser.id)
-      .eq('status', 'pending')
-      .then(({ count }) => setPendingCount(count ?? 0));
-  }, [currentUser?.id]));
+      .eq('status', 'pending');
+    setPendingCount(count ?? 0);
+  }, [currentUser?.id]);
+
+  useFocusEffect(useCallback(() => {
+    fetchPendingCount();
+  }, [fetchPendingCount]));
+
+  // Realtime: update badge instantly when an application changes
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(`apps-badge-${currentUser.id}-${Date.now()}`)
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'applications', filter: `manager_id=eq.${currentUser.id}` },
+          () => { fetchPendingCount(); }
+        )
+        .subscribe();
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
+  }, [currentUser?.id, fetchPendingCount]);
 
   return (
     <Tabs

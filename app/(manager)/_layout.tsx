@@ -2,9 +2,10 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase } from '@/lib/store';
 
 export default function ManagerLayout() {
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -250,49 +251,74 @@ if (!lineupError && lineupData) {
     };
   }, []);
 
+  // Notifications: load from Supabase + realtime subscription (depends on currentUser)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    loadNotificationsFromSupabase(currentUser.id);
+    // Remove any stale channels from previous renders/hot-reloads
+    supabase.getChannels()
+      .filter((c: any) => c.topic?.includes(currentUser.id))
+      .forEach((c: any) => supabase.removeChannel(c));
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(`notif-mgr-${currentUser.id}-${Date.now()}`)
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
+          (payload) => {
+            const n = payload.new as any;
+            const store = useNotificationStore.getState();
+            if (store.notifications.some((x) => x.id === n.id)) return;
+            useNotificationStore.setState((state) => ({
+              notifications: [{
+                id: n.id, userId: n.user_id, type: n.type,
+                title: n.title, body: n.body, isRead: n.is_read ?? false,
+                relatedId: n.related_id ?? undefined, relatedType: n.related_type ?? undefined,
+                createdAt: n.created_at,
+              }, ...state.notifications],
+            }));
+          }
+        )
+        .subscribe();
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
+  }, [currentUser?.id]);
+
   // Realtime: listen for new invoices sent to this manager
   useEffect(() => {
+    if (!currentUser?.id) return;
     let invoiceChannel: ReturnType<typeof supabase.channel> | null = null;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
       invoiceChannel = supabase
-        .channel(`invoices-manager-${user.id}`)
+        .channel(`inv-mgr-${currentUser.id}-${Date.now()}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'invoices', filter: `manager_id=eq.${user.id}` },
+          { event: 'INSERT', schema: 'public', table: 'invoices', filter: `manager_id=eq.${currentUser.id}` },
           (payload) => {
             const inv = payload.new as any;
             const invoiceStore = useInvoiceStore.getState();
             if (invoiceStore.invoices.some((i) => i.id === inv.id)) return;
             invoiceStore.addInvoice({
-              id: inv.id,
-              venueId: inv.venue_id,
-              venueName: inv.venue_name,
-              artistId: inv.artist_id,
-              artistLegalName: inv.artist_legal_name,
-              artistEmail: inv.artist_email ?? '',
-              artistLocation: inv.artist_location ?? '',
-              managerId: inv.manager_id,
-              managerName: '',
+              id: inv.id, venueId: inv.venue_id, venueName: inv.venue_name,
+              artistId: inv.artist_id, artistLegalName: inv.artist_legal_name,
+              artistEmail: inv.artist_email ?? '', artistLocation: inv.artist_location ?? '',
+              managerId: inv.manager_id, managerName: '',
               venueLegalName: inv.venue_legal_name ?? inv.venue_name,
-              venueTrnNumber: inv.venue_trn_number ?? '',
-              venueAddress: inv.venue_address ?? '',
-              gigs: inv.gigs ?? [],
-              totalAmount: parseFloat(inv.total_amount),
-              invoiceNumber: inv.invoice_number ?? '',
-              sentAt: inv.sent_at,
-              status: inv.status,
-              isReadByManager: false,
-              isDeletedByManager: false,
+              venueTrnNumber: inv.venue_trn_number ?? '', venueAddress: inv.venue_address ?? '',
+              gigs: inv.gigs ?? [], totalAmount: parseFloat(inv.total_amount),
+              invoiceNumber: inv.invoice_number ?? '', sentAt: inv.sent_at, status: inv.status,
+              isReadByManager: false, isDeletedByManager: false,
             });
           }
         )
         .subscribe();
-    });
-    return () => {
-      if (invoiceChannel) supabase.removeChannel(invoiceChannel);
-    };
-  }, []);
+    }, 200);
+    return () => { cancelled = true; clearTimeout(timer); if (invoiceChannel) supabase.removeChannel(invoiceChannel); };
+  }, [currentUser?.id]);
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator, Image } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -35,6 +35,15 @@ export default function NetworkScreen() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (activeTab === 'applications') await fetchApplications();
+    else if (activeTab === 'artists') await fetchArtists();
+    else await fetchVenues();
+    setRefreshing(false);
+  }, [activeTab]);
 
   // ── Artists state ─────────────────────────────────────────────────────────
   const [sbArtists, setSbArtists] = useState<User[]>([]);
@@ -240,6 +249,7 @@ export default function NetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="inbox" size={48} color={colors.muted} />
@@ -288,6 +298,7 @@ export default function NetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="people" size={48} color={colors.muted} />
@@ -350,6 +361,7 @@ export default function NetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="place" size={48} color={colors.muted} />

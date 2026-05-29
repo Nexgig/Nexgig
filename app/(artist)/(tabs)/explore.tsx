@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 
@@ -42,6 +42,17 @@ export default function ArtistNetworkScreen() {
   const currentUser = useAuthStore((s) => s.currentUser);
 
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const venueAssignments = useLineupStore((s) => s.venueAssignments);
+
+  // Derive assigned venue IDs reactively from the store — updates instantly when manager removes artist
+  const assignedVenueIds = useMemo(() =>
+    new Set(
+      venueAssignments
+        .filter((a) => a.artistId === currentUser?.id && a.status === 'active')
+        .map((a) => a.venueId)
+    ),
+    [venueAssignments, currentUser?.id]
+  );
   const [activeTab, setActiveTab] = useState<NetworkTab>('applications');
   const [search, setSearch] = useState('');
 
@@ -51,9 +62,17 @@ export default function ArtistNetworkScreen() {
 
   // ── Venues state ───────────────────────────────────────────────────────────
   const [venues, setVenues] = useState<VenueItem[]>([]);
-  const [assignedVenueIds, setAssignedVenueIds] = useState<Set<string>>(new Set());
   const [appliedVenueIds, setAppliedVenueIds] = useState<Set<string>>(new Set());
   const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (activeTab === 'applications') await fetchApplications();
+    else if (activeTab === 'venues') await fetchVenues();
+    else await fetchArtists();
+    setRefreshing(false);
+  }, [activeTab]);
   const [venuesLoading, setVenuesLoading] = useState(false);
   const [venuesFetched, setVenuesFetched] = useState(false);
 
@@ -80,7 +99,7 @@ export default function ArtistNetworkScreen() {
       .from('applications')
       .select('id, venue_id, status, created_at')
       .eq('artist_id', currentUser.id)
-      .in('status', ['pending', 'accepted'])
+      .eq('status', 'pending')
       .order('created_at', { ascending: false });
     if (data && data.length > 0) {
       const venueIds = data.map((a: any) => a.venue_id);
@@ -99,13 +118,11 @@ export default function ArtistNetworkScreen() {
   const fetchVenues = async () => {
     if (!currentUser) return;
     setVenuesLoading(true);
-    const [venuesRes, assignmentsRes, appsRes] = await Promise.all([
+    const [venuesRes, appsRes] = await Promise.all([
       supabase.from('venues').select('id, name, venue_type, address, genre_preferences, manager_id').neq('is_hidden', true),
-      supabase.from('venue_assignments').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'active'),
-      supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).in('status', ['pending', 'accepted']),
+      supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'pending'),
     ]);
     if (venuesRes.data) setVenues(venuesRes.data);
-    setAssignedVenueIds(new Set((assignmentsRes.data ?? []).map((a: any) => a.venue_id)));
     setAppliedVenueIds(new Set((appsRes.data ?? []).map((a: any) => a.venue_id)));
     setVenuesFetched(true);
     setVenuesLoading(false);
@@ -142,8 +159,9 @@ export default function ArtistNetworkScreen() {
             return;
           }
           // Notify manager
+          const notifId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
           addNotification({
-            id: `app-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            id: notifId,
             userId: venue.manager_id,
             type: 'lineup_request' as any,
             title: 'New Join Request',
@@ -241,6 +259,7 @@ export default function ArtistNetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="inbox" size={48} color={colors.muted} />
@@ -289,6 +308,7 @@ export default function ArtistNetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="place" size={48} color={colors.muted} />
@@ -367,6 +387,7 @@ export default function ArtistNetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="people" size={48} color={colors.muted} />

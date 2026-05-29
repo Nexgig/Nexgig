@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore } from '@/lib/store';
+import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore, loadNotificationsFromSupabase } from '@/lib/store';
 import type { Booking } from '@/lib/types';
 
 export default function DJLayout() {
@@ -210,6 +210,50 @@ export default function DJLayout() {
       });
     };
     fetchInvoices();
+
+    // Load notifications from Supabase
+    loadNotificationsFromSupabase(currentUser.id);
+    // Remove any stale channels from previous renders/hot-reloads
+    supabase.getChannels()
+      .filter((c: any) => c.topic?.includes(currentUser.id))
+      .forEach((c: any) => supabase.removeChannel(c));
+
+    // Realtime: receive new notifications instantly
+    let notifCancelled = false;
+    let notifChannel: ReturnType<typeof supabase.channel> | null = null;
+    const notifTimer = setTimeout(() => {
+      if (notifCancelled) return;
+      notifChannel = supabase
+        .channel(`notif-artist-${currentUser.id}-${Date.now()}`)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
+        (payload) => {
+          const n = payload.new as any;
+          const store = useNotificationStore.getState();
+          if (store.notifications.some((x) => x.id === n.id)) return;
+          // If removed from a venue, update local venue assignments immediately
+          if (n.type === 'venue_removed' && n.related_id) {
+            const lineupStore = useLineupStore.getState();
+            lineupStore.resetVenueAssignmentsForArtist(
+              currentUser.id,
+              lineupStore.venueAssignments.filter(
+                (a) => !(a.artistId === currentUser.id && a.venueId === n.related_id)
+              )
+            );
+          }
+          useNotificationStore.setState((state) => ({
+            notifications: [{
+              id: n.id, userId: n.user_id, type: n.type,
+              title: n.title, body: n.body, isRead: n.is_read ?? false,
+              relatedId: n.related_id ?? undefined, relatedType: n.related_type ?? undefined,
+              createdAt: n.created_at,
+            }, ...state.notifications],
+          }));
+        }
+      )
+      .subscribe();
+      }, 200);
+      return () => { notifCancelled = true; clearTimeout(notifTimer); if (notifChannel) supabase.removeChannel(notifChannel); };
   }, [currentUser?.id]);
 
   return (

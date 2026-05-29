@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Animated, Image, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
@@ -42,7 +43,13 @@ export default function ManagerDashboard() {
       const slot = slots.find((s) => s.id === b.slotId);
       const dj = artistUsers.find((u) => u.id === b.artistId);
       const venue = allVenues.find((v) => v.id === b.venueId);
-      return { ...b, slot, dj, venue };
+      const resolvedSlot = slot ?? (b.slotDate ? {
+        id: b.slotId, venueId: b.venueId, date: b.slotDate,
+        name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+        endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
+      } : undefined);
+      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue };
     })
     .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime))
     .sort((a, b) => (a.slot?.date ?? '') < (b.slot?.date ?? '') ? -1 : 1)
@@ -51,32 +58,59 @@ export default function ManagerDashboard() {
   );
 
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const clearBookings = useBookingStore((s) => s.clearBookings);
+  const addBooking = useBookingStore((s) => s.addBooking);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    const { data } = await supabase.from('bookings').select('*').eq('manager_id', currentUser.id);
+    if (data) {
+      clearBookings();
+      data.forEach((b: any) => addBooking({
+        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+        managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
+        confirmedAt: b.confirmed_at ?? undefined, cancelledAt: b.cancelled_at ?? undefined,
+        cancellationReason: b.cancellation_reason ?? undefined,
+        cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+        cancelledAsRequest: b.cancelled_as_request ?? false,
+        hiddenFromCalendar: b.hidden_from_calendar ?? false,
+        hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
+        slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        venueName: b.venue_name ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+      }));
+    }
+    setRefreshing(false);
+  }, [currentUser?.id]);
 
   // Auto-complete confirmed bookings whose slot start time has passed
-  // Also snapshot slot/venue data so the record persists even after slot deletion
   useEffect(() => {
     bookings
       .filter((b) => b.status === 'confirmed' && !b.isCompleted)
       .forEach((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
-        if (slot && isPastStart(slot.date, slot.startTime)) {
+        // Use live slot first, fall back to booking's own snapshot
+        const slotDate = slot?.date ?? b.slotDate;
+        const slotStart = slot?.startTime ?? b.slotStartTime;
+        if (slotDate && slotStart && isPastStart(slotDate, slotStart)) {
           const venue = allVenues.find((v) => v.id === b.venueId);
           updateBookingStatus(b.id, 'completed', {
             isCompleted: true,
-            slotDate: slot.date,
-            slotName: slot.name,
-            slotStartTime: slot.startTime,
-            slotEndTime: slot.endTime,
-            venueName: venue?.name,
+            slotDate: slot?.date ?? b.slotDate,
+            slotName: slot?.name ?? b.slotName,
+            slotStartTime: slot?.startTime ?? b.slotStartTime,
+            slotEndTime: slot?.endTime ?? b.slotEndTime,
+            venueName: venue?.name ?? b.venueName,
           });
-          // Also sync snapshot fields to Supabase so they survive reload
           syncBookingStatus(b.id, 'completed', {
             isCompleted: true,
-            slotDate: slot.date,
-            slotName: slot.name,
-            slotStartTime: slot.startTime,
-            slotEndTime: slot.endTime,
-            venueName: venue?.name,
+            slotDate: slot?.date ?? b.slotDate,
+            slotName: slot?.name ?? b.slotName,
+            slotStartTime: slot?.startTime ?? b.slotStartTime,
+            slotEndTime: slot?.endTime ?? b.slotEndTime,
+            venueName: venue?.name ?? b.venueName,
           });
         }
       });
@@ -215,7 +249,11 @@ export default function ManagerDashboard() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>

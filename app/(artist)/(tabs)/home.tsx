@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
@@ -24,6 +25,34 @@ export default function DJHomeScreen() {
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const allInvoices = useInvoiceStore((s) => s.invoices);
   const getReminder = useInvoiceReminderStore((s) => s.getReminder);
+
+  const clearBookings = useBookingStore((s) => s.clearBookings);
+  const addBooking = useBookingStore((s) => s.addBooking);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    const { data } = await supabase.from('bookings').select('*').eq('artist_id', currentUser.id);
+    if (data) {
+      clearBookings();
+      data.forEach((b: any) => addBooking({
+        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+        managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
+        confirmedAt: b.confirmed_at ?? undefined, cancelledAt: b.cancelled_at ?? undefined,
+        cancellationReason: b.cancellation_reason ?? undefined,
+        cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+        cancelledAsRequest: b.cancelled_as_request ?? false,
+        hiddenFromCalendar: b.hidden_from_calendar ?? false,
+        hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
+        isArtistCreated: b.is_artist_created ?? false,
+        slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        venueName: b.venue_name ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+      }));
+    }
+    setRefreshing(false);
+  }, [currentUser?.id]);
 
   // Check if any venue has overdue invoice reminder
   const hasOverdueInvoice = useMemo(() => {
@@ -80,7 +109,14 @@ export default function DJHomeScreen() {
       .map((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
         const venue = allVenues.find((v) => v.id === b.venueId);
-        return { ...b, slot, venue };
+        // Fall back to snapshot when slot not in store
+        const resolvedSlot = slot ?? (b.slotDate ? {
+          id: b.slotId, venueId: b.venueId, date: b.slotDate,
+          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
+        } : undefined);
+        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+        return { ...b, slot: resolvedSlot, venue: resolvedVenue };
       })
       .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime));
     const privateConfirmed = bookings
@@ -92,7 +128,7 @@ export default function DJHomeScreen() {
         const dateB = b.slot?.date ?? b.slotDate ?? '';
         return dateA < dateB ? -1 : 1;
       })
-      .slice(0, 4);
+      .slice(0, 6);
   }, [bookings, slots, allVenues, nowDT]);
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
@@ -191,7 +227,7 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -217,7 +253,7 @@ export default function DJHomeScreen() {
         <View style={styles.summaryRow}>
           <SummaryCard label="CONFIRMED" value={confirmedCount} color={colors.success} colors={colors} onPress={() => router.push('/(artist)/confirmed-gigs' as Href)} />
           <SummaryCard label="PENDING" value={pendingCount} color={colors.warning} colors={colors} onPress={() => router.push('/(artist)/pending-requests' as Href)} />
-          <SummaryCard label="VENUES" value={venueCount} color={colors.primary} colors={colors} onPress={() => router.push('/(artist)/my-venues' as Href)} />
+          <SummaryCard label="COMPLETED" value={completedBookings.length} color={colors.primary} colors={colors} onPress={() => setCompletedOpen(true)} />
         </View>
 
         {/* Upcoming Gigs */}
@@ -225,7 +261,7 @@ export default function DJHomeScreen() {
           <SectionHeader
             title="Upcoming"
             actionLabel="See all"
-            onAction={() => router.push('/(artist)/(tabs)/bookings' as Href)}
+            onAction={() => router.push('/(artist)/confirmed-gigs' as Href)}
           />
           {upcomingBookings.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -385,7 +421,7 @@ function SummaryCard({ label, value, color, colors, onPress }: {
       onPress={onPress}
     >
       <Text style={[styles.summaryValue, { color }]}>{value}</Text>
-      <Text style={[styles.summaryLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.summaryLabel, { color: colors.muted }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
     </Pressable>
   );
 }

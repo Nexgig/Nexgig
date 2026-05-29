@@ -9,6 +9,7 @@ import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotifica
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { syncBookingStatus } from '@/lib/booking-sync';
+import { isPastStart } from '@/lib/utils';
 
 export default function DJBookingDetailScreen() {
   const router = useRouter();
@@ -82,9 +83,8 @@ export default function DJBookingDetailScreen() {
   const venue = getVenueById(booking.venueId);
 
   const handleAccept = () => {
-    const today = new Date().toISOString().split('T')[0];
     const bookingDate = slot?.date ?? booking.slotDate ?? '';
-    const isPast = bookingDate !== '' && bookingDate < today;
+    const isPast = bookingDate !== '' && isPastStart(bookingDate, slot?.startTime ?? booking.slotStartTime ?? '23:59');
 
     if (isPast) {
       // Past booking — confirm goes directly to completed
@@ -271,7 +271,7 @@ console.log('cancel sync called:', booking.id);
           )}
 
           {/* Venue Energy */}
-          {venue && venue.preferredEnergy.length > 0 && (
+          {venue && (venue.preferredEnergy?.length ?? 0) > 0 && (
             <View style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.notesLabel, { color: colors.muted }]}>Expected Energy</Text>
               <View style={styles.chips}>

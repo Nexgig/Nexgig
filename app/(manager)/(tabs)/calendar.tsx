@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 // react-native-reanimated Animated not used in this file (using RNAnimated from react-native instead)
@@ -139,6 +139,24 @@ export default function CalendarScreen() {
   else console.log('booking saved to Supabase:', bookingId);
 };
 
+  const clearSlots = useSlotStore((s) => s.clearSlots);
+  const [calendarRefreshing, setCalendarRefreshing] = useState(false);
+
+  const handleCalendarRefresh = useCallback(async () => {
+    if (!currentUser) return;
+    setCalendarRefreshing(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const [slotsRes] = await Promise.all([
+        supabase.from('slots').select('*').eq('manager_id', user.id),
+      ]);
+      if (slotsRes.data) {
+        clearSlots();
+        slotsRes.data.forEach((s: any) => addSlot({ id: s.id, venueId: s.venue_id, name: s.name, date: s.date, startTime: s.start_time, endTime: s.end_time, createdAt: s.created_at }));
+      }
+    }
+    setCalendarRefreshing(false);
+  }, [currentUser]);
   const managerVenueIds = useMemo(() => venues.map((v) => v.id), [venues]);
   const allManagerSlots = useMemo(
     () => allSlots.filter((s) => managerVenueIds.includes(s.venueId)),
@@ -1535,7 +1553,7 @@ if (newBookingId) {
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
+      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={<RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>

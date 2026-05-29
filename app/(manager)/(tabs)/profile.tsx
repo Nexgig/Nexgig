@@ -1,10 +1,11 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, resetAllStores } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -30,19 +31,44 @@ export default function ManagerProfileScreen() {
     [allVenues, currentUser?.id]
   );
 
+  const addInvoice = useInvoiceStore((s) => s.addInvoice);
+  const invoicesList = useInvoiceStore((s) => s.invoices);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    const { data } = await supabase.from('invoices').select('*').eq('manager_id', currentUser.id).order('sent_at', { ascending: false });
+    if (data) {
+      data.forEach((inv: any) => {
+        if (invoicesList.some((i) => i.id === inv.id)) return;
+        addInvoice({
+          id: inv.id, venueId: inv.venue_id, venueName: inv.venue_name,
+          artistId: inv.artist_id, artistLegalName: inv.artist_legal_name,
+          artistEmail: inv.artist_email ?? '', artistLocation: inv.artist_location ?? '',
+          managerId: inv.manager_id, managerName: '',
+          venueLegalName: inv.venue_legal_name ?? inv.venue_name,
+          venueTrnNumber: inv.venue_trn_number ?? '', venueAddress: inv.venue_address ?? '',
+          gigs: inv.gigs ?? [], totalAmount: parseFloat(inv.total_amount),
+          invoiceNumber: inv.invoice_number ?? '', sentAt: inv.sent_at, status: inv.status,
+        });
+      });
+    }
+    setRefreshing(false);
+  }, [currentUser?.id, invoicesList]);
   const managerBasedIn = currentUser?.location ?? '';
   const managerBasedInCountry = managerBasedIn ? COUNTRIES.find((c) => c.name === managerBasedIn) : undefined;
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/welcome' as Href); } },
+      { text: 'Sign Out', style: 'destructive', onPress: () => { resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href); } },
     ]);
   };
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.foreground }]}>My Profile</Text>
@@ -191,7 +217,8 @@ function InvoicesSection({ colors, currentUserId, router }: {
         const year = sentDate.getFullYear();
         const artistSlug = (inv.artistLegalName || 'Artist').replace(/[^a-zA-Z0-9]/g, '');
         const venueSlug = (inv.venueName || 'Venue').replace(/[^a-zA-Z0-9]/g, '');
-        const filename = `NX_${artistSlug}_${venueSlug}_${day}${mon}${year}.pdf`;
+        const invSlug = (inv.invoiceNumber || inv.id.slice(0, 8)).replace(/[^a-zA-Z0-9]/g, '');
+        const filename = `${invSlug}.pdf`;
         const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
         zip.file(filename, base64, { base64: true, compression: 'STORE' });
       }

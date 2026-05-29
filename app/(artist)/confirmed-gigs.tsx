@@ -27,7 +27,13 @@ export default function ArtistConfirmedGigsScreen() {
       .map((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
         const venue = allVenues.find((v) => v.id === b.venueId);
-        return { ...b, slot, venue };
+        const resolvedSlot = slot ?? (b.slotDate ? {
+          id: b.slotId, venueId: b.venueId, date: b.slotDate,
+          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
+        } : undefined);
+        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+        return { ...b, slot: resolvedSlot, venue: resolvedVenue };
       })
       .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime))
       .sort((a, b) => (a.slot?.date ?? '') < (b.slot?.date ?? '') ? -1 : 1);

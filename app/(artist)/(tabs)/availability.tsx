@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -256,6 +256,33 @@ export default function DJAvailabilityScreen() {
 
   // Three-dot menu state: { type: 'booking'|'block', id: string } | null
   const [menuItem, setMenuItem] = useState<{ type: 'booking' | 'block'; id: string } | null>(null);
+
+  const clearBookings = useBookingStore((s) => s.clearBookings);
+  const addBookingFn = useBookingStore((s) => s.addBooking);
+  const [calRefreshing, setCalRefreshing] = useState(false);
+
+  const handleCalRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setCalRefreshing(true);
+    const { data } = await supabase.from('bookings').select('*').eq('artist_id', currentUser.id);
+    if (data) {
+      clearBookings();
+      data.forEach((b: any) => addBookingFn({
+        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+        managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
+        confirmedAt: b.confirmed_at ?? undefined, cancelledAt: b.cancelled_at ?? undefined,
+        cancellationReason: b.cancellation_reason ?? undefined,
+        cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+        cancelledAsRequest: b.cancelled_as_request ?? false,
+        hiddenFromCalendar: b.hidden_from_calendar ?? false,
+        isArtistCreated: b.is_artist_created ?? false,
+        slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        venueName: b.venue_name ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+      }));
+    }
+    setCalRefreshing(false);
+  }, [currentUser?.id]);
 
   // Calendar Sync modal
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -833,9 +860,8 @@ export default function DJAvailabilityScreen() {
               style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
               onPress={(e) => {
                 e.stopPropagation?.();
-                const today = new Date().toISOString().split('T')[0];
                 const bookingDate = b.resolvedDate ?? '';
-                const isPast = bookingDate !== '' && bookingDate < today;
+                const isPast = bookingDate !== '' && isPastStart(bookingDate, b.resolvedStart ?? '23:59');
                 if (isPast) {
                   Alert.alert(
                     'Confirm Past Gig',
@@ -1025,7 +1051,7 @@ export default function DJAvailabilityScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>

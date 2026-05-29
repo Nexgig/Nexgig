@@ -784,3 +784,75 @@
 ## Download All Fix
 
 - [x] Fix Download All hanging indefinitely in manager profile invoices section — switched to STORE compression (no compression) for speed, added error message display
+
+# ─────────────────────────────────────────────────────────────
+# PRE-LAUNCH AUDIT — Cleanup, Bugs, Store Readiness (May 2026)
+# ─────────────────────────────────────────────────────────────
+
+## A. Remove dead code (unused Manus backend scaffold — app runs 100% on Supabase)
+
+- [ ] Delete `server/` directory (tRPC/Express stubs — only system + auth.logout, never used)
+- [ ] Delete `drizzle/` and `drizzle.config.ts` (no MySQL DB — app is Supabase)
+- [ ] Delete `shared/` directory
+- [ ] Delete `lib/_core/` (Manus runtime + auth + api — unused)
+- [ ] Delete `lib/trpc.ts` and remove the trpc.Provider wrapper from `app/_layout.tsx`
+- [ ] Verify then delete `lib/api.ts` if unused (screens write to Supabase directly)
+- [ ] Delete `hooks/use-auth.ts` (unused Manus auth hook, full of console.logs)
+- [ ] Remove unused deps: @trpc/*, express, drizzle-orm, mysql2, superjson, axios, cookie, jose, @expo/ngrok
+- [ ] Remove unused npm scripts: dev:server, build, start, db:push (Node-server only)
+- [ ] Delete scratch notes: notes.txt, notes-calendar.txt, notes-checkpoint2.txt, notes-weekview.txt
+- [ ] Delete dev-only screen `app/dev/theme-lab.tsx` and `expo-qr-code.png`
+- [ ] Verify `lib/mock-data.ts` is NOT seeding stores at runtime; delete if unused (else real users see fake data)
+- [ ] Delete `package-lock.json` (keep pnpm-lock.yaml — project uses pnpm; two lockfiles cause drift)
+- [ ] Remove dead styles in welcome.tsx (djNote, testBtn, testBtnText)
+- [ ] Remove unused language selector code in artist settings.tsx (state defined but never rendered)
+- [ ] Remove/replace `tests/auth.logout.test.ts` (imports deleted server/ — currently skipped)
+
+## B. Bugs & correctness
+
+- [ ] Fix `Slot` type in types.ts — add managerId, status, updatedAt (sync.ts already uses them → type error). Run `pnpm check`.
+- [ ] Consolidate venue/slot/booking persistence INTO the store actions so Supabase writes can't be forgotten (currently split between store + screens → silent local/server drift)
+- [ ] Make `updateBookingStatus` store action sync to Supabase (today it only mutates local state; relies on manual syncBookingStatus calls)
+- [ ] Dedupe notifications: addNotification + realtime subscribeToNotifications can insert the same id twice locally
+- [ ] Strip console.log from production paths (booking-sync.ts, store.ts; use-auth.ts before deletion)
+- [ ] Fix false self-conflict when assigning an artist to a past slot (open item from prior session)
+
+## C. Store launch blockers (HARD requirements for App Store + Google Play)
+
+- [ ] Build in-app Delete Account in artist + manager settings — REQUIRED by Apple 5.1.1(v) & Google (auto-reject without it)
+- [ ] Add Privacy Policy + Terms screens/links in settings — REQUIRED by both stores (need a hosted policy URL)
+- [ ] Decide on expo-audio (microphone) + expo-video plugins — remove plugins+packages if unused (mic permission with no feature = rejection risk); else be ready to justify
+- [ ] Add iOS permission strings for expo-image-picker (NSPhotoLibraryUsageDescription / camera) in app.config.ts
+- [ ] Verify splash + app icon are Nexgig (not old Gigster) in app.config.ts and assets
+- [ ] Prepare reviewer demo accounts (manager + artist) + review notes — onboarding is invite-only
+- [ ] Complete App Store privacy nutrition labels / Google Data Safety form (collects email, name, photos)
+
+## D. Push notifications
+
+- [ ] Set up EAS Build (create eas.json + EAS project id) — cannot submit or test push from Expo Go
+- [ ] Add expo-notifications to app.config.ts plugins (notification icon + sound config)
+- [ ] iOS push credentials (APNs key) via EAS
+- [ ] Android push credentials (FCM) via EAS
+- [ ] Register device push tokens on sign-in and store per user/device in Supabase
+- [ ] Send push on key events (new request, confirm/decline/cancel, invite) — today these are in-app only
+- [ ] Wire same-day / day-before gig reminders (artist settings toggles exist; need real scheduling on a dev/EAS build)
+
+## E. Sign in with Apple + Google
+
+- [ ] Add Google sign-in via Supabase OAuth (oauth/callback.tsx + constants/oauth.ts are scaffolded — wire them up)
+- [ ] Add Sign in with Apple — REQUIRED by Apple once Google/social login is offered
+- [ ] Add Apple + Google buttons to welcome.tsx and sign-in.tsx
+- [ ] On first OAuth sign-in, route new users through account-type selection and create the managers/artists/users rows
+- [ ] Configure redirect scheme + enable Apple & Google providers in the Supabase dashboard
+
+## F. Testing
+
+- [x] Add smoke test `__tests__/smoke.test.ts` — stores, venue/slot/booking/draft/lineup reducers, slot-delete cascade, conflict detection (incl. overnight wrap + self-slot skip), time utils, resetAllStores
+- [ ] Run `pnpm check` (TypeScript) — fix Slot type + any other errors
+- [ ] Run `pnpm test` — confirm smoke test + existing suite pass
+- [ ] Run `pnpm lint`
+
+## G. Security to verify
+
+- [ ] `.env` is committed (only .env*.local is gitignored) — confirm no service-role key / private secret is inside; rotate + gitignore if so
+- [ ] Confirm Supabase Row Level Security (RLS) is enabled with correct policies on all tables (critical — the anon key is public)

@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { supabase } from '@/lib/supabase';
@@ -322,8 +322,27 @@ Linking.openURL(url);
                           `Remove ${dj.fullName} from this venue's lineup?`,
                           [
                             { text: 'Cancel', style: 'cancel' },
-                            { text: 'Remove', style: 'destructive', onPress: () => {
+                            { text: 'Remove', style: 'destructive', onPress: async () => {
+                              // Update local store
                               useLineupStore.getState().removeFromVenue(a.venueId, a.artistId);
+                              // Update Supabase so artist sees the change on next load
+                              const { error: vaErr } = await supabase.from('venue_assignments')
+                                .delete()
+                                .eq('venue_id', a.venueId)
+                                .eq('artist_id', a.artistId);
+                              if (vaErr) console.log('venue_assignments remove error:', vaErr.message);
+                              // Notify the artist
+                              useNotificationStore.getState().addNotification({
+                                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                                userId: a.artistId,
+                                type: 'venue_removed',
+                                title: 'Removed from Lineup',
+                                body: `You have been removed from the lineup at ${venue.name}.`,
+                                isRead: false,
+                                relatedId: a.venueId,
+                                relatedType: 'venue',
+                                createdAt: new Date().toISOString(),
+                              });
                             }},
                           ]
                         );

@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, useSlotStore, useVenueStore } from '@/lib/store'; // useLineupStore kept for getArtistProfile
+import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, useSlotStore, useVenueStore, resetAllStores } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -51,10 +52,33 @@ export default function ArtistProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState(currentUser?.bio ?? '');
 
+  const clearBookings = useBookingStore((s) => s.clearBookings);
+  const addBooking = useBookingStore((s) => s.addBooking);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    const { data } = await supabase.from('bookings').select('*').eq('artist_id', currentUser.id);
+    if (data) {
+      clearBookings();
+      data.forEach((b: any) => addBooking({
+        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+        managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
+        hiddenFromCalendar: b.hidden_from_calendar ?? false,
+        isArtistCreated: b.is_artist_created ?? false,
+        slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        venueName: b.venue_name ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+      }));
+    }
+    setRefreshing(false);
+  }, [currentUser?.id]);
+
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/welcome' as Href); } },
+      { text: 'Sign Out', style: 'destructive', onPress: () => { resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href); } },
     ]);
   };
 
@@ -109,7 +133,7 @@ export default function ArtistProfileScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.foreground }]}>My Profile</Text>
