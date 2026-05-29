@@ -16,7 +16,6 @@ import {
 } from "react-native-safe-area-context";
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore, resetAllStores } from "@/lib/store";
@@ -83,7 +82,6 @@ export default function RootLayout() {
         },
       }),
   );
-  const [trpcClient] = useState(() => createTRPCClient());
 
   // Ensure minimum padding for top and bottom on mobile
   const providerInitialMetrics = useMemo(() => {
@@ -100,18 +98,16 @@ export default function RootLayout() {
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
-            <Stack.Screen name="(manager)" />
-            <Stack.Screen name="(artist)" />
-            <Stack.Screen name="oauth/callback" />
-          </Stack>
-          <StatusBar style="auto" />
-        </QueryClientProvider>
-      </trpc.Provider>
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
+          <Stack.Screen name="(manager)" />
+          <Stack.Screen name="(artist)" />
+          <Stack.Screen name="oauth/callback" />
+        </Stack>
+        <StatusBar style="auto" />
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 
