@@ -35,6 +35,11 @@ export async function syncBookingStatus(
   if (extra.hiddenFromManagerCalendar !== undefined) {
     updates.hidden_from_manager_calendar = extra.hiddenFromManagerCalendar;
   }
+  if (extra.slotDate !== undefined) updates.slot_date = extra.slotDate;
+  if (extra.slotName !== undefined) updates.slot_name = extra.slotName;
+  if (extra.slotStartTime !== undefined) updates.slot_start_time = extra.slotStartTime;
+  if (extra.slotEndTime !== undefined) updates.slot_end_time = extra.slotEndTime;
+  if (extra.venueName !== undefined) updates.venue_name = extra.venueName;
 
   const { error } = await supabase
     .from('bookings')

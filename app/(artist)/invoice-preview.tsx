@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { supabase } from '@/lib/supabase';
 import type { Invoice, InvoiceGig } from '@/lib/types';
 
 export default function InvoicePreviewScreen() {
@@ -72,8 +73,12 @@ export default function InvoicePreviewScreen() {
             setIsSending(true);
             await new Promise((r) => setTimeout(r, 600));
 
+            const newInvoiceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+              const r = Math.random() * 16 | 0;
+              return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
             const newInvoice: Invoice = {
-              id: 'inv-' + Date.now(),
+              id: newInvoiceId,
               venueId,
               venueName,
               artistId: currentUser.id,
@@ -92,6 +97,27 @@ export default function InvoicePreviewScreen() {
               status: 'sent',
             };
             addInvoice(newInvoice);
+
+            // Save to Supabase
+            const { error: invError } = await supabase.from('invoices').insert({
+              id: newInvoice.id,
+              artist_id: currentUser.id,
+              manager_id: managerId,
+              venue_id: venueId,
+              venue_name: venueName,
+              artist_legal_name: artistName,
+              artist_email: artistEmail,
+              artist_location: artistLocation,
+              venue_legal_name: venueLegalName,
+              venue_trn_number: venueTrnNumber || null,
+              venue_address: venueAddress || null,
+              gigs: gigs,
+              total_amount: totalAmount,
+              invoice_number: invoiceNumber,
+              status: 'sent',
+              sent_at: newInvoice.sentAt,
+            });
+            if (invError) console.log('Invoice insert error:', invError.message);
 
             // Send notification to manager
             addNotification({

@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType, Gender } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
+import { PhoneInput } from '@/components/phone-input';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
@@ -48,6 +49,7 @@ export default function DJSetupScreen() {
     username: '',
     email: '',
     password: '',
+    phone: '',
     bio: '',
     basedIn: '',
     nationality: '',
@@ -162,7 +164,7 @@ export default function DJSetupScreen() {
   email: form.email.trim().toLowerCase(),
   full_name: form.fullName.trim(),
   account_type: 'artist',
-  phone: '',
+  phone: form.phone.trim(),
   is_phone_verified: false,
   is_email_verified: false,
 }, { onConflict: 'id' });
@@ -189,7 +191,7 @@ export default function DJSetupScreen() {
   instruments: form.instruments,
   min_rate: form.minRate ? parseFloat(form.minRate) : null,
   years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
-  instagram_url: form.instagram || null,
+  instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
   soundcloud_url: form.soundcloud || null,
   mixcloud_url: form.mixcloud || null,
   spotify_url: form.spotify || null,
@@ -206,7 +208,7 @@ export default function DJSetupScreen() {
     setCurrentUser({
       id: user.id,
       email: form.email.trim().toLowerCase(),
-      phone: '',
+      phone: form.phone.trim(),
       accountType: 'artist' as const,
       fullName: form.fullName.trim(),
       fullLegalName: form.fullLegalName.trim(),
@@ -291,6 +293,12 @@ export default function DJSetupScreen() {
                   value={form.password} onChangeText={(v) => update('password', v)}
                   secureTextEntry autoCapitalize="none" returnKeyType="next" />
               </View>
+              <PhoneInput
+                label="Phone Number"
+                optional
+                value={form.phone}
+                onChange={(v) => update('phone', v)}
+              />
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Bio (max 500 chars)</Text>
                 <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
@@ -382,7 +390,7 @@ export default function DJSetupScreen() {
           {displayStep === 4 && (
             <View style={styles.form}>
               <Text style={[styles.infoText, { color: colors.muted, marginBottom: 8 }]}>At least one link is required.</Text>
-              {(['soundcloud', 'instagram', 'spotify', 'mixcloud'] as const).map((platform) => (
+              {(['soundcloud', 'spotify', 'mixcloud'] as const).map((platform) => (
                 <View key={platform} style={styles.fieldGroup}>
                   <Text style={[styles.label, { color: colors.foreground }]}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
                   <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
@@ -391,6 +399,22 @@ export default function DJSetupScreen() {
                     autoCapitalize="none" keyboardType="url" returnKeyType="done" />
                 </View>
               ))}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Instagram</Text>
+                <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
+                  <TextInput
+                    style={[styles.instagramInput, { color: colors.foreground }]}
+                    placeholder="yourhandle"
+                    placeholderTextColor={colors.muted}
+                    value={form.instagram.replace(/^@/, '')}
+                    onChangeText={(v) => update('instagram', v.replace(/^@/, ''))}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
             </View>
           )}
 
@@ -431,4 +455,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, marginTop: 2 },
   nextBtn: { backgroundColor: '#2E75B6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  instagramRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
+  instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },
+  instagramInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 15 },
 });

@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore } from '@/lib/store';
 
 export default function ManagerLayout() {
 
@@ -186,7 +186,45 @@ if (!lineupError && lineupData) {
 
     fetchData();
 
-    // ✅ Realtime: listen for booking status changes
+    // Fetch invoices received by this manager
+    const fetchInvoices = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('manager_id', user.id)
+        .order('sent_at', { ascending: false });
+      if (!data || data.length === 0) return;
+      const invoiceStore = useInvoiceStore.getState();
+      data.forEach((inv: any) => {
+        if (invoiceStore.invoices.some((i) => i.id === inv.id)) return;
+        invoiceStore.addInvoice({
+          id: inv.id,
+          venueId: inv.venue_id,
+          venueName: inv.venue_name,
+          artistId: inv.artist_id,
+          artistLegalName: inv.artist_legal_name,
+          artistEmail: inv.artist_email ?? '',
+          artistLocation: inv.artist_location ?? '',
+          managerId: inv.manager_id,
+          managerName: inv.manager_name ?? '',
+          venueLegalName: inv.venue_legal_name ?? inv.venue_name,
+          venueTrnNumber: inv.venue_trn_number ?? '',
+          venueAddress: inv.venue_address ?? '',
+          gigs: inv.gigs ?? [],
+          totalAmount: parseFloat(inv.total_amount),
+          invoiceNumber: inv.invoice_number ?? '',
+          sentAt: inv.sent_at,
+          status: inv.status,
+          isReadByManager: inv.is_read_by_manager ?? false,
+          isDeletedByManager: inv.is_deleted_by_manager ?? false,
+        });
+      });
+    };
+    fetchInvoices();
+
+    // Realtime: listen for booking status changes
     const subscription = supabase
       .channel('bookings-changes')
       .on(
@@ -209,6 +247,50 @@ if (!lineupError && lineupData) {
 
     return () => {
       supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  // Realtime: listen for new invoices sent to this manager
+  useEffect(() => {
+    let invoiceChannel: ReturnType<typeof supabase.channel> | null = null;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      invoiceChannel = supabase
+        .channel(`invoices-manager-${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'invoices', filter: `manager_id=eq.${user.id}` },
+          (payload) => {
+            const inv = payload.new as any;
+            const invoiceStore = useInvoiceStore.getState();
+            if (invoiceStore.invoices.some((i) => i.id === inv.id)) return;
+            invoiceStore.addInvoice({
+              id: inv.id,
+              venueId: inv.venue_id,
+              venueName: inv.venue_name,
+              artistId: inv.artist_id,
+              artistLegalName: inv.artist_legal_name,
+              artistEmail: inv.artist_email ?? '',
+              artistLocation: inv.artist_location ?? '',
+              managerId: inv.manager_id,
+              managerName: '',
+              venueLegalName: inv.venue_legal_name ?? inv.venue_name,
+              venueTrnNumber: inv.venue_trn_number ?? '',
+              venueAddress: inv.venue_address ?? '',
+              gigs: inv.gigs ?? [],
+              totalAmount: parseFloat(inv.total_amount),
+              invoiceNumber: inv.invoice_number ?? '',
+              sentAt: inv.sent_at,
+              status: inv.status,
+              isReadByManager: false,
+              isDeletedByManager: false,
+            });
+          }
+        )
+        .subscribe();
+    });
+    return () => {
+      if (invoiceChannel) supabase.removeChannel(invoiceChannel);
     };
   }, []);
 

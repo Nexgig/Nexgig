@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { AvatarImage } from '@/components/ui/avatar-image';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore } from '@/lib/store';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
@@ -62,6 +62,15 @@ export default function ManagerDashboard() {
         if (slot && isPastStart(slot.date, slot.startTime)) {
           const venue = allVenues.find((v) => v.id === b.venueId);
           updateBookingStatus(b.id, 'completed', {
+            isCompleted: true,
+            slotDate: slot.date,
+            slotName: slot.name,
+            slotStartTime: slot.startTime,
+            slotEndTime: slot.endTime,
+            venueName: venue?.name,
+          });
+          // Also sync snapshot fields to Supabase so they survive reload
+          syncBookingStatus(b.id, 'completed', {
             isCompleted: true,
             slotDate: slot.date,
             slotName: slot.name,
@@ -273,7 +282,13 @@ export default function ManagerDashboard() {
                 onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
               >
                 <View style={styles.bookingCardLeft}>
-                  <AvatarImage uri={booking.dj?.profilePhotoUrl} name={booking.dj?.fullName} size={44} />
+                  {booking.dj?.profilePhotoUrl ? (
+                    <Image source={{ uri: booking.dj.profilePhotoUrl }} style={styles.djPhoto} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.djPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                      <MaterialIcons name="person" size={22} color={colors.muted} />
+                    </View>
+                  )}
                   <View style={styles.bookingInfo}>
                     <Text style={[styles.bookingDJ, { color: colors.foreground }]} numberOfLines={1}>{booking.dj?.fullName ?? 'Unknown Artist'}</Text>
                     <Text style={[styles.bookingVenue, { color: colors.muted }]} numberOfLines={1}>{booking.venue?.name ?? 'Unknown Venue'}</Text>
@@ -481,6 +496,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14 },
   bookingCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10 },
   bookingCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  djPhoto: { width: 44, height: 44, borderRadius: 12 },
   bookingInfo: { flex: 1 },
   bookingDJ: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   bookingVenue: { fontSize: 13, marginBottom: 2 },

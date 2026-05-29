@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { CountryPicker } from '@/components/country-picker';
+import { PhoneInput } from '@/components/phone-input';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(manager)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -262,13 +263,11 @@ export default function ManagerRegisterScreen() {
                   </Pressable>
                 </View>
               </View>
-              <InputField
-                label="Phone Number (optional)"
+              <PhoneInput
+                label="Phone Number"
+                optional
                 value={form.phone}
-                onChangeText={(v) => update('phone', v)}
-                placeholder="+971 50 123 4567"
-                keyboardType="phone-pad"
-                colors={colors}
+                onChange={(v) => update('phone', v)}
               />
             </View>
           )}

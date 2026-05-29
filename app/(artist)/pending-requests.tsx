@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore } from '@/lib/store';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
@@ -72,7 +73,8 @@ export default function ArtistPendingRequestsScreen() {
 
   // ── Confirm a booking request ──
   const handleConfirm = (item: typeof pendingRequests[number]) => {
-    const isPastConfirmation = item.status === 'past_confirmation';
+    const isPastConfirmation = item.status === 'past_confirmation' ||
+      (item.status === 'requested' && !!item.resolvedDate && new Date(item.resolvedDate + 'T00:00:00') <= new Date());
     Alert.alert(
       isPastConfirmation ? 'Confirm Completed Gig' : 'Confirm Booking',
       isPastConfirmation
@@ -87,8 +89,10 @@ export default function ArtistPendingRequestsScreen() {
             const now = new Date().toISOString();
             if (isPastConfirmation) {
               updateBookingStatus(item.id, 'completed', { isCompleted: true, confirmedAt: now, updatedAt: now, artistRespondedFromRequests: true });
+              syncBookingStatus(item.id, 'completed', { isCompleted: true, confirmedAt: now });
             } else {
               updateBookingStatus(item.id, 'confirmed', { confirmedAt: now, artistRespondedFromRequests: true });
+              syncBookingStatus(item.id, 'confirmed', { confirmedAt: now });
             }
             markRelatedNotificationsRead(item.id);
             if (booking) {
@@ -102,7 +106,8 @@ export default function ArtistPendingRequestsScreen() {
 
   // ── Decline a booking request ──
   const handleDecline = (item: typeof pendingRequests[number]) => {
-    const isPastConfirmation = item.status === 'past_confirmation';
+    const isPastConfirmation = item.status === 'past_confirmation' ||
+      (item.status === 'requested' && !!item.resolvedDate && new Date(item.resolvedDate + 'T00:00:00') <= new Date());
     Alert.alert(
       isPastConfirmation ? 'Decline Completed Gig' : 'Decline Booking',
       isPastConfirmation
@@ -116,6 +121,7 @@ export default function ArtistPendingRequestsScreen() {
           onPress: () => {
             const booking = rawBookings.find((x) => x.id === item.id);
             updateBookingStatus(item.id, 'declined', { updatedAt: new Date().toISOString(), artistRespondedFromRequests: true });
+            syncBookingStatus(item.id, 'declined', {});
             markRelatedNotificationsRead(item.id);
             if (booking) {
               notifyManager(item.managerId, 'booking_declined', item.id, item.resolvedVenueName, item.resolvedDate ? formatDate(item.resolvedDate) : '');
@@ -129,6 +135,7 @@ export default function ArtistPendingRequestsScreen() {
   // ── Dismiss a manager cancellation ──
   const handleDismiss = (id: string) => {
     acknowledgeCancellation(id);
+    syncBookingStatus(id, 'cancelled', { cancellationAcknowledged: true });
     markRelatedNotificationsRead(id);
   };
 

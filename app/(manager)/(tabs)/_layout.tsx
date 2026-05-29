@@ -1,9 +1,24 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
+import { useState, useCallback } from 'react';
+import { useAuthStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 
 export default function ManagerTabsLayout() {
   const colors = useColors();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    if (!currentUser?.id) return;
+    supabase
+      .from('applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('manager_id', currentUser.id)
+      .eq('status', 'pending')
+      .then(({ count }) => setPendingCount(count ?? 0));
+  }, [currentUser?.id]));
 
   return (
     <Tabs
@@ -36,6 +51,7 @@ export default function ManagerTabsLayout() {
         options={{
           title: 'Network',
           tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
+          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
         }}
       />
       <Tabs.Screen

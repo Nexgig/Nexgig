@@ -777,7 +777,7 @@ export default function CalendarScreen() {
     setActiveSlotMenu(null);
     Alert.alert(
       'Delete Slot',
-      `Are you sure you want to delete "${slot.name}"? Any associated bookings will be affected.`,
+      'Are you sure you want to delete this set? Any associated bookings will be affected.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: async () => {
@@ -1144,15 +1144,17 @@ export default function CalendarScreen() {
                     <MaterialIcons name="close" size={14} color={colors.muted} />
                   </TouchableOpacity>
                 )}
-                {/* × for declined/cancelled — hides locally only, no confirmation needed */}
+                {/* × for declined/cancelled — hides from manager; if artist-cancelled, also hides from artist */}
                 {(isDeclined || isCancelled) && (
                   <TouchableOpacity
                     activeOpacity={0.6}
                     style={styles.removeDJBtn}
                     onPress={() => {
-  hideFromManagerCalendar(booking.id);
-  syncBookingStatus(booking.id, booking.status as any, { hiddenFromManagerCalendar: true });
-}}
+                      hideFromManagerCalendar(booking.id);
+                      const syncFields: any = { hiddenFromManagerCalendar: true };
+                      if (booking.cancelledByArtist) syncFields.hiddenFromCalendar = true;
+                      syncBookingStatus(booking.id, booking.status as any, syncFields);
+                    }}
                   >
                     <MaterialIcons name="close" size={14} color={colors.muted} />
                   </TouchableOpacity>
@@ -1364,15 +1366,17 @@ export default function CalendarScreen() {
                     <MaterialIcons name="close" size={14} color={colors.muted} />
                   </TouchableOpacity>
                 )}
-                {/* × for declined/cancelled — hides locally only, no confirmation needed */}
+                {/* × for declined/cancelled — hides from manager; if artist-cancelled, also hides from artist */}
                 {(isDeclined || isCancelled) && (
                   <TouchableOpacity
                     activeOpacity={0.6}
                     style={styles.removeDJBtn}
                     onPress={() => {
-  hideFromManagerCalendar(booking.id);
-  syncBookingStatus(booking.id, booking.status as any, { hiddenFromManagerCalendar: true });
-}}
+                      hideFromManagerCalendar(booking.id);
+                      const syncFields: any = { hiddenFromManagerCalendar: true };
+                      if (booking.cancelledByArtist) syncFields.hiddenFromCalendar = true;
+                      syncBookingStatus(booking.id, booking.status as any, syncFields);
+                    }}
                   >
                     <MaterialIcons name="close" size={14} color={colors.muted} />
                   </TouchableOpacity>
@@ -2492,7 +2496,7 @@ if (newBookingId) {
                   style={({ pressed }) => [slotModalStyles.ctaBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                   onPress={() => handleSaveSlot(false)}
                 >
-                  <Text style={[slotModalStyles.ctaBtnText, { color: colors.foreground }]}>Later</Text>
+                  <Text style={[slotModalStyles.ctaBtnText, { color: colors.foreground }]}>Create</Text>
                 </Pressable>
               )}
             </View>

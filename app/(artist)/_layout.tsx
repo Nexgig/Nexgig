@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore } from '@/lib/store';
+import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore } from '@/lib/store';
 import type { Booking } from '@/lib/types';
 
 export default function DJLayout() {
@@ -149,6 +149,67 @@ export default function DJLayout() {
       lineupStore.resetVenueAssignmentsForArtist(currentUser.id, freshAssignments);
     };
     fetchVenueAssignments();
+
+    // Load availability blocks from Supabase (blocks + private events)
+    const fetchBlocks = async () => {
+      const { data } = await supabase
+        .from('availability_blocks')
+        .select('id, date, start_time, end_time, is_full_day, block_type, event_name, location')
+        .eq('artist_id', currentUser.id);
+      if (!data || data.length === 0) {
+        // Clear any stale persisted blocks for this artist
+        useAvailabilityStore.getState().resetBlocksForArtist(currentUser.id, []);
+        return;
+      }
+      const freshBlocks = data.map((b: any) => ({
+        id: b.id,
+        artistId: currentUser.id,
+        date: b.date,
+        startTime: b.start_time,
+        endTime: b.end_time,
+        fullDay: b.is_full_day ?? false,
+        label: b.block_type === 'private_event' ? 'Private Event' : 'Unavailable',
+        blockType: b.block_type ?? 'block',
+        createdAt: new Date().toISOString(),
+      }));
+      useAvailabilityStore.getState().resetBlocksForArtist(currentUser.id, freshBlocks);
+    };
+    fetchBlocks();
+
+    // Load artist's sent invoices from Supabase
+    const fetchInvoices = async () => {
+      const { data } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('artist_id', currentUser.id)
+        .order('sent_at', { ascending: false });
+      if (!data || data.length === 0) return;
+      const invoiceStore = useInvoiceStore.getState();
+      data.forEach((inv: any) => {
+        // Only add if not already in store
+        if (invoiceStore.invoices.some((i) => i.id === inv.id)) return;
+        invoiceStore.addInvoice({
+          id: inv.id,
+          venueId: inv.venue_id,
+          venueName: inv.venue_name,
+          artistId: inv.artist_id,
+          artistLegalName: inv.artist_legal_name,
+          artistEmail: inv.artist_email ?? '',
+          artistLocation: inv.artist_location ?? '',
+          managerId: inv.manager_id,
+          managerName: inv.manager_name ?? '',
+          venueLegalName: inv.venue_legal_name ?? inv.venue_name,
+          venueTrnNumber: inv.venue_trn_number ?? '',
+          venueAddress: inv.venue_address ?? '',
+          gigs: inv.gigs ?? [],
+          totalAmount: parseFloat(inv.total_amount),
+          invoiceNumber: inv.invoice_number ?? '',
+          sentAt: inv.sent_at,
+          status: inv.status,
+        });
+      });
+    };
+    fetchInvoices();
   }, [currentUser?.id]);
 
   return (

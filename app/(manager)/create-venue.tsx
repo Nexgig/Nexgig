@@ -455,13 +455,13 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     {/* Instagram */}
     <View style={styles.fieldGroup}>
       <Text style={[styles.label, { color: colors.foreground }]}>Instagram (optional)</Text>
-      <View style={[styles.prefixInput, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={[styles.prefix, { color: colors.muted }]}>instagram.com/</Text>
+      <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
         <TextInput
-          style={[styles.prefixTextInput, { color: colors.foreground }]}
+          style={[styles.instagramInput, { color: colors.foreground }]}
           placeholder="username"
           placeholderTextColor={colors.muted}
-          value={form.instagramUrl}
+          value={form.instagramUrl.replace(/^@/, '')}
           onChangeText={(v) => update('instagramUrl', v.replace('@', '').replace(/\s/g, '').toLowerCase())}
           autoCapitalize="none"
           autoCorrect={false}
@@ -540,6 +540,9 @@ const styles = StyleSheet.create({
   placesContainer: { borderWidth: 1, borderRadius: 10, overflow: 'hidden', position: 'relative' },
   clearAddressBtn: { position: 'absolute', right: 10, top: 14, zIndex: 10 },
   prefixInput: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
-prefix: { paddingLeft: 12, fontSize: 15 },
-prefixTextInput: { flex: 1, padding: 12, fontSize: 15 },
+  prefix: { paddingLeft: 12, fontSize: 15 },
+  prefixTextInput: { flex: 1, padding: 12, fontSize: 15 },
+  instagramRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
+  instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },
+  instagramInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 15 },
 });

@@ -1,15 +1,15 @@
-import { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput } from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
-import { detectConflicts, formatDate, formatTime } from '@/lib/conflict-detection';
+import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
+import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
 import { isPastStart } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import type { Booking, VenueAssignment } from '@/lib/types';
 
 export default function AssignDJScreen() {
   const router = useRouter();
@@ -68,6 +68,63 @@ export default function AssignDJScreen() {
   );
 
   const [venueSearch, setVenueSearch] = useState('');
+
+  // ── Cross-manager conflict detection ─────────────────────────────────────
+  // Fetch confirmed bookings + blocks from OTHER managers for lineup artists on this slot's date
+  const [crossConflicts, setCrossConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
+
+  useEffect(() => {
+    if (!slot || !currentUser || isVenueLineupMode) return;
+    const assignmentsForSlot = venueAssignments.filter(
+      (a) => a.venueId === slot.venueId && a.status === 'active'
+    );
+    const artistIds = assignmentsForSlot.map((a) => a.artistId);
+    if (artistIds.length === 0) return;
+
+    Promise.all([
+      supabase
+        .from('bookings')
+        .select('id, artist_id, manager_id, venue_id, slot_date, slot_start_time, slot_end_time, venue_name, status')
+        .in('artist_id', artistIds)
+        .eq('slot_date', slot.date)
+        .in('status', ['confirmed', 'requested'])
+        .neq('manager_id', currentUser.id),
+      supabase
+        .from('availability_blocks')
+        .select('id, artist_id, start_time, end_time, is_full_day, block_type, event_name')
+        .in('artist_id', artistIds)
+        .eq('date', slot.date),
+    ]).then(([bookingsRes, blocksRes]) => {
+      const map = new Map<string, ConflictInfo[]>();
+      const add = (artistId: string, c: ConflictInfo) => {
+        map.set(artistId, [...(map.get(artistId) ?? []), c]);
+      };
+      (bookingsRes.data ?? []).forEach((b: any) => {
+        if (!b.slot_start_time || !b.slot_end_time) return;
+        if (timesOverlap(b.slot_start_time, b.slot_end_time, slot.startTime, slot.endTime, slot.date, slot.date)) {
+          add(b.artist_id, {
+            type: 'booking',
+            description: `Unavailable ${b.slot_start_time}–${b.slot_end_time}`,
+            startTime: b.slot_start_time,
+            endTime: b.slot_end_time,
+          });
+        }
+      });
+      (blocksRes.data ?? []).forEach((bl: any) => {
+        const bStart = bl.is_full_day ? '00:00' : bl.start_time;
+        const bEnd = bl.is_full_day ? '23:59' : bl.end_time;
+        if (timesOverlap(bStart, bEnd, slot.startTime, slot.endTime, slot.date, slot.date)) {
+          add(bl.artist_id, {
+            type: 'availability_block',
+            description: `Unavailable ${bStart}–${bEnd}`,
+            startTime: bStart,
+            endTime: bEnd,
+          });
+        }
+      });
+      if (map.size > 0) setCrossConflicts(map);
+    }).catch(() => {});
+  }, [slot?.id]);
 
   const unassignedLineupArtists = useMemo(
     () => myGlobalLineup
@@ -207,7 +264,13 @@ export default function AssignDJScreen() {
               ]}
               onPress={() => handleAddToVenueLineup(item.entry.artistId)}
             >
-              <AvatarImage uri={item.user!.profilePhotoUrl} name={item.user!.fullName} size={48} />
+              {item.user!.profilePhotoUrl ? (
+                <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
+              ) : (
+                <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                  <MaterialIcons name="person" size={22} color={colors.muted} />
+                </View>
+              )}
               <View style={styles.djInfo}>
                 <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
                 <Text style={[styles.djGenre, { color: colors.muted }]}>{item.profile?.primaryGenre ?? 'Artist'}</Text>
@@ -260,14 +323,17 @@ export default function AssignDJScreen() {
     const user = getArtistUser(a.artistId);
     const profile = getArtistProfile(a.artistId);
     if (!user) return null;
-    const conflicts = detectConflicts(
+    const localConflicts = detectConflicts(
       a.artistId, slot!, confirmedBookings, blocks,
       (venueId) => getVenueById(venueId)?.name ?? 'Unknown Venue',
       getSlotById2,
       draftSlotsByDJ(a.artistId),
       allBookings
     );
-    return { user, profile, hasConflict: conflicts.length > 0, conflicts, assignment: a };
+    // Merge with cross-manager conflicts from Supabase
+    const external = crossConflicts.get(a.artistId) ?? [];
+    const allConflicts = [...localConflicts, ...external];
+    return { user, profile, hasConflict: allConflicts.length > 0, conflicts: allConflicts, assignment: a };
   }).filter(Boolean) as Array<{
     user: NonNullable<ReturnType<typeof getArtistUser>>;
     profile: ReturnType<typeof getArtistProfile>;
@@ -410,7 +476,13 @@ export default function AssignDJScreen() {
         ]}
         onPress={() => handleTapDJ(item.user.id)}
       >
-        <AvatarImage uri={item.user.profilePhotoUrl} name={item.user.fullName} size={48} />
+        {item.user.profilePhotoUrl ? (
+          <Image source={{ uri: item.user.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
+        ) : (
+          <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+            <MaterialIcons name="person" size={22} color={colors.muted} />
+          </View>
+        )}
         <View style={styles.djInfo}>
           <View style={styles.djNameRow}>
             <Text style={[styles.djName, { color: colors.foreground }]}>{item.user.fullName}</Text>
@@ -567,6 +639,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   sectionTitle: { fontSize: 14, fontWeight: '700' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10 },
+  artistPhoto: { width: 48, height: 48, borderRadius: 12, borderWidth: 1 },
   djInfo: { flex: 1 },
   djNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   djName: { fontSize: 15, fontWeight: '700' },

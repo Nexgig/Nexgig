@@ -416,15 +416,30 @@ interface AvailabilityState {
   blocks: AvailabilityBlock[];
   addBlock: (block: AvailabilityBlock) => void;
   deleteBlock: (id: string) => void;
+  resetBlocksForArtist: (artistId: string, blocks: AvailabilityBlock[]) => void;
   getBlocksByDJ: (artistId: string) => AvailabilityBlock[];
 }
 
-export const useAvailabilityStore = create<AvailabilityState>((set, get) => ({
-  blocks: [],
-  addBlock: (block) => set((state) => ({ blocks: [...state.blocks, block] })),
-  deleteBlock: (id) => set((state) => ({ blocks: state.blocks.filter((b) => b.id !== id) })),
-  getBlocksByDJ: (artistId) => get().blocks.filter((b) => b.artistId === artistId),
-}));
+export const useAvailabilityStore = create<AvailabilityState>()(
+  persist(
+    (set, get) => ({
+      blocks: [],
+      addBlock: (block) => set((state) => {
+        if (state.blocks.some((b) => b.id === block.id)) return state;
+        return { blocks: [...state.blocks, block] };
+      }),
+      deleteBlock: (id) => set((state) => ({ blocks: state.blocks.filter((b) => b.id !== id) })),
+      resetBlocksForArtist: (artistId, newBlocks) => set((state) => ({
+        blocks: [...state.blocks.filter((b) => b.artistId !== artistId), ...newBlocks],
+      })),
+      getBlocksByDJ: (artistId) => get().blocks.filter((b) => b.artistId === artistId),
+    }),
+    {
+      name: 'nexgig:availability',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 
 // ─── Draft Assignment Store ───────────────────────────────────────────────────
 

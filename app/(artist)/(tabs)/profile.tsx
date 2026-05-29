@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -135,7 +135,15 @@ export default function ArtistProfileScreen() {
           </Pressable>
           {/* Top row: photo + name/flag */}
           <View style={styles.profileTopRow}>
-            <AvatarImage uri={currentUser?.profilePhotoUrl} name={currentUser?.fullName} size={80} />
+            {currentUser?.profilePhotoUrl ? (
+              <View style={[styles.profilePhoto, { overflow: 'hidden' }]}>
+                <Image source={{ uri: currentUser.profilePhotoUrl }} style={{ width: 80, height: 80 }} resizeMode="cover" />
+              </View>
+            ) : (
+              <View style={[styles.profilePhoto, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                <MaterialIcons name="person" size={36} color={colors.muted} />
+              </View>
+            )}
             <View style={styles.profileNameBlock}>
               <Text style={[styles.name, { color: colors.foreground }]}>
                 {currentUser?.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
@@ -404,6 +412,7 @@ const styles = StyleSheet.create({
   profileCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14, position: 'relative' },
   heroEditBtn: { position: 'absolute', top: 12, right: 12, zIndex: 1, padding: 4 },
   profileTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  profilePhoto: { width: 80, height: 80, borderRadius: 16, borderWidth: 1 },
   profileNameBlock: { flex: 1, gap: 4 },
   profileBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileInfo: { flex: 1, gap: 4 },

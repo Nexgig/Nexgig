@@ -7,6 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import type { AvailabilityBlock, Booking, BookingStatus } from '@/lib/types';
 import { useFocusEffect } from 'expo-router';
@@ -533,7 +534,13 @@ export default function DJAvailabilityScreen() {
     setShowAddModal(true);
   };
 
-  const handleSave = () => {
+  // Simple UUID generator for Supabase rows
+  const genUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+
+  const handleSave = async () => {
     const targetDate = addForm.modalDate || selectedDate;
     if (addForm.blockType === 'private_event') {
       if (!addForm.eventName.trim()) {
@@ -556,8 +563,9 @@ export default function DJAvailabilityScreen() {
       } else {
         // Create new private event booking
         const isPast = isPastStart(targetDate, addForm.fullDay ? '00:00' : addForm.startTime);
+        const newId = genUUID();
         const newBooking: Booking = {
-          id: 'private-' + Date.now(),
+          id: newId,
           slotId: 'private-slot-' + Date.now(),
           venueId: '',
           artistId: currentUser?.id ?? '',
@@ -576,6 +584,20 @@ export default function DJAvailabilityScreen() {
           privateEventLocation: addForm.location.trim() || undefined,
         };
         addBooking(newBooking);
+        // Save to availability_blocks so managers can detect this as a conflict
+        if (currentUser?.id) {
+          supabase.from('availability_blocks').insert({
+            id: newId,
+            artist_id: currentUser.id,
+            date: targetDate,
+            start_time: addForm.fullDay ? '00:00' : addForm.startTime,
+            end_time: addForm.fullDay ? '23:59' : addForm.endTime,
+            is_full_day: addForm.fullDay,
+            block_type: 'private_event',
+            event_name: addForm.eventName.trim(),
+            location: addForm.location.trim() || null,
+          }).then(({ error }) => { if (error) console.log('availability_blocks insert error:', error.message); });
+        }
       }
     } else {
       // Block type
@@ -584,10 +606,15 @@ export default function DJAvailabilityScreen() {
         return;
       }
       if (editingBlockId) {
-        // Update existing block — delete old and add new
+        // Update: delete old Supabase row, insert new one
         deleteBlock(editingBlockId);
+        if (currentUser?.id) {
+          supabase.from('availability_blocks').delete().eq('id', editingBlockId)
+            .then(({ error }) => { if (error) console.log('block delete error:', error.message); });
+        }
+        const newId = genUUID();
         const updatedBlock: AvailabilityBlock = {
-          id: 'block-' + Date.now(),
+          id: newId,
           artistId: currentUser?.id ?? '',
           date: targetDate,
           startTime: addForm.fullDay ? '00:00' : addForm.startTime,
@@ -598,9 +625,21 @@ export default function DJAvailabilityScreen() {
           createdAt: new Date().toISOString(),
         };
         addBlock(updatedBlock);
+        if (currentUser?.id) {
+          supabase.from('availability_blocks').insert({
+            id: newId,
+            artist_id: currentUser.id,
+            date: targetDate,
+            start_time: updatedBlock.startTime,
+            end_time: updatedBlock.endTime,
+            is_full_day: updatedBlock.fullDay,
+            block_type: 'block',
+          }).then(({ error }) => { if (error) console.log('block insert error:', error.message); });
+        }
       } else {
+        const newId = genUUID();
         const newBlock: AvailabilityBlock = {
-          id: 'block-' + Date.now(),
+          id: newId,
           artistId: currentUser?.id ?? '',
           date: targetDate,
           startTime: addForm.fullDay ? '00:00' : addForm.startTime,
@@ -611,6 +650,17 @@ export default function DJAvailabilityScreen() {
           createdAt: new Date().toISOString(),
         };
         addBlock(newBlock);
+        if (currentUser?.id) {
+          supabase.from('availability_blocks').insert({
+            id: newId,
+            artist_id: currentUser.id,
+            date: targetDate,
+            start_time: newBlock.startTime,
+            end_time: newBlock.endTime,
+            is_full_day: newBlock.fullDay,
+            block_type: 'block',
+          }).then(({ error }) => { if (error) console.log('block insert error:', error.message); });
+        }
       }
     }
     setEditingBookingId(null);
@@ -622,14 +672,23 @@ export default function DJAvailabilityScreen() {
   const handleDeleteBlock = (id: string) => {
     Alert.alert('Remove Block', 'Remove this unavailability block?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteBlock(id) },
+      { text: 'Remove', style: 'destructive', onPress: () => {
+        deleteBlock(id);
+        supabase.from('availability_blocks').delete().eq('id', id)
+          .then(({ error }) => { if (error) console.log('block delete error:', error.message); });
+      }},
     ]);
   };
 
   const handleDeletePrivateEvent = (bookingId: string, name: string) => {
     Alert.alert('Delete Private Event', `Delete "${name}"? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteBooking(bookingId) },
+      { text: 'Delete', style: 'destructive', onPress: () => {
+        deleteBooking(bookingId);
+        // Also remove from availability_blocks (private events are stored there)
+        supabase.from('availability_blocks').delete().eq('id', bookingId)
+          .then(({ error }) => { if (error) console.log('availability_blocks delete error:', error.message); });
+      }},
     ]);
   };
 
@@ -656,7 +715,8 @@ export default function DJAvailabilityScreen() {
           onPress: () => {
             const booking = allBookings.find((b) => b.id === bookingId);
             updateBookingStatus(bookingId, 'declined', { artistRespondedFromRequests: true });
-            syncBookingStatus(bookingId, 'declined', {});
+            hideFromCalendar(bookingId);
+            syncBookingStatus(bookingId, 'declined', { hiddenFromCalendar: true });
             markRelatedNotificationsRead(bookingId);
             if (booking) {
               notifyManager('booking_declined', { id: booking.id, managerId: booking.managerId, resolvedVenueName: venueName, resolvedDate: booking.slotDate ?? allSlots.find((s) => s.id === booking.slotId)?.date });
@@ -868,7 +928,8 @@ export default function DJAvailabilityScreen() {
                     {
                       text: 'Cancel Booking', style: 'destructive', onPress: () => {
                         updateBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledByArtist: true, artistRespondedFromRequests: true });
-                        syncBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString() });
+                        hideFromCalendar(b.id);
+                        syncBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString(), hiddenFromCalendar: true });
                         markRelatedNotificationsRead(b.id);
                         const booking = allBookings.find((x) => x.id === b.id);
                         if (booking) { notifyManager('booking_cancelled', { ...b, managerId: booking.managerId }); }
@@ -928,12 +989,16 @@ export default function DJAvailabilityScreen() {
       <View style={[styles.slotColorBar, { backgroundColor: STATUS_COLORS.cancelled }]} />
       <View style={styles.slotCardContent}>
         <View style={styles.slotCardTop}>
-          <Text style={[styles.slotCardTitle, { color: colors.foreground }]} numberOfLines={1}>Unavailable</Text>
+          <Text style={[styles.slotCardTitle, { color: colors.foreground }]} numberOfLines={1}>
+            {b.blockType === 'private_event' ? 'Private Event' : 'Unavailable'}
+          </Text>
         </View>
         <Text style={[styles.slotCardSub, { color: colors.muted }]}>
           {b.fullDay ? 'Full Day' : `${b.startTime} – ${b.endTime}`}
         </Text>
-        <Text style={[styles.slotCardStatus, { color: STATUS_COLORS.cancelled }]}>Blocked</Text>
+        <Text style={[styles.slotCardStatus, { color: STATUS_COLORS.cancelled }]}>
+            {b.blockType === 'private_event' ? 'Private Event' : 'Blocked'}
+          </Text>
       </View>
       <TouchableOpacity
         style={[styles.slotMenuBtn, { opacity: 1 }]}

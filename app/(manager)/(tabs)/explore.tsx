@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +28,7 @@ export default function NetworkScreen() {
   const { tab: initialTab } = useLocalSearchParams<{ tab?: NetworkTab }>();
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'artists' || initialTab === 'venues' ? initialTab : 'applications');
   // ── Applications state ────────────────────────────────────────────────────
@@ -171,6 +172,17 @@ export default function NetworkScreen() {
           });
           setProcessingId(null);
           setApplications((prev) => prev.filter((a) => a.id !== app.id));
+          addNotification({
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            userId: app.artist_id,
+            type: 'lineup_added' as any,
+            title: 'Application Accepted',
+            body: `Your request to join the lineup at ${app.venue?.name ?? 'the venue'} has been accepted.`,
+            isRead: false,
+            relatedId: app.venue_id,
+            relatedType: 'venue',
+            createdAt: new Date().toISOString(),
+          });
           Alert.alert('Accepted!', `${app.artist?.full_name} has been added to your lineup.`);
         },
       },
@@ -240,7 +252,9 @@ export default function NetworkScreen() {
               return (
                 <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.cardTop}>
-                    <AvatarImage uri={app.artist?.profile_photo_url} name={app.artist?.full_name ?? ''} size={48} />
+                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                      <MaterialIcons name="person" size={22} color={colors.muted} />
+                    </View>
                     <View style={styles.cardInfo}>
                       <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{app.artist?.full_name ?? 'Unknown Artist'}</Text>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
@@ -387,6 +401,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '600' },
   list: { padding: 16, gap: 12, flexGrow: 1 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cardInfo: { flex: 1 },

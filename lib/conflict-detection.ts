@@ -37,22 +37,22 @@ export function detectConflicts(
   for (const booking of confirmedBookings) {
     if (booking.artistId !== artistId) continue;
     if (booking.status !== 'confirmed' && booking.status !== 'requested') continue;
+    if (booking.slotId === slot.id) continue; // skip self
+    // Use slot store first, fall back to booking's own date/time snapshot
     const bookingSlot = getSlotById(booking.slotId);
-    if (!bookingSlot) continue;
-    if (booking.slotId === slot.id) continue; // skip self — same slot already has this booking
-    if (timesOverlap(
-      bookingSlot.startTime, bookingSlot.endTime,
-      slot.startTime, slot.endTime,
-      bookingSlot.date, slot.date
-    )) {
+    const bDate = bookingSlot?.date ?? booking.slotDate;
+    const bStart = bookingSlot?.startTime ?? booking.slotStartTime;
+    const bEnd = bookingSlot?.endTime ?? booking.slotEndTime;
+    if (!bDate || !bStart || !bEnd) continue;
+    if (timesOverlap(bStart, bEnd, slot.startTime, slot.endTime, bDate, slot.date)) {
       const venueName = getVenueName(booking.venueId);
       conflicts.push({
         type: 'booking',
-        description: `Conflicting booking: ${venueName} – ${bookingSlot.name} ${bookingSlot.startTime}–${bookingSlot.endTime}`,
+        description: `Unavailable ${bStart}–${bEnd}`,
         venueName,
-        slotName: bookingSlot.name,
-        startTime: bookingSlot.startTime,
-        endTime: bookingSlot.endTime,
+        slotName: bookingSlot?.name ?? booking.slotName,
+        startTime: bStart,
+        endTime: bEnd,
       });
     }
   }
@@ -83,7 +83,7 @@ export function detectConflicts(
     )) {
       conflicts.push({
         type: 'availability_block',
-        description: `Private event: ${pb.slotName ?? 'Private Event'} ${pb.slotStartTime}–${pb.slotEndTime}`,
+        description: `Unavailable ${pb.slotStartTime}–${pb.slotEndTime}`,
         startTime: pb.slotStartTime!,
         endTime: pb.slotEndTime!,
       });
@@ -100,7 +100,7 @@ export function detectConflicts(
       )) {
         conflicts.push({
           type: 'booking',
-          description: `Draft conflict: ${draft.venueName} – ${draft.slotName} ${draft.startTime}–${draft.endTime}`,
+          description: 'Unavailable',
           venueName: draft.venueName,
           slotName: draft.slotName,
           startTime: draft.startTime,
