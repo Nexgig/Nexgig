@@ -326,8 +326,8 @@ export default function ArtistProfileViewScreen() {
     instagram: profile?.instagramUrl,
     spotify: profile?.spotifyUrl,
   };
-  const secondaryGenres = profile?.secondaryGenres ?? [];
-  const instruments = profile?.instruments ?? [];
+  const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
+  const instruments: string[] = profile?.instruments ?? [];
   const minRate = profile?.minRate;
 
   return (

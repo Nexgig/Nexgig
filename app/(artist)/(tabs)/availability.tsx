@@ -1016,14 +1016,14 @@ export default function DJAvailabilityScreen() {
       <View style={styles.slotCardContent}>
         <View style={styles.slotCardTop}>
           <Text style={[styles.slotCardTitle, { color: colors.foreground }]} numberOfLines={1}>
-            {b.blockType === 'private_event' ? 'Private Event' : 'Unavailable'}
+            Unavailable
           </Text>
         </View>
         <Text style={[styles.slotCardSub, { color: colors.muted }]}>
           {b.fullDay ? 'Full Day' : `${b.startTime} – ${b.endTime}`}
         </Text>
         <Text style={[styles.slotCardStatus, { color: STATUS_COLORS.cancelled }]}>
-            {b.blockType === 'private_event' ? 'Private Event' : 'Blocked'}
+            Blocked
           </Text>
       </View>
       <TouchableOpacity

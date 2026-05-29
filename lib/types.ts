@@ -289,7 +289,8 @@ export type NotificationType =
   | 'venue_assigned'
   | 'venue_removed'
   | 'review_submitted'
-  | 'invoice_received';
+  | 'invoice_received'
+  | 'manager_invite';
 
 // ─── Availability Block ─────────────────────────────────────────────────────
 

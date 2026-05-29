@@ -807,6 +807,7 @@
 - [ ] Remove dead styles in welcome.tsx (djNote, testBtn, testBtnText)
 - [ ] Remove unused language selector code in artist settings.tsx (state defined but never rendered)
 - [ ] Remove/replace `tests/auth.logout.test.ts` (imports deleted server/ — currently skipped)
+- [ ] Rename `app/(manager)/(tabs)/explore.tsx` → `network.tsx` so the filename matches the "Network" tab (changes route path /explore→/network; must update all router.push references + dashboard/profile/artists links)
 
 ## B. Bugs & correctness
 
@@ -816,6 +817,7 @@
 - [ ] Dedupe notifications: addNotification + realtime subscribeToNotifications can insert the same id twice locally
 - [ ] Strip console.log from production paths (booking-sync.ts, store.ts; use-auth.ts before deletion)
 - [ ] Fix false self-conflict when assigning an artist to a past slot (open item from prior session)
+- [ ] Private events are written to BOTH the bookings table (isArtistCreated) and the availability_blocks table (block_type='private_event') — redundant; display reads from bookings only. Consider dropping the availability_blocks write. (availability.tsx ~line 221, 623)
 
 ## C. Store launch blockers (HARD requirements for App Store + Google Play)
 

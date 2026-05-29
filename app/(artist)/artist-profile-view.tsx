@@ -124,8 +124,8 @@ export default function ArtistProfileViewScreen() {
   const memberSince = formatMemberSince(dj.createdAt);
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
   const nationalityCountry = profile?.nationality ? COUNTRIES.find((c) => c.name === profile.nationality) : undefined;
-  const secondaryGenres = profile?.secondaryGenres ?? [];
-  const instruments = profile?.instruments ?? [];
+  const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
+  const instruments: string[] = profile?.instruments ?? [];
   const mediaLinks = {
     instagram: profile?.instagramUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.instagram,
     soundcloud: profile?.soundcloudUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.soundcloud,

@@ -120,8 +120,11 @@ describe('Audit Fixes', () => {
 
     it('should have 44pt minimum for profile buttons', () => {
       const managerProfile = fs.readFileSync(path.join(APP_DIR, '(manager)', '(tabs)', 'profile.tsx'), 'utf-8');
-      expect(managerProfile).toContain('notifBtn: { width: 44, height: 44');
-      expect(managerProfile).toContain('editBtn: { width: 44, height: 44');
+      const artistProfile = fs.readFileSync(path.join(APP_DIR, '(artist)', '(tabs)', 'profile.tsx'), 'utf-8');
+      // Manager profile header button (redesigned: iconBtn)
+      expect(managerProfile).toContain('iconBtn: { width: 44, height: 44');
+      // Artist profile header button
+      expect(artistProfile).toContain('notifBtn: { width: 44, height: 44');
     });
   });
 

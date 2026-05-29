@@ -120,9 +120,10 @@ export default function NetworkScreen() {
     if (data) {
       setSbVenues(data.map((v: any) => ({
         id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
-        description: v.description, photoUrls: v.photo_urls ?? [],
-        genrePreferences: v.genre_preferences ?? [], energyPreferences: v.energy_preferences ?? [],
-        googleMapsLocation: v.google_maps_location, isHidden: v.is_hidden ?? false,
+        photoUrls: v.photo_urls ?? [],
+        genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
+        googleMapsLocation: v.google_maps_location, color: v.color ?? '#2563EB',
+        isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
         createdAt: v.created_at, updatedAt: v.updated_at,
       })));
     }
