@@ -1,1 +1,0 @@
-Screenshot shows Dashboard tab (default landing). Calendar tab is the 3rd tab. TypeScript has 0 errors. All 16 tests pass. The weekly view has been implemented with Week/Month/Venue toggle, week navigation, venue legend, day-by-day slot display with compact slot cards showing DJ name, venue tag, status dot, and add button per day.

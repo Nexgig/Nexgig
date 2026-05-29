@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useThemeContext } from '@/lib/theme-provider';
 import { useAuthStore, useLineupStore } from '@/lib/store';
+import { DeleteAccountModal } from '@/components/delete-account-modal';
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 export const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
@@ -46,6 +47,7 @@ export default function DJSettingsScreen() {
   const [reminderDayBefore, setReminderDayBefore] = useState(true);
   const [language, setLanguage] = useState<LanguageOption>('en');
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // ─── Load persisted settings ───────────────────────────────────────────────
   useEffect(() => {
@@ -406,7 +408,28 @@ export default function DJSettingsScreen() {
           </Pressable>
         </View>
 
+        {/* Danger Zone */}
+        <Text style={[styles.sectionLabel, { color: colors.muted }]}>DANGER ZONE</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable
+            style={({ pressed }) => [styles.resetRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => setShowDeleteModal(true)}
+          >
+            <MaterialIcons name="delete-forever" size={20} color={colors.error} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.resetText, { color: colors.error }]}>Delete Account</Text>
+              <Text style={[styles.settingDesc, { color: colors.muted }]}>Permanently delete your account and personal data</Text>
+            </View>
+          </Pressable>
+        </View>
+
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        accountType="artist"
+      />
 
     </ScreenContainer>
   );

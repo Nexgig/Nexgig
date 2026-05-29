@@ -791,22 +791,23 @@
 
 ## A. Remove dead code (unused Manus backend scaffold — app runs 100% on Supabase)
 
-- [ ] Delete `server/` directory (tRPC/Express stubs — only system + auth.logout, never used)
-- [ ] Delete `drizzle/` and `drizzle.config.ts` (no MySQL DB — app is Supabase)
-- [ ] Delete `shared/` directory
-- [ ] Delete `lib/_core/` (Manus runtime + auth + api — unused)
-- [ ] Delete `lib/trpc.ts` and remove the trpc.Provider wrapper from `app/_layout.tsx`
-- [ ] Verify then delete `lib/api.ts` if unused (screens write to Supabase directly)
-- [ ] Delete `hooks/use-auth.ts` (unused Manus auth hook, full of console.logs)
-- [ ] Remove unused deps: @trpc/*, express, drizzle-orm, mysql2, superjson, axios, cookie, jose, @expo/ngrok
-- [ ] Remove unused npm scripts: dev:server, build, start, db:push (Node-server only)
-- [ ] Delete scratch notes: notes.txt, notes-calendar.txt, notes-checkpoint2.txt, notes-weekview.txt
-- [ ] Delete dev-only screen `app/dev/theme-lab.tsx` and `expo-qr-code.png`
-- [ ] Verify `lib/mock-data.ts` is NOT seeding stores at runtime; delete if unused (else real users see fake data)
-- [ ] Delete `package-lock.json` (keep pnpm-lock.yaml — project uses pnpm; two lockfiles cause drift)
-- [ ] Remove dead styles in welcome.tsx (djNote, testBtn, testBtnText)
-- [ ] Remove unused language selector code in artist settings.tsx (state defined but never rendered)
-- [ ] Remove/replace `tests/auth.logout.test.ts` (imports deleted server/ — currently skipped)
+- [x] Delete `server/` directory (tRPC/Express stubs — never used)
+- [x] Delete `drizzle/` and `drizzle.config.ts` (no MySQL DB — app is Supabase)
+- [x] Delete `shared/` directory
+- [ ] Delete `lib/_core/` — KEPT FOR NOW: still holds live nativewind-pressable + manus-runtime (web safe-area) + api/auth used by oauth/callback.tsx. Revisit during sign-in work (E).
+- [x] Delete `lib/trpc.ts` and remove the trpc.Provider wrapper from `app/_layout.tsx`
+- [x] Verify `lib/api.ts` — (still present; revisit)
+- [x] Delete `hooks/use-auth.ts` (unused Manus auth hook)
+- [x] Remove unused deps (@trpc/*, express, drizzle-orm, mysql2, superjson, axios, cookie, jose, dotenv, zod, @expo/ngrok, drizzle-kit, esbuild, tsx, concurrently, cross-env, @types/cookie, @types/express)
+- [x] Remove unused npm scripts: dev:server, dev:metro, build, start, db:push
+- [x] Delete scratch notes: notes.txt, notes-calendar.txt, notes-checkpoint2.txt, notes-weekview.txt
+- [x] Delete dev-only screen `app/dev/theme-lab.tsx` and `expo-qr-code.png`
+- [x] Verify `lib/mock-data.ts` is NOT seeding stores at runtime; delete if unused — CONFIRMED orphaned (every ref was self-internal), deleted
+- [x] Delete `package-lock.json` (using pnpm)
+- [x] Remove dead styles in welcome.tsx (djNote, testBtn, testBtnText)
+- [~] Artist settings.tsx language code — SKIPPED: not actually unused; `language`/`saveLanguage`/`DJ_STORAGE_KEY_LANGUAGE` are wired into handleResetAll. Only the `languages` array + LANGUAGE_LABELS are unrendered; left in place for a future language feature. Not worth the risk.
+- [x] Remove/replace `tests/auth.logout.test.ts` (imported deleted server/)
+- [x] Remove unneeded `@types/jszip` devDep stub (jszip ships its own types)
 - [ ] Rename `app/(manager)/(tabs)/explore.tsx` → `network.tsx` so the filename matches the "Network" tab (changes route path /explore→/network; must update all router.push references + dashboard/profile/artists links)
 
 ## B. Bugs & correctness

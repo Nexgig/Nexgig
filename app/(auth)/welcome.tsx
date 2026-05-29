@@ -104,21 +104,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  djNote: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    marginTop: 8,
-  },
-  testBtn: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  testBtnText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-  },
 });
