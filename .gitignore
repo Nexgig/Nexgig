@@ -67,3 +67,6 @@ Thumbs.db
 
 # Environment files
 .env
+
+# Supabase CLI temp files
+supabase/.temp/

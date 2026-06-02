@@ -271,7 +271,7 @@ console.log('cancel sync called:', booking.id);
           )}
 
           {/* Venue Energy */}
-          {venue && (venue.preferredEnergy?.length ?? 0) > 0 && (
+          {venue && Array.isArray(venue.preferredEnergy) && venue.preferredEnergy.length > 0 && (
             <View style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.notesLabel, { color: colors.muted }]}>Expected Energy</Text>
               <View style={styles.chips}>

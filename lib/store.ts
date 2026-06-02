@@ -599,18 +599,21 @@ export const useNotificationStore = create<NotificationState>()(
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(notif.id);
         const safeNotif = isUUID ? notif : { ...notif, id: genUUID() };
         set((state) => ({ notifications: [safeNotif, ...state.notifications] }));
-        // Sync to Supabase for cross-device delivery
-        supabase.from('notifications').upsert({
-          id: safeNotif.id,
-          user_id: safeNotif.userId,
-          type: safeNotif.type,
-          title: safeNotif.title,
-          body: safeNotif.body,
-          is_read: safeNotif.isRead ?? false,
-          related_id: safeNotif.relatedId ?? null,
-          related_type: safeNotif.relatedType ?? null,
-          created_at: safeNotif.createdAt,
-        }, { onConflict: 'id' }).then(({ error }) => {
+        // Sync to Supabase via the create-notification Edge Function.
+        // (Direct table writes are blocked by RLS; only the service role may insert.)
+        supabase.functions.invoke('create-notification', {
+          body: {
+            id: safeNotif.id,
+            user_id: safeNotif.userId,
+            type: safeNotif.type,
+            title: safeNotif.title,
+            body: safeNotif.body,
+            is_read: safeNotif.isRead ?? false,
+            related_id: safeNotif.relatedId ?? null,
+            related_type: safeNotif.relatedType ?? null,
+            created_at: safeNotif.createdAt,
+          },
+        }).then(({ error }) => {
           if (error) console.log('notification sync error:', error.message);
         });
       },
