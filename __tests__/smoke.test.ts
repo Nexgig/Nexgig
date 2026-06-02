@@ -30,14 +30,16 @@ vi.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-// Universal chainable Supabase stub. Any method call returns the stub, and
-// `.then()` resolves to { data: [], error: null } so fire-and-forget writes
-// inside the store (e.g. notification sync) never hit the network.
+// Universal chainable Supabase stub. Every property access returns the same
+// callable proxy, and calling it returns the proxy too — so any shape works,
+// e.g. `supabase.from('x').upsert(...)`, `supabase.functions.invoke(...)`,
+// `supabase.auth.getUser()`. `.then()` resolves to { data: [], error: null }
+// so fire-and-forget writes inside the store never hit the network.
 vi.mock('../lib/supabase', () => {
   const proxy: any = new Proxy(function () {}, {
     get(_t, prop) {
       if (prop === 'then') return (resolve: any) => resolve({ data: [], error: null });
-      return () => proxy;
+      return proxy;
     },
     apply() { return proxy; },
   });

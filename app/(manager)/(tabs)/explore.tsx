@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +29,7 @@ export default function NetworkScreen() {
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const allVenues = useVenueStore((s) => s.venues);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'artists' || initialTab === 'venues' ? initialTab : 'applications');
   // ── Applications state ────────────────────────────────────────────────────
@@ -216,6 +217,68 @@ export default function NetworkScreen() {
     ]);
   };
 
+  // ── Add an existing artist to the manager's roster + all current venues ────
+  const handleAddToRoster = async (artist: User) => {
+    if (!currentUser) return;
+    setProcessingId(artist.id);
+
+    const managerVenues = allVenues.filter((v) => v.managerId === currentUser.id && !v.isHidden);
+
+    // 1. Roster row
+    const { error: lineupError } = await supabase.from('global_lineup').upsert(
+      { manager_id: currentUser.id, artist_id: artist.id, status: 'active' },
+      { onConflict: 'manager_id,artist_id' }
+    );
+    if (lineupError) { setProcessingId(null); Alert.alert('Error', lineupError.message); return; }
+
+    // 2. Assign to every current venue
+    if (managerVenues.length > 0) {
+      const rows = managerVenues.map((v) => ({
+        manager_id: currentUser.id, artist_id: artist.id, venue_id: v.id, status: 'active',
+      }));
+      await supabase.from('venue_assignments').upsert(rows, { onConflict: 'venue_id,artist_id' });
+    }
+
+    // 3. Local store updates so the row flips to Connected immediately
+    const lineupStore = useLineupStore.getState();
+    lineupStore.addArtistUser({
+      id: artist.id, email: artist.email ?? '', phone: '', accountType: 'artist' as const,
+      fullName: artist.fullName ?? '', profilePhotoUrl: artist.profilePhotoUrl ?? undefined,
+      isPhoneVerified: false, isEmailVerified: true,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    lineupStore.addToGlobalLineup({
+      id: `${currentUser.id}-${artist.id}`, managerId: currentUser.id,
+      artistId: artist.id, status: 'active' as const, addedAt: new Date().toISOString(),
+    });
+    managerVenues.forEach((v) => {
+      lineupStore.assignToVenue({
+        id: `va-${v.id}-${artist.id}`,
+        globalLineupId: `${currentUser.id}-${artist.id}`,
+        venueId: v.id, artistId: artist.id,
+        assignedAt: new Date().toISOString(), status: 'active' as const,
+      });
+    });
+
+    // 4. Informational notification to the artist
+    const venueText = managerVenues.length > 0
+      ? ` You've been added to ${managerVenues.length} venue${managerVenues.length > 1 ? 's' : ''}.`
+      : '';
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: artist.id,
+      type: 'lineup_added' as any,
+      title: 'Added to Roster',
+      body: `${currentUser.fullName ?? 'A manager'} added you to their roster.${venueText}`,
+      isRead: false,
+      relatedId: currentUser.id,
+      relatedType: 'manager',
+      createdAt: new Date().toISOString(),
+    });
+
+    setProcessingId(null);
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -343,7 +406,16 @@ export default function NetworkScreen() {
                       <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
                     </View>
                   ) : (
-                    <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                    <Pressable
+                      style={({ pressed }) => [styles.addBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                      onPress={(e) => { e.stopPropagation?.(); handleAddToRoster(user); }}
+                      disabled={processingId === user.id}
+                      hitSlop={6}
+                    >
+                      {processingId === user.id
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <><MaterialIcons name="person-add" size={14} color="#fff" /><Text style={styles.addBtnText}>Add</Text></>}
+                    </Pressable>
                   )}
                 </Pressable>
               );
@@ -434,4 +506,6 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
   connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
   connectedText: { fontSize: 11, fontWeight: '700' },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
+  addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });
