@@ -58,46 +58,6 @@ export default function DJLayout() {
     };
     fetchBookings();
 
-    // Fetch pending invites and show as notifications
-    const fetchInvites = async () => {
-      const { data } = await supabase
-        .from('invites')
-        .select('id, manager_id, venue_ids, created_at')
-        .eq('artist_id', currentUser.id)
-        .eq('status', 'pending');
-      if (!data || data.length === 0) return;
-
-      // Fetch manager names
-      const managerIds = [...new Set(data.map((i: any) => i.manager_id))];
-      const { data: managers } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .in('id', managerIds);
-      const managerMap = Object.fromEntries((managers ?? []).map((m: any) => [m.id, m.full_name]));
-
-      const notifStore = useNotificationStore.getState();
-      data.forEach((invite: any) => {
-        const existingNotif = notifStore.notifications.find(
-          (n) => n.relatedId === invite.id && n.type === 'manager_invite'
-        );
-        if (existingNotif) return; // already in store
-        const managerName = managerMap[invite.manager_id] ?? 'A manager';
-        const venueCount = (invite.venue_ids ?? []).length;
-        notifStore.addNotification({
-          id: `invite-${invite.id}`,
-          userId: currentUser.id,
-          type: 'manager_invite',
-          title: 'Lineup Invitation',
-          body: `${managerName} invited you to join their lineup${venueCount > 0 ? ` · ${venueCount} venue${venueCount > 1 ? 's' : ''}` : ''}.`,
-          isRead: false,
-          relatedId: invite.id,
-          relatedType: 'invite',
-          createdAt: invite.created_at,
-        });
-      });
-    };
-    fetchInvites();
-
     // Fetch venue assignments so artist sees their venues after reload
     const fetchVenueAssignments = async () => {
       const { data: assignments } = await supabase
