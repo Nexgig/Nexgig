@@ -13,27 +13,6 @@ const json = (body: unknown, status: number) =>
     status,
   });
 
-// Allowed notification types (mirror of NotificationType in lib/types.ts).
-const ALLOWED_TYPES = new Set([
-  'booking_request',
-  'booking_confirmed',
-  'booking_declined',
-  'booking_cancelled',
-  'booking_request_cancelled',
-  'past_confirmation_request',
-  'lineup_invite',
-  'lineup_accepted',
-  'lineup_declined',
-  'artist_joined',
-  'lineup_added',
-  'lineup_removed',
-  'venue_assigned',
-  'venue_removed',
-  'review_submitted',
-  'invoice_received',
-  'manager_invite',
-]);
-
 function isUuid(v: unknown): v is string {
   return typeof v === 'string' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -66,7 +45,7 @@ serve(async (req) => {
 
     if (!isUuid(id)) return json({ error: 'Invalid notification id' }, 400);
     if (!isUuid(user_id)) return json({ error: 'Invalid recipient user_id' }, 400);
-    if (!ALLOWED_TYPES.has(type)) return json({ error: 'Invalid notification type' }, 400);
+    if (typeof type !== 'string' || type.length === 0) return json({ error: 'Invalid notification type' }, 400);
     if (typeof title !== 'string' || typeof body !== 'string') {
       return json({ error: 'Title and body are required' }, 400);
     }

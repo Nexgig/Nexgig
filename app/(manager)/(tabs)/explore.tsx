@@ -10,7 +10,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
-type NetworkTab = 'applications' | 'artists' | 'venues';
+type NetworkTab = 'artists' | 'venues';
 
 type Application = {
   id: string;
@@ -31,7 +31,7 @@ export default function NetworkScreen() {
   const addNotification = useNotificationStore((s) => s.addNotification);
   const allVenues = useVenueStore((s) => s.venues);
 
-  const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'artists' || initialTab === 'venues' ? initialTab : 'applications');
+  const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'venues' ? 'venues' : 'artists');
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -40,8 +40,7 @@ export default function NetworkScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    if (activeTab === 'applications') await fetchApplications();
-    else if (activeTab === 'artists') await fetchArtists();
+    if (activeTab === 'artists') { await fetchApplications(); await fetchArtists(); }
     else await fetchVenues();
     setRefreshing(false);
   }, [activeTab]);
@@ -55,10 +54,10 @@ export default function NetworkScreen() {
   const [sbVenues, setSbVenues] = useState<Venue[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(false);
 
-  // ── Fetch applications on mount ───────────────────────────────────────────
+  // ── Fetch applications + artists on mount (Artists is the default tab) ─────
   useEffect(() => { fetchApplications(); }, []);
 
-  // ── Fetch artists/venues only when switching to that tab and data is empty ─
+  // ── Fetch artists/venues when switching to that tab and data is empty ──────
   useEffect(() => {
     if (activeTab === 'artists' && sbArtists.length === 0) fetchArtists();
     if (activeTab === 'venues' && sbVenues.length === 0) fetchVenues();
@@ -133,10 +132,16 @@ export default function NetworkScreen() {
 
   const getProfile = (userId: string) => sbProfiles.find((p) => p.userId === userId);
 
+  // Artist IDs with a pending application — shown at the top of the Artists tab
+  const applicantIds = useMemo(
+    () => new Set(applications.map((a) => a.artist_id)),
+    [applications]
+  );
+
   const filteredArtists = useMemo(
-    () => [...sbArtists.filter((u) => u.id !== currentUser?.id)]
+    () => [...sbArtists.filter((u) => u.id !== currentUser?.id && !applicantIds.has(u.id))]
       .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase())),
-    [sbArtists, currentUser?.id]
+    [sbArtists, currentUser?.id, applicantIds]
   );
 
   const filteredVenues = useMemo(
@@ -285,72 +290,23 @@ export default function NetworkScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>Artists, venues & applications</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>Artists & venues</Text>
       </View>
 
       {/* Sub-tabs */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {(['applications', 'artists', 'venues'] as NetworkTab[]).map((tab) => (
+        {(['artists', 'venues'] as NetworkTab[]).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
             onPress={() => setActiveTab(tab)}
           >
             <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-              {tab === 'applications' ? `Applications${applications.length > 0 ? ` (${applications.length})` : ''}` : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
           </Pressable>
         ))}
       </View>
-
-      {/* Applications tab */}
-      {activeTab === 'applications' && (
-        appsLoading ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={applications}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="inbox" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Applications</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>Artists who apply to your venues will appear here</Text>
-              </View>
-            }
-            renderItem={({ item: app }) => {
-              const isProcessing = processingId === app.id;
-              return (
-                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <View style={styles.cardTop}>
-                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                      <MaterialIcons name="person" size={22} color={colors.muted} />
-                    </View>
-                    <View style={styles.cardInfo}>
-                      <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{app.artist?.full_name ?? 'Unknown Artist'}</Text>
-                      <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {app.artist?.primary_genre ?? 'Artist'}{app.artist?.based_in ? ` · ${app.artist.based_in}` : ''}
-                      </Text>
-                      <Text style={[styles.cardVenue, { color: colors.primary }]} numberOfLines={1}>→ {app.venue?.name ?? 'Unknown Venue'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.actions}>
-                    <Pressable style={[styles.declineBtn, { borderColor: colors.border }]} onPress={() => handleDecline(app)} disabled={isProcessing}>
-                      <Text style={[styles.declineBtnText, { color: colors.muted }]}>Decline</Text>
-                    </Pressable>
-                    <Pressable style={[styles.acceptBtn, { backgroundColor: colors.primary }]} onPress={() => handleAccept(app)} disabled={isProcessing}>
-                      {isProcessing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.acceptBtnText}>Accept</Text>}
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            }}
-          />
-        )
-      )}
 
       {/* Artists tab */}
       {activeTab === 'artists' && (
@@ -363,12 +319,51 @@ export default function NetworkScreen() {
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+            ListHeaderComponent={
+              applications.length > 0 ? (
+                <View style={{ gap: 12, marginBottom: 4 }}>
+                  <Text style={[styles.sectionLabel, { color: colors.muted }]}>JOIN REQUESTS</Text>
+                  {applications.map((app) => {
+                    const isProcessing = processingId === app.id;
+                    return (
+                      <View key={app.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}>
+                        <View style={styles.cardTop}>
+                          <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                            {app.artist?.profile_photo_url
+                              ? <Image source={{ uri: app.artist.profile_photo_url }} style={styles.thumb} resizeMode="cover" />
+                              : <MaterialIcons name="person" size={22} color={colors.muted} />}
+                          </View>
+                          <View style={styles.cardInfo}>
+                            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{app.artist?.full_name ?? 'Unknown Artist'}</Text>
+                            <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                              {app.artist?.primary_genre ?? 'Artist'}{app.artist?.based_in ? ` · ${app.artist.based_in}` : ''}
+                            </Text>
+                            <Text style={[styles.cardVenue, { color: colors.primary }]} numberOfLines={1}>→ wants to join {app.venue?.name ?? 'a venue'}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.actions}>
+                          <Pressable style={[styles.declineBtn, { borderColor: colors.border }]} onPress={() => handleDecline(app)} disabled={isProcessing}>
+                            <Text style={[styles.declineBtnText, { color: colors.muted }]}>Decline</Text>
+                          </Pressable>
+                          <Pressable style={[styles.acceptBtn, { backgroundColor: colors.primary }]} onPress={() => handleAccept(app)} disabled={isProcessing}>
+                            {isProcessing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.acceptBtnText}>Accept</Text>}
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+                  <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 8 }]}>ALL ARTISTS</Text>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="people" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>No artists have signed up yet</Text>
-              </View>
+              applications.length > 0 ? null : (
+                <View style={styles.emptyWrap}>
+                  <MaterialIcons name="people" size={48} color={colors.muted} />
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.muted }]}>No artists have signed up yet</Text>
+                </View>
+              )
             }
             renderItem={({ item: user }) => {
               const profile = getProfile(user.id);
@@ -508,4 +503,5 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
 });

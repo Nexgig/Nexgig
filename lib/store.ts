@@ -585,6 +585,7 @@ interface NotificationState {
   markAsRead: (id: string) => void;
   markAllAsRead: (userId: string) => void;
   removeNotification: (id: string) => void;
+  clearNotifications: () => void;
   getByUser: (userId: string) => AppNotification[];
   getUnreadCount: (userId: string) => number;
 }
@@ -632,6 +633,7 @@ export const useNotificationStore = create<NotificationState>()(
       removeNotification: (id) => set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id),
       })),
+      clearNotifications: () => set({ notifications: [] }),
       getByUser: (userId) => get().notifications.filter((n) => n.userId === userId).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       ),
@@ -639,6 +641,33 @@ export const useNotificationStore = create<NotificationState>()(
     }),
     {
       name: 'nexgig:notifications',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+// ─── Network Tab Last-Viewed Store ────────────────────────────────────────────
+// Tracks when the artist last opened the Network tab, per user, so we can show a
+// dot when a manager has added them (or accepted an application) since then —
+// without marking the underlying notifications as read.
+
+interface NetworkSeenState {
+  lastSeen: Record<string, string>; // userId -> ISO timestamp
+  markNetworkSeen: (userId: string) => void;
+  getLastSeen: (userId: string) => string | undefined;
+}
+
+export const useNetworkSeenStore = create<NetworkSeenState>()(
+  persist(
+    (set, get) => ({
+      lastSeen: {},
+      markNetworkSeen: (userId) => set((state) => ({
+        lastSeen: { ...state.lastSeen, [userId]: new Date().toISOString() },
+      })),
+      getLastSeen: (userId) => get().lastSeen[userId],
+    }),
+    {
+      name: 'nexgig:network-seen',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )
@@ -768,6 +797,7 @@ export function resetAllStores() {
   useDraftStore.setState({ drafts: [] });
   useAvailabilityStore.setState({ blocks: [] });
   useInvoiceStore.setState({ invoices: [] });
+  useNotificationStore.getState().clearNotifications();
   useInvoiceReminderStore.setState({ reminders: [] });
   useCalendarJumpStore.setState({ pendingDate: null });
 }

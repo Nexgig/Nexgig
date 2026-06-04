@@ -4,11 +4,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useNotificationStore, useLineupStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 
-type NetworkTab = 'applications' | 'venues' | 'artists';
+type NetworkTab = 'venues' | 'artists';
 
 type VenueItem = {
   id: string;
@@ -28,14 +28,6 @@ type ArtistItem = {
   secondary_genres: string[];
 };
 
-type ApplicationItem = {
-  id: string;
-  venue_id: string;
-  status: string;
-  created_at: string;
-  venue: { name: string; venue_type: string } | null;
-};
-
 export default function ArtistNetworkScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -43,6 +35,7 @@ export default function ArtistNetworkScreen() {
 
   const addNotification = useNotificationStore((s) => s.addNotification);
   const venueAssignments = useLineupStore((s) => s.venueAssignments);
+  const markNetworkSeen = useNetworkSeenStore((s) => s.markNetworkSeen);
 
   // Derive assigned venue IDs reactively from the store — updates instantly when manager removes artist
   const assignedVenueIds = useMemo(() =>
@@ -53,12 +46,8 @@ export default function ArtistNetworkScreen() {
     ),
     [venueAssignments, currentUser?.id]
   );
-  const [activeTab, setActiveTab] = useState<NetworkTab>('applications');
+  const [activeTab, setActiveTab] = useState<NetworkTab>('venues');
   const [search, setSearch] = useState('');
-
-  // ── Applications state ─────────────────────────────────────────────────────
-  const [applications, setApplications] = useState<ApplicationItem[]>([]);
-  const [appsLoading, setAppsLoading] = useState(true);
 
   // ── Venues state ───────────────────────────────────────────────────────────
   const [venues, setVenues] = useState<VenueItem[]>([]);
@@ -68,8 +57,7 @@ export default function ArtistNetworkScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    if (activeTab === 'applications') await fetchApplications();
-    else if (activeTab === 'venues') await fetchVenues();
+    if (activeTab === 'venues') await fetchVenues();
     else await fetchArtists();
     setRefreshing(false);
   }, [activeTab]);
@@ -81,39 +69,17 @@ export default function ArtistNetworkScreen() {
   const [artistsLoading, setArtistsLoading] = useState(false);
   const [artistsFetched, setArtistsFetched] = useState(false);
 
-  // ── Fetch applications on mount + on focus ─────────────────────────────────
+  // ── Refresh venue "Requested" status + clear the Network dot on focus ───────
   useFocusEffect(useCallback(() => {
-    fetchApplications();
-  }, [currentUser?.id]));
+    if (currentUser?.id) markNetworkSeen(currentUser.id);
+    if (venuesFetched) fetchVenues();
+  }, [currentUser?.id, venuesFetched]));
 
   // ── Lazy-fetch venues/artists on first tab open ────────────────────────────
   useEffect(() => {
     if (activeTab === 'venues' && !venuesFetched) fetchVenues();
     if (activeTab === 'artists' && !artistsFetched) fetchArtists();
   }, [activeTab]);
-
-  const fetchApplications = async () => {
-    if (!currentUser) return;
-    setAppsLoading(true);
-    const { data } = await supabase
-      .from('applications')
-      .select('id, venue_id, status, created_at')
-      .eq('artist_id', currentUser.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-    if (data && data.length > 0) {
-      const venueIds = data.map((a: any) => a.venue_id);
-      const { data: venuesData } = await supabase
-        .from('venues')
-        .select('id, name, venue_type')
-        .in('id', venueIds);
-      const venueMap = Object.fromEntries((venuesData ?? []).map((v: any) => [v.id, v]));
-      setApplications(data.map((a: any) => ({ ...a, venue: venueMap[a.venue_id] ?? null })));
-    } else {
-      setApplications([]);
-    }
-    setAppsLoading(false);
-  };
 
   const fetchVenues = async () => {
     if (!currentUser) return;
@@ -173,7 +139,6 @@ export default function ArtistNetworkScreen() {
           });
           setApplyingId(null);
           setAppliedVenueIds((prev) => new Set([...prev, venue.id]));
-          fetchApplications();
         },
       },
     ]);
@@ -208,21 +173,19 @@ export default function ArtistNetworkScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>Venues, artists & applications</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>Venues & artists</Text>
       </View>
 
       {/* Sub-tabs */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {(['applications', 'venues', 'artists'] as NetworkTab[]).map((tab) => (
+        {(['venues', 'artists'] as NetworkTab[]).map((tab) => (
           <Pressable
             key={tab}
             style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
             onPress={() => { setActiveTab(tab); setSearch(''); }}
           >
             <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-              {tab === 'applications'
-                ? `Applications${applications.length > 0 ? ` (${applications.length})` : ''}`
-                : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
           </Pressable>
         ))}
@@ -247,55 +210,6 @@ export default function ArtistNetworkScreen() {
             </Pressable>
           )}
         </View>
-      )}
-
-      {/* Applications tab */}
-      {activeTab === 'applications' && (
-        appsLoading ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={applications}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="inbox" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Applications</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  Your venue applications will appear here
-                </Text>
-              </View>
-            }
-            renderItem={({ item: app }) => (
-              <View style={[styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.cardLeft}>
-                  <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                    <MaterialIcons name="place" size={22} color={colors.muted} />
-                  </View>
-                  <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>
-                      {app.venue?.name ?? 'Unknown Venue'}
-                    </Text>
-                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {app.venue?.venue_type ?? 'Venue'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={[styles.statusBadge, {
-                  backgroundColor: app.status === 'accepted' ? colors.success + '15' : '#F59E0B15',
-                  borderColor: app.status === 'accepted' ? colors.success + '40' : '#F59E0B40',
-                }]}>
-                  <Text style={[styles.statusText, { color: app.status === 'accepted' ? colors.success : '#F59E0B' }]}>
-                    {app.status === 'accepted' ? 'Accepted' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-            )}
-          />
-        )
       )}
 
       {/* Venues tab */}

@@ -4,7 +4,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { useColors } from '@/hooks/use-colors';
-import { useAuthStore, useBookingStore } from '@/lib/store';
+import { useAuthStore, useBookingStore, useNotificationStore, useNetworkSeenStore } from '@/lib/store';
 import { useMemo } from 'react';
 
 function CalendarTabIcon({ color, focused }: { color: string; focused: boolean }) {
@@ -67,6 +67,33 @@ function BookingTabIcon({ color, focused }: { color: string; focused: boolean })
   );
 }
 
+function NetworkTabIcon({ color }: { color: string; focused: boolean }) {
+  const colors = useColors();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const lastSeenMap = useNetworkSeenStore((s) => s.lastSeen);
+
+  const hasNew = useMemo(() => {
+    if (!currentUser?.id) return false;
+    const lastSeen = lastSeenMap[currentUser.id];
+    const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : 0;
+    const NETWORK_TYPES = ['lineup_added', 'venue_assigned', 'lineup_accepted'];
+    return notifications.some(
+      (n) =>
+        n.userId === currentUser.id &&
+        NETWORK_TYPES.includes(n.type) &&
+        new Date(n.createdAt).getTime() > lastSeenTime
+    );
+  }, [notifications, lastSeenMap, currentUser?.id]);
+
+  return (
+    <View style={styles.iconWrap}>
+      <IconSymbol size={26} name="person.2.fill" color={color} />
+      {hasNew && <View style={[styles.dot, { backgroundColor: colors.error }]} />}
+    </View>
+  );
+}
+
 export default function DJTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -115,7 +142,7 @@ export default function DJTabLayout() {
         name="explore"
         options={{
           title: 'Network',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.2.fill" color={color} />,
+          tabBarIcon: ({ color, focused }) => <NetworkTabIcon color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -143,4 +170,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
+  dot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
 });
