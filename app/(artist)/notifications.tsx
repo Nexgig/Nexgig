@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useMemo, useState, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuthStore, useNotificationStore, useLineupStore, useVenueStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useLineupStore, useVenueStore, loadNotificationsFromSupabase } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import type { AppNotification } from '@/lib/types';
@@ -74,6 +74,19 @@ export default function ArtistNotificationsScreen() {
   const addVenue = useVenueStore((s) => s.addVenue);
   const allVenues = useVenueStore((s) => s.venues);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Refetch from Supabase whenever the screen opens (covers missed realtime pushes)
+  useFocusEffect(useCallback(() => {
+    if (currentUser?.id) loadNotificationsFromSupabase(currentUser.id);
+  }, [currentUser?.id]));
+
+  const handleRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    await loadNotificationsFromSupabase(currentUser.id);
+    setRefreshing(false);
+  }, [currentUser?.id]);
 
   const handleAcceptInvite = async (notif: AppNotification) => {
     if (!currentUser || !notif.relatedId) return;
@@ -280,6 +293,7 @@ export default function ArtistNotificationsScreen() {
         renderItem={renderNotif}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <EmptyState icon="notifications" title="No notifications" subtitle="You're all caught up!" />
         }

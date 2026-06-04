@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -34,8 +35,10 @@ export default function ArtistNetworkScreen() {
   const currentUser = useAuthStore((s) => s.currentUser);
 
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const notifications = useNotificationStore((s) => s.notifications);
   const venueAssignments = useLineupStore((s) => s.venueAssignments);
   const markNetworkSeen = useNetworkSeenStore((s) => s.markNetworkSeen);
+  const isFocused = useIsFocused();
 
   // Derive assigned venue IDs reactively from the store — updates instantly when manager removes artist
   const assignedVenueIds = useMemo(() =>
@@ -74,6 +77,11 @@ export default function ArtistNetworkScreen() {
     if (currentUser?.id) markNetworkSeen(currentUser.id);
     if (venuesFetched) fetchVenues();
   }, [currentUser?.id, venuesFetched]));
+
+  // ── Also clear the dot if a notification arrives while already on this tab ──
+  useEffect(() => {
+    if (isFocused && currentUser?.id) markNetworkSeen(currentUser.id);
+  }, [notifications, isFocused, currentUser?.id]);
 
   // ── Lazy-fetch venues/artists on first tab open ────────────────────────────
   useEffect(() => {

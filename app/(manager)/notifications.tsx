@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useMemo, useState, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuthStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, loadNotificationsFromSupabase } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { AppNotification } from '@/lib/types';
 
@@ -53,6 +53,19 @@ export default function ManagerNotificationsScreen() {
   );
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Refetch from Supabase whenever the screen opens (covers missed realtime pushes)
+  useFocusEffect(useCallback(() => {
+    if (currentUser?.id) loadNotificationsFromSupabase(currentUser.id);
+  }, [currentUser?.id]));
+
+  const handleRefresh = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    await loadNotificationsFromSupabase(currentUser.id);
+    setRefreshing(false);
+  }, [currentUser?.id]);
 
   const handlePress = (notif: AppNotification) => {
     markAsRead(notif.id);
@@ -115,6 +128,7 @@ export default function ManagerNotificationsScreen() {
         renderItem={renderNotif}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <EmptyState icon="notifications" title="No notifications" subtitle="You're all caught up!" />
         }
