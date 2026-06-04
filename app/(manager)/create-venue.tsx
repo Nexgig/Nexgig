@@ -368,6 +368,16 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 )}
               </View>
               <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Preferred Energy (optional)</Text>
+                <View style={styles.chipGrid}>
+                  {VENUE_ENERGY_OPTIONS.map((e) => (
+                    <Pressable key={e} style={[styles.chip, { borderColor: form.preferredEnergy.includes(e) ? colors.primary : colors.border, backgroundColor: form.preferredEnergy.includes(e) ? colors.primary : colors.surface }]} onPress={() => toggleItem('preferredEnergy', e, form.preferredEnergy)}>
+                      <Text style={[styles.chipText, { color: form.preferredEnergy.includes(e) ? '#fff' : colors.foreground }]}>{e}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Venue Color (optional)</Text>
                 <Text style={[{ color: colors.muted, fontSize: 12, marginBottom: 4 }]}>This color will identify your venue on the calendar</Text>
                 <View style={styles.chipGrid}>
@@ -401,16 +411,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                   {AUDIENCE_TYPES.map((a) => (
                     <Pressable key={a} style={[styles.chip, { borderColor: form.audienceType.includes(a) ? colors.primary : colors.border, backgroundColor: form.audienceType.includes(a) ? colors.primary : colors.surface }]} onPress={() => toggleItem('audienceType', a, form.audienceType)}>
                       <Text style={[styles.chipText, { color: form.audienceType.includes(a) ? '#fff' : colors.foreground }]}>{a}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Preferred Energy (optional)</Text>
-                <View style={styles.chipGrid}>
-                  {VENUE_ENERGY_OPTIONS.map((e) => (
-                    <Pressable key={e} style={[styles.chip, { borderColor: form.preferredEnergy.includes(e) ? colors.primary : colors.border, backgroundColor: form.preferredEnergy.includes(e) ? colors.primary : colors.surface }]} onPress={() => toggleItem('preferredEnergy', e, form.preferredEnergy)}>
-                      <Text style={[styles.chipText, { color: form.preferredEnergy.includes(e) ? '#fff' : colors.foreground }]}>{e}</Text>
                     </Pressable>
                   ))}
                 </View>
