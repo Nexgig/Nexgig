@@ -815,14 +815,14 @@
 - [ ] Fix `Slot` type in types.ts — add managerId, status, updatedAt (sync.ts already uses them → type error). Run `pnpm check`.
 - [ ] Consolidate venue/slot/booking persistence INTO the store actions so Supabase writes can't be forgotten (currently split between store + screens → silent local/server drift)
 - [ ] Make `updateBookingStatus` store action sync to Supabase (today it only mutates local state; relies on manual syncBookingStatus calls)
-- [ ] Dedupe notifications: addNotification + realtime subscribeToNotifications can insert the same id twice locally
+- [x] Dedupe notifications: removed legacy fetchInvites synthesizer in artist _layout (was creating a 2nd notification per invite alongside the real one)
 - [ ] Strip console.log from production paths (booking-sync.ts, store.ts; use-auth.ts before deletion)
 - [ ] Fix false self-conflict when assigning an artist to a past slot (open item from prior session)
 - [ ] Private events are written to BOTH the bookings table (isArtistCreated) and the availability_blocks table (block_type='private_event') — redundant; display reads from bookings only. Consider dropping the availability_blocks write. (availability.tsx ~line 221, 623)
 
 ## C. Store launch blockers (HARD requirements for App Store + Google Play)
 
-- [ ] Build in-app Delete Account in artist + manager settings — REQUIRED by Apple 5.1.1(v) & Google (auto-reject without it)
+- [x] Build in-app Delete Account in artist + manager settings — built `delete-account` Edge Function (option-2 anonymize: private data deleted, shared history anonymized, manager venues deactivated), "type DELETE to confirm" modal wired into both settings screens; deployed + tested (manager delete verified)
 - [ ] Add Privacy Policy + Terms screens/links in settings — REQUIRED by both stores (need a hosted policy URL)
 - [ ] Decide on expo-audio (microphone) + expo-video plugins — remove plugins+packages if unused (mic permission with no feature = rejection risk); else be ready to justify
 - [ ] Add iOS permission strings for expo-image-picker (NSPhotoLibraryUsageDescription / camera) in app.config.ts
@@ -832,13 +832,14 @@
 
 ## D. Push notifications
 
-- [ ] Set up EAS Build (create eas.json + EAS project id) — cannot submit or test push from Expo Go
-- [ ] Add expo-notifications to app.config.ts plugins (notification icon + sound config)
-- [ ] iOS push credentials (APNs key) via EAS
-- [ ] Android push credentials (FCM) via EAS
-- [ ] Register device push tokens on sign-in and store per user/device in Supabase
-- [ ] Send push on key events (new request, confirm/decline/cancel, invite) — today these are in-app only
+- [x] Set up EAS Build (eas.json + EAS project id `eae9c0e4-...`) — simulator dev build + device dev build both succeeded
+- [x] Add expo-notifications to app.config.ts plugins (notification color set; also added expo-font + expo-web-browser plugins)
+- [x] iOS push credentials (APNs key) via EAS — created + assigned during device build, Push Notifications capability enabled on com.nexgig.app
+- [ ] Android push credentials (FCM) via EAS — not done yet (iOS only so far)
+- [x] Register device push tokens on sign-in and store per user in Supabase — `lib/notifications-push.ts` registers + saves to new `users.push_token` column; called from app/_layout on sign-in
+- [x] Send push on key events — `create-notification` Edge Function now sends Expo push to the recipient's push_token (best-effort); tested working on a physical iPhone
 - [ ] Wire same-day / day-before gig reminders (artist settings toggles exist; need real scheduling on a dev/EAS build)
+- [ ] Push-tap deep-link: route by notification type/related_id (currently always opens notifications list) — tie in with the "Booking not found" fix below
 
 ## E. Sign in with Apple + Google
 
@@ -851,11 +852,36 @@
 ## F. Testing
 
 - [x] Add smoke test `__tests__/smoke.test.ts` — stores, venue/slot/booking/draft/lineup reducers, slot-delete cascade, conflict detection (incl. overnight wrap + self-slot skip), time utils, resetAllStores
-- [ ] Run `pnpm check` (TypeScript) — fix Slot type + any other errors
-- [ ] Run `pnpm test` — confirm smoke test + existing suite pass
+- [x] Run `pnpm check` (TypeScript) — clean (0 errors)
+- [x] Run `pnpm test` — 25 passing (smoke + existing suite)
 - [ ] Run `pnpm lint`
 
 ## G. Security to verify
 
-- [ ] `.env` is committed (only .env*.local is gitignored) — confirm no service-role key / private secret is inside; rotate + gitignore if so
-- [ ] Confirm Supabase Row Level Security (RLS) is enabled with correct policies on all tables (critical — the anon key is public)
+- [x] `.env` — confirmed contains only public Supabase keys (anon + url); now gitignored + untracked, no rotation needed
+- [~] Confirm Supabase RLS enabled with correct policies on all tables — `notifications` locked down (own-row read/update/delete; inserts only via service-role create-notification function). STILL TODO: verify the other 13 tables have sensible policies before launch
+
+# ─────────────────────────────────────────────────────────
+# JUNE 2026 — Notifications, Network refactor, EAS/Push
+# ─────────────────────────────────────────────────────────
+
+## Done (June 2026)
+
+- [x] Notifications moved server-side (option 2): `create-notification` Edge Function (service-role insert, verifies caller, validates payload); rewrote addNotification to call it instead of direct table upsert; enabled RLS on notifications
+- [x] Add-to-roster from manager Network > Artists tab: "Add" button adds existing artist to roster + all current venues, one informational notification (instant, no acceptance)
+- [x] Fix artist venue load crash: Array.isArray guards on preferred_energy/genre_preferences/audience_type/sub_vibe + load previously-missing fields (vibe, rules, capacity, links)
+- [x] Retire email-invite flow: removed legacy fetchInvites synthesizer (fixed duplicate notifications)
+- [x] Artist Network tab: removed Applications sub-tab (status shows as Requested on venue rows); added red DOT badge on Network tab for new network activity (clears on focus/while-focused, leaves notifications in bell)
+- [x] Manager Network tab: removed Applications tab; pending applicants show inline at top of Artists tab with Accept/Decline (per-venue accept preserved vs add-to-all-venues roster)
+- [x] resetAllStores now clears notifications on sign-out (privacy + stale-cache fix)
+- [x] Notifications screens (artist + manager): refetch from Supabase on open + pull-to-refresh (covers missed realtime pushes without sign-out/in)
+- [x] Move Preferred Energy field to step 1 (after Address) in create-venue
+- [x] Silence RN-internal SafeAreaView deprecation warning via LogBox
+- [x] Align all deps to SDK 54 (expo-file-system + expo-linear-gradient were on SDK 55 — broke the native build)
+
+## Open bugs (June 2026) — tackle next
+
+- [ ] "Booking not found" when tapping a booking notification — booking-detail only reads the local Zustand store; if the booking isn't loaded it shows the error. User confirmed it appears after going into the app, scrolling down, and pull-to-refresh (which triggers a Supabase fetch). FIX: fetch the booking from Supabase by id when missing locally (show loading), instead of "not found". Also fix push-tap routing (D bucket) to open the right screen by notification type.
+- [ ] Artist DECLINES a booking — notification behaves wrong (diagnose: is the manager notified correctly? stale artist notification?)
+- [ ] Artist DISMISSES a cancelled booking — notification behaves wrong (diagnose)
+- [ ] Remove dead invite code: handleAcceptInvite / handleDeclineInvite still in app/(artist)/notifications.tsx (leftover from retired email-invite flow)
