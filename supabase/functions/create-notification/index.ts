@@ -73,6 +73,38 @@ serve(async (req) => {
       return json({ error: 'Could not create notification', details: insertError.message }, 500);
     }
 
+    // 4. Best-effort push notification to the recipient's device.
+    //    Failures here never fail the request — the in-app notification row
+    //    is already saved above.
+    try {
+      const { data: recipient } = await admin
+        .from('users')
+        .select('push_token')
+        .eq('id', user_id)
+        .maybeSingle();
+
+      const pushToken = recipient?.push_token;
+      if (pushToken && typeof pushToken === 'string' && pushToken.startsWith('ExponentPushToken')) {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip, deflate',
+          },
+          body: JSON.stringify({
+            to: pushToken,
+            title,
+            body,
+            sound: 'default',
+            data: { type, related_id, related_type, notification_id: id },
+          }),
+        });
+      }
+    } catch (pushErr) {
+      console.log('push send failed (non-fatal):', pushErr);
+    }
+
     return json({ success: true }, 200);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

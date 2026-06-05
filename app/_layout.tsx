@@ -19,6 +19,8 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore, resetAllStores } from "@/lib/store";
+import { registerForPushNotifications } from "@/lib/notifications-push";
+import * as Notifications from "expo-notifications";
 
 // Silence React Native's internal SafeAreaView deprecation warning.
 // It originates from RN's own Button/InputAccessoryView components, not our code.
@@ -36,6 +38,7 @@ export default function RootLayout() {
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
@@ -61,6 +64,26 @@ export default function RootLayout() {
       }
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Register this device for push notifications whenever a user is signed in.
+  useEffect(() => {
+    if (currentUser?.id) {
+      registerForPushNotifications(currentUser.id);
+    }
+  }, [currentUser?.id]);
+
+  // Handle taps on a push notification — route to the notifications screen.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { type?: string } | undefined;
+      const accountType = useAuthStore.getState().currentUser?.accountType;
+      if (!accountType) return;
+      const base = accountType === 'manager' ? '/(manager)' : '/(artist)';
+      router.push(`${base}/notifications` as any);
+      void data;
+    });
+    return () => sub.remove();
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {

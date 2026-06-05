@@ -86,6 +86,14 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "expo-font",
+    "expo-web-browser",
+    [
+      "expo-notifications",
+      {
+        color: "#2563EB",
+      },
+    ],
     [
       "expo-calendar",
       {
@@ -130,6 +138,11 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+  },
+  extra: {
+    eas: {
+      projectId: "eae9c0e4-5f95-4c8b-ba5f-09303b81ecbe",
+    },
   },
 };
 
