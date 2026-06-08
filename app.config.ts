@@ -43,7 +43,7 @@ const config: ExpoConfig = {
   slug: env.appSlug,
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/app-icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
@@ -51,7 +51,9 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access your photos so you can set a profile or venue picture.",
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to use your camera so you can take a profile or venue picture."
       }
   },
   android: {
@@ -101,16 +103,10 @@ const config: ExpoConfig = {
       }
     ],
     [
-      "expo-audio",
+      "expo-image-picker",
       {
-        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
-      },
-    ],
-    [
-      "expo-video",
-      {
-        supportsBackgroundPlayback: true,
-        supportsPictureInPicture: true,
+        photosPermission: "Allow $(PRODUCT_NAME) to access your photos so you can set a profile or venue picture.",
+        cameraPermission: "Allow $(PRODUCT_NAME) to use your camera so you can take a profile or venue picture.",
       },
     ],
     [
