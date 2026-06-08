@@ -848,10 +848,10 @@
 - [x] Add Sign in with Apple — native expo-apple-authentication → signInWithIdToken (signInWithApple in lib/auth.ts); Apple App ID capability + Services ID com.nexgig.app.signin + Key 8UMH84RKW8; Supabase Apple provider Client IDs = com.nexgig.app.signin,com.nexgig.app (native, no secret needed). TESTED WORKING ON DEVICE ✅
 - [x] Add Apple + Google buttons to welcome.tsx and sign-in.tsx — reusable components/oauth-buttons.tsx (onDark/onLight variants); native Apple button (iOS only) + Google button
 - [x] On first OAuth sign-in, route new users through account-type selection and create the managers/artists/users rows — choose-account-type.tsx screen + oauth mode in manager-register & artist-setup (skip signup, pre-fill name/email, use existing session); resolveAccountRoute() checks managers→artists→new
-- [x] Configure redirect scheme + enable Apple & Google providers in the Supabase dashboard — both enabled; iOS URL scheme (reversed iOS client ID) added to app.config.ts google-signin plugin
+- [x] Configure redirect scheme + enable Apple & Google providers in the Supabase dashboard — both enabled; iOS URL scheme (reversed iOS client ID) added to app.config.ts google-signin plugin. IMPORTANT: enabled "Skip nonce check" on the Supabase Google provider — REQUIRED for native iOS Google sign-in (iOS Google SDK embeds a nonce it never exposes, so it can't be matched; this is the Supabase-sanctioned fix). Google sign-in CONFIRMED WORKING on device ✅
 - [x] Removed dead Manus OAuth scaffold (oauth/callback.tsx, _core/api.ts, _core/auth.ts, constants/oauth.ts) before building real OAuth
 - [ ] Android Google sign-in — not done (iOS only so far; would need Android OAuth client + SHA-1, and Apple secret-key generation for web/Android flow if ever needed)
-- [ ] Test new-user Google flow + returning-user flows on device (Apple new-user flow confirmed working)
+- [x] Test Google flow on device — CONFIRMED WORKING (both existing-in-app Gmail and brand-new Gmail) after enabling Skip nonce check. Apple confirmed working too. (Returning-user re-sign-in flow not separately stress-tested but routing logic is shared with sign-in.)
 
 ## F. Testing
 
@@ -895,3 +895,4 @@
 - [ ] Invoices section should be collapsed by default on sign in
 - [ ] No badge on the profile tab when an invoice is unopened
 - [ ] In the registration wizards (manager-register + artist-setup), remove the "optional" label next to the phone number field
+- [ ] "Booking not found" page has NO back button — artist gets stuck. Repro: manager sends a booking request then cancels it; the artist taps the (now-deleted) booking notification and lands on "Booking not found" with no way back. FIX: add a back button to the booking-not-found state (ties into the booking-detail Supabase-fetch fix above)
