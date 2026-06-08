@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -458,7 +458,39 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* ── Advanced ──────────────────────────────────────────────────────── */}
+        {/* ── About ─────────────────────────────────────────── */}
+        <Text style={[styles.sectionLabel, { color: colors.muted }]}>ABOUT</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable
+            style={({ pressed }) => [styles.navRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => Linking.openURL('https://nexgig.github.io/legal/privacy-policy.html')}
+          >
+            <View style={styles.settingInfo}>
+              <MaterialIcons name="privacy-tip" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Privacy Policy</Text>
+              </View>
+            </View>
+            <MaterialIcons name="open-in-new" size={18} color={colors.muted} />
+          </Pressable>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.navRow, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => Linking.openURL('https://nexgig.github.io/legal/terms-of-service.html')}
+          >
+            <View style={styles.settingInfo}>
+              <MaterialIcons name="description" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Terms of Service</Text>
+              </View>
+            </View>
+            <MaterialIcons name="open-in-new" size={18} color={colors.muted} />
+          </Pressable>
+        </View>
+
+        {/* ── Advanced ── */}
         <Text style={[styles.sectionLabel, { color: colors.muted }]}>ADVANCED</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Pressable
