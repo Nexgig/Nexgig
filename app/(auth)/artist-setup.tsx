@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '@/components/screen-container';
@@ -40,14 +40,19 @@ export default function DJSetupScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
 
+  // OAuth mode: user already authenticated via Apple/Google, session exists.
+  // We skip the email/password signup and pre-fill name/email.
+  const { oauth, name: oauthName, email: oauthEmail } = useLocalSearchParams<{ oauth?: string; name?: string; email?: string }>();
+  const isOAuth = oauth === '1';
+
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [form, setForm] = useState({
-    fullName: '',
+    fullName: oauthName ?? '',
     fullLegalName: '',
     username: '',
-    email: '',
+    email: oauthEmail ?? '',
     password: '',
     phone: '',
     bio: '',
@@ -115,8 +120,10 @@ export default function DJSetupScreen() {
       if (!form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
       if (!form.username.trim()) { Alert.alert('Required', 'Please choose a username.'); return; }
       if (!usernameValid) { Alert.alert('Invalid Username', 'Lowercase letters, numbers, and underscores only.'); return; }
-      if (!form.email.trim()) { Alert.alert('Required', 'Please enter your email address.'); return; }
-      if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
+      if (!isOAuth) {
+        if (!form.email.trim()) { Alert.alert('Required', 'Please enter your email address.'); return; }
+        if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
+      }
       setUsernameError('');
       setEmailError('');
     }
@@ -139,29 +146,43 @@ export default function DJSetupScreen() {
 
     setIsLoading(true);
 
-    // ✅ Step 1 — sign up with Supabase auth
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: form.email.trim().toLowerCase(),
-      password: form.password,
-    });
+    // ✅ Get the user — either from the existing OAuth session, or by signing up.
+    let user;
+    if (isOAuth) {
+      const { data: { user: sessionUser }, error: getUserError } = await supabase.auth.getUser();
+      if (getUserError || !sessionUser) {
+        setIsLoading(false);
+        Alert.alert('Error', 'Session not found. Please sign in again.');
+        return;
+      }
+      user = sessionUser;
+    } else {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
 
-    if (signUpError) {
-      setIsLoading(false);
-      Alert.alert('Sign up failed', signUpError.message);
-      return;
+      if (signUpError) {
+        setIsLoading(false);
+        Alert.alert('Sign up failed', signUpError.message);
+        return;
+      }
+
+      if (!signUpData.user) {
+        setIsLoading(false);
+        Alert.alert('Error', 'Could not create account. Try again.');
+        return;
+      }
+      user = signUpData.user;
     }
 
-    const user = signUpData.user;
-    if (!user) {
-      setIsLoading(false);
-      Alert.alert('Error', 'Could not create account. Try again.');
-      return;
-    }
+    // The email used for profile rows: OAuth users use their session email.
+    const profileEmail = (isOAuth ? (user.email ?? form.email) : form.email).trim().toLowerCase();
 
     // ✅ Step 2 — insert into users table
     const { error: userInsertError } = await supabase.from('users').upsert({
   id: user.id,
-  email: form.email.trim().toLowerCase(),
+  email: profileEmail,
   full_name: form.fullName.trim(),
   account_type: 'artist',
   phone: form.phone.trim(),
@@ -178,7 +199,7 @@ export default function DJSetupScreen() {
     // ✅ Step 3 — insert into artists table
     const { error: artistInsertError } = await supabase.from('artists').upsert({
   id: user.id,
-  email: form.email.trim().toLowerCase(),
+  email: profileEmail,
   full_name: form.fullName.trim(),
   full_legal_name: form.fullLegalName.trim(),
   username: form.username.trim().toLowerCase(),
@@ -207,7 +228,7 @@ export default function DJSetupScreen() {
     // ✅ Set current user in store
     setCurrentUser({
       id: user.id,
-      email: form.email.trim().toLowerCase(),
+      email: profileEmail,
       phone: form.phone.trim(),
       accountType: 'artist' as const,
       fullName: form.fullName.trim(),
@@ -278,6 +299,7 @@ export default function DJSetupScreen() {
                   autoCapitalize="none" autoCorrect={false} returnKeyType="next" />
                 {usernameError ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{usernameError}</Text> : null}
               </View>
+              {!isOAuth && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Email *</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: emailError ? '#EF4444' : colors.border, color: colors.foreground }]}
@@ -286,6 +308,8 @@ export default function DJSetupScreen() {
                   keyboardType="email-address" autoCapitalize="none" returnKeyType="next" />
                 {emailError ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{emailError}</Text> : null}
               </View>
+              )}
+              {!isOAuth && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Password *</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
@@ -293,6 +317,7 @@ export default function DJSetupScreen() {
                   value={form.password} onChangeText={(v) => update('password', v)}
                   secureTextEntry autoCapitalize="none" returnKeyType="next" />
               </View>
+              )}
               <PhoneInput
                 label="Phone Number"
                 optional

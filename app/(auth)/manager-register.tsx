@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -26,13 +26,18 @@ export default function ManagerRegisterScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
 
+  // OAuth mode: user already authenticated via Apple/Google, session exists.
+  // We skip the email/password signup and pre-fill name/email.
+  const { oauth, name: oauthName, email: oauthEmail } = useLocalSearchParams<{ oauth?: string; name?: string; email?: string }>();
+  const isOAuth = oauth === '1';
+
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
-    fullName: '',
-    email: '',
+    fullName: oauthName ?? '',
+    email: oauthEmail ?? '',
     password: '',
     phone: '',
     basedIn: '',
@@ -68,8 +73,18 @@ export default function ManagerRegisterScreen() {
   const handleNext = async () => {
     if (isAnimating) return;
 
-    // ✅ Step 1 — sign up with email + password
+    // ✅ Step 1 — sign up with email + password (skipped in OAuth mode)
     if (step === 1) {
+      if (isOAuth) {
+        // Session already exists from Apple/Google. Just need a name.
+        if (!form.fullName.trim()) {
+          Alert.alert('Required', 'Please enter your full name.');
+          return;
+        }
+        animateToStep(2, 'forward');
+        return;
+      }
+
       if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
         Alert.alert('Required', 'Please fill in all fields.');
         return;
@@ -230,14 +245,17 @@ export default function ManagerRegisterScreen() {
                 placeholder="Alex Thompson"
                 colors={colors}
               />
-              <InputField
-                label="Email Address"
-                value={form.email}
-                onChangeText={(v) => update('email', v)}
-                placeholder="alex@example.com"
-                keyboardType="email-address"
-                colors={colors}
-              />
+              {!isOAuth && (
+                <InputField
+                  label="Email Address"
+                  value={form.email}
+                  onChangeText={(v) => update('email', v)}
+                  placeholder="alex@example.com"
+                  keyboardType="email-address"
+                  colors={colors}
+                />
+              )}
+              {!isOAuth && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
                 <View style={styles.passwordRow}>
@@ -263,6 +281,7 @@ export default function ManagerRegisterScreen() {
                   </Pressable>
                 </View>
               </View>
+              )}
               <PhoneInput
                 label="Phone Number"
                 optional
