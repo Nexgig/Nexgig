@@ -90,6 +90,13 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-font",
     "expo-web-browser",
+    "expo-apple-authentication",
+    [
+      "@react-native-google-signin/google-signin",
+      {
+        iosUrlScheme: "com.googleusercontent.apps.1090523281211-facnl2rejtk7oivo71nir9h70jt3o2ot",
+      },
+    ],
     [
       "expo-notifications",
       {
