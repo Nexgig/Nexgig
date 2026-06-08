@@ -823,13 +823,13 @@
 ## C. Store launch blockers (HARD requirements for App Store + Google Play)
 
 - [x] Build in-app Delete Account in artist + manager settings — built `delete-account` Edge Function (option-2 anonymize: private data deleted, shared history anonymized, manager venues deactivated), "type DELETE to confirm" modal wired into both settings screens; deployed + tested (manager delete verified)
-- [ ] Add Privacy Policy + Terms screens/links in settings — REQUIRED by both stores (need a hosted policy URL). DRAFTED: legal/privacy-policy.html + legal/terms-of-service.html (UAE/Dubai, admin@nexgigapp.com, covers data collected + history-visibility control + user-content-accuracy/fake-venue clause). STILL TODO: host them at public URLs + add in-app links in settings.
+- [x] Add Privacy Policy + Terms screens/links in settings — DONE: legal/privacy-policy.html + legal/terms-of-service.html (UAE/Dubai, admin@nexgigapp.com, history-visibility + user-content-accuracy clauses) hosted live at https://nexgig.github.io/legal/ ; in-app "About" links added to both manager + artist settings.
 - [x] Decide on expo-audio (microphone) + expo-video plugins — REMOVED both plugins + packages (no audio/video features; mic permission with no feature was a rejection risk)
 - [x] Add iOS permission strings for expo-image-picker — added NSPhotoLibraryUsageDescription + NSCameraUsageDescription to infoPlist + expo-image-picker plugin (photos + camera; users can pick from library or take a photo)
 - [x] Verify splash + app icon are Nexgig — icon set to app-icon.png (white X on blue #2563EB, 1024×1024, no transparency); splash uses the full Nexgig logo on blue. Old Gigster icons gone.
 - [ ] Prepare reviewer demo accounts (manager + artist) + review notes — onboarding now allows self-registration, so just supply one manager + one artist test login at submission
 - [ ] Complete App Store privacy nutrition labels / Google Data Safety form (collects email, name, photos) — done in App Store Connect at submission
-- [ ] Add a Report / flag mechanism for user content (venues, profiles) + ability to block a user — Apple guideline 1.2 expects this for any app with user-generated content. Not strictly about policing every venue, but reviewers may flag UGC with NO report path. Lower risk for a B2B tool, but safest to add a lightweight "Report" (e.g. emails admin@nexgigapp.com) before submission. (Raised re: fake venues.)
+- [x] Add a Report / flag mechanism for user content (venues, profiles) — DONE: ReportModal component (reason + details → Supabase `reports` table) wired to manager→artist-profile, manager→venue-detail (non-owner only), artist→venue-detail, artist→artist-profile. `reports` table created in Supabase with insert RLS. (Block-a-user still optional/deferred.)
 
 ## D. Push notifications
 
