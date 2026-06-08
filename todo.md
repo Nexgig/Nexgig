@@ -844,11 +844,14 @@
 
 ## E. Sign in with Apple + Google
 
-- [ ] Add Google sign-in via Supabase OAuth (oauth/callback.tsx + constants/oauth.ts are scaffolded — wire them up)
-- [ ] Add Sign in with Apple — REQUIRED by Apple once Google/social login is offered
-- [ ] Add Apple + Google buttons to welcome.tsx and sign-in.tsx
-- [ ] On first OAuth sign-in, route new users through account-type selection and create the managers/artists/users rows
-- [ ] Configure redirect scheme + enable Apple & Google providers in the Supabase dashboard
+- [x] Add Google sign-in via Supabase OAuth — native @react-native-google-signin/google-signin → signInWithIdToken (signInWithGoogle in lib/auth.ts); Google Cloud project Nexgig (admin@nexgigapp.com org), Web + iOS OAuth clients, Supabase Google provider enabled
+- [x] Add Sign in with Apple — native expo-apple-authentication → signInWithIdToken (signInWithApple in lib/auth.ts); Apple App ID capability + Services ID com.nexgig.app.signin + Key 8UMH84RKW8; Supabase Apple provider Client IDs = com.nexgig.app.signin,com.nexgig.app (native, no secret needed). TESTED WORKING ON DEVICE ✅
+- [x] Add Apple + Google buttons to welcome.tsx and sign-in.tsx — reusable components/oauth-buttons.tsx (onDark/onLight variants); native Apple button (iOS only) + Google button
+- [x] On first OAuth sign-in, route new users through account-type selection and create the managers/artists/users rows — choose-account-type.tsx screen + oauth mode in manager-register & artist-setup (skip signup, pre-fill name/email, use existing session); resolveAccountRoute() checks managers→artists→new
+- [x] Configure redirect scheme + enable Apple & Google providers in the Supabase dashboard — both enabled; iOS URL scheme (reversed iOS client ID) added to app.config.ts google-signin plugin
+- [x] Removed dead Manus OAuth scaffold (oauth/callback.tsx, _core/api.ts, _core/auth.ts, constants/oauth.ts) before building real OAuth
+- [ ] Android Google sign-in — not done (iOS only so far; would need Android OAuth client + SHA-1, and Apple secret-key generation for web/Android flow if ever needed)
+- [ ] Test new-user Google flow + returning-user flows on device (Apple new-user flow confirmed working)
 
 ## F. Testing
 
@@ -886,3 +889,9 @@
 - [ ] Artist DECLINES a booking — notification behaves wrong (diagnose: is the manager notified correctly? stale artist notification?)
 - [ ] Artist DISMISSES a cancelled booking — notification behaves wrong (diagnose)
 - [ ] Remove dead invite code: handleAcceptInvite / handleDeclineInvite still in app/(artist)/notifications.tsx (leftover from retired email-invite flow)
+
+## UI polish (from device testing, June 2026)
+
+- [ ] Invoices section should be collapsed by default on sign in
+- [ ] No badge on the profile tab when an invoice is unopened
+- [ ] In the registration wizards (manager-register + artist-setup), remove the "optional" label next to the phone number field
