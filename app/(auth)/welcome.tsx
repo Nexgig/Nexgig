@@ -2,6 +2,7 @@ import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { OAuthButtons } from '@/components/oauth-buttons';
 import { useColors } from '@/hooks/use-colors';
 
 export default function WelcomeScreen() {
@@ -44,6 +45,8 @@ export default function WelcomeScreen() {
 >
   <Text style={styles.secondaryBtnText}>Join as Artist</Text>
 </Pressable>
+
+            <OAuthButtons variant="onDark" />
           </View>
         </View>
       </ScreenContainer>

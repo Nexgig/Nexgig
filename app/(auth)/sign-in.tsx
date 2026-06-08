@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Alert, ScrollView, Image 
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { OAuthButtons } from '@/components/oauth-buttons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
@@ -162,6 +163,8 @@ export default function SignInScreen() {
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Text>
           </Pressable>
+
+          <OAuthButtons />
         </View>
       </ScrollView>
     </ScreenContainer>
