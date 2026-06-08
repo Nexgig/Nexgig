@@ -9,6 +9,7 @@ import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotSt
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
+import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
 import type { VenueAssignment } from '@/lib/types';
 
@@ -39,6 +40,7 @@ export default function ArtistProfileViewScreen() {
 
   // ── Assign Venue sheet state ──────────────────────────────────────────────
   const [showAssignSheet, setShowAssignSheet] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   // ── Invite state ──────────────────────────────────────────────────────────
   const [inviteStatus, setInviteStatus] = useState<'none' | 'pending'>('none');
@@ -339,6 +341,9 @@ export default function ArtistProfileViewScreen() {
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Artist Profile</Text>
+          <Pressable onPress={() => setShowReport(true)} style={styles.reportBtn} hitSlop={8}>
+            <MaterialIcons name="flag" size={20} color={colors.muted} />
+          </Pressable>
         </View>
 
         {/* 1. Profile Hero: photo, name, location, member since */}
@@ -643,6 +648,14 @@ export default function ArtistProfileViewScreen() {
           </View>
         </View>
       </Modal>
+      {/* ── Report Modal ───────────────────────────────────────────── */}
+      <ReportModal
+        visible={showReport}
+        onClose={() => setShowReport(false)}
+        reportedType="artist"
+        reportedId={artistId ?? ''}
+        reportedName={dj.fullName}
+      />
     </ScreenContainer>
   );
 }
@@ -651,7 +664,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '800' },
+  headerTitle: { fontSize: 18, fontWeight: '800', flex: 1 },
+  reportBtn: { padding: 4 },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   heroPhoto: { width: 80, height: 80, borderRadius: 16 },

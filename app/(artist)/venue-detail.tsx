@@ -9,6 +9,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { ReportModal } from '@/components/report-modal';
 
 export default function ArtistVenueDetailScreen() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function ArtistVenueDetailScreen() {
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'slots' | 'lineup'>('overview');
+  const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
   const venueAssignments = useMemo(() => venue ? getAssignmentsByVenue(venue.id) : [], [venue, getAssignmentsByVenue]);
@@ -63,7 +65,9 @@ export default function ArtistVenueDetailScreen() {
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
           <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
-          <View style={styles.backBtn} />
+          <Pressable onPress={() => setShowReport(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1, alignItems: 'flex-end' }]} hitSlop={8}>
+            <MaterialIcons name="flag" size={20} color={colors.muted} />
+          </Pressable>
         </View>
 
         {/* Venue Photo */}
@@ -189,6 +193,13 @@ export default function ArtistVenueDetailScreen() {
 
 
       </ScrollView>
+      <ReportModal
+        visible={showReport}
+        onClose={() => setShowReport(false)}
+        reportedType="venue"
+        reportedId={venue.id}
+        reportedName={venue.name}
+      />
     </ScreenContainer>
   );
 }

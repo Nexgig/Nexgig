@@ -8,6 +8,7 @@ import { useLineupStore, useBookingStore, useVenueStore, useSlotStore } from '@/
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
+import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
 
 function formatMemberSince(createdAt?: string): string {
@@ -33,6 +34,7 @@ export default function ArtistProfileViewScreen() {
   const [fetchedUser, setFetchedUser] = useState<any>(null);
   const [fetchedProfile, setFetchedProfile] = useState<any>(null);
   const [isFetching, setIsFetching] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     if (djFromStore || !artistId) return;
@@ -141,7 +143,9 @@ export default function ArtistProfileViewScreen() {
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Artist Profile</Text>
-          <View style={styles.backBtn} />
+          <Pressable onPress={() => setShowReport(true)} style={styles.backBtn} hitSlop={8}>
+            <MaterialIcons name="flag" size={20} color={colors.muted} />
+          </Pressable>
         </View>
 
         {/* 1. Profile Hero: photo, name, location, member since */}
@@ -318,6 +322,13 @@ export default function ArtistProfileViewScreen() {
           )}
         </View>
       </ScrollView>
+      <ReportModal
+        visible={showReport}
+        onClose={() => setShowReport(false)}
+        reportedType="artist"
+        reportedId={artistId ?? ''}
+        reportedName={dj.fullName}
+      />
     </ScreenContainer>
   );
 }
