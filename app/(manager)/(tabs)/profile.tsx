@@ -178,7 +178,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
 }) {
   const invoices = useInvoiceStore((s) => s.invoices);
   const deleteInvoice = useInvoiceStore((s) => s.deleteInvoice);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
 
   const sortedInvoices = useMemo(

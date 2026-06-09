@@ -673,6 +673,34 @@ export const useNetworkSeenStore = create<NetworkSeenState>()(
   )
 );
 
+// ─── Manager Profile Invoices Last-Seen Store ─────────────────────────────────
+// Tracks when the manager last opened the Profile tab, per user, so the Profile
+// tab can show a badge when new invoices have arrived since then. This is
+// independent of each invoice's own read state (the per-invoice red dot clears
+// separately when the manager opens that invoice).
+
+interface ProfileInvoicesSeenState {
+  lastSeen: Record<string, string>; // userId -> ISO timestamp
+  markProfileInvoicesSeen: (userId: string) => void;
+  getProfileInvoicesSeen: (userId: string) => string | undefined;
+}
+
+export const useProfileInvoicesSeenStore = create<ProfileInvoicesSeenState>()(
+  persist(
+    (set, get) => ({
+      lastSeen: {},
+      markProfileInvoicesSeen: (userId) => set((state) => ({
+        lastSeen: { ...state.lastSeen, [userId]: new Date().toISOString() },
+      })),
+      getProfileInvoicesSeen: (userId) => get().lastSeen[userId],
+    }),
+    {
+      name: 'nexgig:profile-invoices-seen',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
 // ─── Calendar Jump Store ──────────────────────────────────────────────────────
 // Used by booking detail screens to tell the Calendar tab to jump to a specific date.
 

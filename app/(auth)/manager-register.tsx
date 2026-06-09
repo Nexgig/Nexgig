@@ -284,7 +284,7 @@ export default function ManagerRegisterScreen() {
               )}
               <PhoneInput
                 label="Phone Number"
-                optional
+                optional={false}
                 value={form.phone}
                 onChange={(v) => update('phone', v)}
               />

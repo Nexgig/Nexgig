@@ -247,7 +247,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     });
   }
 
-  router.replace('/(manager)/my-venues' as Href);
+  router.replace('/(manager)/(tabs)/calendar' as Href);
 };
 
   const handleBack = () => {

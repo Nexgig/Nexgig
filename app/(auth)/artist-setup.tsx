@@ -320,7 +320,7 @@ export default function DJSetupScreen() {
               )}
               <PhoneInput
                 label="Phone Number"
-                optional
+                optional={false}
                 value={form.phone}
                 onChange={(v) => update('phone', v)}
               />

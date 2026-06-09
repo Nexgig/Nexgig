@@ -1,4 +1,6 @@
-import { Image, View, Text } from 'react-native';
+import { Image, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useColors } from '@/hooks/use-colors';
 import { cn } from '@/lib/utils';
 
 interface AvatarImageProps {
@@ -8,10 +10,8 @@ interface AvatarImageProps {
   className?: string;
 }
 
-export function AvatarImage({ uri, name, size = 40, className }: AvatarImageProps) {
-  const initials = name
-    ? name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
+export function AvatarImage({ uri, size = 40, className }: AvatarImageProps) {
+  const colors = useColors();
 
   if (uri) {
     return (
@@ -23,14 +23,22 @@ export function AvatarImage({ uri, name, size = 40, className }: AvatarImageProp
     );
   }
 
+  // No photo → fall back to the shared person icon (consistent everywhere)
   return (
     <View
-      style={{ width: size, height: size, borderRadius: size / 2 }}
-      className={cn('bg-accent items-center justify-center', className)}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      className={cn('items-center justify-center', className)}
     >
-      <Text style={{ fontSize: size * 0.35 }} className="text-white font-bold">
-        {initials}
-      </Text>
+      <MaterialIcons name="person" size={size * 0.55} color={colors.muted} />
     </View>
   );
 }

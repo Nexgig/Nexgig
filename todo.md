@@ -887,7 +887,7 @@
 
 - [ ] "Booking not found" when tapping a booking notification — booking-detail only reads the local Zustand store; if the booking isn't loaded it shows the error. User confirmed it appears after going into the app, scrolling down, and pull-to-refresh (which triggers a Supabase fetch). FIX: fetch the booking from Supabase by id when missing locally (show loading), instead of "not found". Also fix push-tap routing (D bucket) to open the right screen by notification type.
 - [ ] Artist DECLINES a booking — notification behaves wrong (diagnose: is the manager notified correctly? stale artist notification?)
-- [ ] Artist DISMISSES a cancelled booking — notification behaves wrong (diagnose)
+- [x] Artist DISMISSES a cancelled booking — notification behaves wrong (diagnose) — VERIFIED WORKING (tested by user, June 2026)
 - [ ] Remove dead invite code: handleAcceptInvite / handleDeclineInvite still in app/(artist)/notifications.tsx (leftover from retired email-invite flow)
 
 ## UI polish (from device testing, June 2026)
