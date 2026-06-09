@@ -883,20 +883,33 @@
 - [x] Silence RN-internal SafeAreaView deprecation warning via LogBox
 - [x] Align all deps to SDK 54 (expo-file-system + expo-linear-gradient were on SDK 55 — broke the native build)
 
+## NEW (June 2026, this session) — account-type back nav
+
+- [x] choose-account-type used router.replace → wizard back button was dead; switched to router.push so back returns to the role picker — TESTED ON DEVICE ✅
+
 ## Open bugs (June 2026) — tackle next
 
-- [ ] "Booking not found" when tapping a booking notification — booking-detail only reads the local Zustand store; if the booking isn't loaded it shows the error. User confirmed it appears after going into the app, scrolling down, and pull-to-refresh (which triggers a Supabase fetch). FIX: fetch the booking from Supabase by id when missing locally (show loading), instead of "not found". Also fix push-tap routing (D bucket) to open the right screen by notification type.
-- [ ] Artist DECLINES a booking — notification behaves wrong (diagnose: is the manager notified correctly? stale artist notification?)
+- [x] "Booking not found" when tapping a booking notification — booking-detail now fetches from Supabase by id when missing locally + back button added. (Push-tap type routing still open in D bucket.) — TESTED ON DEVICE ✅
+- [x] Artist DECLINES a booking — decline now dismisses directly from every screen (calendar, booking-detail, pending-requests) + hides from calendar — TESTED ON DEVICE ✅
 - [x] Artist DISMISSES a cancelled booking — notification behaves wrong (diagnose) — VERIFIED WORKING (tested by user, June 2026)
-- [ ] Remove dead invite code: handleAcceptInvite / handleDeclineInvite still in app/(artist)/notifications.tsx (leftover from retired email-invite flow)
+- [x] Remove dead invite code: handleAcceptInvite / handleDeclineInvite removed from app/(artist)/notifications.tsx + orphaned imports/hooks/styles cleaned up
 
 ## UI polish (from device testing, June 2026)
 
-- [ ] Invoices section should be collapsed by default on sign in
-- [ ] No badge on the profile tab when an invoice is unopened
-- [ ] In the registration wizards (manager-register + artist-setup), remove the "optional" label next to the phone number field
-- [ ] "Booking not found" page has NO back button — artist gets stuck. Repro: manager sends a booking request then cancels it; the artist taps the (now-deleted) booking notification and lands on "Booking not found" with no way back. FIX: add a back button to the booking-not-found state (ties into the booking-detail Supabase-fetch fix above)
-- [ ] When a manager finishes creating a venue, navigate them to the Calendar page (currently goes to My Venues)
-- [ ] Stale push token across account-switching on one device: signing in as user A saves the device push_token to A's row; signing out and into user B can leave A's row pointing at this device, so a push meant for A lands on B's phone (and vice-versa). Noticed when testing both an Apple account and a Gmail account on the same physical device. FIX: clear users.push_token on sign-out (or overwrite/re-register it on every sign-in so only the currently signed-in user owns this device's token). NOTE: likely only a multi-account-on-one-device artifact — real separate users on separate phones are unaffected. (In-app bell notifications already clear on sign-out via resetAllStores → clearNotifications; this is specifically about the Expo push token.)
-- [ ] "Venue not found" when a manager taps a venue in the Network/Discovery that is NOT their own venue. FIX: the discovery/network venue tap should load the venue from Supabase (read-only Overview view) instead of only reading the local store, which only has the manager's own venues — same root cause pattern as the booking-not-found bug (local store ≠ Supabase truth)
-- [ ] Artist profile picture should be consistent across the app — the same artist's avatar should look identical in every view (roster/lineup, booking cards, artist profile, discovery, notifications, etc.). Currently it varies by screen. FIX: source the avatar from one place (Supabase artist record) and render it the same way everywhere; check for screens falling back to a placeholder/initials when the real image is available.
+- [x] Invoices section collapsed by default on sign in — TESTED ON DEVICE ✅
+- [x] Profile-tab badge for new invoices (counts invoices since last Profile-tab visit, clears on tab tap); per-invoice red dot now persists across sign-out via useInvoiceReadStore — TESTED ON DEVICE ✅
+- [x] Removed "(optional)" label next to phone number in both registration wizards — TESTED ON DEVICE ✅
+- [x] "Booking not found" page now has a back button (header arrow + Go Back button, falls back to Calendar tab) — TESTED ON DEVICE ✅
+- [x] Manager lands on Calendar after creating a venue (was My Venues) — TESTED ON DEVICE ✅
+- [x] Clear users.push_token on sign-out — clearPushToken now called in handleSignOut (both manager + artist profiles) before resetAllStores, while session is still valid
+- [x] "Venue not found" in Network/Discovery — both manager + artist venue-detail now fetch from Supabase by id when missing locally (read-only Overview, loading + back-button states); Array.isArray guards fixed a crash on non-array list fields; Hide button gated to owner — TESTED ON DEVICE ✅
+- [x] Artist avatar consistency — AvatarImage fallback now renders the chosen person icon (was white initials on a light circle = "blank white") so every AvatarImage consumer is consistent — TESTED ON DEVICE ✅
+
+## Device testing round 2 (June 2026) — tackle next
+
+- [ ] Network tab badge should clear the MOMENT the manager accepts or declines a join request (inline Accept/Decline in Network > Artists / venue join requests), not only when the manager opens the artist's profile. Currently the red dot persists after accept/decline until the profile is opened.
+- [ ] Network data should fetch ONCE when the manager opens the Network tab — currently it re-fetches every time you return from a venue (or artist) detail. Cache the venues + artists lists in state/store; only re-fetch on first entry to Network or explicit pull-to-refresh, not on back-navigation.
+- [ ] Notifications should auto-dismiss when the user opens the bell — fade out slowly (~3s) on their own, no tapping each one and no "Mark all as read" button needed. (Decide: mark-as-read on open with a fade animation; keep them in the list or clear after fade.)
+- [ ] Artist profile photo not visible to the manager — when an artist uploads a profile picture it shows ONLY on the artist's own profile; the manager (and other users) still see the placeholder person icon. Likely root cause: the photo is saved only to the artist's local store (or device) and not uploaded to Supabase Storage + written to the artist's users/artists row, so manager-side views (lineup, booking cards, discovery, artist-profile-view) read an empty profilePhotoUrl. FIX: upload avatar to Supabase Storage, persist the public URL on the artist record, and make all manager-side artist views read it from Supabase.
+- [ ] [Investigate] Manager profile Invoices section shows a red dot on every sign-in — confirm whether these are genuinely-unread invoices (expected) or previously-opened ones re-showing the dot (would mean the persisted read-state isn't being applied on load). Verify useInvoiceReadStore is applied on EVERY invoice load path, not just profile pull-to-refresh.
+- [x] [Verified] Artist Full Legal Name IS collected at signup — required field in artist-setup.tsx Step 1 ("Full Legal Name", kept private, used for invoicing). No change needed.
