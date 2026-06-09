@@ -18,7 +18,7 @@ export default function ChooseAccountTypeScreen() {
     const params = new URLSearchParams({ oauth: '1' });
     if (name) params.set('name', name);
     if (email) params.set('email', email);
-    router.replace(`${route}?${params.toString()}` as Href);
+    router.push(`${route}?${params.toString()}` as Href);
   };
 
   return (

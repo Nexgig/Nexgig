@@ -740,6 +740,31 @@ export const useReviewStore = create<ReviewState>()(
 
 // ─── Invoice Store ──────────────────────────────────────────────────────────
 
+// Persisted set of invoice IDs the manager has opened. Kept SEPARATE from the
+// invoice store so it survives sign-out (resetAllStores does not clear it).
+// This is what makes the per-invoice "unread" red dot stay cleared across
+// sign-out / sign-in, since the invoice store itself is wiped on sign-out and
+// reloaded from Supabase (which doesn't track manager read-state).
+interface InvoiceReadState {
+  readIds: Record<string, true>;
+  markRead: (id: string) => void;
+  isRead: (id: string) => boolean;
+}
+
+export const useInvoiceReadStore = create<InvoiceReadState>()(
+  persist(
+    (set, get) => ({
+      readIds: {},
+      markRead: (id) => set((s) => ({ readIds: { ...s.readIds, [id]: true } })),
+      isRead: (id) => !!get().readIds[id],
+    }),
+    {
+      name: 'nexgig:invoice-read',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
 interface InvoiceState {
   invoices: Invoice[];
   addInvoice: (invoice: Invoice) => void;
@@ -755,13 +780,23 @@ export const useInvoiceStore = create<InvoiceState>()(
   persist(
     (set, get) => ({
       invoices: [],
-      addInvoice: (invoice) => set((state) => ({ invoices: [invoice, ...state.invoices] })),
+      addInvoice: (invoice) => set((state) => ({
+        invoices: [
+          // Re-apply persisted manager read-state so a previously-opened invoice
+          // doesn't show the unread dot again after sign-out/in.
+          { ...invoice, isReadByManager: invoice.isReadByManager || useInvoiceReadStore.getState().isRead(invoice.id) },
+          ...state.invoices,
+        ],
+      })),
       updateInvoiceStatus: (id, status) => set((state) => ({
         invoices: state.invoices.map((inv) => inv.id === id ? { ...inv, status } : inv),
       })),
-      markInvoiceReadByManager: (id) => set((state) => ({
-        invoices: state.invoices.map((inv) => inv.id === id ? { ...inv, isReadByManager: true } : inv),
-      })),
+      markInvoiceReadByManager: (id) => {
+        useInvoiceReadStore.getState().markRead(id);
+        set((state) => ({
+          invoices: state.invoices.map((inv) => inv.id === id ? { ...inv, isReadByManager: true } : inv),
+        }));
+      },
       deleteInvoice: (id) => set((state) => ({
         invoices: state.invoices.map((inv) => inv.id === id ? { ...inv, isDeletedByManager: true } : inv),
       })),

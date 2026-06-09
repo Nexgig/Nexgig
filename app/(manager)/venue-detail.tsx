@@ -55,14 +55,14 @@ export default function VenueDetailScreen() {
             managerId: data.manager_id,
             name: data.name,
             venueType: data.venue_type,
-            photoUrls: data.photo_urls ?? [],
+            photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls : [],
             googleMapsLocation: data.google_maps_location ?? { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0 },
             capacity: data.capacity ?? undefined,
             vibeDescription: data.vibe_description ?? undefined,
-            preferredEnergy: data.preferred_energy ?? [],
-            genrePreferences: data.genre_preferences ?? [],
-            audienceType: data.audience_type ?? [],
-            subVibe: data.sub_vibe ?? [],
+            preferredEnergy: Array.isArray(data.preferred_energy) ? data.preferred_energy : [],
+            genrePreferences: Array.isArray(data.genre_preferences) ? data.genre_preferences : [],
+            audienceType: Array.isArray(data.audience_type) ? data.audience_type : [],
+            subVibe: Array.isArray(data.sub_vibe) ? data.sub_vibe : [],
             rulesTemplate: data.rules_template ?? undefined,
             instagramUrl: data.instagram_url ?? undefined,
             musicLink: data.music_link ?? undefined,
@@ -168,7 +168,7 @@ export default function VenueDetailScreen() {
           </View>
           <View style={styles.locationRow}>
             <MaterialIcons name="location-on" size={16} color={colors.muted} />
-            <Text style={[styles.locationText, { color: colors.muted }]}>{venue.googleMapsLocation.address}</Text>
+            <Text style={[styles.locationText, { color: colors.muted }]}>{venue.googleMapsLocation?.address}</Text>
           </View>
           {venue.capacity && (
             <View style={styles.locationRow}>
