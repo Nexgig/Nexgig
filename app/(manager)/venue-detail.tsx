@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking } from 'react-native';
+import { useState, useMemo, useEffect } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
+import type { Venue } from '@/lib/types';
 import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -18,7 +19,10 @@ export default function VenueDetailScreen() {
   const colors = useColors();
 
   const currentUser = useAuthStore((s) => s.currentUser);
-  const venue = useVenueStore((s) => s.getVenueById(id ?? ''));
+  const storeVenue = useVenueStore((s) => s.getVenueById(id ?? ''));
+  const [fetchedVenue, setFetchedVenue] = useState<Venue | null>(null);
+  const [venueLoading, setVenueLoading] = useState(false);
+  const venue = storeVenue ?? fetchedVenue;
   const hideVenue = useVenueStore((s) => s.hideVenue);
   const unhideVenue = useVenueStore((s) => s.unhideVenue);
   const isOwner = venue?.managerId === currentUser?.id;
@@ -37,10 +41,67 @@ export default function VenueDetailScreen() {
     [venue, allVenueAssignments]
   );
 
+  // Fallback: if the venue isn't in the local store (e.g. another manager's venue
+  // opened from Network/Discovery), fetch it read-only from Supabase by id.
+  useEffect(() => {
+    let cancelled = false;
+    if (!storeVenue && id) {
+      setVenueLoading(true);
+      supabase.from('venues').select('*').eq('id', id).maybeSingle().then(({ data }) => {
+        if (cancelled) return;
+        if (data) {
+          setFetchedVenue({
+            id: data.id,
+            managerId: data.manager_id,
+            name: data.name,
+            venueType: data.venue_type,
+            photoUrls: data.photo_urls ?? [],
+            googleMapsLocation: data.google_maps_location ?? { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0 },
+            capacity: data.capacity ?? undefined,
+            vibeDescription: data.vibe_description ?? undefined,
+            preferredEnergy: data.preferred_energy ?? [],
+            genrePreferences: data.genre_preferences ?? [],
+            audienceType: data.audience_type ?? [],
+            subVibe: data.sub_vibe ?? [],
+            rulesTemplate: data.rules_template ?? undefined,
+            instagramUrl: data.instagram_url ?? undefined,
+            musicLink: data.music_link ?? undefined,
+            color: data.color ?? '#2563EB',
+            isHidden: data.is_hidden ?? false,
+            isComplete: data.is_complete ?? true,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+          } as Venue);
+        }
+        setVenueLoading(false);
+      });
+    }
+    return () => { cancelled = true; };
+  }, [storeVenue, id]);
+
   if (!venue) {
     return (
-      <ScreenContainer className="items-center justify-center">
-        <Text className="text-foreground text-lg">Venue not found</Text>
+      <ScreenContainer>
+        <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+          <View style={styles.header}>
+            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+              <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+            </Pressable>
+            <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>Venue</Text>
+            <View style={{ width: 32 }} />
+          </View>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }}>
+          {venueLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} />
+          ) : (
+            <>
+              <MaterialIcons name="location-off" size={48} color={colors.muted} />
+              <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: '700' }}>Venue not found</Text>
+              <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center' }}>This venue may have been removed or hidden.</Text>
+            </>
+          )}
+        </View>
       </ScreenContainer>
     );
   }
@@ -217,6 +278,7 @@ Linking.openURL(url);
                 )}
               </View>
             )}
+            {isOwner && (
             <Pressable
               style={({ pressed }) => [styles.greyBtn, { opacity: pressed ? 0.7 : 1, borderColor: colors.border }]}
               onPress={handleToggleHideVenue}
@@ -224,6 +286,7 @@ Linking.openURL(url);
               <MaterialIcons name={venue.isHidden ? 'visibility' : 'visibility-off'} size={18} color={colors.muted} />
               <Text style={[styles.greyBtnText, { color: colors.muted }]}>{venue.isHidden ? 'Unhide Venue' : 'Hide Venue'}</Text>
             </Pressable>
+            )}
           </View>
         )}
 

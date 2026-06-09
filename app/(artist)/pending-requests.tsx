@@ -17,6 +17,7 @@ export default function ArtistPendingRequestsScreen() {
   const allVenues = useVenueStore((s) => s.venues);
   const rawBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const hideFromCalendar = useBookingStore((s) => s.hideFromCalendar);
   const acknowledgeCancellation = useBookingStore((s) => s.acknowledgeCancellation);
   const slots = useSlotStore((s) => s.slots);
   const allNotifications = useNotificationStore((s) => s.notifications);
@@ -121,7 +122,8 @@ export default function ArtistPendingRequestsScreen() {
           onPress: () => {
             const booking = rawBookings.find((x) => x.id === item.id);
             updateBookingStatus(item.id, 'declined', { updatedAt: new Date().toISOString(), artistRespondedFromRequests: true });
-            syncBookingStatus(item.id, 'declined', {});
+            hideFromCalendar(item.id);
+            syncBookingStatus(item.id, 'declined', { hiddenFromCalendar: true });
             markRelatedNotificationsRead(item.id);
             if (booking) {
               notifyManager(item.managerId, 'booking_declined', item.id, item.resolvedVenueName, item.resolvedDate ? formatDate(item.resolvedDate) : '');

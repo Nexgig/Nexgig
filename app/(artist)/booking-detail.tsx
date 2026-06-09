@@ -27,6 +27,7 @@ export default function DJBookingDetailScreen() {
 
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === id));
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const hideFromCalendar = useBookingStore((s) => s.hideFromCalendar);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const allNotifications = useNotificationStore((s) => s.notifications);
@@ -70,10 +71,22 @@ export default function DJBookingDetailScreen() {
   };
 
   if (!booking) {
+    const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(artist)/(tabs)/availability' as Href));
     return (
       <ScreenContainer>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Pressable onPress={goBack} style={styles.backBtn}>
+            <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
+        </View>
         <View style={styles.center}>
-          <Text style={{ color: colors.foreground }}>Booking not found</Text>
+          <MaterialIcons name="event-busy" size={48} color={colors.muted} />
+          <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: '700', marginTop: 12 }}>Booking not found</Text>
+          <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center', marginTop: 4 }}>This booking may have been cancelled or removed.</Text>
+          <Pressable onPress={goBack} style={({ pressed }) => [{ marginTop: 20, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28, opacity: pressed ? 0.85 : 1 }]}>
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Go Back</Text>
+          </Pressable>
         </View>
       </ScreenContainer>
     );
@@ -139,7 +152,8 @@ export default function DJBookingDetailScreen() {
       {
         text: 'Decline', style: 'destructive', onPress: () => {
           updateBookingStatus(booking.id, 'declined', { artistRespondedFromRequests: true });
-          syncBookingStatus(booking.id, 'declined');
+          hideFromCalendar(booking.id);
+          syncBookingStatus(booking.id, 'declined', { hiddenFromCalendar: true });
           markRelatedNotificationsRead(booking.id);
           notifyManager('booking_declined');
           router.back();
@@ -440,7 +454,7 @@ console.log('cancel sync called:', booking.id);
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },

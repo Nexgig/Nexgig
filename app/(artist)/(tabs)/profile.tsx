@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, useSlotStore, useVenueStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -78,7 +79,11 @@ export default function ArtistProfileScreen() {
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => { resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href); } },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => {
+        const uid = currentUser?.id;
+        if (uid) await clearPushToken(uid);
+        resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href);
+      } },
     ]);
   };
 
