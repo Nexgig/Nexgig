@@ -17,7 +17,9 @@ type VenueItem = {
   venue_type: string;
   address: string | null;
   genre_preferences: string[];
+  photo_urls: string[] | null;
   manager_id: string;
+  verification_status: string | null;
 };
 
 type ArtistItem = {
@@ -72,11 +74,11 @@ export default function ArtistNetworkScreen() {
   const [artistsLoading, setArtistsLoading] = useState(false);
   const [artistsFetched, setArtistsFetched] = useState(false);
 
-  // ── Refresh venue "Requested" status + clear the Network dot on focus ───────
+  // ── Clear the Network dot on focus (no re-fetch on back-navigation) ────────
+  // Venues/artists are fetched once on first tab open + via pull-to-refresh.
   useFocusEffect(useCallback(() => {
     if (currentUser?.id) markNetworkSeen(currentUser.id);
-    if (venuesFetched) fetchVenues();
-  }, [currentUser?.id, venuesFetched]));
+  }, [currentUser?.id]));
 
   // ── Also clear the dot if a notification arrives while already on this tab ──
   useEffect(() => {
@@ -93,7 +95,7 @@ export default function ArtistNetworkScreen() {
     if (!currentUser) return;
     setVenuesLoading(true);
     const [venuesRes, appsRes] = await Promise.all([
-      supabase.from('venues').select('id, name, venue_type, address, genre_preferences, manager_id').neq('is_hidden', true),
+      supabase.from('venues').select('id, name, venue_type, address, genre_preferences, photo_urls, manager_id, verification_status').neq('is_hidden', true),
       supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'pending'),
     ]);
     if (venuesRes.data) setVenues(venuesRes.data);
@@ -106,8 +108,7 @@ export default function ArtistNetworkScreen() {
     setArtistsLoading(true);
     const { data } = await supabase
       .from('artists')
-      .select('id, full_name, primary_genre, based_in, profile_photo_url, secondary_genres')
-      .neq('id', currentUser?.id ?? '');
+      .select('id, full_name, primary_genre, based_in, profile_photo_url, secondary_genres');
     if (data) setArtists(data);
     setArtistsFetched(true);
     setArtistsLoading(false);
@@ -254,11 +255,23 @@ export default function ArtistNetworkScreen() {
                   onPress={() => router.push((`/(artist)/venue-detail?id=` + venue.id) as Href)}
                 >
                   <View style={styles.cardLeft}>
-                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                      <MaterialIcons name="place" size={22} color={colors.muted} />
-                    </View>
+                    {venue.photo_urls && venue.photo_urls.length > 0 ? (
+                      <Image source={{ uri: venue.photo_urls[0] }} style={styles.thumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                        <MaterialIcons name="place" size={22} color={colors.muted} />
+                      </View>
+                    )}
                     <View style={styles.cardInfo}>
-                      <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+                      <View style={styles.titleRow}>
+                        <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>
+                        {venue.verification_status === 'verified' && (
+                          <View style={[styles.verifiedPill, { backgroundColor: colors.primary + '15' }]}>
+                            <MaterialIcons name="verified" size={11} color={colors.primary} />
+                            <Text style={[styles.verifiedPillText, { color: colors.primary }]}>Verified</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
                         {venue.venue_type}{venue.address ? ` · ${venue.address}` : ''}
                       </Text>
@@ -344,7 +357,14 @@ export default function ArtistNetworkScreen() {
                     )}
                   </View>
                 </View>
-                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                <View style={styles.rightWrap}>
+                  {artist.id === currentUser?.id && (
+                    <View style={[styles.youPill, { backgroundColor: colors.primary + '15' }]}>
+                      <Text style={[styles.youPillText, { color: colors.primary }]}>You</Text>
+                    </View>
+                  )}
+                  <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                </View>
               </Pressable>
             )}
           />
@@ -373,8 +393,14 @@ const styles = StyleSheet.create({
   thumb: { width: 48, height: 48, borderRadius: 12, borderWidth: 1 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
+  verifiedPillText: { fontSize: 10, fontWeight: '700' },
   cardSub: { fontSize: 13, marginBottom: 2 },
   cardMeta: { fontSize: 12 },
+  rightWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  youPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  youPillText: { fontSize: 10, fontWeight: '700' },
   connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
   connectedText: { fontSize: 11, fontWeight: '700' },
   applyBtn: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, minWidth: 70, alignItems: 'center' },

@@ -69,6 +69,7 @@ export default function VenueDetailScreen() {
             color: data.color ?? '#2563EB',
             isHidden: data.is_hidden ?? false,
             isComplete: data.is_complete ?? true,
+            verificationStatus: data.verification_status ?? 'pending',
             createdAt: data.created_at,
             updatedAt: data.updated_at,
           } as Venue);
@@ -165,6 +166,24 @@ export default function VenueDetailScreen() {
           <View style={styles.infoRow}>
             <Text style={[styles.venueType, { color: colors.muted }]}>{venue.venueType}</Text>
             <StatusBadge status={venue.isHidden ? 'hidden' : 'active'} />
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {venue.verificationStatus === 'verified' ? (
+              <View style={[styles.verifyPill, { backgroundColor: colors.primary + '15' }]}>
+                <MaterialIcons name="verified" size={13} color={colors.primary} />
+                <Text style={[styles.verifyPillText, { color: colors.primary }]}>Verified</Text>
+              </View>
+            ) : venue.verificationStatus === 'rejected' ? (
+              <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
+                <MaterialIcons name="cancel" size={13} color={colors.error} />
+                <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
+              </View>
+            ) : (
+              <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
+                <MaterialIcons name="schedule" size={13} color={colors.warning} />
+                <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
+              </View>
+            )}
           </View>
           <View style={styles.locationRow}>
             <MaterialIcons name="location-on" size={16} color={colors.muted} />
@@ -446,6 +465,8 @@ const styles = StyleSheet.create({
   venueType: { fontSize: 13, fontWeight: '500' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   locationText: { fontSize: 13 },
+  verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  verifyPillText: { fontSize: 11, fontWeight: '700' },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabText: { fontSize: 14, fontWeight: '600' },

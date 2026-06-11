@@ -6,6 +6,8 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { uploadImageAsync } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { CountryPicker } from '@/components/country-picker';
@@ -27,6 +29,7 @@ export default function EditProfileScreen() {
 
   const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Track originals for unsaved-change detection
   const originalForm = useRef({
@@ -84,7 +87,7 @@ export default function EditProfileScreen() {
             mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 0.8,
+            quality: 0.5,
           });
           if (!result.canceled && result.assets[0]) {
             setPhotoUri(result.assets[0].uri);
@@ -102,7 +105,7 @@ export default function EditProfileScreen() {
           const result = await ImagePicker.launchCameraAsync({
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 0.8,
+            quality: 0.5,
           });
           if (!result.canceled && result.assets[0]) {
             setPhotoUri(result.assets[0].uri);
@@ -204,10 +207,24 @@ export default function EditProfileScreen() {
     Alert.alert('Phone Updated', `Your phone number has been changed to ${newPhone.trim()}.`);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.fullName.trim()) {
       Alert.alert('Required', 'Please enter your name.');
       return;
+    }
+    if (saving) return;
+    setSaving(true);
+
+    // Upload a newly-picked photo (local file) to Storage; existing remote URLs pass through unchanged.
+    let photoUrl = photoUri ?? undefined;
+    if (photoUri && currentUser) {
+      try {
+        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${currentUser.id}`);
+      } catch (e: any) {
+        setSaving(false);
+        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
+        return;
+      }
     }
 
     updateProfile({
@@ -216,13 +233,20 @@ export default function EditProfileScreen() {
       location: form.basedIn || undefined,
       yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience, 10) : undefined,
       bio: form.bio.trim() || undefined,
-      profilePhotoUrl: photoUri ?? undefined,
+      profilePhotoUrl: photoUrl,
     });
 
-    setSaved(true);
-    Alert.alert('Saved', 'Your profile has been updated.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    // Persist the photo URL to Supabase so artists and other users can see it.
+    if (currentUser) {
+      await supabase.from('users').update({ profile_photo_url: photoUrl ?? null }).eq('id', currentUser.id);
+    }
+
+    // Reset the change baseline so we can stay on the page without the
+    // unsaved-changes guard firing, and reflect the uploaded photo URL.
+    originalForm.current = { ...form };
+    originalPhoto.current = photoUrl ?? null;
+    setPhotoUri(photoUrl ?? null);
+    setSaving(false);
   };
 
   return (
@@ -235,9 +259,10 @@ export default function EditProfileScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>Edit Profile</Text>
         <Pressable
           onPress={handleSave}
-          style={({ pressed }) => [styles.headerSaveBtn, { opacity: pressed ? 0.7 : 1 }]}
+          disabled={saving}
+          style={({ pressed }) => [styles.headerSaveBtn, { opacity: pressed || saving ? 0.7 : 1 }]}
         >
-          <Text style={[styles.headerSaveBtnText, { color: colors.primary }]}>Save</Text>
+          <Text style={[styles.headerSaveBtnText, { color: colors.primary }]}>{saving ? 'Saving…' : 'Save'}</Text>
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

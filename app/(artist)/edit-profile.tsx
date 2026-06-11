@@ -6,6 +6,8 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useLineupStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { uploadImageAsync } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType, Gender } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
@@ -58,7 +60,10 @@ export default function DJEditProfileScreen() {
   );
   const [gender, setGender] = useState<Gender | ''>(djProfile?.gender ?? '');
   const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
-  const [saved, setSaved] = useState(false);
+  // Bumped after each successful save so the unsaved-changes memo recomputes
+  // against the freshly-reset baseline (mutating the refs alone won't do that).
+  const [baselineVersion, setBaselineVersion] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   // Track originals for unsaved-change detection
   const originalForm = useRef({
@@ -82,7 +87,6 @@ export default function DJEditProfileScreen() {
   const originalPhoto = useRef(photoUri);
 
   const hasChanges = useMemo(() => {
-    if (saved) return false;
     const f = originalForm.current;
     return (
       form.fullName !== f.fullName ||
@@ -103,7 +107,7 @@ export default function DJEditProfileScreen() {
       gender !== originalGender.current ||
       photoUri !== originalPhoto.current
     );
-  }, [form, primaryGenre, secondaryGenres, instruments, gender, photoUri, saved]);
+  }, [form, primaryGenre, secondaryGenres, instruments, gender, photoUri, baselineVersion]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -113,7 +117,7 @@ export default function DJEditProfileScreen() {
         [
           { text: 'Discard', style: 'destructive', onPress: () => router.back() },
           { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Save', onPress: () => handleSave() },
+          { text: 'Save', onPress: () => handleSave(true) },
         ]
       );
     } else {
@@ -150,7 +154,7 @@ export default function DJEditProfileScreen() {
             mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 0.8,
+            quality: 0.5,
           });
           if (!result.canceled && result.assets[0]) {
             setPhotoUri(result.assets[0].uri);
@@ -168,7 +172,7 @@ export default function DJEditProfileScreen() {
           const result = await ImagePicker.launchCameraAsync({
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 0.8,
+            quality: 0.5,
           });
           if (!result.canceled && result.assets[0]) {
             setPhotoUri(result.assets[0].uri);
@@ -221,9 +225,23 @@ export default function DJEditProfileScreen() {
     Alert.alert('Phone Updated', `Your phone number has been changed to ${newPhone.trim()}.`);
   };
 
-  const handleSave = () => {
+  const handleSave = async (exitAfter = false) => {
     if (!form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
     if (!form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
+    if (saving) return;
+    setSaving(true);
+
+    // Upload a newly-picked photo (local file) to Storage; existing remote URLs pass through unchanged.
+    let photoUrl = photoUri ?? undefined;
+    if (photoUri && currentUser) {
+      try {
+        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${currentUser.id}`);
+      } catch (e: any) {
+        setSaving(false);
+        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
+        return;
+      }
+    }
 
     updateProfile({
       fullName: form.fullName.trim(),
@@ -231,7 +249,7 @@ export default function DJEditProfileScreen() {
       phone: form.phone.trim(),
       yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience, 10) : undefined,
       bio: form.bio.trim() || undefined,
-      profilePhotoUrl: photoUri ?? undefined,
+      profilePhotoUrl: photoUrl,
     });
 
     if (currentUser) {
@@ -248,12 +266,26 @@ export default function DJEditProfileScreen() {
         mixcloudUrl: form.mixcloudUrl.trim() || undefined,
         spotifyUrl: form.spotifyUrl.trim() || undefined,
       });
+
+      // Persist the photo URL to Supabase so managers and other users can see it.
+      await Promise.all([
+        supabase.from('users').update({ profile_photo_url: photoUrl ?? null }).eq('id', currentUser.id),
+        supabase.from('artists').update({ profile_photo_url: photoUrl ?? null }).eq('id', currentUser.id),
+      ]);
     }
 
-    setSaved(true);
-    Alert.alert('Saved', 'Your profile has been updated.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    // Reset the change baseline so we can stay on the page without the
+    // unsaved-changes guard firing, and reflect the uploaded photo URL.
+    originalForm.current = { ...form };
+    originalGenre.current = primaryGenre;
+    originalSecondary.current = secondaryGenres;
+    originalInstruments.current = instruments;
+    originalGender.current = gender;
+    originalPhoto.current = photoUrl ?? null;
+    setPhotoUri(photoUrl ?? null);
+    setBaselineVersion((v) => v + 1);
+    setSaving(false);
+    if (exitAfter) router.back();
   };
 
   return (
@@ -265,10 +297,11 @@ export default function DJEditProfileScreen() {
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>Edit Profile</Text>
         <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [styles.headerSaveBtn, { opacity: pressed ? 0.7 : 1 }]}
+          onPress={() => handleSave()}
+          disabled={saving}
+          style={({ pressed }) => [styles.headerSaveBtn, { opacity: pressed || saving ? 0.7 : 1 }]}
         >
-          <Text style={[styles.headerSaveBtnText, { color: colors.primary }]}>Save</Text>
+          <Text style={[styles.headerSaveBtnText, { color: colors.primary }]}>{saving ? 'Saving…' : 'Save'}</Text>
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

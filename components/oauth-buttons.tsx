@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import type { User } from '@supabase/supabase-js';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';
 
@@ -41,6 +41,12 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         phone: managerProfile.phone ?? '',
         accountType: 'manager',
         fullName: managerProfile.full_name,
+        // Hydrate profile fields from the managers row so they survive
+        // sign-out → sign-in (mirrors the email/password sign-in path).
+        bio: managerProfile.bio ?? undefined,
+        location: managerProfile.based_in ?? undefined,
+        yearsOfExperience: managerProfile.years_of_experience ?? undefined,
+        profilePhotoUrl: managerProfile.profile_photo_url ?? undefined,
         isPhoneVerified: false,
         isEmailVerified: true,
         createdAt: user.created_at,
@@ -54,17 +60,52 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
     const { data: artistProfile } = await supabase
       .from('artists').select('*').eq('email', email).maybeSingle();
     if (artistProfile) {
+      // Phone is stored on the users row (not artists), so read it back too.
+      const { data: artistUserRow } = await supabase
+        .from('users')
+        .select('phone, is_phone_verified')
+        .eq('id', user.id)
+        .maybeSingle();
+
       setCurrentUser({
         id: user.id,
         email: artistProfile.email,
-        phone: '',
+        phone: artistUserRow?.phone ?? '',
         accountType: 'artist',
         fullName: artistProfile.full_name,
-        isPhoneVerified: false,
+        // Hydrate the private/profile fields from the artists row so they
+        // survive sign-out → sign-in (mirrors the email/password sign-in path).
+        fullLegalName: artistProfile.full_legal_name ?? undefined,
+        username: artistProfile.username ?? undefined,
+        bio: artistProfile.bio ?? undefined,
+        location: artistProfile.based_in ?? undefined,
+        yearsOfExperience: artistProfile.years_of_experience ?? undefined,
+        profilePhotoUrl: artistProfile.profile_photo_url ?? undefined,
+        isPhoneVerified: artistUserRow?.is_phone_verified ?? false,
         isEmailVerified: true,
         createdAt: user.created_at,
         updatedAt: user.created_at,
       });
+
+      // Hydrate the artist PROFILE store (genres, instruments, gender, rate,
+      // nationality, social links) — these live in useLineupStore.artistProfiles,
+      // NOT on currentUser, and the profile/edit-profile screens read them there.
+      useLineupStore.getState().updateArtistProfile(user.id, {
+        userId: user.id,
+        primaryGenre: artistProfile.primary_genre ?? undefined,
+        secondaryGenres: Array.isArray(artistProfile.secondary_genres) ? artistProfile.secondary_genres : [],
+        instruments: Array.isArray(artistProfile.instruments) ? artistProfile.instruments : [],
+        gender: artistProfile.gender ?? undefined,
+        minRate: artistProfile.min_rate ?? undefined,
+        basedIn: artistProfile.based_in ?? undefined,
+        nationality: artistProfile.nationality ?? undefined,
+        instagramUrl: artistProfile.instagram_url ?? undefined,
+        soundcloudUrl: artistProfile.soundcloud_url ?? undefined,
+        mixcloudUrl: artistProfile.mixcloud_url ?? undefined,
+        spotifyUrl: artistProfile.spotify_url ?? undefined,
+        isHistoryHidden: artistProfile.is_history_hidden ?? undefined,
+      });
+
       router.replace('/(artist)/(tabs)/home' as Href);
       return;
     }

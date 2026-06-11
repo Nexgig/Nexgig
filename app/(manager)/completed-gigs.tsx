@@ -24,7 +24,10 @@ export default function CompletedGigsScreen() {
       .filter((b) => b.managerId === currentUser?.id && b.status === 'completed')
       .map((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
-        const dj = artistUsers.find((u) => u.id === b.artistId);
+        // Null artist_id means the artist deleted their account → show "Former Artist".
+        const dj = b.artistId == null
+          ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
+          : artistUsers.find((u) => u.id === b.artistId);
         const venue = allVenues.find((v) => v.id === b.venueId);
         return { ...b, slot, dj, venue };
       })

@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType, Gender } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
@@ -37,6 +37,7 @@ export default function DJSetupScreen() {
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
+  const updateArtistProfile = useLineupStore((s) => s.updateArtistProfile);
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -241,6 +242,25 @@ export default function DJSetupScreen() {
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+    });
+
+    // Populate the artist PROFILE store too (genres, instruments, gender, rate,
+    // nationality, social links). These live in useLineupStore.artistProfiles,
+    // NOT on currentUser — the profile/edit-profile screens read them from there.
+    // Without this the profile tab is blank right after signup until a re-sign-in.
+    updateArtistProfile(user.id, {
+      userId: user.id,
+      primaryGenre: (form.primaryGenre || undefined) as GenreType,
+      secondaryGenres: form.secondaryGenres,
+      instruments: form.instruments,
+      gender: form.gender || undefined,
+      minRate: form.minRate ? parseFloat(form.minRate) : undefined,
+      basedIn: form.basedIn || undefined,
+      nationality: form.nationality || undefined,
+      instagramUrl: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : undefined,
+      soundcloudUrl: form.soundcloud || undefined,
+      mixcloudUrl: form.mixcloud || undefined,
+      spotifyUrl: form.spotify || undefined,
     });
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');

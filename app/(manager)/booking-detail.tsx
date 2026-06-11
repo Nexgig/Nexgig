@@ -4,7 +4,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useCalendarJumpStore, useReviewStore } from '@/lib/store';
+import { AvatarImage } from '@/components/ui/avatar-image';
+import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useCalendarJumpStore, useReviewStore, useLineupStore } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -23,6 +24,7 @@ export default function DJBookingDetailScreen() {
   const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
+  const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const notifications = useNotificationStore((s) => s.notifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
 
@@ -38,6 +40,9 @@ export default function DJBookingDetailScreen() {
 
   const slot = getSlotById(booking.slotId);
   const venue = getVenueById(booking.venueId);
+  // Artist shown to the manager. getArtistUser returns a "Former Artist"
+  // placeholder when the artist_id is null (account deleted).
+  const artistUser = getArtistUser(booking.artistId);
 
   const isManager = currentUser?.accountType === 'manager';
   const isDJ = currentUser?.accountType === 'artist';
@@ -145,20 +150,16 @@ export default function DJBookingDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Status Bar */}
-          <View style={[styles.statusBar, { backgroundColor: (statusColors[booking.status] ?? colors.muted) + '20', borderColor: (statusColors[booking.status] ?? colors.muted) + '40' }]}>
-            <View style={[styles.statusDot, { backgroundColor: statusColors[booking.status] ?? colors.muted }]} />
-            <Text style={[styles.statusText, { color: statusColors[booking.status] ?? colors.muted }]}>
-              {booking.status === 'requested' && isManager && 'Waiting for artist to respond'}
-              {booking.status === 'requested' && isDJ && 'Venue is requesting you for this gig'}
-              {booking.status === 'confirmed' && isManager && 'Artist has accepted this booking'}
-              {booking.status === 'confirmed' && isDJ && 'You accepted this booking'}
-              {booking.status === 'declined' && isManager && 'Artist declined this request'}
-              {booking.status === 'declined' && isDJ && 'You declined this request'}
-              {booking.status === 'cancelled' && 'Booking was cancelled'}
-              {booking.status === 'completed' && 'Gig completed'}
-            </Text>
-          </View>
+          {/* Artist Card — shown to the manager so they can see who the booking is with */}
+          {isManager && (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <AvatarImage uri={artistUser?.profilePhotoUrl} name={artistUser?.fullName ?? 'Former Artist'} size={44} />
+              <View style={styles.cardInfo}>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{artistUser?.fullName ?? 'Former Artist'}</Text>
+                <Text style={[styles.cardSub, { color: colors.muted }]}>Artist</Text>
+              </View>
+            </View>
+          )}
 
           {/* Venue Card */}
           {venue && (

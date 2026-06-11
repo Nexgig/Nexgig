@@ -41,7 +41,10 @@ export default function ManagerDashboard() {
     .filter((b) => b.status === 'confirmed')
     .map((b) => {
       const slot = slots.find((s) => s.id === b.slotId);
-      const dj = artistUsers.find((u) => u.id === b.artistId);
+      // Null artist_id means the artist deleted their account → show "Former Artist".
+      const dj = b.artistId == null
+        ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
+        : artistUsers.find((u) => u.id === b.artistId);
       const venue = allVenues.find((v) => v.id === b.venueId);
       const resolvedSlot = slot ?? (b.slotDate ? {
         id: b.slotId, venueId: b.venueId, date: b.slotDate,
@@ -136,7 +139,10 @@ export default function ManagerDashboard() {
     .filter((b) => b.status === 'completed' || b.isCompleted)
     .map((b) => {
       const slot = slots.find((s) => s.id === b.slotId);
-      const dj = artistUsers.find((u) => u.id === b.artistId);
+      // Null artist_id means the artist deleted their account → show "Former Artist".
+      const dj = b.artistId == null
+        ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
+        : artistUsers.find((u) => u.id === b.artistId);
       const venue = allVenues.find((v) => v.id === b.venueId);
       // Use live slot/venue if available, otherwise fall back to snapshot stored on the booking
       const resolvedSlot = slot ?? (b.slotDate ? {

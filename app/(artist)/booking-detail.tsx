@@ -200,25 +200,6 @@ console.log('cancel sync called:', booking.id);
         </View>
 
         <View style={styles.content}>
-          {/* Status Bar */}
-          <View style={[styles.statusBar, { backgroundColor: (statusColors[booking.status] ?? colors.muted) + '20', borderColor: (statusColors[booking.status] ?? colors.muted) + '40' }]}>
-            <View style={[styles.statusDot, { backgroundColor: statusColors[booking.status] ?? colors.muted }]} />
-            <Text style={[styles.statusText, { color: statusColors[booking.status] ?? colors.muted }]}>
-              {booking.isArtistCreated ? (
-                booking.status === 'completed' ? 'Private event completed ✓' : 'Your private event'
-              ) : (
-                <>
-                  {booking.status === 'requested' && 'Venue is requesting you for this gig'}
-                  {booking.status === 'past_confirmation' && 'Confirm that this past gig happened'}
-                  {booking.status === 'confirmed' && 'You accepted this booking'}
-                  {booking.status === 'declined' && 'You declined this request'}
-                  {booking.status === 'cancelled' && 'Booking was cancelled'}
-                  {booking.status === 'completed' && 'Gig completed ✓'}
-                </>
-              )}
-            </Text>
-          </View>
-
           {/* Venue Card */}
           {venue ? (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>

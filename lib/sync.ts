@@ -59,6 +59,7 @@ async function syncVenues(managerId: string) {
     color: v.color ?? '#2563EB',
     isHidden: false,
     isComplete: v.is_complete ?? false,
+    verificationStatus: v.verification_status ?? 'pending',
     hasCompletedBooking: v.has_completed_booking ?? undefined,
     createdAt: v.created_at,
     updatedAt: v.updated_at,

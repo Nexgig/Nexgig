@@ -181,6 +181,7 @@ export interface Venue {
   color: string; // hex color chosen by manager
   isHidden: boolean;
   isComplete: boolean;
+  verificationStatus?: 'pending' | 'verified' | 'rejected'; // 'pending' until we review the venue; show-only badge (does not gate anything yet)
   hasCompletedBooking?: boolean;
   createdAt: string;
   updatedAt: string;

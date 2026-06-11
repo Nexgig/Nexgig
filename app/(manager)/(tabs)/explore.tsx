@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
@@ -30,6 +30,7 @@ export default function NetworkScreen() {
   const currentUser = useAuthStore((s) => s.currentUser);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const allVenues = useVenueStore((s) => s.venues);
+  const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'venues' ? 'venues' : 'artists');
   // ── Applications state ────────────────────────────────────────────────────
@@ -56,6 +57,12 @@ export default function NetworkScreen() {
 
   // ── Fetch applications + artists on mount (Artists is the default tab) ─────
   useEffect(() => { fetchApplications(); }, []);
+
+  // Keep the Network tab badge in sync with the live pending list so
+  // accept/decline clears it instantly (no focus change / realtime needed).
+  useEffect(() => {
+    if (!appsLoading) setPendingCount(applications.length);
+  }, [applications.length, appsLoading, setPendingCount]);
 
   // ── Fetch artists/venues when switching to that tab and data is empty ──────
   useEffect(() => {
@@ -124,6 +131,7 @@ export default function NetworkScreen() {
         genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
         googleMapsLocation: v.google_maps_location, color: v.color ?? '#2563EB',
         isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
+        verificationStatus: v.verification_status ?? 'pending',
         createdAt: v.created_at, updatedAt: v.updated_at,
       })));
     }
@@ -284,6 +292,36 @@ export default function NetworkScreen() {
     setProcessingId(null);
   };
 
+  // ── Disconnect an artist from this manager (lineup + all venue assignments) ─
+  const handleDisconnect = (artist: User) => {
+    if (!currentUser) return;
+    Alert.alert(
+      'Disconnect Artist',
+      `Disconnect ${artist.fullName}? They'll be removed from your lineup and all your venues.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Disconnect', style: 'destructive', onPress: async () => {
+          useLineupStore.getState().removeFromGlobalLineup(artist.id);
+          await supabase.from('global_lineup')
+            .update({ status: 'removed' })
+            .eq('manager_id', currentUser.id).eq('artist_id', artist.id);
+          await supabase.from('venue_assignments')
+            .update({ status: 'removed' })
+            .eq('manager_id', currentUser.id).eq('artist_id', artist.id);
+          addNotification({
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            userId: artist.id,
+            type: 'lineup_removed' as any,
+            title: 'Removed from Lineup',
+            body: `${currentUser.fullName ?? 'A manager'} removed you from their artist lineup.`,
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }},
+      ]
+    );
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -396,9 +434,18 @@ export default function NetworkScreen() {
                     </View>
                   </View>
                   {isConnected ? (
-                    <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
-                      <MaterialIcons name="check-circle" size={12} color={colors.success} />
-                      <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
+                    <View style={styles.connectedWrap}>
+                      <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
+                        <MaterialIcons name="check-circle" size={12} color={colors.success} />
+                        <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
+                      </View>
+                      <Pressable
+                        hitSlop={8}
+                        style={({ pressed }) => [styles.disconnectIconBtn, { backgroundColor: colors.error + '12', opacity: pressed ? 0.6 : 1 }]}
+                        onPress={(e) => { e.stopPropagation?.(); handleDisconnect(user); }}
+                      >
+                        <MaterialIcons name="link-off" size={16} color={colors.error} />
+                      </Pressable>
                     </View>
                   ) : (
                     <Pressable
@@ -451,7 +498,15 @@ export default function NetworkScreen() {
                     </View>
                   )}
                   <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+                    <View style={styles.titleRow}>
+                      <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>
+                      {venue.verificationStatus === 'verified' && (
+                        <View style={[styles.verifiedPill, { backgroundColor: colors.primary + '15' }]}>
+                          <MaterialIcons name="verified" size={11} color={colors.primary} />
+                          <Text style={[styles.verifiedPillText, { color: colors.primary }]}>Verified</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
                       {venue.venueType}{venue.googleMapsLocation?.address ? ` · ${venue.googleMapsLocation.address}` : ''}
                     </Text>
@@ -486,6 +541,9 @@ const styles = StyleSheet.create({
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
+  verifiedPillText: { fontSize: 10, fontWeight: '700' },
   cardSub: { fontSize: 13, marginBottom: 2 },
   cardMeta: { fontSize: 12 },
   cardVenue: { fontSize: 13, fontWeight: '600' },
@@ -501,6 +559,8 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
   connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
   connectedText: { fontSize: 11, fontWeight: '700' },
+  connectedWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  disconnectIconBtn: { padding: 7, borderRadius: 20 },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },

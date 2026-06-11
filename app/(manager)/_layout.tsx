@@ -47,6 +47,7 @@ export default function ManagerLayout() {
             photoUrls: [],
             isHidden: v.is_hidden ?? false,
             isComplete: true,
+            verificationStatus: v.verification_status ?? 'pending',
             hasCompletedBooking: false,
             createdAt: v.created_at,
             updatedAt: v.updated_at,
@@ -246,8 +247,28 @@ if (!lineupError && lineupData) {
       )
       .subscribe();
 
+    // Realtime: listen for venue changes (e.g. our backend verifying a venue).
+    // Updates the verification badge live without needing a sign-out/in.
+    const venueSubscription = supabase
+      .channel('venues-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'venues' },
+        (payload) => {
+          const v = payload.new as any;
+          const venueStore = useVenueStore.getState();
+          // Only touch venues already in our store (this manager's own venues).
+          if (!venueStore.venues.some((existing) => existing.id === v.id)) return;
+          venueStore.updateVenue(v.id, {
+            verificationStatus: v.verification_status ?? 'pending',
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(subscription);
+      supabase.removeChannel(venueSubscription);
     };
   }, []);
 

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useNotificationStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueAssignment } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -74,18 +75,24 @@ export default function RosterScreen() {
     bookings.filter((b) => b.artistId === artistId && b.managerId === currentUser?.id && b.isCompleted).length;
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleRemoveDJ = (artistId: string, djName: string) => {
-    if (getCompletedGigs(artistId) > 0) {
-      Alert.alert('Cannot Remove', 'Cannot remove — this artist has completed gigs.');
-      return;
-    }
+  const handleDisconnect = (artistId: string, djName: string) => {
     Alert.alert(
-      'Remove from Lineup',
-      `Remove ${djName} from your lineup? This will also remove them from all venues.`,
+      'Disconnect Artist',
+      `Disconnect ${djName}? They'll be removed from your lineup and all your venues. Past gig history stays.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => {
+        { text: 'Disconnect', style: 'destructive', onPress: async () => {
+          // Local store — also cascades venue assignments for this artist
           removeFromGlobalLineup(artistId);
+          // Supabase — deactivate this manager's lineup + venue assignments so it survives reload
+          if (currentUser?.id) {
+            await supabase.from('global_lineup')
+              .update({ status: 'removed' })
+              .eq('manager_id', currentUser.id).eq('artist_id', artistId);
+            await supabase.from('venue_assignments')
+              .update({ status: 'removed' })
+              .eq('manager_id', currentUser.id).eq('artist_id', artistId);
+          }
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId,
@@ -233,6 +240,13 @@ export default function RosterScreen() {
               )}
             </View>
           </View>
+          <Pressable
+            hitSlop={8}
+            style={({ pressed }) => [styles.disconnectBtn, { opacity: pressed ? 0.55 : 1 }]}
+            onPress={() => handleDisconnect(item.user!.id, item.user!.fullName)}
+          >
+            <MaterialIcons name="link-off" size={20} color={colors.error} />
+          </Pressable>
         </View>
 
         {/* Inline action buttons */}
@@ -495,6 +509,7 @@ const styles = StyleSheet.create({
   // ─── Artist Card ──────────────────────────────────────────────────────────
   card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   cardTop: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
+  disconnectBtn: { padding: 6, alignSelf: 'flex-start' },
   cardInfo: { flex: 1, gap: 2 },
   cardName: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
   cardGenre: { fontSize: 13 },

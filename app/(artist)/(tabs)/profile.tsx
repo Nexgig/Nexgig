@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -39,6 +39,45 @@ export default function ArtistProfileScreen() {
     if (!currentUser?.id) return;
     updateArtistProfile(currentUser.id, { isHistoryHidden: !isHistoryHidden });
   }, [currentUser?.id, isHistoryHidden, updateArtistProfile]);
+
+  // Source of truth = Supabase. Whenever the profile tab opens, pull the
+  // artist's own row and refresh the local cache the screen reads from, so
+  // every field they filled at signup/edit shows here — even if the local
+  // store was empty (old account, app reinstall, or signed up before the
+  // store was wired). The hardened updateArtistProfile MERGES, so this never
+  // clobbers the local-only isHistoryHidden flag.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from('artists').select('*').eq('id', currentUser.id).maybeSingle();
+      if (cancelled || !data) return;
+      updateArtistProfile(currentUser.id, {
+        userId: currentUser.id,
+        primaryGenre: data.primary_genre ?? undefined,
+        secondaryGenres: Array.isArray(data.secondary_genres) ? data.secondary_genres : [],
+        instruments: Array.isArray(data.instruments) ? data.instruments : [],
+        gender: data.gender ?? undefined,
+        minRate: data.min_rate ?? undefined,
+        basedIn: data.based_in ?? undefined,
+        nationality: data.nationality ?? undefined,
+        instagramUrl: data.instagram_url ?? undefined,
+        soundcloudUrl: data.soundcloud_url ?? undefined,
+        mixcloudUrl: data.mixcloud_url ?? undefined,
+        spotifyUrl: data.spotify_url ?? undefined,
+      });
+      updateProfile({
+        fullName: data.full_name ?? currentUser.fullName,
+        fullLegalName: data.full_legal_name ?? undefined,
+        username: data.username ?? undefined,
+        bio: data.bio ?? undefined,
+        location: data.based_in ?? undefined,
+        yearsOfExperience: data.years_of_experience ?? undefined,
+        profilePhotoUrl: data.profile_photo_url ?? undefined,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.id]);
 
   // Venues where the artist has at least one completed booking
   const lineupVenues = useMemo(() => {
@@ -228,10 +267,10 @@ export default function ArtistProfileScreen() {
             </View>
           ) : null}
 
-          {/* Music + Sub-Vibe */}
+          {/* Music Genres */}
           {profile && (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Music</Text>
+              <Text style={[styles.cardLabel, { color: colors.muted }]}>Music Genres</Text>
               <View style={styles.chipRow}>
                 <View style={[styles.primaryChip, { backgroundColor: colors.primary }]}>
                   <Text style={styles.primaryChipText}>{profile.primaryGenre}</Text>
@@ -242,15 +281,20 @@ export default function ArtistProfileScreen() {
                   </View>
                 ))}
               </View>
-              {instruments.length > 0 && (
-                <View style={styles.chipRow}>
-                  {instruments.map((i: string) => (
-                    <View key={i} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                      <Text style={[styles.chipText, { color: colors.foreground }]}>{i}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+            </View>
+          )}
+
+          {/* Instruments */}
+          {instruments.length > 0 && (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.cardLabel, { color: colors.muted }]}>Instruments</Text>
+              <View style={styles.chipRow}>
+                {instruments.map((i: string) => (
+                  <View key={i} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.chipText, { color: colors.foreground }]}>{i}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 

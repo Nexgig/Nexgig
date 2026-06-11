@@ -2,13 +2,14 @@ import { Tabs, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAuthStore, useProfileInvoicesSeenStore } from '@/lib/store';
+import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 
 export default function ManagerTabsLayout() {
   const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
-  const [pendingCount, setPendingCount] = useState(0);
+  const pendingCount = usePendingAppsStore((s) => s.count);
+  const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const fetchPendingCount = useCallback(async () => {
     if (!currentUser?.id) return;

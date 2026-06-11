@@ -26,7 +26,21 @@ export async function deleteAccount(): Promise<void> {
   });
 
   if (error) {
-    throw new Error(error.message || 'Could not delete your account. Please try again.');
+    // supabase-js puts the raw Response on error.context for non-2xx replies.
+    // Pull the function's real error/details out so we surface the actual cause.
+    let detail = error.message;
+    const ctx = (error as { context?: { json?: () => Promise<unknown> } }).context;
+    if (ctx && typeof ctx.json === 'function') {
+      try {
+        const body = (await ctx.json()) as { error?: string; details?: unknown };
+        if (body?.error) {
+          detail = body.error + (body.details ? `: ${JSON.stringify(body.details)}` : '');
+        }
+      } catch {
+        // body wasn't JSON — keep the generic message
+      }
+    }
+    throw new Error(detail || 'Could not delete your account. Please try again.');
   }
   if (data && (data as { error?: string }).error) {
     throw new Error((data as { error: string }).error);

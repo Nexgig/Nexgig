@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { useMemo, useState, useCallback, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl, Animated } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -54,10 +54,26 @@ export default function ManagerNotificationsScreen() {
   const markAsRead = useNotificationStore((s) => s.markAsRead);
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const [refreshing, setRefreshing] = useState(false);
+  const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Refetch from Supabase whenever the screen opens (covers missed realtime pushes)
+  // On open: refetch, then auto-dismiss unread — mark all read (clears the bell
+  // badge) and fade their unread highlight out over ~3s. They stay as history.
   useFocusEffect(useCallback(() => {
-    if (currentUser?.id) loadNotificationsFromSupabase(currentUser.id);
+    if (!currentUser?.id) return;
+    loadNotificationsFromSupabase(currentUser.id);
+    const unread = new Set(
+      useNotificationStore.getState().notifications
+        .filter((n) => n.userId === currentUser.id && !n.isRead)
+        .map((n) => n.id)
+    );
+    if (unread.size === 0) return;
+    setFadingIds(unread);
+    markAllAsRead(currentUser.id);
+    fadeAnim.setValue(1);
+    const anim = Animated.timing(fadeAnim, { toValue: 0, duration: 3000, useNativeDriver: true });
+    anim.start(({ finished }) => { if (finished) setFadingIds(new Set()); });
+    return () => anim.stop();
   }, [currentUser?.id]));
 
   const handleRefresh = useCallback(async () => {
@@ -77,6 +93,12 @@ export default function ManagerNotificationsScreen() {
   const renderNotif = ({ item }: { item: AppNotification }) => {
     const icon = NOTIF_ICONS[item.type] ?? 'notifications';
     const iconColor = NOTIF_COLORS[item.type] ?? colors.primary;
+    const isFading = fadingIds.has(item.id);
+    const showUnread = isFading || !item.isRead;
+    const dotColor =
+      item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' ? '#22C55E' :
+      item.type === 'booking_cancelled' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' ? '#EF4444' :
+      colors.primary;
     return (
       <Pressable
         style={({ pressed }) => [
@@ -85,19 +107,23 @@ export default function ManagerNotificationsScreen() {
         ]}
         onPress={() => handlePress(item)}
       >
+        {isFading && (
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: colors.primary + '08', borderWidth: 1, borderColor: colors.primary + '30', opacity: fadeAnim }]}
+          />
+        )}
         <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
           <MaterialIcons name={icon as any} size={22} color={iconColor} />
         </View>
         <View style={styles.notifContent}>
-          <Text style={[styles.notifTitle, { color: colors.foreground, fontWeight: item.isRead ? '500' : '700' }]}>{item.title}</Text>
+          <Text style={[styles.notifTitle, { color: colors.foreground, fontWeight: showUnread ? '700' : '500' }]}>{item.title}</Text>
           <Text style={[styles.notifBody, { color: colors.muted }]} numberOfLines={2}>{item.body}</Text>
           <Text style={[styles.notifTime, { color: colors.muted }]}>{timeAgo(item.createdAt)}</Text>
         </View>
-        {!item.isRead && <View style={[styles.unreadDot, { backgroundColor:
-            item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' ? '#22C55E' :
-            item.type === 'booking_cancelled' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' ? '#EF4444' :
-            colors.primary
-          }]} />}
+        {isFading
+          ? <Animated.View style={[styles.unreadDot, { backgroundColor: dotColor, opacity: fadeAnim }]} />
+          : (!item.isRead ? <View style={[styles.unreadDot, { backgroundColor: dotColor }]} /> : null)}
       </Pressable>
     );
   };
@@ -110,11 +136,6 @@ export default function ManagerNotificationsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>Notifications</Text>
-        {notifications.some((n) => !n.isRead) && (
-          <Pressable onPress={() => markAllAsRead(currentUser?.id ?? '')}>
-            <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
-          </Pressable>
-        )}
       </View>
 
       <FlatList
@@ -124,6 +145,7 @@ export default function ManagerNotificationsScreen() {
         initialNumToRender={10}
         updateCellsBatchingPeriod={50}
         data={notifications}
+        extraData={fadingIds}
         keyExtractor={(item) => item.id}
         renderItem={renderNotif}
         contentContainerStyle={styles.list}

@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { OAuthButtons } from '@/components/oauth-buttons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { signIn as supabaseSignIn } from '@/lib/auth';
@@ -56,6 +56,12 @@ export default function SignInScreen() {
             phone: managerProfile.phone ?? '',
             accountType: 'manager',
             fullName: managerProfile.full_name,
+            // Hydrate profile fields from the managers row so they survive
+            // sign-out → sign-in (previously only full_name + phone were set).
+            bio: managerProfile.bio ?? undefined,
+            location: managerProfile.based_in ?? undefined,
+            yearsOfExperience: managerProfile.years_of_experience ?? undefined,
+            profilePhotoUrl: managerProfile.profile_photo_url ?? undefined,
             isPhoneVerified: false,
             isEmailVerified: true,
             createdAt: data.user.created_at,
@@ -73,17 +79,53 @@ export default function SignInScreen() {
           .maybeSingle();
 
         if (artistProfile) {
+          // Phone is stored on the users row (not artists), so read it back too.
+          const { data: artistUserRow } = await supabase
+            .from('users')
+            .select('phone, is_phone_verified')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
           setCurrentUser({
             id: data.user.id,
             email: artistProfile.email,
-            phone: '',
+            phone: artistUserRow?.phone ?? '',
             accountType: 'artist',
             fullName: artistProfile.full_name,
-            isPhoneVerified: false,
+            // Hydrate the private/profile fields from the artists row so they
+            // survive sign-out → sign-in (previously only set at signup).
+            fullLegalName: artistProfile.full_legal_name ?? undefined,
+            username: artistProfile.username ?? undefined,
+            bio: artistProfile.bio ?? undefined,
+            location: artistProfile.based_in ?? undefined,
+            yearsOfExperience: artistProfile.years_of_experience ?? undefined,
+            profilePhotoUrl: artistProfile.profile_photo_url ?? undefined,
+            isPhoneVerified: artistUserRow?.is_phone_verified ?? false,
             isEmailVerified: true,
             createdAt: data.user.created_at,
             updatedAt: data.user.created_at,
           });
+
+          // Hydrate the artist PROFILE store (genres, instruments, gender, rate,
+          // nationality, social links) — these live in useLineupStore.artistProfiles,
+          // NOT on currentUser, and the profile/edit-profile screens read them from
+          // there. Without this they came back empty after sign-out → sign-in.
+          useLineupStore.getState().updateArtistProfile(data.user.id, {
+            userId: data.user.id,
+            primaryGenre: artistProfile.primary_genre ?? undefined,
+            secondaryGenres: Array.isArray(artistProfile.secondary_genres) ? artistProfile.secondary_genres : [],
+            instruments: Array.isArray(artistProfile.instruments) ? artistProfile.instruments : [],
+            gender: artistProfile.gender ?? undefined,
+            minRate: artistProfile.min_rate ?? undefined,
+            basedIn: artistProfile.based_in ?? undefined,
+            nationality: artistProfile.nationality ?? undefined,
+            instagramUrl: artistProfile.instagram_url ?? undefined,
+            soundcloudUrl: artistProfile.soundcloud_url ?? undefined,
+            mixcloudUrl: artistProfile.mixcloud_url ?? undefined,
+            spotifyUrl: artistProfile.spotify_url ?? undefined,
+            isHistoryHidden: artistProfile.is_history_hidden ?? undefined,
+          });
+
           router.replace('/(artist)/(tabs)/home' as Href);
           return;
         }

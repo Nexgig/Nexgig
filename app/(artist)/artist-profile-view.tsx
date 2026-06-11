@@ -37,11 +37,15 @@ export default function ArtistProfileViewScreen() {
   const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
-    if (djFromStore || !artistId) return;
-    setIsFetching(true);
+    if (!artistId) return;
+    // Always fetch the full row from Supabase (the source of truth), even when
+    // the artist is in the local store — the stored ArtistProfile doesn't carry
+    // bio/years, so those would otherwise never show. Only show the spinner if
+    // we have nothing to display yet.
+    if (!djFromStore) setIsFetching(true);
     Promise.all([
       supabase.from('users').select('*').eq('id', artistId).single(),
-      supabase.from('artists').select('*').eq('user_id', artistId).maybeSingle(),
+      supabase.from('artists').select('*').eq('id', artistId).maybeSingle(),
     ]).then(([userRes, profileRes]) => {
       if (userRes.data) {
         const u = userRes.data;
@@ -56,24 +60,28 @@ export default function ArtistProfileViewScreen() {
       if (profileRes.data) {
         const p = profileRes.data;
         setFetchedProfile({
-          userId: p.user_id, primaryGenre: p.primary_genre,
-          secondaryGenres: p.secondary_genres ?? [], energyTypes: p.energy_types ?? [],
-          instruments: p.instruments ?? [], socialLinks: p.social_links,
-          ratePerHour: p.rate_per_hour, bio: p.bio,
+          userId: p.id, primaryGenre: p.primary_genre,
+          secondaryGenres: Array.isArray(p.secondary_genres) ? p.secondary_genres : [],
+          instruments: Array.isArray(p.instruments) ? p.instruments : [],
+          minRate: p.min_rate ?? undefined, bio: p.bio,
+          yearsOfExperience: p.years_of_experience ?? undefined,
+          gender: p.gender ?? undefined,
           basedIn: p.based_in, nationality: p.nationality,
           isHistoryHidden: p.is_history_hidden ?? false,
-          mediaLinks: {
-            soundcloud: p.soundcloud_url, instagram: p.instagram_url, spotify: p.spotify_url,
-          },
+          instagramUrl: p.instagram_url ?? undefined,
+          soundcloudUrl: p.soundcloud_url ?? undefined,
+          mixcloudUrl: p.mixcloud_url ?? undefined,
+          spotifyUrl: p.spotify_url ?? undefined,
           createdAt: p.created_at, updatedAt: p.updated_at,
         });
       }
       setIsFetching(false);
     });
-  }, [artistId, djFromStore]);
+  }, [artistId]);
 
-  const dj = djFromStore ?? fetchedUser;
-  const profile = profileFromStore ?? fetchedProfile;
+  // Prefer freshly-fetched Supabase data (has bio/years); fall back to the store.
+  const dj = fetchedUser ?? djFromStore;
+  const profile = fetchedProfile ?? profileFromStore;
 
   // All completed bookings for this artist (public gig history)
   const completedBookings = useMemo(() => {
@@ -128,6 +136,9 @@ export default function ArtistProfileViewScreen() {
   const nationalityCountry = profile?.nationality ? COUNTRIES.find((c) => c.name === profile.nationality) : undefined;
   const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
   const instruments: string[] = profile?.instruments ?? [];
+  // bio + years live on the artists row (profile), not the users row — fall back to it.
+  const bio = dj.bio ?? profile?.bio;
+  const yearsOfExperience = dj.yearsOfExperience ?? profile?.yearsOfExperience;
   const mediaLinks = {
     instagram: profile?.instagramUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.instagram,
     soundcloud: profile?.soundcloudUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.soundcloud,
@@ -172,9 +183,9 @@ export default function ArtistProfileViewScreen() {
         </View>
 
         {/* Years Experience card — only if set */}
-        {dj.yearsOfExperience !== undefined && (
+        {yearsOfExperience !== undefined && (
           <View style={[styles.yearsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{dj.yearsOfExperience}</Text>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{yearsOfExperience}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>Years Experience</Text>
           </View>
         )}
@@ -193,10 +204,10 @@ export default function ArtistProfileViewScreen() {
 
         <View style={styles.content}>
           {/* 3. Bio — only if filled */}
-          {dj.bio ? (
+          {bio ? (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.cardLabel, { color: colors.muted }]}>Bio</Text>
-              <Text style={[styles.cardText, { color: colors.foreground }]}>{dj.bio}</Text>
+              <Text style={[styles.cardText, { color: colors.foreground }]}>{bio}</Text>
             </View>
           ) : null}
 
@@ -231,7 +242,43 @@ export default function ArtistProfileViewScreen() {
             </View>
           )}
 
-          {/* 6. Last 5 completed gigs — hidden if artist set isHistoryHidden */}
+          {/* Links — moved before History to match the artist's own profile order */}
+          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.cardLabel, { color: colors.muted }]}>Links</Text>
+              <View style={styles.linksCol}>
+                {mediaLinks.instagram && (
+                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.instagram!)}>
+                    <View style={[styles.linkIcon, { backgroundColor: '#E1306C20' }]}>
+                      <MaterialIcons name="camera-alt" size={18} color="#E1306C" />
+                    </View>
+                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
+                {mediaLinks.soundcloud && (
+                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.soundcloud!)}>
+                    <View style={[styles.linkIcon, { backgroundColor: '#FF550020' }]}>
+                      <MaterialIcons name="music-note" size={18} color="#FF5500" />
+                    </View>
+                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>SoundCloud</Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
+                {mediaLinks.spotify && (
+                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.spotify!)}>
+                    <View style={[styles.linkIcon, { backgroundColor: '#1DB95420' }]}>
+                      <MaterialIcons name="headset" size={18} color="#1DB954" />
+                    </View>
+                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Spotify</Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Last 5 completed gigs — hidden if artist set isHistoryHidden */}
           {!profile?.isHistoryHidden && (
           <View style={styles.gigHistorySection}>
             <View style={[styles.collapseHeader, { borderColor: colors.border }]}>
@@ -283,42 +330,6 @@ export default function ArtistProfileViewScreen() {
               </ScrollView>
             )}
           </View>
-          )}
-
-          {/* 7. Links — only show Instagram, SoundCloud, Spotify if filled */}
-          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Links</Text>
-              <View style={styles.linksCol}>
-                {mediaLinks.instagram && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.instagram!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#E1306C20' }]}>
-                      <MaterialIcons name="camera-alt" size={18} color="#E1306C" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.soundcloud && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.soundcloud!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#FF550020' }]}>
-                      <MaterialIcons name="music-note" size={18} color="#FF5500" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>SoundCloud</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.spotify && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.spotify!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#1DB95420' }]}>
-                      <MaterialIcons name="headset" size={18} color="#1DB954" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Spotify</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
           )}
         </View>
       </ScrollView>

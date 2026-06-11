@@ -86,6 +86,22 @@ export default function ManagerMyVenuesScreen() {
                       Capacity: {venue.capacity}
                     </Text>
                   ) : null}
+                  {venue.verificationStatus === 'verified' ? (
+                    <View style={[styles.verifyPill, { backgroundColor: colors.primary + '15' }]}>
+                      <MaterialIcons name="verified" size={11} color={colors.primary} />
+                      <Text style={[styles.verifyPillText, { color: colors.primary }]}>Verified</Text>
+                    </View>
+                  ) : venue.verificationStatus === 'rejected' ? (
+                    <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
+                      <MaterialIcons name="cancel" size={11} color={colors.error} />
+                      <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
+                      <MaterialIcons name="schedule" size={11} color={colors.warning} />
+                      <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
@@ -133,6 +149,8 @@ const styles = StyleSheet.create({
   venueName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   venueType: { fontSize: 13, marginBottom: 2 },
   capacity: { fontSize: 12 },
+  verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
+  verifyPillText: { fontSize: 10, fontWeight: '700' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },

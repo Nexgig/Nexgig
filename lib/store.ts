@@ -65,7 +65,7 @@ interface VenueState {
 
 export const useVenueStore = create<VenueState>((set, get) => ({
   venues: [],
-  addVenue: (venue) => set((state) => ({ venues: [...state.venues, venue] })),
+  addVenue: (venue) => set((state) => ({ venues: [...state.venues, { ...venue, verificationStatus: venue.verificationStatus ?? 'pending' }] })),
   clearVenues: () => set({ venues: [] }),
   updateVenue: (id, updates) => set((state) => ({
     venues: state.venues.map((v) => v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v),
@@ -211,13 +211,27 @@ artistUsers: [],
 
   // DJ data methods
   getArtistProfile: (userId) => get().artistProfiles[userId],
-  getArtistUser: (userId) => get().artistUsers.find((u) => u.id === userId),
+  getArtistUser: (userId) => {
+    // A deleted artist leaves their bookings with a null artist_id. Return a
+    // stable "Former Artist" placeholder for a null/undefined id so those
+    // bookings still render (with their real status) on the manager's calendar
+    // and booking screens, instead of disappearing and leaving an orphaned dot.
+    if (userId == null) {
+      return {
+        id: '', email: '', phone: '', accountType: 'artist' as const,
+        fullName: 'Former Artist', isPhoneVerified: false, isEmailVerified: false,
+        createdAt: '', updatedAt: '',
+      } as User;
+    }
+    return get().artistUsers.find((u) => u.id === userId);
+  },
   updateArtistProfile: (userId, updates) => set((state) => ({
     artistProfiles: {
       ...state.artistProfiles,
-      [userId]: state.artistProfiles[userId]
-        ? { ...state.artistProfiles[userId], ...updates }
-        : (updates as ArtistProfile),
+      // Always MERGE onto any existing profile and keep userId, so a partial
+      // update (e.g. the history-hide toggle sending only { isHistoryHidden })
+      // can never wipe the other fields or create a half-empty profile.
+      [userId]: { ...(state.artistProfiles[userId] ?? {}), ...updates, userId } as ArtistProfile,
     },
   })),
   addArtistUser: (user) => set((state) => {
@@ -700,6 +714,21 @@ export const useProfileInvoicesSeenStore = create<ProfileInvoicesSeenState>()(
     }
   )
 );
+
+// ─── Pending Applications Count (manager Network badge) ─────────────────────
+// Live count of pending join requests for the manager's Network tab badge.
+// Not persisted — it's a transient live value. The Network screen keeps it in
+// sync with its applications list so accept/decline clears the badge instantly
+// (no dependence on Supabase realtime firing).
+interface PendingAppsState {
+  count: number;
+  setCount: (n: number) => void;
+}
+
+export const usePendingAppsStore = create<PendingAppsState>((set) => ({
+  count: 0,
+  setCount: (n) => set({ count: n }),
+}));
 
 // ─── Calendar Jump Store ──────────────────────────────────────────────────────
 // Used by booking detail screens to tell the Calendar tab to jump to a specific date.
