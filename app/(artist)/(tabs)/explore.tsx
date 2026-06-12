@@ -5,7 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 
@@ -95,10 +95,14 @@ export default function ArtistNetworkScreen() {
     if (!currentUser) return;
     setVenuesLoading(true);
     const [venuesRes, appsRes] = await Promise.all([
-      supabase.from('venues').select('id, name, venue_type, address, genre_preferences, photo_urls, manager_id, verification_status').neq('is_hidden', true),
+      supabase.from('venues').select('*').neq('is_hidden', true),
       supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'pending'),
     ]);
-    if (venuesRes.data) setVenues(venuesRes.data);
+    if (venuesRes.data) {
+      setVenues(venuesRes.data as VenueItem[]);
+      // Cache full venue data so tapping a venue opens its detail complete (no fetch-on-open).
+      useVenueDirectoryStore.getState().setVenues(venuesRes.data.map((v: any) => mapVenueRow(v)));
+    }
     setAppliedVenueIds(new Set((appsRes.data ?? []).map((a: any) => a.venue_id)));
     setVenuesFetched(true);
     setVenuesLoading(false);

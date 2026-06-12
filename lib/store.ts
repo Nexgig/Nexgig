@@ -772,6 +772,51 @@ export const useArtistDirectoryStore = create<ArtistDirectoryState>((set, get) =
   getArtist: (id) => get().entries[id],
 }));
 
+// ─── Venue Directory Store ────────────────────────────────────────────────────
+// In-memory cache of full Venue objects, populated when venue lists load (Network
+// venues tab, etc.). Lets venue-detail open COMPLETE on the first frame (no fetch-on-
+// open second pass) for any venue the user has browsed. Not persisted: session cache.
+
+// Maps a raw Supabase `venues` row to a full Venue. Shared by venue-detail (artist +
+// manager) and the list screens that seed the directory, so the mapping never diverges.
+export function mapVenueRow(data: any): Venue {
+  return {
+    id: data.id,
+    managerId: data.manager_id,
+    name: data.name,
+    venueType: data.venue_type,
+    photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls : [],
+    googleMapsLocation: data.google_maps_location ?? { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0 },
+    capacity: data.capacity ?? undefined,
+    vibeDescription: data.vibe_description ?? undefined,
+    preferredEnergy: Array.isArray(data.preferred_energy) ? data.preferred_energy : [],
+    genrePreferences: Array.isArray(data.genre_preferences) ? data.genre_preferences : [],
+    audienceType: Array.isArray(data.audience_type) ? data.audience_type : [],
+    subVibe: Array.isArray(data.sub_vibe) ? data.sub_vibe : [],
+    rulesTemplate: data.rules_template ?? undefined,
+    instagramUrl: data.instagram_url ?? undefined,
+    musicLink: data.music_link ?? undefined,
+    color: data.color ?? '#2563EB',
+    isHidden: data.is_hidden ?? false,
+    isComplete: data.is_complete ?? true,
+    verificationStatus: data.verification_status ?? 'pending',
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  } as Venue;
+}
+
+interface VenueDirectoryState {
+  venues: Record<string, Venue>;
+  setVenues: (list: Venue[]) => void;
+  getVenue: (id: string) => Venue | undefined;
+}
+
+export const useVenueDirectoryStore = create<VenueDirectoryState>((set, get) => ({
+  venues: {},
+  setVenues: (list) => set((state) => ({ venues: { ...state.venues, ...Object.fromEntries(list.map((v) => [v.id, v])) } })),
+  getVenue: (id) => get().venues[id],
+}));
+
 // ─── Calendar Jump Store ──────────────────────────────────────────────────────
 // Used by booking detail screens to tell the Calendar tab to jump to a specific date.
 

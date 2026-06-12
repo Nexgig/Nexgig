@@ -7,7 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { ReportModal } from '@/components/report-modal';
@@ -20,9 +20,12 @@ export default function VenueDetailScreen() {
 
   const currentUser = useAuthStore((s) => s.currentUser);
   const storeVenue = useVenueStore((s) => s.getVenueById(id ?? ''));
+  // Full venue cached when this venue was browsed in a list — lets this page open
+  // complete on the first frame (no spinner, no fetch-on-open second pass).
+  const dirVenue = useVenueDirectoryStore((s) => (id ? s.venues[id] : undefined));
   const [fetchedVenue, setFetchedVenue] = useState<Venue | null>(null);
   const [venueLoading, setVenueLoading] = useState(false);
-  const venue = storeVenue ?? fetchedVenue;
+  const venue = storeVenue ?? dirVenue ?? fetchedVenue;
   const hideVenue = useVenueStore((s) => s.hideVenue);
   const unhideVenue = useVenueStore((s) => s.unhideVenue);
   const isOwner = venue?.managerId === currentUser?.id;
@@ -45,35 +48,11 @@ export default function VenueDetailScreen() {
   // opened from Network/Discovery), fetch it read-only from Supabase by id.
   useEffect(() => {
     let cancelled = false;
-    if (!storeVenue && id) {
+    if (!storeVenue && !dirVenue && id) {
       setVenueLoading(true);
       supabase.from('venues').select('*').eq('id', id).maybeSingle().then(({ data }) => {
         if (cancelled) return;
-        if (data) {
-          setFetchedVenue({
-            id: data.id,
-            managerId: data.manager_id,
-            name: data.name,
-            venueType: data.venue_type,
-            photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls : [],
-            googleMapsLocation: data.google_maps_location ?? { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0 },
-            capacity: data.capacity ?? undefined,
-            vibeDescription: data.vibe_description ?? undefined,
-            preferredEnergy: Array.isArray(data.preferred_energy) ? data.preferred_energy : [],
-            genrePreferences: Array.isArray(data.genre_preferences) ? data.genre_preferences : [],
-            audienceType: Array.isArray(data.audience_type) ? data.audience_type : [],
-            subVibe: Array.isArray(data.sub_vibe) ? data.sub_vibe : [],
-            rulesTemplate: data.rules_template ?? undefined,
-            instagramUrl: data.instagram_url ?? undefined,
-            musicLink: data.music_link ?? undefined,
-            color: data.color ?? '#2563EB',
-            isHidden: data.is_hidden ?? false,
-            isComplete: data.is_complete ?? true,
-            verificationStatus: data.verification_status ?? 'pending',
-            createdAt: data.created_at,
-            updatedAt: data.updated_at,
-          } as Venue);
-        }
+        if (data) setFetchedVenue(mapVenueRow(data));
         setVenueLoading(false);
       });
     }

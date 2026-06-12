@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
@@ -158,6 +158,8 @@ export default function NetworkScreen() {
         verificationStatus: v.verification_status ?? 'pending',
         createdAt: v.created_at, updatedAt: v.updated_at,
       })));
+      // Cache full venue data so tapping a venue opens its detail complete (no fetch-on-open).
+      useVenueDirectoryStore.getState().setVenues(data.map((v: any) => mapVenueRow(v)));
     }
     setVenuesLoading(false);
   };
