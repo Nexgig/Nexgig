@@ -227,9 +227,9 @@ export default function ArtistProfileScreen() {
               )}
             </View>
           </View>
-          {/* Bottom row: based in on the right */}
+          {/* Bottom row: based in on the left (consistent across all profile views) */}
           {basedInCountry ? (
-            <View style={[styles.profileBottomRow, { justifyContent: 'flex-end' }]}>
+            <View style={[styles.profileBottomRow, { justifyContent: 'flex-start' }]}>
               <View style={styles.locationRow}>
                 <MaterialIcons name="location-on" size={13} color={colors.muted} />
                 <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>

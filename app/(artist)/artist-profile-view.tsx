@@ -43,40 +43,38 @@ export default function ArtistProfileViewScreen() {
     // bio/years, so those would otherwise never show. Only show the spinner if
     // we have nothing to display yet.
     if (!djFromStore) setIsFetching(true);
-    Promise.all([
-      supabase.from('users').select('*').eq('id', artistId).single(),
-      supabase.from('artists').select('*').eq('id', artistId).maybeSingle(),
-    ]).then(([userRes, profileRes]) => {
-      if (userRes.data) {
-        const u = userRes.data;
-        setFetchedUser({
-          id: u.id, email: u.email, phone: u.phone, accountType: u.account_type,
-          fullName: u.full_name, profilePhotoUrl: u.profile_photo_url,
-          bio: u.bio, location: u.location, yearsOfExperience: u.years_of_experience,
-          isPhoneVerified: u.is_phone_verified ?? false, isEmailVerified: u.is_email_verified ?? false,
-          createdAt: u.created_at, updatedAt: u.updated_at,
-        });
-      }
-      if (profileRes.data) {
-        const p = profileRes.data;
-        setFetchedProfile({
-          userId: p.id, primaryGenre: p.primary_genre,
-          secondaryGenres: Array.isArray(p.secondary_genres) ? p.secondary_genres : [],
-          instruments: Array.isArray(p.instruments) ? p.instruments : [],
-          minRate: p.min_rate ?? undefined, bio: p.bio,
-          yearsOfExperience: p.years_of_experience ?? undefined,
-          gender: p.gender ?? undefined,
-          basedIn: p.based_in, nationality: p.nationality,
-          isHistoryHidden: p.is_history_hidden ?? false,
-          instagramUrl: p.instagram_url ?? undefined,
-          soundcloudUrl: p.soundcloud_url ?? undefined,
-          mixcloudUrl: p.mixcloud_url ?? undefined,
-          spotifyUrl: p.spotify_url ?? undefined,
-          createdAt: p.created_at, updatedAt: p.updated_at,
-        });
-      }
-      setIsFetching(false);
-    });
+    // Read the public profile from the artists table only (world-readable to
+    // authenticated users). The artists row carries name/photo/bio/based_in/years
+    // plus genre/links — so we no longer read the users table here (it holds
+    // private PII: email/phone/push_token, now locked to own-row).
+    supabase.from('artists').select('*').eq('id', artistId).maybeSingle()
+      .then(({ data: p }) => {
+        if (p) {
+          setFetchedUser({
+            id: p.id, email: p.email ?? '', phone: '', accountType: 'artist' as const,
+            fullName: p.full_name, profilePhotoUrl: p.profile_photo_url,
+            bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience ?? undefined,
+            isPhoneVerified: false, isEmailVerified: false,
+            createdAt: p.created_at, updatedAt: p.updated_at,
+          });
+          setFetchedProfile({
+            userId: p.id, primaryGenre: p.primary_genre,
+            secondaryGenres: Array.isArray(p.secondary_genres) ? p.secondary_genres : [],
+            instruments: Array.isArray(p.instruments) ? p.instruments : [],
+            minRate: p.min_rate ?? undefined, bio: p.bio,
+            yearsOfExperience: p.years_of_experience ?? undefined,
+            gender: p.gender ?? undefined,
+            basedIn: p.based_in, nationality: p.nationality,
+            isHistoryHidden: p.is_history_hidden ?? false,
+            instagramUrl: p.instagram_url ?? undefined,
+            soundcloudUrl: p.soundcloud_url ?? undefined,
+            mixcloudUrl: p.mixcloud_url ?? undefined,
+            spotifyUrl: p.spotify_url ?? undefined,
+            createdAt: p.created_at, updatedAt: p.updated_at,
+          });
+        }
+        setIsFetching(false);
+      });
   }, [artistId]);
 
   // Prefer freshly-fetched Supabase data (has bio/years); fall back to the store.
@@ -171,9 +169,9 @@ export default function ArtistProfileViewScreen() {
               <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
             </View>
           </View>
-          {/* Bottom row: based in on the right */}
+          {/* Bottom row: based in on the left (consistent across all profile views) */}
           {basedInCountry ? (
-            <View style={[styles.heroBottomRow, { justifyContent: 'flex-end' }]}>
+            <View style={[styles.heroBottomRow, { justifyContent: 'flex-start' }]}>
               <View style={styles.locationRow}>
                 <MaterialIcons name="location-on" size={13} color={colors.muted} />
                 <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>

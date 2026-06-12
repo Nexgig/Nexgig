@@ -150,38 +150,39 @@ export default function ArtistProfileViewScreen() {
   useEffect(() => {
     if (djFromStore || !artistId) return; // already in store
     setIsFetching(true);
-    Promise.all([
-      supabase.from('users').select('*').eq('id', artistId).single(),
-      supabase.from('artists').select('*').eq('user_id', artistId).maybeSingle(),
-    ]).then(([userRes, profileRes]) => {
-      if (userRes.data) {
-        const u = userRes.data;
-        setFetchedUser({
-          id: u.id, email: u.email, phone: u.phone, accountType: u.account_type,
-          fullName: u.full_name, profilePhotoUrl: u.profile_photo_url,
-          bio: u.bio, location: u.location, yearsOfExperience: u.years_of_experience,
-          isPhoneVerified: u.is_phone_verified ?? false, isEmailVerified: u.is_email_verified ?? false,
-          createdAt: u.created_at, updatedAt: u.updated_at,
-        });
-      }
-      if (profileRes.data) {
-        const p = profileRes.data;
-        setFetchedProfile({
-          userId: p.user_id, primaryGenre: p.primary_genre,
-          secondaryGenres: p.secondary_genres ?? [], energyTypes: p.energy_types ?? [],
-          instruments: p.instruments ?? [], socialLinks: p.social_links,
-          ratePerHour: p.rate_per_hour, bio: p.bio,
-          basedIn: p.based_in, nationality: p.nationality,
-          minRate: p.min_rate, isHistoryHidden: p.is_history_hidden ?? false,
-          mediaLinks: {
-            soundcloud: p.soundcloud_url, mixcloud: p.mixcloud_url,
-            instagram: p.instagram_url, spotify: p.spotify_url,
-          },
-          createdAt: p.created_at, updatedAt: p.updated_at,
-        });
-      }
-      setIsFetching(false);
-    });
+    // Read the public profile from the artists table only (world-readable to
+    // authenticated users). The artists row carries name/photo/bio/based_in/years
+    // plus genre/links — so we no longer read the users table here (private PII,
+    // now locked to own-row). Also fixes the old query: artists is keyed by id and
+    // has no user_id column, so the previous .eq('user_id', …) returned nothing.
+    supabase.from('artists').select('*').eq('id', artistId).maybeSingle()
+      .then(({ data: p }) => {
+        if (p) {
+          setFetchedUser({
+            id: p.id, email: p.email ?? '', phone: '', accountType: 'artist',
+            fullName: p.full_name, profilePhotoUrl: p.profile_photo_url,
+            bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience,
+            isPhoneVerified: false, isEmailVerified: false,
+            createdAt: p.created_at, updatedAt: p.updated_at,
+          });
+          setFetchedProfile({
+            userId: p.id, primaryGenre: p.primary_genre,
+            secondaryGenres: Array.isArray(p.secondary_genres) ? p.secondary_genres : [],
+            instruments: Array.isArray(p.instruments) ? p.instruments : [],
+            bio: p.bio,
+            basedIn: p.based_in, nationality: p.nationality,
+            minRate: p.min_rate ?? undefined,
+            gender: p.gender ?? undefined,
+            isHistoryHidden: p.is_history_hidden ?? false,
+            instagramUrl: p.instagram_url ?? undefined,
+            soundcloudUrl: p.soundcloud_url ?? undefined,
+            mixcloudUrl: p.mixcloud_url ?? undefined,
+            spotifyUrl: p.spotify_url ?? undefined,
+            createdAt: p.created_at, updatedAt: p.updated_at,
+          });
+        }
+        setIsFetching(false);
+      });
   }, [artistId, djFromStore]);
 
   const resolvedDj = djFromStore ?? fetchedUser;

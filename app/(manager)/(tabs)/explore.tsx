@@ -97,25 +97,28 @@ export default function NetworkScreen() {
 
   const fetchArtists = async () => {
     setArtistsLoading(true);
-    const [usersRes, profilesRes] = await Promise.all([
-      supabase.from('users').select('*').eq('account_type', 'artist'),
-      supabase.from('artists').select('*'),
-    ]);
-    if (usersRes.data) {
-      setSbArtists(usersRes.data.map((u: any) => ({
-        id: u.id, email: u.email, phone: u.phone, accountType: u.account_type,
-        fullName: u.full_name, profilePhotoUrl: u.profile_photo_url, bio: u.bio,
-        location: u.location, yearsOfExperience: u.years_of_experience,
-        isPhoneVerified: u.is_phone_verified ?? false, isEmailVerified: u.is_email_verified ?? false,
-        createdAt: u.created_at, updatedAt: u.updated_at,
+    // Read public artist profiles from the artists table ONLY (it's world-readable
+    // to authenticated users). We deliberately do NOT read the users table here —
+    // it holds private PII (email, phone, push_token) and is locked to own-row.
+    // The artists table carries everything the Network cards need (name, photo,
+    // based_in, primary_genre, ...), all keyed by id = the artist's auth id.
+    const { data } = await supabase.from('artists').select('*');
+    if (data) {
+      setSbArtists(data.map((a: any) => ({
+        id: a.id, email: '', phone: '', accountType: 'artist' as const,
+        fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, bio: a.bio ?? undefined,
+        location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
+        isPhoneVerified: false, isEmailVerified: false,
+        createdAt: a.created_at, updatedAt: a.updated_at,
       })));
-    }
-    if (profilesRes.data) {
-      setSbProfiles(profilesRes.data.map((p: any) => ({
-        userId: p.user_id, primaryGenre: p.primary_genre, secondaryGenres: p.secondary_genres ?? [],
-        energyTypes: p.energy_types ?? [], instruments: p.instruments ?? [],
-        socialLinks: p.social_links, ratePerHour: p.rate_per_hour, bio: p.bio,
-        createdAt: p.created_at, updatedAt: p.updated_at,
+      // sbProfiles is keyed by id (= user.id) so getProfile(user.id) matches and
+      // the card genre subtitle renders (previously keyed by a non-existent
+      // user_id, so primaryGenre always fell back to 'Artist').
+      setSbProfiles(data.map((a: any) => ({
+        userId: a.id, primaryGenre: a.primary_genre, secondaryGenres: a.secondary_genres ?? [],
+        energyTypes: [], instruments: a.instruments ?? [],
+        socialLinks: undefined, ratePerHour: a.min_rate ?? undefined, bio: a.bio ?? undefined,
+        createdAt: a.created_at, updatedAt: a.updated_at,
       })));
     }
     setArtistsLoading(false);
