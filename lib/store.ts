@@ -419,15 +419,30 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   getBookingBySlot: (slotId) => get().bookings.find((b) => b.slotId === slotId && b.status !== 'cancelled' && b.status !== 'declined'),
   getBookingsBySlot: (slotId) => get().bookings.filter((b) => b.slotId === slotId && !b.hiddenFromManagerCalendar),
   getConfirmedBookingsByDJ: (artistId) => get().bookings.filter((b) => b.artistId === artistId && b.status === 'confirmed'),
-  hideFromCalendar: (id) => set((state) => ({
-    bookings: state.bookings.map((b) => b.id === id ? { ...b, hiddenFromCalendar: true, cancellationAcknowledged: true } : b),
-  })),
-  hideFromManagerCalendar: (id) => set((state) => ({
-    bookings: state.bookings.map((b) => b.id === id ? { ...b, hiddenFromManagerCalendar: true } : b),
-  })),
-  acknowledgeCancellation: (id) => set((state) => ({
-    bookings: state.bookings.map((b) => b.id === id ? { ...b, cancellationAcknowledged: true } : b),
-  })),
+  hideFromCalendar: (id) => {
+    set((state) => ({
+      bookings: state.bookings.map((b) => b.id === id ? { ...b, hiddenFromCalendar: true, cancellationAcknowledged: true } : b),
+    }));
+    // Persist the flags so they survive sign-out. Partial update, so it only
+    // touches these columns; for a private event (not in the Supabase bookings
+    // table) it matches zero rows and is a harmless no-op.
+    const b = get().bookings.find((x) => x.id === id);
+    if (b) void syncBookingStatus(id, b.status, { hiddenFromCalendar: true, cancellationAcknowledged: true });
+  },
+  hideFromManagerCalendar: (id) => {
+    set((state) => ({
+      bookings: state.bookings.map((b) => b.id === id ? { ...b, hiddenFromManagerCalendar: true } : b),
+    }));
+    const b = get().bookings.find((x) => x.id === id);
+    if (b) void syncBookingStatus(id, b.status, { hiddenFromManagerCalendar: true });
+  },
+  acknowledgeCancellation: (id) => {
+    set((state) => ({
+      bookings: state.bookings.map((b) => b.id === id ? { ...b, cancellationAcknowledged: true } : b),
+    }));
+    const b = get().bookings.find((x) => x.id === id);
+    if (b) void syncBookingStatus(id, b.status, { cancellationAcknowledged: true });
+  },
   deleteBooking: (id) => set((state) => ({
     bookings: state.bookings.filter((b) => b.id !== id),
   })),
