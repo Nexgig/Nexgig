@@ -416,7 +416,7 @@ Linking.openURL(url);
                                 .delete()
                                 .eq('venue_id', a.venueId)
                                 .eq('artist_id', a.artistId);
-                              if (vaErr) console.log('venue_assignments remove error:', vaErr.message);
+                              if (vaErr) console.warn('venue_assignments remove error:', vaErr.message);
                               // Notify the artist
                               useNotificationStore.getState().addNotification({
                                 id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,

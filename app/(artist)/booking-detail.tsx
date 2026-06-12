@@ -169,7 +169,6 @@ export default function DJBookingDetailScreen() {
         text: 'Cancel Booking', style: 'destructive', onPress: () => {
           updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledByArtist: true, artistRespondedFromRequests: true });
           syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
-console.log('cancel sync called:', booking.id);
           markRelatedNotificationsRead(booking.id);
           notifyManager('booking_cancelled');
           router.back();

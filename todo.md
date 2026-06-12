@@ -812,13 +812,13 @@
 
 ## B. Bugs & correctness
 
-- [ ] Fix `Slot` type in types.ts — add managerId, status, updatedAt (sync.ts already uses them → type error). Run `pnpm check`.
+- [x] Fix `Slot` type in types.ts — added managerId, status, updatedAt (sync.ts uses them). `pnpm check` clean. — TESTED ON DEVICE ✅
 - [ ] Consolidate venue/slot/booking persistence INTO the store actions so Supabase writes can't be forgotten (currently split between store + screens → silent local/server drift)
-- [ ] Make `updateBookingStatus` store action sync to Supabase (today it only mutates local state; relies on manual syncBookingStatus calls)
+- [x] Make `updateBookingStatus` store action sync to Supabase — the store action now calls syncBookingStatus internally (fire-and-forget) after the local set, so every confirm/decline/cancel persists without the caller remembering. Critically this also fixes the deleteSlot cancel-cascade, which previously updated cancelled bookings locally only. syncBookingStatus does a PARTIAL update so existing manual calls in screens are now harmless idempotent double-writes (left in place to avoid a risky sweep). — needs device test (confirm/decline/cancel + manager-deletes-slot-with-confirmed-booking reaches Supabase)
 - [x] Dedupe notifications: removed legacy fetchInvites synthesizer in artist _layout (was creating a 2nd notification per invite alongside the real one)
-- [ ] Strip console.log from production paths (booking-sync.ts, store.ts; use-auth.ts before deletion)
-- [ ] Fix false self-conflict when assigning an artist to a past slot (open item from prior session)
-- [ ] Private events are written to BOTH the bookings table (isArtistCreated) and the availability_blocks table (block_type='private_event') — redundant; display reads from bookings only. Consider dropping the availability_blocks write. (availability.tsx ~line 221, 623)
+- [x] Strip console.log from production paths — COMPLETE full sweep across lib + all screens. Removed pure-debug logs entirely (booking-sync per-call log, store notification log, calendar "saving/saved booking" logs, booking-detail "cancel sync called") and converted genuine error logs to console.warn everywhere (notifications-push ×4, assign-artist past-booking insert, venue-detail venue_assignments remove, calendar booking insert, invoice-preview invoice insert, availability ×6 block/private-event insert+delete). No console.log remains in lib/ or app/. (console.warn kept for real errors, which is appropriate for production.)
+- [x] Fixed false self-conflict when assigning an artist to a past slot. — TESTED ON DEVICE ✅
+- [x] INVESTIGATED — NOT a bug, DO NOT remove. The two writes are NOT redundant: a private event is written (A) to the LOCAL bookings store only via addBooking (isArtistCreated:true) — this is never inserted into the Supabase bookings table, it only ever lives on the artist's own device and drives the ARTIST'S calendar; and (B) to the Supabase availability_blocks table with block_type='private_event' — this is what the MANAGER side reads (assign-artist.tsx queries availability_blocks) to detect the artist as busy and avoid double-booking. Deleting write B would let managers book over an artist's blocked time (real user-facing bug). The todo's premise ("display reads from bookings only") was backwards — on the artist's device private events are never written to the Supabase bookings table, and manager conflict detection genuinely depends on availability_blocks. OPTIONAL privacy nicety (not done): availability_blocks stores event_name + location for private events, which managers' apps can read; only start/end time is needed for conflict detection, so those two fields could be dropped from write B if desired.
 
 ## C. Store launch blockers (HARD requirements for App Store + Google Play)
 
@@ -907,11 +907,11 @@
 
 ## Device testing round 2 (June 2026) — tackle next
 
-- [ ] Network tab badge should clear the MOMENT the manager accepts or declines a join request (inline Accept/Decline in Network > Artists / venue join requests), not only when the manager opens the artist's profile. Currently the red dot persists after accept/decline until the profile is opened.
-- [ ] Network data should fetch ONCE when the manager opens the Network tab — currently it re-fetches every time you return from a venue (or artist) detail. Cache the venues + artists lists in state/store; only re-fetch on first entry to Network or explicit pull-to-refresh, not on back-navigation.
-- [ ] Notifications should auto-dismiss when the user opens the bell — fade out slowly (~3s) on their own, no tapping each one and no "Mark all as read" button needed. (Decide: mark-as-read on open with a fade animation; keep them in the list or clear after fade.)
-- [ ] Artist profile photo not visible to the manager — when an artist uploads a profile picture it shows ONLY on the artist's own profile; the manager (and other users) still see the placeholder person icon. Likely root cause: the photo is saved only to the artist's local store (or device) and not uploaded to Supabase Storage + written to the artist's users/artists row, so manager-side views (lineup, booking cards, discovery, artist-profile-view) read an empty profilePhotoUrl. FIX: upload avatar to Supabase Storage, persist the public URL on the artist record, and make all manager-side artist views read it from Supabase.
-- [ ] [Investigate] Manager profile Invoices section shows a red dot on every sign-in — confirm whether these are genuinely-unread invoices (expected) or previously-opened ones re-showing the dot (would mean the persisted read-state isn't being applied on load). Verify useInvoiceReadStore is applied on EVERY invoice load path, not just profile pull-to-refresh.
+- [x] Network tab badge clears the MOMENT the manager accepts or declines a join request (inline Accept/Decline), not only when the manager opens the artist's profile. — TESTED ON DEVICE ✅
+- [x] Network data fetches ONCE on Network tab entry (cached in state); only re-fetches on first entry or explicit pull-to-refresh, not on back-navigation. — TESTED ON DEVICE ✅
+- [x] Notifications auto-dismiss when the user opens the bell — fade out slowly (~3s) on their own, no tapping each one. — TESTED ON DEVICE ✅
+- [x] Artist profile photo now visible to managers/other users — avatar uploads to Supabase Storage + public URL persisted on the artist record; all manager-side artist views read it from Supabase. — TESTED ON DEVICE ✅
+- [x] Manager profile Invoices red-dot-on-every-sign-in investigated + fixed — useInvoiceReadStore now applied on every invoice load path. — TESTED ON DEVICE ✅
 - [x] [Verified] Artist Full Legal Name IS collected at signup — required field in artist-setup.tsx Step 1 ("Full Legal Name", kept private, used for invoicing). No change needed.
 
 ## Device testing round 3 (June 2026) — tackle next

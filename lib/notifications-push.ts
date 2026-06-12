@@ -22,7 +22,7 @@ export async function registerForPushNotifications(userId: string): Promise<stri
   try {
     // Push only works on physical devices.
     if (!Device.isDevice) {
-      console.log('Push notifications require a physical device — skipping.');
+      // Push only works on physical devices — silently skip on simulators.
       return null;
     }
 
@@ -44,7 +44,7 @@ export async function registerForPushNotifications(userId: string): Promise<stri
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('Push notification permission not granted.');
+      // User declined notification permission — nothing more to do.
       return null;
     }
 
@@ -53,7 +53,7 @@ export async function registerForPushNotifications(userId: string): Promise<stri
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
     if (!projectId) {
-      console.log('No EAS projectId found — cannot get push token.');
+      console.warn('No EAS projectId found — cannot get push token.');
       return null;
     }
 
@@ -65,11 +65,11 @@ export async function registerForPushNotifications(userId: string): Promise<stri
       .from('users')
       .update({ push_token: token })
       .eq('id', userId);
-    if (error) console.log('Failed to save push token:', error.message);
+    if (error) console.warn('Failed to save push token:', error.message);
 
     return token;
   } catch (e) {
-    console.log('registerForPushNotifications error:', e);
+    console.warn('registerForPushNotifications error:', e);
     return null;
   }
 }
@@ -82,6 +82,6 @@ export async function clearPushToken(userId: string): Promise<void> {
   try {
     await supabase.from('users').update({ push_token: null }).eq('id', userId);
   } catch (e) {
-    console.log('clearPushToken error:', e);
+    console.warn('clearPushToken error:', e);
   }
 }

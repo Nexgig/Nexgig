@@ -120,7 +120,6 @@ export default function CalendarScreen() {
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const saveBookingToSupabase = async (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null) => {
-  console.log('saving booking, manager_id:', currentUser?.id);
   const { error } = await supabase.from('bookings').insert({
     id: bookingId,
     slot_id: slotId,
@@ -135,8 +134,7 @@ export default function CalendarScreen() {
     slot_end_time: slotEndTime,
     venue_name: venueName,
   });
-  if (error) console.log('booking insert error:', JSON.stringify(error));
-  else console.log('booking saved to Supabase:', bookingId);
+  if (error) console.warn('booking insert error:', JSON.stringify(error));
 };
 
   const clearSlots = useSlotStore((s) => s.clearSlots);

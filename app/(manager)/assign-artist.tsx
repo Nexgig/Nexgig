@@ -409,7 +409,7 @@ export default function AssignDJScreen() {
               slot_end_time: slot!.endTime,
               venue_name: venue?.name ?? null,
             }).then(({ error }) => {
-              if (error) console.log('past booking insert error:', error.message);
+              if (error) console.warn('past booking insert error:', error.message);
             });
             addNotification({
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,

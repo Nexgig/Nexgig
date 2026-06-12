@@ -117,7 +117,7 @@ export default function InvoicePreviewScreen() {
               status: 'sent',
               sent_at: newInvoice.sentAt,
             });
-            if (invError) console.log('Invoice insert error:', invError.message);
+            if (invError) console.warn('Invoice insert error:', invError.message);
 
             // Send notification to manager
             addNotification({

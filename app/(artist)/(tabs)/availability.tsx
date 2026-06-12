@@ -623,7 +623,7 @@ export default function DJAvailabilityScreen() {
             block_type: 'private_event',
             event_name: addForm.eventName.trim(),
             location: addForm.location.trim() || null,
-          }).then(({ error }) => { if (error) console.log('availability_blocks insert error:', error.message); });
+          }).then(({ error }) => { if (error) console.warn('availability_blocks insert error:', error.message); });
         }
       }
     } else {
@@ -637,7 +637,7 @@ export default function DJAvailabilityScreen() {
         deleteBlock(editingBlockId);
         if (currentUser?.id) {
           supabase.from('availability_blocks').delete().eq('id', editingBlockId)
-            .then(({ error }) => { if (error) console.log('block delete error:', error.message); });
+            .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
         }
         const newId = genUUID();
         const updatedBlock: AvailabilityBlock = {
@@ -661,7 +661,7 @@ export default function DJAvailabilityScreen() {
             end_time: updatedBlock.endTime,
             is_full_day: updatedBlock.fullDay,
             block_type: 'block',
-          }).then(({ error }) => { if (error) console.log('block insert error:', error.message); });
+          }).then(({ error }) => { if (error) console.warn('block insert error:', error.message); });
         }
       } else {
         const newId = genUUID();
@@ -686,7 +686,7 @@ export default function DJAvailabilityScreen() {
             end_time: newBlock.endTime,
             is_full_day: newBlock.fullDay,
             block_type: 'block',
-          }).then(({ error }) => { if (error) console.log('block insert error:', error.message); });
+          }).then(({ error }) => { if (error) console.warn('block insert error:', error.message); });
         }
       }
     }
@@ -702,7 +702,7 @@ export default function DJAvailabilityScreen() {
       { text: 'Remove', style: 'destructive', onPress: () => {
         deleteBlock(id);
         supabase.from('availability_blocks').delete().eq('id', id)
-          .then(({ error }) => { if (error) console.log('block delete error:', error.message); });
+          .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
       }},
     ]);
   };
@@ -714,7 +714,7 @@ export default function DJAvailabilityScreen() {
         deleteBooking(bookingId);
         // Also remove from availability_blocks (private events are stored there)
         supabase.from('availability_blocks').delete().eq('id', bookingId)
-          .then(({ error }) => { if (error) console.log('availability_blocks delete error:', error.message); });
+          .then(({ error }) => { if (error) console.warn('availability_blocks delete error:', error.message); });
       }},
     ]);
   };

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import { syncBookingStatus } from './booking-sync';
 import type {
   User, ArtistProfile, Venue, Lineup, Slot, Booking, BookingStatus,
   AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, DraftAssignment,
@@ -391,20 +392,28 @@ interface BookingState {
 export const useBookingStore = create<BookingState>((set, get) => ({
   bookings: [],
   addBooking: (booking) => set((state) => ({ bookings: [...state.bookings, booking] })),
-  updateBookingStatus: (id, status, extra = {}) => set((state) => ({
-    bookings: state.bookings.map((b) =>
-      b.id === id
-        ? {
-            ...b,
-            status,
-            updatedAt: new Date().toISOString(),
-            ...(status === 'confirmed' ? { confirmedAt: new Date().toISOString() } : {}),
-            ...(status === 'cancelled' ? { cancelledAt: new Date().toISOString() } : {}),
-            ...extra,
-          }
-        : b
-    ),
-  })),
+  updateBookingStatus: (id, status, extra = {}) => {
+    set((state) => ({
+      bookings: state.bookings.map((b) =>
+        b.id === id
+          ? {
+              ...b,
+              status,
+              updatedAt: new Date().toISOString(),
+              ...(status === 'confirmed' ? { confirmedAt: new Date().toISOString() } : {}),
+              ...(status === 'cancelled' ? { cancelledAt: new Date().toISOString() } : {}),
+              ...extra,
+            }
+          : b
+      ),
+    }));
+    // Persist to Supabase from the store action itself so callers can never
+    // forget to sync (e.g. the deleteSlot cancel cascade above). Fire-and-forget;
+    // syncBookingStatus does a PARTIAL update (only the columns it builds, never
+    // nulls others), so any screen that also calls it directly just double-writes
+    // the same values harmlessly.
+    void syncBookingStatus(id, status, extra as Record<string, any>);
+  },
   getBookingsByDJ: (artistId) => get().bookings.filter((b) => b.artistId === artistId),
   getBookingsByVenue: (venueId) => get().bookings.filter((b) => b.venueId === venueId),
   getBookingBySlot: (slotId) => get().bookings.find((b) => b.slotId === slotId && b.status !== 'cancelled' && b.status !== 'declined'),
@@ -629,7 +638,7 @@ export const useNotificationStore = create<NotificationState>()(
             created_at: safeNotif.createdAt,
           },
         }).then(({ error }) => {
-          if (error) console.log('notification sync error:', error.message);
+          if (error) console.warn('notification sync error:', error.message);
         });
       },
       markAsRead: (id) => {
