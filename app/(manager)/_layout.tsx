@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase, useArtistDirectoryStore } from '@/lib/store';
 
 export default function ManagerLayout() {
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -132,7 +132,7 @@ if (!lineupError && lineupData) {
         if (artistIds.length > 0) {
           const { data: artistsData } = await supabase
             .from('artists')
-            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, instagram_url, soundcloud_url, bio, min_rate, years_of_experience')
+            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, instagram_url, soundcloud_url, mixcloud_url, spotify_url, bio, min_rate, years_of_experience, gender, nationality, created_at, updated_at')
             .in('id', artistIds);
 
           if (artistsData) {
@@ -160,6 +160,28 @@ if (!lineupError && lineupData) {
                 addedAt: new Date().toISOString(),
               });
             });
+            // Seed the shared artist directory with FULL lineup-artist data so their
+            // profile screens open complete on the first frame (no fetch-on-open pop).
+            useArtistDirectoryStore.getState().setArtists(artistsData.map((a) => ({
+              user: {
+                id: a.id, email: a.email ?? '', phone: '', accountType: 'artist' as const,
+                fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined,
+                bio: a.bio ?? undefined, location: a.based_in ?? undefined,
+                yearsOfExperience: a.years_of_experience ?? undefined,
+                isPhoneVerified: false, isEmailVerified: true,
+                createdAt: a.created_at ?? new Date().toISOString(), updatedAt: a.updated_at ?? new Date().toISOString(),
+              },
+              profile: {
+                userId: a.id, primaryGenre: a.primary_genre,
+                secondaryGenres: Array.isArray(a.secondary_genres) ? a.secondary_genres : [],
+                instruments: Array.isArray(a.instruments) ? a.instruments : [],
+                minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
+                basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
+                isHistoryHidden: false,
+                instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
+                mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
+              },
+            })));
           }
         }
 

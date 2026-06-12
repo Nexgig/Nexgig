@@ -754,6 +754,24 @@ export const usePendingAppsStore = create<PendingAppsState>((set) => ({
   setCount: (n) => set({ count: n }),
 }));
 
+// ─── Artist Directory Store ───────────────────────────────────────────────────
+// In-memory cache of the public artist directory (name/photo/bio/genre/links/rate/etc.),
+// populated when the Network → Artists list loads. Lets the artist profile screen open
+// COMPLETE on the first frame (no fetch-on-open second pass) for any artist the manager
+// has already browsed — the data is in hand before the tap. Not persisted: it's a session
+// cache that the Network list refreshes.
+interface ArtistDirectoryState {
+  entries: Record<string, { user: User; profile: ArtistProfile }>;
+  setArtists: (list: { user: User; profile: ArtistProfile }[]) => void;
+  getArtist: (id: string) => { user: User; profile: ArtistProfile } | undefined;
+}
+
+export const useArtistDirectoryStore = create<ArtistDirectoryState>((set, get) => ({
+  entries: {},
+  setArtists: (list) => set((state) => ({ entries: { ...state.entries, ...Object.fromEntries(list.map((e) => [e.user.id, e])) } })),
+  getArtist: (id) => get().entries[id],
+}));
+
 // ─── Calendar Jump Store ──────────────────────────────────────────────────────
 // Used by booking detail screens to tell the Calendar tab to jump to a specific date.
 

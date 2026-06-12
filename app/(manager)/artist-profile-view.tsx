@@ -1,11 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator } from 'react-native';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore } from '@/lib/store';
+import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
@@ -19,10 +19,26 @@ function formatMemberSince(createdAt?: string): string {
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
+// Shimmer placeholder shown while artist data is still loading (Option 3).
+function Skeleton({ width, height, radius = 6, color, style }: { width: number; height: number; radius?: number; color: string; style?: any }) {
+  const opacity = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return <Animated.View style={[{ width, height, borderRadius: radius, backgroundColor: color, opacity }, style]} />;
+}
+
 export default function ArtistProfileViewScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { artistId } = useLocalSearchParams<{ artistId: string }>();
+  const { artistId, name: paramName, photo: paramPhoto, genre: paramGenre } = useLocalSearchParams<{ artistId: string; name?: string; photo?: string; genre?: string }>();
 
   // ── Stores ────────────────────────────────────────────────────────────────
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
@@ -141,15 +157,22 @@ export default function ArtistProfileViewScreen() {
 
   const djFromStore = getArtistUser(artistId ?? '');
   const profileFromStore = getArtistProfile(artistId ?? '');
+  // Full data cached when the manager browsed the Network list — lets this page open
+  // complete on the first frame (no fetch-on-open second pass). Subscribes to entries
+  // so it updates if the directory loads after mount.
+  const dirEntry = useArtistDirectoryStore((s) => (artistId ? s.entries[artistId] : undefined));
 
   // If artist isn't in local store (not on lineup), fetch from Supabase
   const [fetchedUser, setFetchedUser] = useState<any>(null);
   const [fetchedProfile, setFetchedProfile] = useState<any>(null);
   const [isFetching, setIsFetching] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    if (djFromStore || !artistId) return; // already in store
-    setIsFetching(true);
+    if (!artistId) return;
+    // Always fetch the artists row (the source of truth) so bio/years show even for
+    // artists already in the lineup — the local store user object doesn't carry them.
+    if (!djFromStore) setIsFetching(true);
     // Read the public profile from the artists table only (world-readable to
     // authenticated users). The artists row carries name/photo/bio/based_in/years
     // plus genre/links — so we no longer read the users table here (private PII,
@@ -161,7 +184,7 @@ export default function ArtistProfileViewScreen() {
           setFetchedUser({
             id: p.id, email: p.email ?? '', phone: '', accountType: 'artist',
             fullName: p.full_name, profilePhotoUrl: p.profile_photo_url,
-            bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience,
+            bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience ?? undefined,
             isPhoneVerified: false, isEmailVerified: false,
             createdAt: p.created_at, updatedAt: p.updated_at,
           });
@@ -182,11 +205,25 @@ export default function ArtistProfileViewScreen() {
           });
         }
         setIsFetching(false);
+        setHasFetched(true);
       });
-  }, [artistId, djFromStore]);
+  }, [artistId]);
 
-  const resolvedDj = djFromStore ?? fetchedUser;
-  const resolvedProfile = profileFromStore ?? fetchedProfile;
+  // We have lower-section data to show instantly for lineup artists (from the store) or
+  // once the fetch lands for Network/deep-link artists. Until then we render shimmer
+  // skeletons in place of the stats/bio/genres cards (Instagram-style).
+  const contentReady = hasFetched || !!dirEntry;
+
+  // Instant paint: prefer freshly-fetched Supabase data (carries bio/years), then the
+  // local store (lineup artists), then the name/photo/genre passed as route params from
+  // the Network card — so a non-lineup artist's hero shows immediately (Instagram-style)
+  // instead of waiting on the fetch.
+  const paramDj = (paramName || paramPhoto)
+    ? ({ id: artistId ?? '', fullName: paramName ?? '', profilePhotoUrl: paramPhoto || undefined, accountType: 'artist' } as any)
+    : null;
+  const paramProfile = paramGenre ? ({ userId: artistId ?? '', primaryGenre: paramGenre } as any) : null;
+  const resolvedDj = fetchedUser ?? dirEntry?.user ?? djFromStore ?? paramDj;
+  const resolvedProfile = fetchedProfile ?? dirEntry?.profile ?? profileFromStore ?? paramProfile;
 
   // All completed bookings with slot/venue snapshot fallback
   const completedBookings = useMemo(() => {
@@ -296,17 +333,11 @@ export default function ArtistProfileViewScreen() {
     ]);
   };
 
-  if (isFetching) {
-    return (
-      <ScreenContainer>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563EB" />
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  if (!resolvedDj) {
+  // Render the page shell immediately in BOTH cases (lineup and non-lineup) and let
+  // data fill in when the fetch lands, so the screen opens the same way regardless of
+  // whether the artist was already cached locally. Only show "not found" once a fetch
+  // has actually completed with no row — otherwise we'd flash it before data arrives.
+  if (!resolvedDj && hasFetched) {
     return (
       <ScreenContainer>
         <View style={styles.center}>
@@ -316,7 +347,10 @@ export default function ArtistProfileViewScreen() {
     );
   }
 
-  const dj = resolvedDj;
+  // When we have no identity at all yet (e.g. opened from a deep link with no cached
+  // data and the fetch hasn't landed), show shimmer skeletons instead of an empty hero.
+  const loading = !resolvedDj;
+  const dj = resolvedDj ?? ({ id: artistId ?? '', fullName: '', accountType: 'artist' } as any);
   const profile = resolvedProfile;
 
   const completedGigs = completedBookings.length;
@@ -351,7 +385,9 @@ export default function ArtistProfileViewScreen() {
         <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Top row: photo + name/flag */}
           <View style={styles.heroTopRow}>
-            {dj.profilePhotoUrl ? (
+            {loading ? (
+              <Skeleton width={80} height={80} radius={16} color={colors.border} />
+            ) : dj.profilePhotoUrl ? (
               <Image source={{ uri: dj.profilePhotoUrl }} style={styles.heroPhoto} resizeMode="cover" />
             ) : (
               <View style={[styles.heroPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
@@ -359,10 +395,19 @@ export default function ArtistProfileViewScreen() {
               </View>
             )}
             <View style={styles.heroNameBlock}>
-              <Text style={[styles.djName, { color: colors.foreground }]}>
-                {dj.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
-              </Text>
-              <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
+              {loading ? (
+                <>
+                  <Skeleton width={150} height={20} radius={6} color={colors.border} />
+                  <Skeleton width={90} height={13} radius={5} color={colors.border} style={{ marginTop: 6 }} />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.djName, { color: colors.foreground }]}>
+                    {dj.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
+                  </Text>
+                  <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
+                </>
+              )}
             </View>
           </View>
           {/* Bottom row: based in + invite button (if not connected) */}
@@ -393,6 +438,8 @@ export default function ArtistProfileViewScreen() {
           </View>
         </View>
 
+        {contentReady ? (
+        <>
         {/* Years Experience card — only if set */}
         {dj.yearsOfExperience !== undefined && (
           <View style={[styles.yearsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -453,6 +500,42 @@ export default function ArtistProfileViewScreen() {
             </View>
           )}
 
+          {/* Links — only show filled ones (shown before History) */}
+          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.cardLabel, { color: colors.muted }]}>Links</Text>
+              <View style={styles.linksCol}>
+                {mediaLinks.instagram && (
+                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.instagram!)}>
+                    <View style={[styles.linkIcon, { backgroundColor: '#E1306C20' }]}>
+                      <MaterialIcons name="camera-alt" size={18} color="#E1306C" />
+                    </View>
+                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
+                {mediaLinks.soundcloud && (
+                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.soundcloud!)}>
+                    <View style={[styles.linkIcon, { backgroundColor: '#FF550020' }]}>
+                      <MaterialIcons name="music-note" size={18} color="#FF5500" />
+                    </View>
+                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>SoundCloud</Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
+                {mediaLinks.spotify && (
+                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.spotify!)}>
+                    <View style={[styles.linkIcon, { backgroundColor: '#1DB95420' }]}>
+                      <MaterialIcons name="headset" size={18} color="#1DB954" />
+                    </View>
+                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Spotify</Text>
+                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* 6. Last 5 completed gigs — hidden if artist set isHistoryHidden */}
           {!profile?.isHistoryHidden && (
           <View style={styles.gigHistorySection}>
@@ -509,42 +592,6 @@ export default function ArtistProfileViewScreen() {
           </View>
           )}
 
-          {/* 7. Links — only show filled ones */}
-          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Links</Text>
-              <View style={styles.linksCol}>
-                {mediaLinks.instagram && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.instagram!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#E1306C20' }]}>
-                      <MaterialIcons name="camera-alt" size={18} color="#E1306C" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.soundcloud && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.soundcloud!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#FF550020' }]}>
-                      <MaterialIcons name="music-note" size={18} color="#FF5500" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>SoundCloud</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.spotify && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.spotify!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#1DB95420' }]}>
-                      <MaterialIcons name="headset" size={18} color="#1DB954" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Spotify</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          )}
-
           {/* Rates — manager-only private section */}
           {minRate !== undefined && minRate !== null && (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -562,6 +609,35 @@ export default function ArtistProfileViewScreen() {
             </View>
           )}
         </View>
+        </>
+        ) : (
+        <View style={styles.content}>
+          {/* Shimmer skeletons while the artist's data loads */}
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'flex-start', gap: 10 }]}>
+              <Skeleton width={44} height={20} radius={6} color={colors.border} />
+              <Skeleton width={78} height={11} radius={5} color={colors.border} />
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'flex-start', gap: 10 }]}>
+              <Skeleton width={44} height={20} radius={6} color={colors.border} />
+              <Skeleton width={78} height={11} radius={5} color={colors.border} />
+            </View>
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: 10 }]}>
+            <Skeleton width={36} height={11} radius={5} color={colors.border} />
+            <Skeleton width={260} height={11} radius={5} color={colors.border} />
+            <Skeleton width={200} height={11} radius={5} color={colors.border} />
+          </View>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: 12 }]}>
+            <Skeleton width={92} height={11} radius={5} color={colors.border} />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Skeleton width={68} height={28} radius={14} color={colors.border} />
+              <Skeleton width={68} height={28} radius={14} color={colors.border} />
+              <Skeleton width={68} height={28} radius={14} color={colors.border} />
+            </View>
+          </View>
+        </View>
+        )}
       </ScrollView>
 
 

@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
@@ -119,6 +119,27 @@ export default function NetworkScreen() {
         energyTypes: [], instruments: a.instruments ?? [],
         socialLinks: undefined, ratePerHour: a.min_rate ?? undefined, bio: a.bio ?? undefined,
         createdAt: a.created_at, updatedAt: a.updated_at,
+      })));
+      // Cache the FULL artist data in the shared directory store so tapping any artist
+      // here opens their profile complete on the first frame (no fetch-on-open).
+      useArtistDirectoryStore.getState().setArtists(data.map((a: any) => ({
+        user: {
+          id: a.id, email: '', phone: '', accountType: 'artist' as const,
+          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, bio: a.bio ?? undefined,
+          location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
+          isPhoneVerified: false, isEmailVerified: false,
+          createdAt: a.created_at, updatedAt: a.updated_at,
+        },
+        profile: {
+          userId: a.id, primaryGenre: a.primary_genre,
+          secondaryGenres: Array.isArray(a.secondary_genres) ? a.secondary_genres : [],
+          instruments: Array.isArray(a.instruments) ? a.instruments : [],
+          minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
+          basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
+          isHistoryHidden: a.is_history_hidden ?? false,
+          instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
+          mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
+        },
       })));
     }
     setArtistsLoading(false);
@@ -414,7 +435,7 @@ export default function NetworkScreen() {
               return (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: isConnected ? colors.success + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id) as Href)}
+                  onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
                 >
                   <View style={styles.cardLeft}>
                     {user.profilePhotoUrl ? (
