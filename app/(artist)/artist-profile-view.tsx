@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useLineupStore, useBookingStore, useVenueStore, useSlotStore } from '@/lib/store';
+import { useLineupStore, useBookingStore, useVenueStore, useSlotStore, useArtistDirectoryStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
@@ -30,6 +30,9 @@ export default function ArtistProfileViewScreen() {
 
   const djFromStore = getArtistUser(artistId ?? '');
   const profileFromStore = getArtistProfile(artistId ?? '');
+  // Full data cached when the artist browsed the Network list — lets this page open
+  // complete on the first frame (no spinner, no fetch-on-open second pass).
+  const dirEntry = useArtistDirectoryStore((s) => (artistId ? s.entries[artistId] : undefined));
 
   const [fetchedUser, setFetchedUser] = useState<any>(null);
   const [fetchedProfile, setFetchedProfile] = useState<any>(null);
@@ -42,7 +45,7 @@ export default function ArtistProfileViewScreen() {
     // the artist is in the local store — the stored ArtistProfile doesn't carry
     // bio/years, so those would otherwise never show. Only show the spinner if
     // we have nothing to display yet.
-    if (!djFromStore) setIsFetching(true);
+    if (!djFromStore && !dirEntry) setIsFetching(true);
     // Read the public profile from the artists table only (world-readable to
     // authenticated users). The artists row carries name/photo/bio/based_in/years
     // plus genre/links — so we no longer read the users table here (it holds
@@ -77,9 +80,10 @@ export default function ArtistProfileViewScreen() {
       });
   }, [artistId]);
 
-  // Prefer freshly-fetched Supabase data (has bio/years); fall back to the store.
-  const dj = fetchedUser ?? djFromStore;
-  const profile = fetchedProfile ?? profileFromStore;
+  // Prefer freshly-fetched Supabase data (has bio/years), then the directory cache
+  // (complete, from Network browsing), then the local store.
+  const dj = fetchedUser ?? dirEntry?.user ?? djFromStore;
+  const profile = fetchedProfile ?? dirEntry?.profile ?? profileFromStore;
 
   // All completed bookings for this artist (public gig history)
   const completedBookings = useMemo(() => {

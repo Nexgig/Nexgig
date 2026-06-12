@@ -5,7 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 
@@ -108,8 +108,31 @@ export default function ArtistNetworkScreen() {
     setArtistsLoading(true);
     const { data } = await supabase
       .from('artists')
-      .select('id, full_name, primary_genre, based_in, profile_photo_url, secondary_genres');
-    if (data) setArtists(data);
+      .select('*');
+    if (data) {
+      setArtists(data as ArtistItem[]);
+      // Cache the FULL artist data so tapping an artist opens their profile complete on
+      // the first frame (no fetch-on-open second pass) — same pattern as the manager side.
+      useArtistDirectoryStore.getState().setArtists(data.map((a: any) => ({
+        user: {
+          id: a.id, email: '', phone: '', accountType: 'artist' as const,
+          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, bio: a.bio ?? undefined,
+          location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
+          isPhoneVerified: false, isEmailVerified: false,
+          createdAt: a.created_at, updatedAt: a.updated_at,
+        },
+        profile: {
+          userId: a.id, primaryGenre: a.primary_genre,
+          secondaryGenres: Array.isArray(a.secondary_genres) ? a.secondary_genres : [],
+          instruments: Array.isArray(a.instruments) ? a.instruments : [],
+          minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
+          basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
+          isHistoryHidden: false,
+          instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
+          mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
+        },
+      })));
+    }
     setArtistsFetched(true);
     setArtistsLoading(false);
   };
