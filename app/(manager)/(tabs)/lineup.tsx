@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useNotificationStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueAssignment } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -70,8 +71,16 @@ export default function RosterScreen() {
     }
     Alert.alert('Remove from Lineup', `Remove ${djName} from your lineup? This will also remove them from all venues.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => {
+      { text: 'Remove', style: 'destructive', onPress: async () => {
         removeFromGlobalLineup(artistId);
+        // Persist to Supabase: delete the global lineup row + all this manager's venue
+        // assignments for the artist (local store alone reverts on the next re-sync).
+        if (currentUser?.id) {
+          const { error: glErr } = await supabase.from('global_lineup').delete().eq('manager_id', currentUser.id).eq('artist_id', artistId);
+          if (glErr) console.warn('Failed to remove global_lineup row:', glErr.message);
+          const { error: vaErr } = await supabase.from('venue_assignments').delete().eq('manager_id', currentUser.id).eq('artist_id', artistId);
+          if (vaErr) console.warn('Failed to remove venue_assignments rows:', vaErr.message);
+        }
         addNotification({
           id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           userId: artistId, type: 'lineup_removed', title: 'Removed from Lineup',
@@ -111,8 +120,13 @@ export default function RosterScreen() {
     const djName = getArtistUser(assignDJId)?.fullName ?? 'Artist';
     Alert.alert('Remove from Venue', `Remove ${djName} from ${venueName}? They will stay on your global lineup.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => {
+      { text: 'Remove', style: 'destructive', onPress: async () => {
         removeFromVenue(venueId, assignDJId);
+        // Persist to Supabase: delete this specific venue assignment row.
+        if (currentUser?.id && assignDJId) {
+          const { error } = await supabase.from('venue_assignments').delete().eq('manager_id', currentUser.id).eq('artist_id', assignDJId).eq('venue_id', venueId);
+          if (error) console.warn('Failed to remove venue_assignment:', error.message);
+        }
         addNotification({
           id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           userId: assignDJId, type: 'venue_removed', title: 'Removed from Venue',

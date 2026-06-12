@@ -328,12 +328,15 @@ export default function NetworkScreen() {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Disconnect', style: 'destructive', onPress: async () => {
           useLineupStore.getState().removeFromGlobalLineup(artist.id);
-          await supabase.from('global_lineup')
-            .update({ status: 'removed' })
+          // DELETE the rows (do NOT update status='removed' — that violates a check
+          // constraint on venue_assignments and fails silently, so the artist returns
+          // on the next re-sync / sign-in).
+          const { error: glErr } = await supabase.from('global_lineup').delete()
             .eq('manager_id', currentUser.id).eq('artist_id', artist.id);
-          await supabase.from('venue_assignments')
-            .update({ status: 'removed' })
+          if (glErr) console.warn('Failed to remove global_lineup row:', glErr.message);
+          const { error: vaErr } = await supabase.from('venue_assignments').delete()
             .eq('manager_id', currentUser.id).eq('artist_id', artist.id);
+          if (vaErr) console.warn('Failed to remove venue_assignments rows:', vaErr.message);
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artist.id,

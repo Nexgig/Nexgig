@@ -86,12 +86,15 @@ export default function RosterScreen() {
           removeFromGlobalLineup(artistId);
           // Supabase — deactivate this manager's lineup + venue assignments so it survives reload
           if (currentUser?.id) {
-            await supabase.from('global_lineup')
-              .update({ status: 'removed' })
+            // DELETE the rows (do NOT update status='removed' — that violates a check
+            // constraint on venue_assignments and fails silently, so the artist returns
+            // on the next re-sync / sign-in).
+            const { error: glErr } = await supabase.from('global_lineup').delete()
               .eq('manager_id', currentUser.id).eq('artist_id', artistId);
-            await supabase.from('venue_assignments')
-              .update({ status: 'removed' })
+            if (glErr) console.warn('Failed to remove global_lineup row:', glErr.message);
+            const { error: vaErr } = await supabase.from('venue_assignments').delete()
               .eq('manager_id', currentUser.id).eq('artist_id', artistId);
+            if (vaErr) console.warn('Failed to remove venue_assignments rows:', vaErr.message);
           }
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -158,8 +161,13 @@ export default function RosterScreen() {
       `Remove ${djName} from ${venueName}? They will stay on your global lineup.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => {
+        { text: 'Remove', style: 'destructive', onPress: async () => {
           removeFromVenue(venueId, assignDJId);
+          // Persist to Supabase: delete this specific venue assignment row.
+          if (currentUser?.id && assignDJId) {
+            const { error } = await supabase.from('venue_assignments').delete().eq('manager_id', currentUser.id).eq('artist_id', assignDJId).eq('venue_id', venueId);
+            if (error) console.warn('Failed to remove venue_assignment:', error.message);
+          }
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: assignDJId,

@@ -261,8 +261,17 @@ export default function ArtistProfileViewScreen() {
     Alert.alert('Remove from Lineup', message, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove', style: 'destructive', onPress: () => {
+        text: 'Remove', style: 'destructive', onPress: async () => {
           removeFromGlobalLineup(artistId ?? '');
+          // Persist the removal to Supabase: delete the global lineup row AND all of this
+          // manager's venue assignments for the artist. Without this, the local store
+          // reverts on the next re-sync and the artist reappears as connected.
+          if (currentUser?.id && artistId) {
+            const { error: glErr } = await supabase.from('global_lineup').delete().eq('manager_id', currentUser.id).eq('artist_id', artistId);
+            if (glErr) console.warn('Failed to remove global_lineup row:', glErr.message);
+            const { error: vaErr } = await supabase.from('venue_assignments').delete().eq('manager_id', currentUser.id).eq('artist_id', artistId);
+            if (vaErr) console.warn('Failed to remove venue_assignments rows:', vaErr.message);
+          }
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
@@ -317,8 +326,13 @@ export default function ArtistProfileViewScreen() {
     Alert.alert('Remove from Venue', `Remove ${djName} from ${venueName}? They will stay on your global lineup.`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove', style: 'destructive', onPress: () => {
+        text: 'Remove', style: 'destructive', onPress: async () => {
           removeFromVenue(venueId, artistId ?? '');
+          // Persist to Supabase: delete this specific venue assignment row.
+          if (currentUser?.id && artistId) {
+            const { error } = await supabase.from('venue_assignments').delete().eq('manager_id', currentUser.id).eq('artist_id', artistId).eq('venue_id', venueId);
+            if (error) console.warn('Failed to remove venue_assignment:', error.message);
+          }
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
