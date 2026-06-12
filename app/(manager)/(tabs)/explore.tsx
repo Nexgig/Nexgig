@@ -116,6 +116,7 @@ export default function NetworkScreen() {
       // user_id, so primaryGenre always fell back to 'Artist').
       setSbProfiles(data.map((a: any) => ({
         userId: a.id, primaryGenre: a.primary_genre, secondaryGenres: a.secondary_genres ?? [],
+        hasCompletedBooking: a.has_completed_booking ?? false,
         energyTypes: [], instruments: a.instruments ?? [],
         socialLinks: undefined, ratePerHour: a.min_rate ?? undefined, bio: a.bio ?? undefined,
         createdAt: a.created_at, updatedAt: a.updated_at,
@@ -137,6 +138,7 @@ export default function NetworkScreen() {
           minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
           basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
           isHistoryHidden: a.is_history_hidden ?? false,
+          hasCompletedBooking: a.has_completed_booking ?? false,
           instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
           mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
         },
@@ -451,7 +453,12 @@ export default function NetworkScreen() {
                       </View>
                     )}
                     <View style={styles.cardInfo}>
-                      <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{user.fullName}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>
+                        {profile?.hasCompletedBooking && (
+                          <MaterialIcons name="verified" size={15} color={colors.primary} />
+                        )}
+                      </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
                         {profile?.primaryGenre ?? 'Artist'}{user.location ? ` · ${user.location}` : ''}
                       </Text>

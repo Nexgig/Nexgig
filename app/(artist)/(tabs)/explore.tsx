@@ -29,6 +29,7 @@ type ArtistItem = {
   based_in: string;
   profile_photo_url: string;
   secondary_genres: string[];
+  has_completed_booking?: boolean;
 };
 
 export default function ArtistNetworkScreen() {
@@ -132,6 +133,7 @@ export default function ArtistNetworkScreen() {
           minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
           basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
           isHistoryHidden: false,
+          hasCompletedBooking: a.has_completed_booking ?? false,
           instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
           mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
         },
@@ -373,7 +375,12 @@ export default function ArtistNetworkScreen() {
                     </View>
                   )}
                   <View style={styles.cardInfo}>
-                    <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{artist.full_name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{artist.full_name}</Text>
+                      {artist.has_completed_booking && (
+                        <MaterialIcons name="verified" size={15} color={colors.primary} />
+                      )}
+                    </View>
                     <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
                       {artist.primary_genre ?? 'Artist'}{artist.based_in ? ` · ${artist.based_in}` : ''}
                     </Text>

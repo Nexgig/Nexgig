@@ -69,6 +69,7 @@ export default function ArtistProfileViewScreen() {
             gender: p.gender ?? undefined,
             basedIn: p.based_in, nationality: p.nationality,
             isHistoryHidden: p.is_history_hidden ?? false,
+            hasCompletedBooking: p.has_completed_booking ?? false,
             instagramUrl: p.instagram_url ?? undefined,
             soundcloudUrl: p.soundcloud_url ?? undefined,
             mixcloudUrl: p.mixcloud_url ?? undefined,

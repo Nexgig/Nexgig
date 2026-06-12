@@ -197,6 +197,7 @@ export default function ArtistProfileViewScreen() {
             minRate: p.min_rate ?? undefined,
             gender: p.gender ?? undefined,
             isHistoryHidden: p.is_history_hidden ?? false,
+            hasCompletedBooking: p.has_completed_booking ?? false,
             instagramUrl: p.instagram_url ?? undefined,
             soundcloudUrl: p.soundcloud_url ?? undefined,
             mixcloudUrl: p.mixcloud_url ?? undefined,
@@ -424,32 +425,15 @@ export default function ArtistProfileViewScreen() {
               )}
             </View>
           </View>
-          {/* Bottom row: based in + invite button (if not connected) */}
-          <View style={[styles.heroBottomRow, { justifyContent: basedInCountry ? 'space-between' : 'flex-end' }]}>
-            {basedInCountry && (
+          {/* Bottom row: based in */}
+          {basedInCountry && (
+            <View style={[styles.heroBottomRow, { justifyContent: 'flex-start' }]}>
               <View style={styles.locationRow}>
                 <MaterialIcons name="location-on" size={13} color={colors.muted} />
                 <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
               </View>
-            )}
-            {!isConnected && (
-              inviteStatus === 'pending' ? (
-                <View style={[styles.connectedBadge, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
-                  <MaterialIcons name="schedule" size={13} color="#F59E0B" />
-                  <Text style={[styles.connectedBadgeText, { color: '#F59E0B' }]}>Invite Sent</Text>
-                </View>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [styles.inviteBtn, { backgroundColor: colors.primary, opacity: (pressed || isSending) ? 0.85 : 1 }]}
-                  onPress={handleSendInvite}
-                  disabled={isSending}
-                >
-                  <MaterialIcons name="person-add" size={14} color="#fff" />
-                  <Text style={styles.inviteBtnText}>{isSending ? 'Sending…' : 'Invite to Lineup'}</Text>
-                </Pressable>
-              )
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         {contentReady ? (
