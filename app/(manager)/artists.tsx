@@ -317,7 +317,7 @@ export default function RosterScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>My Artists</Text>
         <Pressable
           style={({ pressed }) => [styles.discoverBtn, { borderColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => router.push('/(manager)/(tabs)/explore?tab=artists' as Href)}
+          onPress={() => router.push('/(manager)/(tabs)/network?tab=artists' as Href)}
         >
           <MaterialIcons name="explore" size={15} color={colors.primary} />
           <Text style={[styles.discoverBtnText, { color: colors.primary }]}>Discover</Text>

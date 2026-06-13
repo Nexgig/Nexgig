@@ -114,7 +114,7 @@ export default function ManagerTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="network"
         options={{
           title: 'Network',
           tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
@@ -132,9 +132,7 @@ export default function ManagerTabsLayout() {
           tabPress: () => { if (currentUser?.id) markProfileInvoicesSeen(currentUser.id); },
         }}
       />
-      <Tabs.Screen name="lineup" options={{ href: null }} />
       <Tabs.Screen name="venues" options={{ href: null }} />
-      <Tabs.Screen name="team" options={{ href: null }} />
     </Tabs>
   );
 }

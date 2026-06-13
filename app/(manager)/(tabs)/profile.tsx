@@ -119,7 +119,7 @@ export default function ManagerProfileScreen() {
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => router.push((djCount === 0 ? '/(manager)/(tabs)/explore?tab=artists' : '/(manager)/artists') as Href)}
+              onPress={() => router.push((djCount === 0 ? '/(manager)/(tabs)/network?tab=artists' : '/(manager)/artists') as Href)}
             >
               <Text style={[styles.statNumber, { color: colors.primary }]}>{djCount === 0 ? '+' : djCount}</Text>
               <Text style={[styles.statLabel, { color: colors.muted }]}>Artists</Text>

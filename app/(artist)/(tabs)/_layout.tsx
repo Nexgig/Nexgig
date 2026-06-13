@@ -139,7 +139,7 @@ export default function DJTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="network"
         options={{
           title: 'Network',
           tabBarIcon: ({ color, focused }) => <NetworkTabIcon color={color} focused={focused} />,
