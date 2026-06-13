@@ -992,8 +992,8 @@
 
 ## Page cleanup — TODO (flagged June 2026)
 
-- [ ] [Wipe unused hidden pages] The manager tabs layout (app/(manager)/(tabs)/_layout.tsx) marks `lineup`, `team`, and `venues` as `href: null` (hidden from the tab bar). team.tsx and lineup.tsx look like older redundant versions of the artist-management UI that's actually used now on explore.tsx (Network) + artists.tsx (Profile → Artists). VERIFY each is truly unreachable first — grep the app for router.push/navigate to '(tabs)/team' and '(tabs)/lineup' — then delete the files + their Tabs.Screen entries if nothing routes to them. (The disconnect fix was applied to team.tsx + lineup.tsx too, so deleting them loses nothing.)
-- [ ] [Rename pages to match what they are] File names don't reflect their real role — e.g. (manager)/(tabs)/explore.tsx IS the Network/Discovery screen; (manager)/artists.tsx IS the "My Artists" screen. Rename for clarity (e.g. explore.tsx → network.tsx) and update every router path + Tabs.Screen `name` that references them. Do it as one careful pass since expo-router matches routes by string.
+- [x] [Wipe unused hidden pages] DONE (commit f48d276): deleted team.tsx + lineup.tsx (confirmed unreachable via grep) + their Tabs.Screen entries.
+- [x] [Rename pages to match what they are] DONE (commit f48d276): renamed (manager)/(tabs)/explore.tsx AND (artist)/(tabs)/explore.tsx → network.tsx; updated both Tabs.Screen name="explore"→"network" and the 3 router pushes (dashboard, profile, artists). Left the MaterialIcons name="explore" compass icon (it's an icon, not a route). (manager)/artists.tsx kept its name (it's "My Artists").
 
 ## Session log — June 12 2026 (security + instant-load + disconnect + verified badge)
 
@@ -1011,3 +1011,34 @@ All items below COMMITTED + device-tested unless marked otherwise.
 - [ ] [Stale connection rows] If any artists still show connected from the OLD failed status='removed' attempts, disconnect again (now deletes) or run: `DELETE FROM public.venue_assignments;` then `DELETE FROM public.global_lineup;`.
 
 (See also "Page cleanup — TODO" just above: wipe unused hidden team.tsx/lineup.tsx after verifying they're unreachable; rename misleading page files e.g. explore.tsx → network.tsx.)
+
+## Session log — June 13 2026 (screen cleanup pass, pre-Replit-design)
+
+- [x] [Wipe team/lineup] Deleted (manager)/(tabs)/team.tsx + lineup.tsx + their Tabs.Screen entries. Commit f48d276.
+- [x] [Rename explore→network] Both (manager) + (artist) (tabs)/explore.tsx → network.tsx; Tabs.Screen names + 3 router pushes repointed; compass icon left alone. Commit f48d276.
+- [x] [Remove 5 orphaned screens] Confirmed unreachable via grep, then deleted + removed their layout entries (commit 037fb26, 1501 deletions):
+  - (auth)/artist-invite.tsx — retired email-invite onboarding.
+  - (manager)/manager-artist-invoices.tsx — superseded by manager-invoice-detail.
+  - (manager)/(tabs)/venues.tsx — leftover hidden tab; live venue screen is (manager)/my-venues.tsx.
+  - (artist)/requests.tsx — older version; live flow is (artist)/pending-requests.tsx.
+  - (artist)/(tabs)/bookings.tsx — leftover hidden tab; artists use home / confirmed-gigs / pending-requests.
+- [x] [Housekeeping] Removed an accidental stray git repo in the home folder (~/.git, no remote/commits) that was causing `git add -A` from ~ to try to stage the whole home dir. Nexgig repo unaffected.
+
+### CLEAN SCREEN INVENTORY (as of 037fb26 — reference for the Replit design pass)
+VISIBLE TABS — manager: dashboard, calendar, network, profile | artist: home, availability, network, profile. (No hidden href:null tabs remain on either side.)
+MANAGER pushed (non-tab) screens: artist-bookings, artist-profile-view, artists ("My Artists"), assign-artist, booking-detail, completed-gigs, confirmed-bookings, create-venue, edit-profile, edit-venue, invite-artist, manager-invoice-detail, my-venues, notifications, pending-requests, send-feedback, settings, venue-detail.
+ARTIST pushed (non-tab) screens: artist-profile-view, booking-detail, confirmed-gigs, edit-profile, invoice-gigs, invoice-preview, invoices, my-venues, notifications, pending-requests, send-feedback, settings, venue-detail.
+AUTH: welcome, sign-in, choose-account-type, manager-register, artist-setup.
+ENTRY: app/(tabs)/index.tsx = auth-gate router (redirects to welcome / manager dashboard / artist home). KEEP.
+NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is the "add an already-registered artist to a venue lineup" in-app action, NOT the retired email invite. Left in place.
+
+### Remaining dead-code tidy-ups (cosmetic, noUnusedLocals is off so pnpm check stays green)
+- [ ] hasCompletedBooking threading now unused (badge moved to cards): remove the ArtistProfile field (types.ts), the 2 artist-profile-view fetch-mapping lines, the 3 directory-cache seeder lines, and the artist profile.tsx updateArtistProfile line. (Keep the artists column + trigger + the card reads.)
+- [ ] booking-detail status-bar leftovers: statusColors object + statusBar/statusDot/statusText styles in both booking-detail files, and the unused isDJ in manager booking-detail.
+- [ ] artist (tabs)/_layout.tsx: BookingTabIcon is now unused (only powered the deleted bookings tab) — remove the component + its import.
+
+### Still-open verifications/items carried forward
+- [ ] Verify on device: complete a brand-new gig end-to-end → verified badge flips on after next list fetch.
+- [ ] Stale connection rows: reset SQL if any old failed-disconnect rows linger.
+- [ ] is_history_hidden: no column yet (eye-toggle is local-only) — add column if we want it to persist/propagate.
+- [ ] Bigger workstreams (unchanged): push notifications (Android FCM, reminders, deep-linking), email infra, OAuth/password edge cases, Maps location picker, Google Calendar sync, App Store submission prep, Tap Payments.
