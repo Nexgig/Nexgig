@@ -71,7 +71,7 @@ export default function DJBookingDetailScreen() {
   };
 
   if (!booking) {
-    const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(artist)/(tabs)/availability' as Href));
+    const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(artist)/(tabs)/calendar' as Href));
     return (
       <ScreenContainer>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -419,7 +419,7 @@ export default function DJBookingDetailScreen() {
                 const date = slot?.date ?? booking.slotDate ?? '';
                 if (date) {
                   useCalendarJumpStore.getState().setPendingDate(date);
-                  router.push('/(artist)/(tabs)/availability' as Href);
+                  router.push('/(artist)/(tabs)/calendar' as Href);
                 }
               }}
             >

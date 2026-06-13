@@ -140,7 +140,7 @@ export default function InvoicesScreen() {
             if (router.canGoBack()) {
               router.back();
             } else {
-              router.replace('/(artist)/(tabs)/home' as any);
+              router.replace('/(artist)/(tabs)/dashboard' as any);
             }
           }}
           // canGoBack() handles both normal nav and post-send nav correctly

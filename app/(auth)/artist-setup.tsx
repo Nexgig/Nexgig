@@ -264,7 +264,7 @@ export default function DJSetupScreen() {
     });
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
-    router.replace('/(artist)/(tabs)/home' as Href);
+    router.replace('/(artist)/(tabs)/dashboard' as Href);
   };
 
   const handleBack = () => {

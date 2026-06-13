@@ -138,7 +138,7 @@ export default function InvoicePreviewScreen() {
                 onPress: () => {
                   // Go to dashboard tab first (clears invoice creation stack),
                   // then push invoices on top so back goes to dashboard
-                  router.replace('/(artist)/(tabs)/home' as any);
+                  router.replace('/(artist)/(tabs)/dashboard' as any);
                   setTimeout(() => {
                     router.push('/(artist)/invoices' as any);
                   }, 50);

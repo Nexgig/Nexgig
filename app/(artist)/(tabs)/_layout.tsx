@@ -117,14 +117,14 @@ export default function DJTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="dashboard"
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="availability"
+        name="calendar"
         options={{
           title: 'Calendar',
           tabBarIcon: ({ color, focused }) => <CalendarTabIcon color={color} focused={focused} />,

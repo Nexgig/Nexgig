@@ -19,7 +19,7 @@ export default function IndexScreen() {
   }
 
   if (currentUser.accountType === 'artist') {
-    return <Redirect href={'/(artist)/(tabs)/home' as Href} />;
+    return <Redirect href={'/(artist)/(tabs)/dashboard' as Href} />;
   }
 
   return (

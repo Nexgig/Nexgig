@@ -106,7 +106,7 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         isHistoryHidden: artistProfile.is_history_hidden ?? undefined,
       });
 
-      router.replace('/(artist)/(tabs)/home' as Href);
+      router.replace('/(artist)/(tabs)/dashboard' as Href);
       return;
     }
 

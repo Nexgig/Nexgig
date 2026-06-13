@@ -126,7 +126,7 @@ export default function SignInScreen() {
             isHistoryHidden: artistProfile.is_history_hidden ?? undefined,
           });
 
-          router.replace('/(artist)/(tabs)/home' as Href);
+          router.replace('/(artist)/(tabs)/dashboard' as Href);
           return;
         }
 
