@@ -132,7 +132,6 @@ export default function ManagerTabsLayout() {
           tabPress: () => { if (currentUser?.id) markProfileInvoicesSeen(currentUser.id); },
         }}
       />
-      <Tabs.Screen name="venues" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -124,14 +124,6 @@ export default function DJTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="bookings"
-        options={{
-          title: 'Requests',
-          href: null,
-          tabBarIcon: ({ color, focused }) => <BookingTabIcon color={color} focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
         name="availability"
         options={{
           title: 'Calendar',
