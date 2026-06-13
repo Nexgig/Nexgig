@@ -1023,13 +1023,14 @@ All items below COMMITTED + device-tested unless marked otherwise.
   - (artist)/requests.tsx — older version; live flow is (artist)/pending-requests.tsx.
   - (artist)/(tabs)/bookings.tsx — leftover hidden tab; artists use home / confirmed-gigs / pending-requests.
 - [x] [Housekeeping] Removed an accidental stray git repo in the home folder (~/.git, no remote/commits) that was causing `git add -A` from ~ to try to stage the whole home dir. Nexgig repo unaffected.
+- [x] [Artist tab rename] (artist)/(tabs)/home.tsx → dashboard.tsx and availability.tsx → calendar.tsx so file names match their displayed titles (Dashboard / Calendar), consistent with the manager side. Tabs.Screen names + all 8 route refs repointed (entry redirect, sign-in, artist-setup, oauth-buttons, invoice-preview, invoices, booking-detail ×2). Commit 3dbf31b.
 
 ### CLEAN SCREEN INVENTORY (as of 037fb26 — reference for the Replit design pass)
-VISIBLE TABS — manager: dashboard, calendar, network, profile | artist: home, availability, network, profile. (No hidden href:null tabs remain on either side.)
+VISIBLE TABS — manager: dashboard, calendar, network, profile | artist: dashboard, calendar, network, profile (file names + titles now match on both sides after the home→dashboard / availability→calendar rename, commit 3dbf31b). No hidden href:null tabs remain on either side.
 MANAGER pushed (non-tab) screens: artist-bookings, artist-profile-view, artists ("My Artists"), assign-artist, booking-detail, completed-gigs, confirmed-bookings, create-venue, edit-profile, edit-venue, invite-artist, manager-invoice-detail, my-venues, notifications, pending-requests, send-feedback, settings, venue-detail.
 ARTIST pushed (non-tab) screens: artist-profile-view, booking-detail, confirmed-gigs, edit-profile, invoice-gigs, invoice-preview, invoices, my-venues, notifications, pending-requests, send-feedback, settings, venue-detail.
 AUTH: welcome, sign-in, choose-account-type, manager-register, artist-setup.
-ENTRY: app/(tabs)/index.tsx = auth-gate router (redirects to welcome / manager dashboard / artist home). KEEP.
+ENTRY: app/(tabs)/index.tsx = auth-gate router (redirects to welcome / manager dashboard / artist dashboard). KEEP.
 NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is the "add an already-registered artist to a venue lineup" in-app action, NOT the retired email invite. Left in place.
 
 ### Remaining dead-code tidy-ups (cosmetic, noUnusedLocals is off so pnpm check stays green)
