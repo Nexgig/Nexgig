@@ -203,8 +203,9 @@ export default function InvoicePreviewScreen() {
       const namedUri = `${FileSystem.cacheDirectory}${pdfFileName}`;
       await FileSystem.copyAsync({ from: uri, to: namedUri });
       await Sharing.shareAsync(namedUri, { mimeType: 'application/pdf', dialogTitle: pdfFileName, UTI: 'com.adobe.pdf' });
-    } catch (e) {
-      Alert.alert('Error', 'Could not generate PDF. Please try again.');
+    } catch (e: any) {
+      console.log('[PDF] generation failed:', e);
+      Alert.alert('Could not generate PDF', 'Please try again.');
     }
   };
 
