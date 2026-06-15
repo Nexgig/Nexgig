@@ -485,6 +485,9 @@ export default function EditVenueScreen() {
           {/* Rules Template */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Rules Template</Text>
+            <Text style={{ fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8, lineHeight: 16 }}>
+              Rules are sent to artists when they join your lineup or accept a booking at this venue.
+            </Text>
             <TextInput
               style={[styles.fieldInputMulti, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
               placeholder="House rules for artists..."

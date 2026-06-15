@@ -969,7 +969,7 @@
 - [x] Dashboard History + Completed Gigs showed "Unknown Artist" for deleted artists — dashboard.tsx (upcoming + completed useMemos) and completed-gigs.tsx now resolve dj to a { fullName: 'Former Artist', profilePhotoUrl: undefined } object when b.artistId == null (kept the "Unknown Artist" fallback only for the truly-unresolvable case). profilePhotoUrl:undefined added to satisfy tsc (placeholder shape must match User where .profilePhotoUrl is read).
 - [x] Booking-detail duplicate status removed — deleted the colored status-bar block (the "Gig completed" / "You accepted this booking" line) under the header on BOTH manager and artist booking-detail; the header StatusBadge is now the only status indicator. (Left statusColors / statusBar styles / isDJ in place as dead code — noUnusedLocals is off; logged for tidy-up below.)
 - [x] pnpm check clean after fixes (was 3 TS2339 errors on the Former-Artist placeholder missing profilePhotoUrl; fixed).
-- [ ] [Tidy-up, optional] Remove now-dead code left by the booking-detail status-bar removal: statusColors object + statusBar/statusDot/statusText styles in both booking-detail files, and the unused isDJ in manager booking-detail. Purely cosmetic (noUnusedLocals off).
+- [x] [Tidy-up] Removed dead code left by the booking-detail status-bar removal: statusColors object + statusBar/statusDot/statusText styles in both booking-detail files. (Left `isDJ` in manager booking-detail — it IS still used at the Accept/Decline guard, so the todo note was wrong on that one.) Done in the June 13 tidy commit.
 - [ ] [Optional polish] confirmed/cancelled former-artist booking rows on the calendar still show the × cancel button which would fire a notification to a null userId (harmless no-op). Gate the action buttons off for null-artist bookings if it ever matters.
 - [x] Full test-data wipe performed by user (all bookings + all app-table rows + auth logins) and the whole delete/former-artist flow re-tested on device — WORKING.
 
@@ -1034,12 +1034,21 @@ ENTRY: app/(tabs)/index.tsx = auth-gate router (redirects to welcome / manager d
 NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is the "add an already-registered artist to a venue lineup" in-app action, NOT the retired email invite. Left in place.
 
 ### Remaining dead-code tidy-ups (cosmetic, noUnusedLocals is off so pnpm check stays green)
-- [ ] hasCompletedBooking threading now unused (badge moved to cards): remove the ArtistProfile field (types.ts), the 2 artist-profile-view fetch-mapping lines, the 3 directory-cache seeder lines, and the artist profile.tsx updateArtistProfile line. (Keep the artists column + trigger + the card reads.)
-- [ ] booking-detail status-bar leftovers: statusColors object + statusBar/statusDot/statusText styles in both booking-detail files, and the unused isDJ in manager booking-detail.
-- [ ] artist (tabs)/_layout.tsx: BookingTabIcon is now unused (only powered the deleted bookings tab) — remove the component + its import.
+- [x] hasCompletedBooking threading removed (badge stays on the cards via raw row reads): removed the ArtistProfile field (types.ts) + an unrelated stray field on Venue, both artist-profile-view fetch-mapping lines, all 3 directory-cache seeder lines, the has_completed_booking column from the manager _layout.tsx select, and the artist profile.tsx mapping. Verified the artists column + trigger + the card-side reads were left intact.
+- [x] booking-detail status-bar leftovers removed (both files).
+- [x] artist (tabs)/_layout.tsx BookingTabIcon removed (component was orphaned after deleting the bookings tab).
 
 ### Still-open verifications/items carried forward
 - [ ] Verify on device: complete a brand-new gig end-to-end → verified badge flips on after next list fetch.
 - [ ] Stale connection rows: reset SQL if any old failed-disconnect rows linger.
 - [ ] is_history_hidden: no column yet (eye-toggle is local-only) — add column if we want it to persist/propagate.
 - [ ] Bigger workstreams (unchanged): push notifications (Android FCM, reminders, deep-linking), email infra, OAuth/password edge cases, Maps location picker, Google Calendar sync, App Store submission prep, Tap Payments.
+
+## Session log — June 13 2026 evening (dead-code tidy + stale Stack.Screen fix)
+
+- [x] [Dead-code tidy] Removed three orphan blocks across the codebase: BookingTabIcon in artist (tabs)/_layout.tsx (powered the deleted bookings tab); hasCompletedBooking threading (ArtistProfile field + stray Venue field + 2 fetch mappings + 3 seeders + select column + own-profile mapping) — the badge stays on the cards via raw row reads; statusColors + statusBar/statusDot/statusText styles in both booking-detail files. Verified isDJ in manager booking-detail is still used (todo note was off on that one).
+- [x] [Stale Stack.Screen] Removed `<Stack.Screen name="requests" />` from (artist)/_layout.tsx that was left over from deleting (artist)/requests.tsx earlier today (commit 037fb26). Cleared the "No route named 'requests' exists" runtime warning.
+
+### Pre-existing warnings surfaced during today's reload (NOT from today's work)
+- [ ] [Deprecation] React Native's bundled SafeAreaView is deprecated; migrate every import to `react-native-safe-area-context`. Low priority — still works today, future RN release will remove it. Grep for `from 'react-native'` lines that include `SafeAreaView` and switch the import source.
+- [ ] [Extraneous route] Runtime warns `Layout children: Too many screens defined. Route "oauth/callback" is extraneous.` — there's a Stack.Screen entry for oauth/callback in some layout but no matching route file (or vice versa). Audit during the auth/sign-in work: either add the missing route file under app/ or remove the orphan Stack.Screen entry. lib/_core/ still holds bits used by oauth/callback, so investigate together with the `lib/_core/` cleanup item.

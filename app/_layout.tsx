@@ -131,7 +131,6 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
           <Stack.Screen name="(manager)" />
           <Stack.Screen name="(artist)" />
-          <Stack.Screen name="oauth/callback" />
         </Stack>
         <StatusBar style="auto" />
       </QueryClientProvider>

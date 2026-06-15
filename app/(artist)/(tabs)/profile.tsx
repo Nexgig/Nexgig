@@ -35,9 +35,18 @@ export default function ArtistProfileScreen() {
   const allVenues = useVenueStore((s) => s.venues);
   const profile = currentUser?.id ? (artistProfiles[currentUser.id] ?? getArtistProfile(currentUser.id)) : undefined;
   const isHistoryHidden = profile?.isHistoryHidden ?? false;
-  const toggleHistoryVisibility = useCallback(() => {
+  const toggleHistoryVisibility = useCallback(async () => {
     if (!currentUser?.id) return;
-    updateArtistProfile(currentUser.id, { isHistoryHidden: !isHistoryHidden });
+    const next = !isHistoryHidden;
+    updateArtistProfile(currentUser.id, { isHistoryHidden: next });
+    // Persist to Supabase so the eye-toggle survives reinstalls and propagates
+    // to managers/other artists viewing this profile (the read mappings already
+    // reference is_history_hidden defensively).
+    const { error } = await supabase
+      .from('artists')
+      .update({ is_history_hidden: next })
+      .eq('id', currentUser.id);
+    if (error) console.warn('Failed to persist is_history_hidden:', error.message);
   }, [currentUser?.id, isHistoryHidden, updateArtistProfile]);
 
   // Source of truth = Supabase. Whenever the profile tab opens, pull the
@@ -65,6 +74,7 @@ export default function ArtistProfileScreen() {
         soundcloudUrl: data.soundcloud_url ?? undefined,
         mixcloudUrl: data.mixcloud_url ?? undefined,
         spotifyUrl: data.spotify_url ?? undefined,
+        isHistoryHidden: data.is_history_hidden ?? false,
       });
       updateProfile({
         fullName: data.full_name ?? currentUser.fullName,

@@ -215,7 +215,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     color: form.color,
     isHidden: false,
     isComplete: true,
-    hasCompletedBooking: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -442,6 +441,9 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
   <View style={styles.form}>
     <View style={styles.fieldGroup}>
       <Text style={[styles.label, { color: colors.foreground }]}>Venue Rules (optional)</Text>
+      <Text style={{ fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8, lineHeight: 16 }}>
+        Rules are sent to artists when they join your lineup or accept a booking at this venue.
+      </Text>
       <TextInput
         style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
         placeholder="e.g. No explicit lyrics, set ends at 3am..."

@@ -132,7 +132,7 @@ export default function ArtistNetworkScreen() {
           instruments: Array.isArray(a.instruments) ? a.instruments : [],
           minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
           basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
-          isHistoryHidden: false,
+          isHistoryHidden: a.is_history_hidden ?? false,
           instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
           mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
         },
