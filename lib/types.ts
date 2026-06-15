@@ -91,7 +91,6 @@ export interface ArtistProfile {
   gender?: Gender;
   userId: string;
   isHistoryHidden?: boolean; // when true, history card is hidden from managers and other artists
-  hasCompletedBooking?: boolean; // true once the artist has ≥1 completed booking — drives the verified badge
   primaryGenre: GenreType;
   secondaryGenres: GenreType[];
   instruments?: InstrumentType[];
@@ -183,7 +182,6 @@ export interface Venue {
   isHidden: boolean;
   isComplete: boolean;
   verificationStatus?: 'pending' | 'verified' | 'rejected'; // 'pending' until we review the venue; show-only badge (does not gate anything yet)
-  hasCompletedBooking?: boolean;
   createdAt: string;
   updatedAt: string;
 }

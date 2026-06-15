@@ -132,7 +132,7 @@ if (!lineupError && lineupData) {
         if (artistIds.length > 0) {
           const { data: artistsData } = await supabase
             .from('artists')
-            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, instagram_url, soundcloud_url, mixcloud_url, spotify_url, bio, min_rate, years_of_experience, gender, nationality, has_completed_booking, created_at, updated_at')
+            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, instagram_url, soundcloud_url, mixcloud_url, spotify_url, bio, min_rate, years_of_experience, gender, nationality, created_at, updated_at')
             .in('id', artistIds);
 
           if (artistsData) {
@@ -178,7 +178,6 @@ if (!lineupError && lineupData) {
                 minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
                 basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
                 isHistoryHidden: false,
-                hasCompletedBooking: a.has_completed_booking ?? false,
                 instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
                 mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
               },

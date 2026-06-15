@@ -129,14 +129,6 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
-  const statusColors: Record<string, string> = {
-    requested: colors.warning,
-    confirmed: colors.success,
-    declined: colors.error,
-    cancelled: colors.muted,
-    completed: colors.primary,
-  };
-
   return (
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -323,9 +315,6 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
   content: { padding: 20, gap: 14 },
-  statusBar: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 14, fontWeight: '600', flex: 1 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
   cardIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1 },

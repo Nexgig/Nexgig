@@ -61,7 +61,6 @@ export default function ArtistProfileScreen() {
         minRate: data.min_rate ?? undefined,
         basedIn: data.based_in ?? undefined,
         nationality: data.nationality ?? undefined,
-        hasCompletedBooking: data.has_completed_booking ?? false,
         instagramUrl: data.instagram_url ?? undefined,
         soundcloudUrl: data.soundcloud_url ?? undefined,
         mixcloudUrl: data.mixcloud_url ?? undefined,

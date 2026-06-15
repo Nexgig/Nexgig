@@ -38,35 +38,6 @@ function CalendarTabIcon({ color, focused }: { color: string; focused: boolean }
   );
 }
 
-function BookingTabIcon({ color, focused }: { color: string; focused: boolean }) {
-  const colors = useColors();
-  const currentUser = useAuthStore((s) => s.currentUser);
-  const allBookings = useBookingStore((s) => s.bookings);
-
-  const actionableCount = useMemo(() => {
-    return allBookings.filter(
-      (b) =>
-        b.artistId === currentUser?.id &&
-        (
-          b.status === 'requested' ||
-          b.status === 'past_confirmation' ||
-          (b.status === 'cancelled' && !b.cancellationAcknowledged && !b.cancelledByArtist)
-        )
-    ).length;
-  }, [allBookings, currentUser?.id]);
-
-  return (
-    <View style={styles.iconWrap}>
-      <IconSymbol size={26} name="tray.fill" color={color} />
-      {actionableCount > 0 && (
-        <View style={[styles.badgeWrap, { backgroundColor: colors.error }]}>
-          <Text style={styles.badgeText}>{actionableCount > 99 ? '99+' : actionableCount}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
 function NetworkTabIcon({ color }: { color: string; focused: boolean }) {
   const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
