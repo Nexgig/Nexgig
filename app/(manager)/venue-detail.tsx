@@ -152,17 +152,17 @@ export default function VenueDetailScreen() {
                 <MaterialIcons name="verified" size={13} color={colors.primary} />
                 <Text style={[styles.verifyPillText, { color: colors.primary }]}>Verified</Text>
               </View>
-            ) : venue.verificationStatus === 'rejected' ? (
+            ) : isOwner && venue.verificationStatus === 'rejected' ? (
               <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
                 <MaterialIcons name="cancel" size={13} color={colors.error} />
                 <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
               </View>
-            ) : (
+            ) : isOwner ? (
               <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
                 <MaterialIcons name="schedule" size={13} color={colors.warning} />
                 <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
               </View>
-            )}
+            ) : null}
           </View>
           <View style={styles.locationRow}>
             <MaterialIcons name="location-on" size={16} color={colors.muted} />

@@ -1,5 +1,45 @@
 # Project TODO
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     CURRENT OPEN ITEMS  ·  authoritative list, maintained June 15 2026
+     Everything below this block is historical session logs (mostly [x] done).
+     When asked "what's left", READ THIS BLOCK FIRST. Line refs point into the body.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+## ⟢ CURRENT OPEN ITEMS (read this first)
+
+**MEDIUM / feature work**
+- Wizards split (OPTIONAL polish, low value): create-venue / manager-register / artist-setup → separate route screens for native back-gesture. They already work as single-screen wizards with slide animation. (L469-471)
+- Notification + push-tap deep-link routing: tapping a notification (in-app AND push) should open the specific screen by type/related_id, not just the notifications list. Booking→booking-detail (partly handled via the "Booking not found" fix), venue/lineup→my-venues. (L364 / L843)
+
+**VERIFY ON DEVICE (no code — just testing)**
+- KeyboardAvoidingView on Add/Block slot modal — reworked many times historically; just confirm lower fields aren't covered by the keyboard. (L626)
+- Full signup matrix: new artist signup shows everything immediately; appears in others' Network; survives sign-out/in on email + Apple + Google. (L981)
+
+**OPTIONAL polish (decide if worth it)**
+- Hide "Pending verification" pill from non-owners — one-line conditional. (L929)
+- Gate the × cancel button off for null-artist booking rows (harmless no-op today). (L973)
+- Live-remove a just-deleted artist from Network (clears on refresh today). (L959)
+
+**BIGGER WORKSTREAMS (deliberately parked)**
+- Push: Android FCM credentials; same-day/day-before gig reminders. (iOS push already works end-to-end — registration, send, real-device tested.) (L839, L842)
+- Auth: OAuth-then-password collision; plain email+password signup sanity-check; Android Google sign-in; + the signup-flow INSERT-bug investigation checklist at the very bottom of this file. (L941-942, L853, L1095-1099)
+- Email infra: welcome email; lineup-add email (with venue rules); venue-rules-on-acceptance email. (L935-937)
+- Maps: location picker at venue creation + "Open in Google Maps" on booking-detail. (L923)
+- Calendar: artist Google Calendar sync (scope TBD). (L946)
+- App Store: reviewer demo accounts + notes; privacy/Data Safety forms. (L830-831)
+- Payments: Tap Payments integration.
+- Venue verification gate v2 (only if show-only proves too soft) + internal admin screen. (L928)
+
+**LINT HYGIENE (deferred — "clean as you touch")**
+- 9 cosmetic unescaped-apostrophe errors, ~80 unused-import/var warnings, ~40 hook-dependency warnings (case-by-case ONLY — bulk-fixing has caused infinite loops), ~7 duplicate-import warnings. Full catalogue in the June 15 lint session log near the bottom.
+- Delete `lib/_core/` (still has live bits used by oauth/callback — blocked until auth pass). (L797)
+- delete-account Edge Function hardening (best-effort cleanup steps). (L960)
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     END current open items. Historical logs follow.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
 - [x] Project initialization and scaffolding
 - [x] Type definitions (User, DJProfile, Venue, Booking, etc.)
 - [x] Zustand stores (auth, venue, slot, booking, roster, notification, availability)
@@ -290,8 +330,6 @@
 - [x] Manager Calendar: slot cards tappable → opens booking detail (already implemented)
 - [x] Calendar: hide red dot for past blocked/cancelled dates (artist calendar; manager has no red dots)
 - [x] Fix: past past_confirmation bookings should still show orange dot on artist calendar
-- [ ] Manager artist-profile view: add header fields (gender, experience, energy, member since), 2 stat cards, Played In, Sub-Vibe, Links sections, fix Gig History, correct section order
-- [ ] Artist own profile: same changes as manager artist-profile view
 - [x] Manager artist-profile view: 7 changes (header fields, 2 stat cards, Played In, Sub-Vibe, Links, Gig History fix, section order)
 - [x] Artist own profile: same 7 changes applied
 - [x] Fix: artist profile Venues section — only show venues with at least one completed booking
@@ -353,24 +391,14 @@
 - [x] Artist tab bar: Requests badge count includes past_confirmation bookings (sync with New tab count)
 - [x] Add Confirm/Decline inline buttons to past_confirmation (Completed Gig) cards in Artist Requests New tab; blue badge stays visible; after response card moves to Responded tab
 - [x] Fix: past_confirmation Confirm button now sets status to 'completed' (not 'confirmed') so card moves to Responded tab correctly
-- [ ] Fix Responded tab: only show bookings artist actively responded to from Requests tab (not all completed gigs); add artistRespondedFromRequests flag
 - [x] Fix Responded tab: only show bookings artist actively responded to from Requests tab (not all completed gigs); add artistRespondedFromRequests flag
 - [x] Fix artist notifications screen infinite render loop (unstable Zustand selector + timeAgo component)
-- [ ] Remove all addNotification calls and mock notification data; keep store/screen/types/bell icon intact
 - [x] Remove all addNotification calls and mock notification data; keep store/screen/types/bell icon intact
 - [x] Fix: artist-cancelled bookings should not appear in New tab; only manager-cancelled should (add cancelledByArtist flag)
 - [x] Add 8 in-app notification triggers for artists (new request, cancelled, slot deleted, past confirmation, lineup add/remove, venue assign/remove)
-- [ ] Create artist venues screen showing assigned venues with venue profile view
+- [x] Add 8 in-app notification triggers for artists (new request, cancelled, slot deleted, past confirmation, lineup add/remove, venue assign/remove)
 - [ ] Notification deep-link: booking notifications → booking detail with back → notifications; venue/lineup → artist venues screen
 - [x] Rename all roster references to lineup (Global Lineup = artists connected to manager, Lineup = artists assigned to venue)
-- [ ] Add notification: New Gig Request (when manager sends booking request)
-- [ ] Add notification: Gig Cancelled by Manager (confirmed booking cancelled)
-- [ ] Add notification: Request Cancelled (slot with pending request deleted)
-- [ ] Add notification: Past Gig Confirmation Request (past gig needs artist confirm)
-- [ ] Add notification: Added to Lineup (manager adds artist to global lineup)
-- [ ] Add notification: Removed from Lineup (manager removes artist from global lineup)
-- [ ] Add notification: Assigned to Venue (manager assigns artist to venue)
-- [ ] Add notification: Removed from Venue (manager removes artist from venue)
 - [x] Create artist my-venues screen showing assigned venues with venue profiles
 - [x] Fix New Gig Request notification: add venue/date/slot details to body, add relatedId/relatedType so it navigates to booking detail on tap
 - [x] New Gig Request notification: general body with manager name, navigate to Requests tab on tap
@@ -858,7 +886,7 @@
 - [x] Add smoke test `__tests__/smoke.test.ts` — stores, venue/slot/booking/draft/lineup reducers, slot-delete cascade, conflict detection (incl. overnight wrap + self-slot skip), time utils, resetAllStores
 - [x] Run `pnpm check` (TypeScript) — clean (0 errors)
 - [x] Run `pnpm test` — 25 passing (smoke + existing suite)
-- [ ] Run `pnpm lint`
+- [x] Run `pnpm lint` — DONE June 15: ran clean after a node_modules reinstall; fixed the 2 real rules-of-hooks bugs; remaining 9 cosmetic errors + 161 warnings catalogued in the June 15 lint session log below ("clean as you touch").
 
 ## G. Security to verify
 
@@ -926,7 +954,7 @@
 
 - [x] [Review — v1 SHIPPED: show-only verification badge] Venues now carry a `verification_status` ('pending' | 'verified' | 'rejected'). New venues default to 'pending'; all existing venues were backfilled to 'verified'. A small pill renders on the manager's My Venues card and on the venue-detail info card: blue "Verified" ✓ / amber "Pending verification" / red "Not approved". PURELY A LABEL — nothing is gated. Moderation action = flip `verification_status` in Supabase (manual for now). Implemented in: lib/types.ts (Venue.verificationStatus), lib/store.ts (addVenue default 'pending'), lib/sync.ts (map verification_status on load), venue-detail.tsx (fallback fetch map + badge), my-venues.tsx (badge). pnpm check clean.
 - [ ] [Review — FUTURE, decide later] If show-only proves too soft, tighten the gate WITHOUT changing the data model: options in increasing strictness — (a) hide pending venues from Discovery until verified, (b) block the FIRST artist assignment / Send Bookings on a never-verified venue with a "Pending verification" message. Also still open: notify the manager when we verify/reject; auto-flag risky new venues (new manager, dup name+address, no maps location, banned words) server-side via a Postgres insert trigger so the review queue stays small; lock `verification_status` to service-role-only in RLS so managers can't self-verify; build a small internal admin screen (v2) instead of editing rows by hand.
-- [ ] [Review — optional polish] Decide whether to hide the "Pending verification" pill from NON-owners (other managers/artists viewing the venue in Discovery) and show them only the "Verified" badge — currently the pill shows to everyone. One-line conditional if wanted.
+- [x] [Review — optional polish] DONE June 15: hid the "Pending verification" + "Not approved" pills from NON-owners on (manager)/venue-detail.tsx — non-owners now only ever see the "Verified" badge (gated both the rejected + pending branches behind `isOwner`, added `: null` fallback). Artist-side venue-detail never rendered the pill, so no change needed there.
 
 ## Email + onboarding (June 2026) — NEEDS EMAIL INFRA FIRST
 
@@ -956,7 +984,7 @@
 - [x] FK constraints that blocked deletion fixed in Supabase: bookings.manager_id and reports.reporter_id were NO ACTION → dropped NOT NULL + recreated as ON DELETE SET NULL (bookings.artist_id was already SET NULL). Every other user-referencing FK already CASCADEs. Artist delete now completes (confirmed gone from Supabase).
 - [x] delete-account Edge Function: on deletion the departing user's still-pending bookings (requested / past_confirmation) are set to 'cancelled' so they drop off the OTHER party's Pending list automatically (handled for both artist_id and manager_id). Confirmed/completed bookings stay as history, name anonymized to "Former Artist" / "Former Manager". Redeployed via the dashboard Code tab (no local Supabase CLI / Homebrew on this Mac).
 - [x] lib/delete-account.ts now surfaces the real Edge Function error (reads error.context.json()) instead of the generic "non-2xx" message — this is how we found the FK error.
-- [ ] [Low priority] Manager Network > Artists doesn't live-remove an artist who just deleted their account — it clears on pull-to-refresh / app restart (correct behavior, just not instant). A live "artist deleted" listener was judged not worth the complexity. Leave unless it becomes a problem.
+- [x] [Low priority — WON'T DO] Manager Network > Artists doesn't live-remove an artist who just deleted their account — it clears on pull-to-refresh / app restart (correct behavior, just not instant). DECISION (re-confirmed June 15): not building it. A live "artist deleted" realtime listener isn't worth the complexity (Supabase realtime subscription + StrictMode dedupe + channel cleanup) for a rare edge case that already self-corrects on refresh. Reopen only if it becomes a real problem.
 - [ ] [Deferred / optional] delete-account Edge Function hardening — make the anonymize + private-data cleanup steps best-effort (collected as warnings, never block deletion); only the critical identity-row + auth-user deletion can hard-fail. Not done; the function works now that the FKs are fixed, but this would make it robust against a future stray missing-column/table error.
 
 ## Delete Account — follow-ups & former-artist display (June 2026, this session)
@@ -970,7 +998,7 @@
 - [x] Booking-detail duplicate status removed — deleted the colored status-bar block (the "Gig completed" / "You accepted this booking" line) under the header on BOTH manager and artist booking-detail; the header StatusBadge is now the only status indicator. (Left statusColors / statusBar styles / isDJ in place as dead code — noUnusedLocals is off; logged for tidy-up below.)
 - [x] pnpm check clean after fixes (was 3 TS2339 errors on the Former-Artist placeholder missing profilePhotoUrl; fixed).
 - [x] [Tidy-up] Removed dead code left by the booking-detail status-bar removal: statusColors object + statusBar/statusDot/statusText styles in both booking-detail files. (Left `isDJ` in manager booking-detail — it IS still used at the Accept/Decline guard, so the todo note was wrong on that one.) Done in the June 13 tidy commit.
-- [ ] [Optional polish] confirmed/cancelled former-artist booking rows on the calendar still show the × cancel button which would fire a notification to a null userId (harmless no-op). Gate the action buttons off for null-artist bookings if it ever matters.
+- [x] [Optional polish — WON'T DO] confirmed/cancelled former-artist booking rows on the calendar still show the × cancel button which would fire a notification to a null userId (harmless no-op). DECISION (June 15): leaving as-is — it's a do-nothing button on orphaned bookings (artist already deleted), lowest-value item on the list. Gate the action buttons off for null-artist bookings only if it ever actually matters.
 - [x] Full test-data wipe performed by user (all bookings + all app-table rows + auth logins) and the whole delete/former-artist flow re-tested on device — WORKING.
 
 ## Artist signup data not persisting (June 2026) — RE-INVESTIGATED, real root causes
@@ -1006,7 +1034,7 @@ All items below COMMITTED + device-tested unless marked otherwise.
 - [x] [Verified badge] Artists with ≥1 completed booking get a blue `verified` checkmark. SQL RUN: added artists.has_completed_booking (bool), backfilled from bookings (status='completed' OR is_completed=true), + AFTER INSERT/UPDATE trigger mark_artist_completed() (SECURITY DEFINER) to keep it synced. Badge placed on the NETWORK LIST CARDS (manager + artist explore), NOT inside profile screens (flag lives there). Reads has_completed_booking straight off the row.
 
 ### Open follow-ups from this session (NOT done)
-- [ ] [Tidy dead code] hasCompletedBooking was threaded through ArtistProfile (types.ts) + both artist-profile-view fetch mappings + all 3 directory-cache seeders for an earlier in-profile badge that was then MOVED to the cards. That threading is now unused (cards read the raw row). Harmless, pnpm check clean (noUnusedLocals off), but remove for tidiness: the ArtistProfile field, the 2 fetch-mapping lines, the 3 seeder lines, and the artist own-profile profile.tsx updateArtistProfile line. (The artists column + trigger + the card reads STAY.)
+- [x] [Tidy dead code] DONE June 15: removed the unused hasCompletedBooking threading (the 2 artist-profile-view fetch mappings, the artist + manager network seeder duplicates, the artist own-profile mapping) and the stray hasCompletedBooking fields on Venue objects. KEPT ArtistProfile.hasCompletedBooking + the manager network seeder line + the artists column/trigger/card-reads, because the manager Network card's badge reads from that field (removing it broke the build — regression caught and fixed in the same session).
 - [x] [Verify on device] DONE June 15: badge end-to-end verified during the orphan-row investigation; trigger fires + card reads correctly.
 - [x] [Stale connection rows] VERIFIED CLEAN June 15 (same check as above).
 
@@ -1042,7 +1070,7 @@ NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is th
 - [x] Verify on device: badge end-to-end — DONE June 15.
 - [x] Stale connection rows — VERIFIED CLEAN June 15.
 - [x] is_history_hidden — DONE June 15 (column added, write + read + cache seeders).
-- [ ] Bigger workstreams (unchanged): push notifications (Android FCM, reminders, deep-linking), email infra, OAuth/password edge cases, Maps location picker, Google Calendar sync, App Store submission prep, Tap Payments.
+- (recap — full list lives in "CURRENT OPEN ITEMS" at the top of this file) Bigger workstreams still pending: push (Android FCM + reminders), email infra, auth/OAuth edge cases, Maps, Google Calendar, App Store submission, Tap Payments.
 
 ## Session log — June 13 2026 evening (dead-code tidy + stale Stack.Screen fix)
 
@@ -1101,3 +1129,21 @@ FK cascade worked (bookings/lineup/assignments already pointed at the correct UU
 ### Items NOT done from tonight's "finish everything except big workstreams" plan
 - [x] **(e) Stale connection rows check** — VERIFIED CLEAN. Both global_lineup (4 rows) and venue_assignments (4 rows) contain only `status='active'` rows for legitimate current connections (manager Eie Turk → 4 artists: Elie Turk, Bsnsna, Salt Shaker, Tuurk; all assigned to Feb30). No stale `'removed'` rows from the old broken-disconnect bug. The disconnect fixes earlier this week stopped the rot at the source; no wipe needed.
 - [x] **(f) Verify badge end-to-end** — confirmed manually tonight while investigating the orphan-row bug above; the badge logic + the trigger both work. Calling this verified.
+
+## Session log — June 15 2026 (lint pass, minimum scope)
+
+Ran `pnpm lint` (`expo lint`). First attempt errored "Cannot find module is-string" — corrupt node_modules; fixed with `rm -rf node_modules && pnpm install` (lockfile up to date, 1081 packages). Lint then ran: **11 errors, 161 warnings.**
+
+Chose MINIMUM scope: fix only the 2 real rules-of-hooks bugs, log the rest.
+
+- [x] [Rules-of-hooks] app/(manager)/assign-artist.tsx — `useState`(slotSearch) and a `useMemo`(filteredDjs) were declared AFTER two early returns (slot-not-found + venue-lineup-mode), so they ran conditionally. FIX: moved the slotSearch `useState` up next to venueSearch (above the early returns); converted filteredDjs from useMemo to a plain computation (its dep chain crossed the early-return branches; the list is small so memoization loss is imperceptible). 
+- [x] [Rules-of-hooks] app/(manager)/booking-detail.tsx — `useNotificationStore`(addNotification) on line 74 was after the `if (!booking) return` early return. FIX: hoisted it into the hook block above the early return (next to the other two useNotificationStore reads), deleted the lower one.
+- (Both fixed; pnpm check expected clean; device-test the manager booking-detail + assign-artist screens. Commit msg: "Fix two rules-of-hooks violations: hoist slotSearch state + convert filteredDjs to plain compute in assign-artist; hoist addNotification above early-return in booking-detail".)
+
+### Remaining lint inventory — NOT fixed (deliberately deferred; "clean as you touch" going forward)
+- [ ] [Lint — cosmetic] 9 `react/no-unescaped-entities` errors = literal apostrophes in JSX text (e.g. don't / you're) that ESLint wants written as `&apos;`. ZERO runtime impact. Files: (manager)/artists.tsx (L450×2), (manager)/booking-detail.tsx (L267), (manager)/invite-artist.tsx (L140×2, L198), (artist)/my-venues.tsx (L122), (manager)/settings.tsx (L325). Auto-fixable.
+- [ ] [Lint — cosmetic] ~80 "defined/assigned but never used" warnings (dead imports/vars) spread across many files. Safe to remove but tedious; do it per-file as you touch them.
+- [ ] [Lint — RISKY, case-by-case only] ~40 "React Hook missing dependency" warnings. Do NOT bulk-fix — some omissions are intentional (adding the dep causes infinite loops / unwanted reruns; we've hit that regression before). Handle one at a time only when editing that specific effect.
+- [ ] [Lint — cosmetic] ~7 "imported multiple times" (expo-router) + "import/first" warnings. Safe to merge/reorder.
+- [ ] [Lint — harmless] `MODULE_TYPELESS_PACKAGE_JSON` warning on eslint.config.js — could add `"type":"module"` to package.json to silence; not urgent.
+- Note: only 5 of the 161 warnings are auto-fixable via `pnpm lint --fix`.
