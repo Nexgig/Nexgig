@@ -172,7 +172,6 @@ export default function ArtistProfileScreen() {
   }, [completedBookings]);
 
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
-  const nationalityCountry = profile?.nationality ? COUNTRIES.find((c) => c.name === profile.nationality) : undefined;
 
   const mediaLinks = {
     soundcloud: profile?.mediaLinks?.soundcloud ?? profile?.soundcloudUrl,
@@ -224,17 +223,9 @@ export default function ArtistProfileScreen() {
             )}
             <View style={styles.profileNameBlock}>
               <Text style={[styles.name, { color: colors.foreground }]}>
-                {currentUser?.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
+                {currentUser?.fullName}
               </Text>
               <Text style={[styles.genre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
-              {/* Extra header fields */}
-              {profile?.gender && (
-                <View style={styles.metaRow}>
-                  <View style={[styles.metaPill, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.metaPillText, { color: colors.foreground }]}>{profile.gender}</Text>
-                  </View>
-                </View>
-              )}
             </View>
           </View>
           {/* Bottom row: based in on the left (consistent across all profile views) */}
@@ -247,14 +238,6 @@ export default function ArtistProfileScreen() {
             </View>
           ) : null}
         </View>
-
-        {/* Years Experience card — only if set */}
-        {currentUser?.yearsOfExperience !== undefined && (
-          <View style={[styles.yearsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{currentUser.yearsOfExperience}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Years Experience</Text>
-          </View>
-        )}
 
         {/* Stats — Monthly Plays + Completed Gigs */}
         <View style={styles.statsRow}>
@@ -506,14 +489,9 @@ const styles = StyleSheet.create({
   genre: { fontSize: 15 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },
-  nationalityFlag: { fontSize: 22, marginTop: 4 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  metaPill: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },
-  metaPillText: { fontSize: 12, fontWeight: '500' },
   memberSince: { fontSize: 11, marginTop: 4 },
   content: { padding: 20, paddingBottom: 40, gap: 14 },
   // Stats
-  yearsCard: { marginHorizontal: 20, marginBottom: 12, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4, marginTop: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 28, fontWeight: '800' },

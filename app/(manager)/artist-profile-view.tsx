@@ -370,7 +370,6 @@ export default function ArtistProfileViewScreen() {
   const completedGigs = completedBookings.length;
   const last5Gigs = completedBookings.slice(0, 5);
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
-  const nationalityCountry = profile?.nationality ? COUNTRIES.find((c) => c.name === profile.nationality) : undefined;
   const mediaLinks = profile?.mediaLinks ?? {
     soundcloud: profile?.soundcloudUrl,
     mixcloud: profile?.mixcloudUrl,
@@ -417,7 +416,7 @@ export default function ArtistProfileViewScreen() {
               ) : (
                 <>
                   <Text style={[styles.djName, { color: colors.foreground }]}>
-                    {dj.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
+                    {dj.fullName}
                   </Text>
                   <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
                 </>

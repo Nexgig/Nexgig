@@ -135,7 +135,6 @@ export default function ArtistProfileViewScreen() {
   const last5Gigs = completedBookings.slice(0, 5);
   const memberSince = formatMemberSince(dj.createdAt);
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
-  const nationalityCountry = profile?.nationality ? COUNTRIES.find((c) => c.name === profile.nationality) : undefined;
   const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
   const instruments: string[] = profile?.instruments ?? [];
   // bio lives on the artists row (profile), not the users row — fall back to it.
@@ -167,7 +166,7 @@ export default function ArtistProfileViewScreen() {
             <AvatarImage uri={dj.profilePhotoUrl} name={dj.fullName} size={80} />
             <View style={styles.heroNameBlock}>
               <Text style={[styles.djName, { color: colors.foreground }]}>
-                {dj.fullName}{nationalityCountry ? ` ${nationalityCountry.flag}` : ''}
+                {dj.fullName}
               </Text>
               <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
             </View>
@@ -351,7 +350,6 @@ const styles = StyleSheet.create({
   djGenre: { fontSize: 14 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   locationText: { fontSize: 13 },
-  nationalityFlag: { fontSize: 22, marginTop: 4 },
   memberSince: { fontSize: 12, marginTop: 4 },
   statsRow: { flexDirection: 'row', gap: 12, marginHorizontal: 20, marginBottom: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
