@@ -68,6 +68,8 @@ export default function AssignDJScreen() {
   );
 
   const [venueSearch, setVenueSearch] = useState('');
+  // slotSearch moved up here (was below an early return, which violated rules-of-hooks)
+  const [slotSearch, setSlotSearch] = useState('');
 
   // ── Cross-manager conflict detection ─────────────────────────────────────
   // Fetch confirmed bookings + blocks from OTHER managers for lineup artists on this slot's date
@@ -317,8 +319,6 @@ export default function AssignDJScreen() {
     })
     .filter(Boolean) as Array<{ slotId: string; date: string; startTime: string; endTime: string; venueName: string; slotName: string }>;
 
-  const [slotSearch, setSlotSearch] = useState('');
-
   const djsWithConflicts = venueAssignmentsForSlot.map((a) => {
     const user = getArtistUser(a.artistId);
     const profile = getArtistProfile(a.artistId);
@@ -342,14 +342,16 @@ export default function AssignDJScreen() {
     assignment: typeof venueAssignmentsForSlot[0];
   }>;
 
-  const filteredDjs = useMemo(() => {
-    if (!slotSearch.trim()) return djsWithConflicts;
-    const q = slotSearch.toLowerCase();
-    return djsWithConflicts.filter((d) =>
-      (d.user.fullName ?? '').toLowerCase().includes(q) ||
-      (d.profile?.primaryGenre ?? '').toLowerCase().includes(q)
-    );
-  }, [djsWithConflicts, slotSearch]);
+  // Was a useMemo here — changed to plain computation because its dependency chain
+  // includes values defined below early-return branches, which broke rules-of-hooks.
+  // The filter runs on a small artist list, so losing memoization is imperceptible.
+  const filteredDjs = !slotSearch.trim()
+    ? djsWithConflicts
+    : djsWithConflicts.filter((d) => {
+        const q = slotSearch.toLowerCase();
+        return (d.user.fullName ?? '').toLowerCase().includes(q) ||
+          (d.profile?.primaryGenre ?? '').toLowerCase().includes(q);
+      });
 
   const available = filteredDjs
     .filter((d) => !d.hasConflict)

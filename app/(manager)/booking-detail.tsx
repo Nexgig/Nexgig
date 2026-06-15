@@ -27,6 +27,7 @@ export default function DJBookingDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const notifications = useNotificationStore((s) => s.notifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   if (!booking) {
     return (
@@ -70,8 +71,6 @@ export default function DJBookingDetailScreen() {
       },
     ]);
   };
-
-  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const handleCancelRequest = () => {
     Alert.alert('Cancel Request', 'Are you sure you want to cancel this gig request?', [

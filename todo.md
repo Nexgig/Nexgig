@@ -446,8 +446,8 @@
 - [x] Artist Dashboard: stat cards match Profile screen style (no icons, colored number, grey uppercase label)
 - [x] Settings (both): convert Send Feedback from bottom-sheet to full-screen modal (like Add to Lineup), fix success state layout
 - [x] Manager Dashboard: Confirmed Bookings section must only show status='confirmed', exclude pending/requested
-- [ ] Rename app to Nexgig (app.config.ts appName)
-- [ ] Generate new Nexgig app icon (X with arrows on right side only) and replace all icon files
+- [x] Rename app to Nexgig (app.config.ts appName) — DONE (verified in app.config.ts: appName="Nexgig", slug="nexgig", bundle com.nexgig.app).
+- [x] Generate new Nexgig app icon (X with arrows on right side only) and replace all icon files — DONE (./assets/images/app-icon.png).
 - [x] Manager Dashboard: swap Confirmed and Pending stat card positions (Confirmed first, Pending second)
 - [x] Manager Dashboard: remove profile photo from header, keep only notification bell at top-right
 - [x] Artist Dashboard: remove profile photo from header, keep only notification bell at top-right
@@ -648,8 +648,8 @@
 
 ## Splash Screen Fix
 
-- [ ] Verify splash-icon.png is the Nexgig logo and not the old Gigster logo
-- [ ] Ensure app.config.ts splash screen config points to correct asset
+- [x] Verify splash-icon.png is the Nexgig logo and not the old Gigster logo — DONE (byte-size match with nexgig-logo.png; visually verified during testing).
+- [x] Ensure app.config.ts splash screen config points to correct asset — DONE (splash points to splash-icon.png on #2563EB).
 
 ## Calendar Sync Message Fix
 
@@ -808,7 +808,7 @@
 - [~] Artist settings.tsx language code — SKIPPED: not actually unused; `language`/`saveLanguage`/`DJ_STORAGE_KEY_LANGUAGE` are wired into handleResetAll. Only the `languages` array + LANGUAGE_LABELS are unrendered; left in place for a future language feature. Not worth the risk.
 - [x] Remove/replace `tests/auth.logout.test.ts` (imported deleted server/)
 - [x] Remove unneeded `@types/jszip` devDep stub (jszip ships its own types)
-- [ ] Rename `app/(manager)/(tabs)/explore.tsx` → `network.tsx` so the filename matches the "Network" tab (changes route path /explore→/network; must update all router.push references + dashboard/profile/artists links)
+- [x] Rename `app/(manager)/(tabs)/explore.tsx` → `network.tsx` so the filename matches the "Network" tab — DONE in commit f48d276 (both manager + artist sides; all router.push refs + Tabs.Screen name updated).
 
 ## B. Bugs & correctness
 
@@ -919,7 +919,7 @@
 - [x] [Investigate] Artist Full Legal Name disappears after sign-out then sign-in — the legal name the artist entered at signup is gone after re-signing in. Likely root cause: fullLegalName is saved only to the local auth/profile store (or not included in the auth-store partialize) and is never re-read from Supabase (artists.full_legal_name) on sign-in, so it reverts to empty. FIX direction: persist fullLegalName to the artists row on save AND hydrate it from Supabase on sign-in.
 - [x] Add a "disconnect" icon to each artist's profile card on the manager's "My Artists" page that removes that artist from THIS manager's connections — i.e. remove them from the manager's global lineup AND from all of the manager's venue assignments (call useLineupStore.removeFromGlobalLineup(artistId) locally + delete/deactivate the corresponding global_lineup and venue_assignments rows in Supabase for this manager). Add a confirmation step before disconnecting.
 - [x] [Self-view] Artist should see their OWN card in Network > Artists so they can preview how their profile looks to other artists — currently self is likely filtered out. Either include self in the list (clearly marked "You"), or add a "Preview my profile" affordance that opens the read-only artist-profile-view of themselves.
-- [ ] [Venue copy] In create-venue (and edit-venue), add a short note near the Rules field telling the manager that a venue's rules are sent to the artist when they join the lineup / are accepted. Pure UI copy; pairs with the lineup-add email below.
+- [x] [Venue copy] In create-venue (and edit-venue), add a short note near the Rules field telling the manager that a venue's rules are sent to the artist when they join the lineup / are accepted — DONE June 15.
 - [ ] [Maps] Capture a real Google Maps location for venues (Venue type already has googleMapsLocation; today it's address text only). Add a location/place picker at venue creation, persist lat/lng (or a maps URL) on the venue, snapshot it onto booking records, and add an "Open in Google Maps" button on the booking-detail screen that launches turn-by-turn navigation (Linking.openURL) so the artist can navigate to the gig.
 
 ## Venue verification / moderation (June 2026)
@@ -979,16 +979,16 @@
 - [x] [ROOT CAUSE B — network artist preview blank] artist-profile-view.tsx fetched the artists row with `.eq('user_id', artistId)`, but the artists table is keyed by `id` (signup writes `id: user.id`; sign-in + edit-profile both query `.eq('id', ...)`). So the preview query matched nothing and the whole profile came back empty. FIX: changed to `.eq('id', artistId)` and rewrote the field mapping to the ACTUAL columns (primary_genre, secondary_genres, instruments, min_rate, gender, based_in, nationality, instagram/soundcloud/mixcloud/spotify_url, is_history_hidden) — the old mapping read non-existent columns (energy_types, social_links, rate_per_hour, user_id). Array.isArray guards on the array columns.
 - [x] [Re-sign-in hydration — still correct] sign-in.tsx + oauth-buttons.tsx hydrate currentUser + artistProfiles for returning artists (email/Apple/Google), and manager bio/based_in/years on both paths. Kept.
 - [ ] [VERIFY on device] After these fixes, test the FULL matrix: (1) brand-new artist signup → profile tab shows everything immediately (no refresh); (2) that artist appears correctly in another user's Network > Artists preview; (3) sign out → sign back in (email + Apple + Google) → everything still there. NOTE: any artist who signed up BEFORE these fixes may still have an empty local profile store until one clean re-sign-in (the data is in Supabase; re-sign-in now hydrates it).
-- [ ] [Network preview minor] explore.tsx artist list query only selects id/full_name/primary_genre/based_in/profile_photo_url/secondary_genres — fine for the list CARD, but the DETAIL screen (artist-profile-view) does its own full fetch, so no change needed there. Left as-is.
+- [x] [Network preview minor] explore.tsx artist list query — reviewed and left as-is intentionally (the DETAIL screen does its own full fetch, so no change needed).
 - [x] ["Filled = filled everywhere" — single source of truth] Confirmed the real artists-table schema (21 cols, keyed by id, no user_id/energy_types/social_links/rate_per_hour, and NO is_history_hidden column). Two hardening changes so filled fields always show on every screen: (1) lib/store.ts updateArtistProfile now MERGES onto existing + always keeps userId — a partial update (history-hide toggle sending only {isHistoryHidden}) can no longer wipe the rest or create a half-empty profile (this was the user's "maybe history-hide is hiding the others" suspicion — plausible when the store was empty). (2) profile.tsx now fetches the artist's OWN row from Supabase on every tab open and repopulates both currentUser (fullName/legalName/username/bio/location/years/photo) and artistProfiles (genres/instruments/gender/rate/nationality/links). Supabase is the source of truth; the local store is just a cache the screen reads. This makes the own-profile tab correct even for old accounts / reinstalls / pre-fix signups, with no manual re-sign-in. Network preview (artist-profile-view) already fetches Supabase directly → same truth. pnpm check passed.
 - [x] [Profile/preview layout parity (June 2026)] (1) profile.tsx: split the single "Music" card into separate "Music Genres" + "Instruments" cards to match the preview. (2) artist-profile-view.tsx: bio + years_of_experience were read from the users row (which doesn't store them) — now read from the artists row (fetchedProfile) via resolved `bio`/`yearsOfExperience` fallbacks. (3) ALSO the preview had a guard `if (djFromStore) return` that skipped the Supabase fetch when the artist was in the local store — and the stored ArtistProfile carries no bio/years, so they never showed. Changed to ALWAYS fetch the full row from Supabase (source of truth) and prefer fetched over store; spinner only when nothing cached. (4) Moved the Links/Instagram card above History in the preview to match profile order. All verified on device.
-- [ ] [NOTE — history-hide does NOT persist] There is no is_history_hidden column in the artists table, so the eye-toggle is LOCAL ONLY: it won't survive reinstall and won't reach managers/other artists' preview. If we want it to persist + propagate, add a boolean is_history_hidden column to artists, write it in the toggle, and read it in the preview (the read mapping already references it defensively). Decide later.
+- [x] [history-hide PERSISTS now] DONE June 15: added is_history_hidden boolean column to artists, profile.tsx toggle writes to Supabase alongside the local store, profile.tsx own-row fetch reads it back, all 3 directory-cache seeders read `a.is_history_hidden ?? false`. Also killed the "history card flashes for 1ms on entry" first-paint bug on manager + other-artist views.
 
 ## Disconnect artist — REAL fix + cleanup notes (June 2026, this session)
 
 - [x] [ROOT CAUSE] "Disconnect" on the manager Network (explore) tab AND the manager Profile → Artists screen (artists.tsx) wrote `.update({ status: 'removed' })` to global_lineup + venue_assignments. Setting venue_assignments.status='removed' VIOLATES a check constraint on that table, so the write failed silently (error never checked) and the row stayed active → the artist reappeared on sign-out/in. FIX: both now `.delete()` the rows (with console.warn on error). This SUPERSEDES the earlier "Device testing round 3" note that recorded the status='removed' approach as done — that approach was broken from the start.
 - [x] [Audited every remove path — all DELETE now] (manager) explore.tsx handleDisconnect; artists.tsx handleDisconnect + handleRemoveFromVenue; team.tsx handleRemoveDJ + handleRemoveFromVenue; lineup.tsx both handlers; artist-profile-view.tsx handleRemove + handleRemoveFromVenue. RLS confirmed OK: global_lineup + venue_assignments each have a "Managers can manage…" ALL policy (auth.uid() = manager_id) that covers DELETE (verified via pg_policies).
-- [ ] [Stale rows] Rows left active by the old failed status='removed' attempts won't self-clear — either disconnect each again (now that it deletes) or run the reset SQL: `DELETE FROM public.venue_assignments;` then `DELETE FROM public.global_lineup;`.
+- [x] [Stale rows] VERIFIED CLEAN June 15: both global_lineup (4 rows) and venue_assignments (4 rows) only contain `status='active'` rows for legitimate current connections. No stale `'removed'` rows.
 
 ## Page cleanup — TODO (flagged June 2026)
 
@@ -1007,8 +1007,8 @@ All items below COMMITTED + device-tested unless marked otherwise.
 
 ### Open follow-ups from this session (NOT done)
 - [ ] [Tidy dead code] hasCompletedBooking was threaded through ArtistProfile (types.ts) + both artist-profile-view fetch mappings + all 3 directory-cache seeders for an earlier in-profile badge that was then MOVED to the cards. That threading is now unused (cards read the raw row). Harmless, pnpm check clean (noUnusedLocals off), but remove for tidiness: the ArtistProfile field, the 2 fetch-mapping lines, the 3 seeder lines, and the artist own-profile profile.tsx updateArtistProfile line. (The artists column + trigger + the card reads STAY.)
-- [ ] [Verify on device] Complete a brand-new gig end-to-end and confirm the trigger flips has_completed_booking → the artist's card shows the checkmark after next list fetch.
-- [ ] [Stale connection rows] If any artists still show connected from the OLD failed status='removed' attempts, disconnect again (now deletes) or run: `DELETE FROM public.venue_assignments;` then `DELETE FROM public.global_lineup;`.
+- [x] [Verify on device] DONE June 15: badge end-to-end verified during the orphan-row investigation; trigger fires + card reads correctly.
+- [x] [Stale connection rows] VERIFIED CLEAN June 15 (same check as above).
 
 (See also "Page cleanup — TODO" just above: wipe unused hidden team.tsx/lineup.tsx after verifying they're unreachable; rename misleading page files e.g. explore.tsx → network.tsx.)
 
@@ -1039,9 +1039,9 @@ NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is th
 - [x] artist (tabs)/_layout.tsx BookingTabIcon removed (component was orphaned after deleting the bookings tab).
 
 ### Still-open verifications/items carried forward
-- [ ] Verify on device: complete a brand-new gig end-to-end → verified badge flips on after next list fetch.
-- [ ] Stale connection rows: reset SQL if any old failed-disconnect rows linger.
-- [ ] is_history_hidden: no column yet (eye-toggle is local-only) — add column if we want it to persist/propagate.
+- [x] Verify on device: badge end-to-end — DONE June 15.
+- [x] Stale connection rows — VERIFIED CLEAN June 15.
+- [x] is_history_hidden — DONE June 15 (column added, write + read + cache seeders).
 - [ ] Bigger workstreams (unchanged): push notifications (Android FCM, reminders, deep-linking), email infra, OAuth/password edge cases, Maps location picker, Google Calendar sync, App Store submission prep, Tap Payments.
 
 ## Session log — June 13 2026 evening (dead-code tidy + stale Stack.Screen fix)
