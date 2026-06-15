@@ -262,10 +262,13 @@ export default function ArtistProfileScreen() {
             <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyPlays}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>Monthly Plays</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable
+            style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => router.push('/(artist)/completed-gigs' as Href)}
+          >
             <Text style={[styles.statValue, { color: colors.primary }]}>{completedBookings.length}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>Completed Gigs</Text>
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.content}>

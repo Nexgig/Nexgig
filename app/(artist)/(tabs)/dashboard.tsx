@@ -167,61 +167,6 @@ export default function DJHomeScreen() {
     [bookings, slots, allVenues]
   );
 
-  // Group by month
-  const completedByMonth = useMemo(() => {
-    const map: Record<string, typeof completedBookings> = {};
-    completedBookings.forEach((b) => {
-      const dateStr = b.slot?.date;
-      if (!dateStr) return;
-      const d = new Date(dateStr);
-      const key = d.toLocaleString('default', { month: 'long', year: 'numeric' });
-      if (!map[key]) map[key] = [];
-      map[key].push(b);
-    });
-    return Object.entries(map).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
-  }, [completedBookings]);
-
-  // Venue filter list
-  const completedVenueList = useMemo(() => {
-    const seen = new Set<string>();
-    const list: { id: string; name: string }[] = [];
-    completedBookings.forEach((b) => {
-      const venueId = b.venue?.id ?? b.venueId;
-      const venueName = b.venue?.name ?? b.venueName;
-      if (venueId && venueName && !seen.has(venueId)) {
-        seen.add(venueId);
-        list.push({ id: venueId, name: venueName });
-      }
-    });
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [completedBookings]);
-
-  const [completedOpen, setCompletedOpen] = useState(false);
-  const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
-  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
-
-  const toggleMonth = useCallback((month: string) => {
-    setExpandedMonth((prev) => (prev === month ? null : month));
-  }, []);
-
-  const filteredCompletedBookings = useMemo(() => {
-    if (!selectedVenueId) return completedBookings;
-    return completedBookings.filter((b) => (b.venue?.id ?? b.venueId) === selectedVenueId);
-  }, [completedBookings, selectedVenueId]);
-
-  const filteredByMonth = useMemo(() => {
-    const map: Record<string, typeof filteredCompletedBookings> = {};
-    filteredCompletedBookings.forEach((b) => {
-      const dateStr = b.slot?.date;
-      if (!dateStr) return;
-      const d = new Date(dateStr);
-      const key = d.toLocaleString('default', { month: 'long', year: 'numeric' });
-      if (!map[key]) map[key] = [];
-      map[key].push(b);
-    });
-    return Object.entries(map).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
-  }, [filteredCompletedBookings]);
-
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -253,7 +198,7 @@ export default function DJHomeScreen() {
         <View style={styles.summaryRow}>
           <SummaryCard label="CONFIRMED" value={confirmedCount} color={colors.success} colors={colors} onPress={() => router.push('/(artist)/confirmed-gigs' as Href)} />
           <SummaryCard label="PENDING" value={pendingCount} color={colors.warning} colors={colors} onPress={() => router.push('/(artist)/pending-requests' as Href)} />
-          <SummaryCard label="COMPLETED" value={completedBookings.length} color={colors.primary} colors={colors} onPress={() => setCompletedOpen(true)} />
+          <SummaryCard label="COMPLETED" value={completedBookings.length} color={colors.primary} colors={colors} onPress={() => router.push('/(artist)/completed-gigs' as Href)} />
         </View>
 
         {/* Upcoming Gigs */}
@@ -292,109 +237,6 @@ export default function DJHomeScreen() {
           )}
         </View>
 
-        {/* Completed Gigs */}
-        <View style={styles.section}>
-          <Pressable
-            style={[styles.collapseHeader, { borderColor: colors.border }]}
-            onPress={() => setCompletedOpen((v) => !v)}
-          >
-            <View style={styles.collapseHeaderLeft}>
-              <Text style={[styles.collapseTitle, { color: colors.foreground }]}>History</Text>
-            </View>
-            <MaterialIcons
-              name={completedOpen ? 'expand-less' : 'expand-more'}
-              size={22}
-              color={colors.muted}
-            />
-          </Pressable>
-          {completedOpen && (
-            <>
-              {/* Venue filter chips */}
-              {completedVenueList.length > 1 && (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.venueChipRow}
-                  style={{ marginBottom: 12 }}
-                >
-                  <Pressable
-                    style={[styles.venueChip, { borderColor: colors.border }, !selectedVenueId && { backgroundColor: colors.foreground }]}
-                    onPress={() => setSelectedVenueId(null)}
-                  >
-                    <Text style={[styles.venueChipText, { color: !selectedVenueId ? colors.background : colors.foreground }]}>All</Text>
-                  </Pressable>
-                  {completedVenueList.map((v) => (
-                    <Pressable
-                      key={v.id}
-                      style={[styles.venueChip, { borderColor: colors.border }, selectedVenueId === v.id && { backgroundColor: colors.foreground }]}
-                      onPress={() => setSelectedVenueId(v.id)}
-                    >
-                      <Text style={[styles.venueChipText, { color: selectedVenueId === v.id ? colors.background : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              )}
-              {filteredByMonth.length === 0 ? (
-                <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <MaterialIcons name="check-circle" size={32} color={colors.muted} />
-                  <Text style={[styles.emptyText, { color: colors.muted }]}>No completed gigs yet</Text>
-                </View>
-              ) : (
-                <View style={[styles.monthTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  {filteredByMonth.map(([month, monthBookings], idx) => {
-                    const isExpanded = expandedMonth === month;
-                    return (
-                      <View key={month}>
-                        <Pressable
-                          style={({ pressed }) => [
-                            styles.monthRow,
-                            { borderTopColor: colors.border, opacity: pressed ? 0.75 : 1 },
-                            idx === 0 && { borderTopWidth: 0 },
-                          ]}
-                          onPress={() => toggleMonth(month)}
-                        >
-                          <MaterialIcons name="calendar-today" size={14} color={colors.muted} style={{ marginRight: 8 }} />
-                          <Text style={[styles.monthLabel, { color: colors.foreground }]}>{month}</Text>
-                          <View style={[styles.monthBadge, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30', marginRight: 8 }]}>
-                            <Text style={[styles.monthBadgeText, { color: colors.primary }]}>{monthBookings.length}</Text>
-                          </View>
-                          <MaterialIcons
-                            name={isExpanded ? 'expand-less' : 'expand-more'}
-                            size={18}
-                            color={colors.muted}
-                          />
-                        </Pressable>
-                        {isExpanded && monthBookings.map((booking) => (
-                          <Pressable
-                            key={booking.id}
-                            style={({ pressed }) => [styles.bookingSubRow, { backgroundColor: colors.background, borderTopColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
-                            onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
-                          >
-                            <View style={styles.bookingSubLeft}>
-                              <View style={[styles.bookingSubAvatar, { backgroundColor: colors.primary + '20' }]}>
-                                <MaterialIcons name="music-note" size={16} color={colors.primary} />
-                              </View>
-                              <View style={styles.bookingSubInfo}>
-                                <Text style={[styles.bookingSubName, { color: colors.foreground }]} numberOfLines={1}>
-                                  {booking.venue?.name ?? booking.venueName ?? 'Unknown Venue'}
-                                </Text>
-                                <Text style={[styles.bookingSubDetail, { color: colors.muted }]} numberOfLines={1}>
-                                  {booking.slot?.date ? formatDate(booking.slot.date) : ''}
-                                  {booking.slot?.startTime ? ` · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime ?? '')}` : ''}
-                                </Text>
-                              </View>
-                            </View>
-                            <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
-                          </Pressable>
-                        ))}
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </>
-          )}
-        </View>
       </ScrollView>
       {/* Invoice FAB */}
       <Pressable
