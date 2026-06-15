@@ -437,14 +437,6 @@ export default function ArtistProfileViewScreen() {
 
         {contentReady ? (
         <>
-        {/* Years Experience card — only if set */}
-        {dj.yearsOfExperience !== undefined && (
-          <View style={[styles.yearsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{dj.yearsOfExperience}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Years Experience</Text>
-          </View>
-        )}
-
         {/* 2. Stats: Monthly Plays + Completed Gigs */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -749,7 +741,6 @@ const styles = StyleSheet.create({
   djGenre: { fontSize: 15 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },
-  yearsCard: { marginHorizontal: 20, marginBottom: 12, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 28, fontWeight: '800' },

@@ -138,9 +138,8 @@ export default function ArtistProfileViewScreen() {
   const nationalityCountry = profile?.nationality ? COUNTRIES.find((c) => c.name === profile.nationality) : undefined;
   const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
   const instruments: string[] = profile?.instruments ?? [];
-  // bio + years live on the artists row (profile), not the users row — fall back to it.
+  // bio lives on the artists row (profile), not the users row — fall back to it.
   const bio = dj.bio ?? profile?.bio;
-  const yearsOfExperience = dj.yearsOfExperience ?? profile?.yearsOfExperience;
   const mediaLinks = {
     instagram: profile?.instagramUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.instagram,
     soundcloud: profile?.soundcloudUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.soundcloud,
@@ -183,14 +182,6 @@ export default function ArtistProfileViewScreen() {
             </View>
           ) : null}
         </View>
-
-        {/* Years Experience card — only if set */}
-        {yearsOfExperience !== undefined && (
-          <View style={[styles.yearsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{yearsOfExperience}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Years Experience</Text>
-          </View>
-        )}
 
         {/* 2. Stats: Monthly Plays + Completed Gigs */}
         <View style={styles.statsRow}>
@@ -362,7 +353,6 @@ const styles = StyleSheet.create({
   locationText: { fontSize: 13 },
   nationalityFlag: { fontSize: 22, marginTop: 4 },
   memberSince: { fontSize: 12, marginTop: 4 },
-  yearsCard: { marginHorizontal: 20, marginBottom: 12, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statsRow: { flexDirection: 'row', gap: 12, marginHorizontal: 20, marginBottom: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 28, fontWeight: '800' },
