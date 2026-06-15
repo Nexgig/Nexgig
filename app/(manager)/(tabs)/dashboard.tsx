@@ -250,7 +250,6 @@ export default function ManagerDashboard() {
   const fabActions = [
     { icon: 'add-business' as const, label: 'New Venue', onPress: () => { setFabSheetOpen(false); router.push('/(manager)/create-venue' as Href); } },
     { icon: 'people' as const, label: 'Find Artists', onPress: () => { setFabSheetOpen(false); router.push('/(manager)/(tabs)/network?tab=artists' as Href); } },
-    { icon: 'event' as const, label: 'Add Set', onPress: () => { setFabSheetOpen(false); router.push('/(manager)/(tabs)/calendar' as Href); } },
   ];
 
   return (

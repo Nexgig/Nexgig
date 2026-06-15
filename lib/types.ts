@@ -18,6 +18,7 @@ export interface User {
   bio?: string;
   location?: string;
   yearsOfExperience?: number;
+  companyName?: string; // Manager's company / employer name (replaces years-of-experience for managers)
   isPhoneVerified: boolean;
   isEmailVerified: boolean;
   createdAt: string;

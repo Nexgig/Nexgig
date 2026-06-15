@@ -45,7 +45,7 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         // sign-out → sign-in (mirrors the email/password sign-in path).
         bio: managerProfile.bio ?? undefined,
         location: managerProfile.based_in ?? undefined,
-        yearsOfExperience: managerProfile.years_of_experience ?? undefined,
+        companyName: managerProfile.company_name ?? undefined,
         profilePhotoUrl: managerProfile.profile_photo_url ?? undefined,
         isPhoneVerified: false,
         isEmailVerified: true,

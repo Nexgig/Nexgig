@@ -10,7 +10,6 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -1629,7 +1628,18 @@ if (newBookingId) {
           )}
 
           {venues.length === 0 ? (
-            <EmptyState icon="business" title="No venues" subtitle="Create a venue first to manage its calendar." />
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48 }}>
+              <MaterialIcons name="business" size={48} color={colors.muted} />
+              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.foreground, marginTop: 16, textAlign: 'center' }}>No venues</Text>
+              <Text style={{ fontSize: 14, color: colors.muted, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>Create a venue first to manage its calendar.</Text>
+              <Pressable
+                onPress={() => router.push('/(manager)/create-venue' as Href)}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, marginTop: 24, opacity: pressed ? 0.85 : 1 })}
+              >
+                <MaterialIcons name="add" size={20} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Create Venue</Text>
+              </Pressable>
+            </View>
           ) : calendarMode === 'today' ? (
             /* ═══════════════════ DAY VIEW ═══════════════════ */
             (() => {

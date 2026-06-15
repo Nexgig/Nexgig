@@ -41,8 +41,7 @@ export default function ManagerRegisterScreen() {
     password: '',
     phone: '',
     basedIn: '',
-    yearsOfExperience: '',
-    bio: '',
+    companyName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -158,9 +157,8 @@ export default function ManagerRegisterScreen() {
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
       full_name: form.fullName.trim(),
-      bio: form.bio || null,
       based_in: form.basedIn || null,
-      years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
+      company_name: form.companyName.trim() || null,
     }, { onConflict: 'id' });
 
     setIsLoading(false);
@@ -176,9 +174,8 @@ export default function ManagerRegisterScreen() {
       phone: form.phone.trim(),
       accountType: 'manager' as const,
       fullName: form.fullName.trim(),
-      bio: form.bio,
       location: undefined,
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
+      companyName: form.companyName.trim() || undefined,
       isPhoneVerified: false,
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
@@ -303,27 +300,12 @@ export default function ManagerRegisterScreen() {
                 />
               </View>
               <InputField
-                label="Years of Experience (optional)"
-                value={form.yearsOfExperience}
-                onChangeText={(v) => update('yearsOfExperience', v)}
-                placeholder="8"
-                keyboardType="number-pad"
+                label="Company Name"
+                value={form.companyName}
+                onChangeText={(v) => update('companyName', v)}
+                placeholder="The company you work for"
                 colors={colors}
               />
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Bio (optional)</Text>
-                <TextInput
-                  style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="Tell DJs about yourself and your venues..."
-                  placeholderTextColor={colors.muted}
-                  value={form.bio}
-                  onChangeText={(v) => update('bio', v)}
-                  multiline
-                  numberOfLines={4}
-                  maxLength={500}
-                />
-                <Text style={[styles.charCount, { color: colors.muted }]}>{form.bio.length}/500</Text>
-              </View>
             </View>
           )}
 
@@ -378,8 +360,6 @@ const styles = StyleSheet.create({
   passwordRow: { flexDirection: 'row', gap: 8 },
   passwordInput: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
   eyeBtn: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
-  textarea: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 100, textAlignVertical: 'top' },
-  charCount: { fontSize: 12, textAlign: 'right' },
   nextBtn: { backgroundColor: '#2E75B6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

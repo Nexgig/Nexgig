@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,36 +23,32 @@ export default function EditProfileScreen() {
     fullName: currentUser?.fullName ?? '',
     phone: currentUser?.phone ?? '',
     basedIn: currentUser?.location ?? '',
-    yearsOfExperience: currentUser?.yearsOfExperience?.toString() ?? '',
-    bio: currentUser?.bio ?? '',
+    companyName: currentUser?.companyName ?? '',
   });
 
   const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
-  const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Track originals for unsaved-change detection
-  const originalForm = useRef({
+  // Track originals for unsaved-change detection. These are STATE (not refs) so that
+  // resetting them after a successful save re-runs the hasChanges memo and clears the guard.
+  const [originalForm, setOriginalForm] = useState({
     fullName: currentUser?.fullName ?? '',
     phone: currentUser?.phone ?? '',
     basedIn: currentUser?.location ?? '',
-    yearsOfExperience: currentUser?.yearsOfExperience?.toString() ?? '',
-    bio: currentUser?.bio ?? '',
+    companyName: currentUser?.companyName ?? '',
   });
-  const originalPhoto = useRef(photoUri);
+  const [originalPhoto, setOriginalPhoto] = useState(photoUri);
 
   const hasChanges = useMemo(() => {
-    if (saved) return false;
-    const f = originalForm.current;
+    const f = originalForm;
     return (
       form.fullName !== f.fullName ||
       form.phone !== f.phone ||
       form.basedIn !== f.basedIn ||
-      form.yearsOfExperience !== f.yearsOfExperience ||
-      form.bio !== f.bio ||
-      photoUri !== originalPhoto.current
+      form.companyName !== f.companyName ||
+      photoUri !== originalPhoto
     );
-  }, [form, photoUri, saved]);
+  }, [form, photoUri, originalForm, originalPhoto]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -231,20 +227,50 @@ export default function EditProfileScreen() {
       fullName: form.fullName.trim(),
       phone: form.phone.trim(),
       location: form.basedIn || undefined,
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience, 10) : undefined,
-      bio: form.bio.trim() || undefined,
+      companyName: form.companyName.trim() || undefined,
       profilePhotoUrl: photoUrl,
     });
 
-    // Persist the photo URL to Supabase so artists and other users can see it.
+    // Persist every editable manager field to Supabase. The managers row is the source
+    // of truth that sign-in re-hydrates from, so all fields are written there; the photo
+    // is also written to the users row so any surface reading from users stays in sync.
     if (currentUser) {
-      await supabase.from('users').update({ profile_photo_url: photoUrl ?? null }).eq('id', currentUser.id);
+      const { error: usersErr } = await supabase
+        .from('users')
+        .update({ profile_photo_url: photoUrl ?? null })
+        .eq('id', currentUser.id);
+
+      const { data: managerRows, error: managersErr } = await supabase
+        .from('managers')
+        .update({
+          full_name: form.fullName.trim(),
+          phone: form.phone.trim(),
+          based_in: form.basedIn || null,
+          company_name: form.companyName.trim() || null,
+          profile_photo_url: photoUrl ?? null,
+        })
+        .eq('id', currentUser.id)
+        .select();
+
+      const writeErr = managersErr ?? usersErr;
+      if (writeErr) {
+        setSaving(false);
+        Alert.alert('Save failed', writeErr.message);
+        return;
+      }
+      // PostgREST does NOT error when RLS blocks an UPDATE — it just updates 0 rows.
+      // Catch that here so a missing UPDATE policy can't fail silently.
+      if (!managerRows || managerRows.length === 0) {
+        setSaving(false);
+        Alert.alert('Save failed', 'Your changes were not written to the database (0 rows updated). This is almost always a missing row-level-security UPDATE policy on the managers table.');
+        return;
+      }
     }
 
-    // Reset the change baseline so we can stay on the page without the
-    // unsaved-changes guard firing, and reflect the uploaded photo URL.
-    originalForm.current = { ...form };
-    originalPhoto.current = photoUrl ?? null;
+    // Reset the change baseline (as state, so the hasChanges memo recomputes to false and
+    // the back-guard won't fire), and reflect the uploaded photo URL.
+    setOriginalForm({ ...form });
+    setOriginalPhoto(photoUrl ?? null);
     setPhotoUri(photoUrl ?? null);
     setSaving(false);
   };
@@ -351,37 +377,19 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          {/* Years of Experience */}
+          {/* Company Name */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Years of Experience</Text>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Company Name</Text>
             <TextInput
               style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              value={form.yearsOfExperience}
-              onChangeText={(v) => update('yearsOfExperience', v.replace(/[^0-9]/g, ''))}
-              placeholder="e.g. 5"
+              value={form.companyName}
+              onChangeText={(v) => update('companyName', v)}
+              placeholder="The company you work for"
               placeholderTextColor={colors.muted}
-              keyboardType="number-pad"
               returnKeyType="done"
             />
           </View>
 
-          {/* Bio */}
-          <View style={styles.fieldGroup}>
-            <View style={styles.fieldLabelRow}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Bio</Text>
-              <Text style={[styles.charCount, { color: colors.muted }]}>{form.bio.length}/500</Text>
-            </View>
-            <TextInput
-              style={[styles.bioInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              value={form.bio}
-              onChangeText={(v) => { if (v.length <= 500) update('bio', v); }}
-              placeholder="Tell artists and venues about yourself..."
-              placeholderTextColor={colors.muted}
-              multiline
-              numberOfLines={5}
-              textAlignVertical="top"
-            />
-          </View>
 
         </View>
       </ScrollView>
@@ -609,22 +617,12 @@ const styles = StyleSheet.create({
   form: { paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
   fieldGroup: { gap: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  fieldLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  charCount: { fontSize: 12 },
   fieldInput: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-  },
-  bioInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    minHeight: 120,
   },
   // Secure field row
   secureField: {

@@ -126,14 +126,6 @@ export default function ManagerProfileScreen() {
             </Pressable>
           </View>
 
-          {/* Bio */}
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.muted }]}>Bio</Text>
-            <Text style={[styles.cardText, { color: currentUser?.bio ? colors.foreground : colors.muted }]}>
-              {currentUser?.bio ?? 'No bio yet. Tap the edit button above to add one.'}
-            </Text>
-          </View>
-
           {/* Invoices */}
           <InvoicesSection colors={colors} currentUserId={currentUser?.id ?? ''} router={router} />
 
@@ -401,7 +393,6 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   card: { borderRadius: 14, borderWidth: 1, padding: 12, gap: 10 },
   cardLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  cardText: { fontSize: 14, lineHeight: 21 },
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   accountText: { fontSize: 14 },
   signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14 },

@@ -60,7 +60,7 @@ export default function SignInScreen() {
             // sign-out → sign-in (previously only full_name + phone were set).
             bio: managerProfile.bio ?? undefined,
             location: managerProfile.based_in ?? undefined,
-            yearsOfExperience: managerProfile.years_of_experience ?? undefined,
+            companyName: managerProfile.company_name ?? undefined,
             profilePhotoUrl: managerProfile.profile_photo_url ?? undefined,
             isPhoneVerified: false,
             isEmailVerified: true,
