@@ -1099,5 +1099,5 @@ FK cascade worked (bookings/lineup/assignments already pointed at the correct UU
 - [ ] Reproduce: try signing up a new artist while a manager session is cached in the app and see if it recurs. (Skipped tonight per user's call to wrap.)
 
 ### Items NOT done from tonight's "finish everything except big workstreams" plan
-- [ ] **(e) Stale connection rows check** — simple `SELECT count(*) FROM venue_assignments; SELECT count(*) FROM global_lineup;` plus a wipe SQL if anything is stuck from the old `status='removed'` failed disconnects. Skipped to wrap cleanly tonight. 2-min item next time.
-- [ ] **(f) Verify badge end-to-end** — confirmed manually tonight while investigating the orphan-row bug above; the badge logic + the trigger both work. Calling this verified.
+- [x] **(e) Stale connection rows check** — VERIFIED CLEAN. Both global_lineup (4 rows) and venue_assignments (4 rows) contain only `status='active'` rows for legitimate current connections (manager Eie Turk → 4 artists: Elie Turk, Bsnsna, Salt Shaker, Tuurk; all assigned to Feb30). No stale `'removed'` rows from the old broken-disconnect bug. The disconnect fixes earlier this week stopped the rot at the source; no wipe needed.
+- [x] **(f) Verify badge end-to-end** — confirmed manually tonight while investigating the orphan-row bug above; the badge logic + the trigger both work. Calling this verified.
