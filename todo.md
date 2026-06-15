@@ -1050,5 +1050,54 @@ NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is th
 - [x] [Stale Stack.Screen] Removed `<Stack.Screen name="requests" />` from (artist)/_layout.tsx that was left over from deleting (artist)/requests.tsx earlier today (commit 037fb26). Cleared the "No route named 'requests' exists" runtime warning.
 
 ### Pre-existing warnings surfaced during today's reload (NOT from today's work)
-- [ ] [Deprecation] React Native's bundled SafeAreaView is deprecated; migrate every import to `react-native-safe-area-context`. Low priority — still works today, future RN release will remove it. Grep for `from 'react-native'` lines that include `SafeAreaView` and switch the import source.
-- [ ] [Extraneous route] Runtime warns `Layout children: Too many screens defined. Route "oauth/callback" is extraneous.` — there's a Stack.Screen entry for oauth/callback in some layout but no matching route file (or vice versa). Audit during the auth/sign-in work: either add the missing route file under app/ or remove the orphan Stack.Screen entry. lib/_core/ still holds bits used by oauth/callback, so investigate together with the `lib/_core/` cleanup item.
+- [x] [Extraneous route] DONE: removed orphan `<Stack.Screen name="oauth/callback" />` from app/_layout.tsx (no matching route file exists; lib/_core/ helpers were not touched). Cleared the runtime warning.
+- [x] [SafeAreaView] Investigated: codebase already imports from `react-native-safe-area-context` (only 2 places, both correct). The deprecation warning is coming from a transitive dependency, so the LogBox.ignoreLogs silencer in app/_layout.tsx is the correct workaround. Marked DONE — leave the silencer in place.
+
+## Session log — June 15 2026 (push-through tidy + is_history_hidden persistence + critical signup-flow finding)
+
+### Code/SQL shipped today (committed)
+- [x] Removed orphan `oauth/callback` Stack.Screen registration (a, above).
+- [x] Added Rules helper copy on create-venue + edit-venue ("Rules are sent to artists when they join your lineup or accept a booking at this venue.").
+- [x] **is_history_hidden now PERSISTS**: SQL added column to artists (boolean NOT NULL DEFAULT false), profile.tsx toggle writes to Supabase alongside local store, profile.tsx own-row fetch now reads it back, and all 3 directory-cache seeders (manager (tabs)/network.tsx, artist (tabs)/network.tsx, manager _layout.tsx) now read `a.is_history_hidden ?? false` instead of hardcoding false. Killed the "history card flashes for 1ms on entry" first-paint bug on the manager + other-artist views of an artist who hid their history.
+- [x] Confirmed cleanup of dead code tidy from earlier today survived: BookingTabIcon removed, statusColors / statusBar / statusDot / statusText styles removed from both booking-detail files, stale `<Stack.Screen name="requests" />` cleaned from (artist)/_layout.tsx.
+- [x] Caught + fixed regression from the dead-code tidy: I had removed `hasCompletedBooking` from ArtistProfile in types.ts, breaking the manager Network card's badge read. Restored the field; restored the manager Network seeder line; removed two stray `hasCompletedBooking: false` lines from Venue object constructions (manager _layout.tsx + create-venue.tsx) that were never legitimate on the Venue type — those were the source of the TS errors.
+
+### CRITICAL finding — signup-flow bug, NOT fixed (logged for auth pass)
+
+**Symptom user reported:** New artist account `elieturk0@gmail.com` had the verified badge in the Network list but the History card on their own Profile said "No completed gigs yet," while the booking was visible on the manager's calendar.
+
+**Diagnosis (SQL forensic):**
+- `public.users.id = 8361a0f9-b94d-4e9d-b320-ae5b9e080e86` (account_type='artist', email='elieturk0@gmail.com') — the actual auth user.
+- `public.bookings.artist_id = 8361a0f9-…` (correct — booking points at the auth user).
+- `public.artists` had NO row at id=8361a0f9-… — the artist's profile row was MISSING at the correct UUID.
+- Instead, the artist's profile data (full_name="Elie Turk", email="elieturk0@gmail.com", primary_genre="Amapiano", username="tuuuuurk", instagram_url, has_completed_booking=true) was sitting on a row at id=084fc235-8732-4b0f-b340-b7bd7fe40712 — which is the MANAGER "Eie Turk" / elieturk@live.com's users.id.
+- Net effect: artist logs in as 8361a0f9-… → app looks for `artists WHERE id = 8361a0f9-…` → no row → empty profile/history. Badge looked correct because the trigger was firing on the orphan row at 084fc235-….
+
+**One-row data repair (RUN tonight, working):**
+```sql
+BEGIN;
+UPDATE public.artists
+  SET id = '8361a0f9-b94d-4e9d-b320-ae5b9e080e86', updated_at = NOW()
+  WHERE id = '084fc235-8732-4b0f-b340-b7bd7fe40712';
+COMMIT;
+```
+FK cascade worked (bookings/lineup/assignments already pointed at the correct UUID anyway). Device-verified: artist sign-out/in shows full profile + 1 Completed Gig + history card. Manager calendar + Network card badge unchanged.
+
+**Earlier attempt that failed (kept for reference):** INSERT-into-target-then-DELETE-orphan tripped on `artists_username_key` unique constraint because Postgres validated the new row's username before the DELETE removed the colliding one. The single-row UPDATE worked because the username never changed.
+
+**Why this is critical for the auth workstream:**
+- The signup flow somewhere wrote an `artists` row with `id = <some OTHER user's auth uuid>` instead of `id = <the signing-up user's auth uuid>`. That's a violation of the 1-to-1 `users.id <-> artists.id` contract.
+- Most plausible cause (educated guess, NOT verified): a manager session was still active when the artist signup ran, and the artist-profile INSERT used the cached/wrong session's uid. This squares with the symptom that the orphan row sat at the manager's UUID specifically. Could also be an OAuth-flow path that pulls the wrong uid.
+- IMPACT: every future artist signup is at risk of the same bug, in conditions we haven't isolated. The repair tonight only fixes THIS account; it does not prevent recurrence.
+- USER-FACING: an affected artist sees the badge from the orphan but an empty profile — confusing, and they may abandon onboarding. Manager-side data looks fine.
+
+**Investigation checklist for the auth pass:**
+- [ ] Audit every place we INSERT into `public.artists`. Confirm the id ALWAYS comes from the freshly-fetched supabase auth user (e.g. `(await supabase.auth.getUser()).data.user!.id`), not from any cached/store value that could be stale. Start with artist-setup.tsx and any OAuth-completion path.
+- [ ] Add a defensive INSERT guard: only insert when `auth.uid()` matches the artists.id being inserted (the "Artists can insert own profile" RLS policy already does this with `WITH CHECK (auth.uid() = id)` — so the bug actually means the wrong uid was somehow auth.uid() at insert time, OR the insert ran from a context that bypassed RLS, like a server-side helper).
+- [ ] After fixing, write a one-off audit query to find any OTHER orphaned/mismatched artists rows: `SELECT a.id, u.id AS auth_id, a.email FROM public.artists a LEFT JOIN public.users u ON u.id = a.id WHERE u.id IS NULL OR u.account_type <> 'artist';` Repair any matches the same way.
+- [ ] Consider adding a Postgres CHECK / trigger / RLS rule that physically prevents an `artists` row from being created at a `users.id` whose `account_type <> 'artist'`. That would have caught this at insert time.
+- [ ] Reproduce: try signing up a new artist while a manager session is cached in the app and see if it recurs. (Skipped tonight per user's call to wrap.)
+
+### Items NOT done from tonight's "finish everything except big workstreams" plan
+- [ ] **(e) Stale connection rows check** — simple `SELECT count(*) FROM venue_assignments; SELECT count(*) FROM global_lineup;` plus a wipe SQL if anything is stuck from the old `status='removed'` failed disconnects. Skipped to wrap cleanly tonight. 2-min item next time.
+- [ ] **(f) Verify badge end-to-end** — confirmed manually tonight while investigating the orphan-row bug above; the badge logic + the trigger both work. Calling this verified.
