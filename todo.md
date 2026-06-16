@@ -14,7 +14,8 @@
 
 **VERIFY ON DEVICE (no code — just testing)**
 - KeyboardAvoidingView on Add/Block slot modal — reworked many times historically; just confirm lower fields aren't covered by the keyboard. (L626)
-- Full signup matrix: new artist signup shows everything immediately; appears in others' Network; survives sign-out/in on email + Apple + Google. (L981)
+- Full signup matrix: new artist signup shows everything immediately; appears in others' Network; survives sign-out/in on email + Apple + Google. (L981) Also re-test MANAGER signup after the June 15 changes — Company Name (not bio/years) saves + shows, and persists across sign-out/in.
+- Manager email + phone DEDICATED change flows (the verification + "Updated"-alert ones in manager edit-profile) — confirm they actually persist to Supabase. The main profile save now persists everything, but these two separate flows were not audited.
 
 **OPTIONAL polish (decide if worth it)**
 - Hide "Pending verification" pill from non-owners — one-line conditional. (L929)
@@ -28,6 +29,7 @@
 - Maps: location picker at venue creation + "Open in Google Maps" on booking-detail. (L923)
 - Calendar: artist Google Calendar sync (scope TBD). (L946)
 - App Store: reviewer demo accounts + notes; privacy/Data Safety forms. (L830-831)
+- Dep alignment before the production release build: run `npx expo install @react-navigation/bottom-tabs @react-navigation/native` to pin them to SDK 54's expected versions — currently ahead (7.8.12 / 7.1.25 vs 7.4.0 / 7.1.8). Harmless in dev (flagged by `expo install --check`), but worth pinning for the App Store build + a quick navigation smoke-test after. Not urgent.
 - Payments: Tap Payments integration.
 - Venue verification gate v2 (only if show-only proves too soft) + internal admin screen. (L928)
 
@@ -1147,3 +1149,17 @@ Chose MINIMUM scope: fix only the 2 real rules-of-hooks bugs, log the rest.
 - [ ] [Lint — cosmetic] ~7 "imported multiple times" (expo-router) + "import/first" warnings. Safe to merge/reorder.
 - [ ] [Lint — harmless] `MODULE_TYPELESS_PACKAGE_JSON` warning on eslint.config.js — could add `"type":"module"` to package.json to silence; not urgent.
 - Note: only 5 of the 161 warnings are auto-fixable via `pnpm lint --fix`.
+
+## Session log — June 15 2026 (manager profile overhaul + calendar/dashboard tweaks)
+
+All device-tested and working. Required SQL (ALL RUN): `ALTER TABLE public.managers ADD COLUMN IF NOT EXISTS company_name text;` + `ALTER TABLE public.managers ADD COLUMN IF NOT EXISTS profile_photo_url text;` + a new RLS UPDATE policy on managers (`create policy "Managers can update own profile" on public.managers for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);`).
+
+- [x] [Manager bio removed ENTIRELY] profile display card + cardText style ((manager)/(tabs)/profile.tsx); field + form state + originalForm + hasChanges + save mapping + bio-only styles ((manager)/edit-profile.tsx); field + form state + managers-table write + setCurrentUser write + textarea/charCount styles ((auth)/manager-register.tsx). Artist bio UNTOUCHED. The `bio` field stays on the User type (artists use it); managers.bio column left in place but unused (harmless).
+- [x] [Manager Company Name replaces Years of Experience] Added `companyName?: string` to the User type (kept yearsOfExperience — artists hydrate it). Replaced the years field with a "Company Name" text field in manager-register + manager edit-profile. Writes `company_name` to the managers row; hydrated on sign-in + OAuth. SQL added managers.company_name. Old managers.years_of_experience column left unused.
+- [x] [Manager profile FULLY persists to Supabase] manager edit-profile save now writes ALL editable fields to the managers row (full_name, phone, based_in, company_name, profile_photo_url) — previously it only wrote the photo to the users table, so name/phone/based-in/company edits silently reverted on re-sign-in (sign-in re-hydrates from managers). Photo also still written to users. SQL added managers.profile_photo_url (the column the code already READ on sign-in but that never existed — so the manager photo never actually persisted before; now it does).
+- [x] [Manager edit-profile RLS — root cause of "based_in not changing"] Added the missing UPDATE policy on the managers table. Before today, edit-profile never UPDATE-d managers (only INSERT via registration), so there was no UPDATE policy — PostgREST silently updated 0 rows with NO error. (users photo write kept working because users has an UPDATE policy.)
+- [x] [Save diagnostics] manager edit-profile save now surfaces failures instead of failing silently: captures `{ error }` from both updates AND checks the returned row count via `.select()` (PostgREST does NOT error on an RLS-blocked UPDATE — it returns 0 rows). Shows a "Save failed" alert with the reason. This is how we found BOTH the missing RLS policy and the missing profile_photo_url column.
+- [x] [Unsaved-changes guard bug FIXED] After Save succeeded, tapping back still prompted "save your changes?". Cause: `hasChanges` is a useMemo, but the baseline (originalForm/originalPhoto) was stored in REFS — updating a ref after save doesn't re-run the memo, and on a text-only edit nothing else in the dep array changed, so hasChanges stayed stuck true. Converted the baseline from refs to STATE so save resets it and the memo recomputes to false. Removed the dead `saved` state (never set) + the now-unused useRef import.
+- [x] [Calendar] Added a centered "+ Create Venue" button to the manager calendar empty state, shown ONLY when the manager has 0 venues (existing `venues.length === 0` branch). Replaced the bare EmptyState with an inline icon+title+subtitle+Pressable → router.push('/(manager)/create-venue'); removed the now-unused EmptyState import.
+- [x] [Dashboard] Removed the "Add Set" option from the manager dashboard + FAB (now only New Venue + Find Artists).
+- [x] [Artist edit-profile] Verified + fixed June 15. The unsaved-changes-after-save bug is NOT present on the artist side (it uses a `baselineVersion` counter in the hasChanges deps that the manager screen lacked — setBaselineVersion on save forces the memo to recompute). BUT artist profile edits other than the photo were NOT persisting to Supabase (updateProfile + updateArtistProfile are local-only; the save only wrote profile_photo_url to users + artists). FIXED: the save now writes ALL editable fields to the artists row (full_name, full_legal_name, bio, based_in, nationality, gender, primary_genre, secondary_genres, instruments, min_rate, years_of_experience, the 4 social URLs, profile_photo_url) + the same error/0-row diagnostics as the manager. No SQL needed — artists already has an UPDATE policy + all these columns (mirrored from the artist-setup signup insert). NOTE: phone is intentionally NOT written to artists (no phone column there; artist phone uses the dedicated change flow / users table).
