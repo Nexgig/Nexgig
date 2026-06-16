@@ -7,7 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
-import type { GenreType, InstrumentType, Gender } from '@/lib/types';
+import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
 import { PhoneInput } from '@/components/phone-input';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -59,8 +59,6 @@ export default function DJSetupScreen() {
     bio: '',
     basedIn: '',
     nationality: '',
-    yearsOfExperience: '',
-    gender: '' as Gender | '',
     primaryGenre: '' as GenreType | '',
     secondaryGenres: [] as GenreType[],
     instruments: [] as InstrumentType[],
@@ -207,12 +205,10 @@ export default function DJSetupScreen() {
   bio: form.bio || null,
   based_in: form.basedIn || null,
   nationality: form.nationality || null,
-  gender: form.gender || null,
   primary_genre: form.primaryGenre || null,
   secondary_genres: form.secondaryGenres,
   instruments: form.instruments,
   min_rate: form.minRate ? parseFloat(form.minRate) : null,
-  years_of_experience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : null,
   instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
   soundcloud_url: form.soundcloud || null,
   mixcloud_url: form.mixcloud || null,
@@ -237,14 +233,13 @@ export default function DJSetupScreen() {
       username: form.username.trim().toLowerCase(),
       bio: form.bio,
       location: undefined,
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
       isPhoneVerified: false,
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
 
-    // Populate the artist PROFILE store too (genres, instruments, gender, rate,
+    // Populate the artist PROFILE store too (genres, instruments, rate,
     // nationality, social links). These live in useLineupStore.artistProfiles,
     // NOT on currentUser — the profile/edit-profile screens read them from there.
     // Without this the profile tab is blank right after signup until a re-sign-in.
@@ -253,7 +248,6 @@ export default function DJSetupScreen() {
       primaryGenre: (form.primaryGenre || undefined) as GenreType,
       secondaryGenres: form.secondaryGenres,
       instruments: form.instruments,
-      gender: form.gender || undefined,
       minRate: form.minRate ? parseFloat(form.minRate) : undefined,
       basedIn: form.basedIn || undefined,
       nationality: form.nationality || undefined,
@@ -350,23 +344,6 @@ export default function DJSetupScreen() {
                   placeholder="Tell venues about your style..." placeholderTextColor={colors.muted}
                   value={form.bio} onChangeText={(v) => update('bio', v)} multiline numberOfLines={4} maxLength={500} />
                 <Text style={[styles.charCount, { color: colors.muted }]}>{form.bio.length}/500</Text>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Gender</Text>
-                <View style={styles.chipRow}>
-                  {(['Male', 'Female', 'Other'] as Gender[]).map((g) => (
-                    <Pressable key={g} style={[styles.chip, { borderColor: form.gender === g ? colors.primary : colors.border, backgroundColor: form.gender === g ? colors.primary : colors.surface }]} onPress={() => update('gender', g)}>
-                      <Text style={[styles.chipText, { color: form.gender === g ? '#fff' : colors.foreground }]}>{g}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Years of Experience (optional)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="8" placeholderTextColor={colors.muted}
-                  value={form.yearsOfExperience} onChangeText={(v) => update('yearsOfExperience', v.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad" returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Based In</Text>

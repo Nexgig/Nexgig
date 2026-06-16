@@ -9,7 +9,7 @@ import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { uploadImageAsync } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
-import type { GenreType, InstrumentType, Gender } from '@/lib/types';
+import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
@@ -40,7 +40,6 @@ export default function DJEditProfileScreen() {
     phone: currentUser?.phone ?? '',
     basedIn: djProfile?.basedIn ?? '',
     nationality: djProfile?.nationality ?? '',
-    yearsOfExperience: currentUser?.yearsOfExperience?.toString() ?? '',
     bio: currentUser?.bio ?? '',
     instagramUrl: djProfile?.instagramUrl ?? '',
     soundcloudUrl: djProfile?.soundcloudUrl ?? '',
@@ -58,7 +57,6 @@ export default function DJEditProfileScreen() {
   const [instruments, setInstruments] = useState<InstrumentType[]>(
     (djProfile?.instruments as InstrumentType[]) ?? []
   );
-  const [gender, setGender] = useState<Gender | ''>(djProfile?.gender ?? '');
   const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
   // Bumped after each successful save so the unsaved-changes memo recomputes
   // against the freshly-reset baseline (mutating the refs alone won't do that).
@@ -72,7 +70,6 @@ export default function DJEditProfileScreen() {
     phone: currentUser?.phone ?? '',
     basedIn: djProfile?.basedIn ?? '',
     nationality: djProfile?.nationality ?? '',
-    yearsOfExperience: currentUser?.yearsOfExperience?.toString() ?? '',
     bio: currentUser?.bio ?? '',
     instagramUrl: djProfile?.instagramUrl ?? '',
     soundcloudUrl: djProfile?.soundcloudUrl ?? '',
@@ -83,7 +80,6 @@ export default function DJEditProfileScreen() {
   const originalGenre = useRef(primaryGenre);
   const originalSecondary = useRef(secondaryGenres);
   const originalInstruments = useRef(instruments);
-  const originalGender = useRef(gender);
   const originalPhoto = useRef(photoUri);
 
   const hasChanges = useMemo(() => {
@@ -94,7 +90,6 @@ export default function DJEditProfileScreen() {
       form.phone !== f.phone ||
       form.basedIn !== f.basedIn ||
       form.nationality !== f.nationality ||
-      form.yearsOfExperience !== f.yearsOfExperience ||
       form.bio !== f.bio ||
       form.instagramUrl !== f.instagramUrl ||
       form.soundcloudUrl !== f.soundcloudUrl ||
@@ -104,10 +99,9 @@ export default function DJEditProfileScreen() {
       primaryGenre !== originalGenre.current ||
       JSON.stringify(secondaryGenres) !== JSON.stringify(originalSecondary.current) ||
       JSON.stringify(instruments) !== JSON.stringify(originalInstruments.current) ||
-      gender !== originalGender.current ||
       photoUri !== originalPhoto.current
     );
-  }, [form, primaryGenre, secondaryGenres, instruments, gender, photoUri, baselineVersion]);
+  }, [form, primaryGenre, secondaryGenres, instruments, photoUri, baselineVersion]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -247,7 +241,6 @@ export default function DJEditProfileScreen() {
       fullName: form.fullName.trim(),
       fullLegalName: form.fullLegalName.trim(),
       phone: form.phone.trim(),
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience, 10) : undefined,
       bio: form.bio.trim() || undefined,
       profilePhotoUrl: photoUrl,
     });
@@ -257,7 +250,6 @@ export default function DJEditProfileScreen() {
         primaryGenre,
         secondaryGenres,
         instruments,
-        gender: gender || undefined,
         minRate: form.minRate ? parseFloat(form.minRate) : undefined,
         basedIn: form.basedIn || undefined,
         nationality: form.nationality || undefined,
@@ -267,11 +259,48 @@ export default function DJEditProfileScreen() {
         spotifyUrl: form.spotifyUrl.trim() || undefined,
       });
 
-      // Persist the photo URL to Supabase so managers and other users can see it.
-      await Promise.all([
-        supabase.from('users').update({ profile_photo_url: photoUrl ?? null }).eq('id', currentUser.id),
-        supabase.from('artists').update({ profile_photo_url: photoUrl ?? null }).eq('id', currentUser.id),
-      ]);
+      // Persist EVERY editable field to Supabase. The artists row is the source of truth
+      // that sign-in re-hydrates from, so all profile fields are written there (previously
+      // only the photo was, so other edits reverted on sign-out/in). The photo is also
+      // written to the users row so any surface reading from users stays in sync.
+      const { error: usersErr } = await supabase
+        .from('users')
+        .update({ profile_photo_url: photoUrl ?? null })
+        .eq('id', currentUser.id);
+
+      const { data: artistRows, error: artistErr } = await supabase
+        .from('artists')
+        .update({
+          full_name: form.fullName.trim(),
+          full_legal_name: form.fullLegalName.trim() || null,
+          bio: form.bio.trim() || null,
+          based_in: form.basedIn || null,
+          nationality: form.nationality || null,
+          primary_genre: primaryGenre || null,
+          secondary_genres: secondaryGenres,
+          instruments: instruments,
+          min_rate: form.minRate ? parseFloat(form.minRate) : null,
+          instagram_url: form.instagramUrl.trim() || null,
+          soundcloud_url: form.soundcloudUrl.trim() || null,
+          mixcloud_url: form.mixcloudUrl.trim() || null,
+          spotify_url: form.spotifyUrl.trim() || null,
+          profile_photo_url: photoUrl ?? null,
+        })
+        .eq('id', currentUser.id)
+        .select();
+
+      const writeErr = artistErr ?? usersErr;
+      if (writeErr) {
+        setSaving(false);
+        Alert.alert('Save failed', writeErr.message);
+        return;
+      }
+      // PostgREST does NOT error when RLS blocks an UPDATE — it just updates 0 rows.
+      if (!artistRows || artistRows.length === 0) {
+        setSaving(false);
+        Alert.alert('Save failed', 'Your changes were not written to the database (0 rows updated). This usually means a missing row-level-security UPDATE policy on the artists table.');
+        return;
+      }
     }
 
     // Reset the change baseline so we can stay on the page without the
@@ -280,7 +309,6 @@ export default function DJEditProfileScreen() {
     originalGenre.current = primaryGenre;
     originalSecondary.current = secondaryGenres;
     originalInstruments.current = instruments;
-    originalGender.current = gender;
     originalPhoto.current = photoUrl ?? null;
     setPhotoUri(photoUrl ?? null);
     setBaselineVersion((v) => v + 1);
@@ -394,16 +422,6 @@ export default function DJEditProfileScreen() {
             />
           </View>
 
-          {/* Years of Experience */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Years of Experience</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              value={form.yearsOfExperience} onChangeText={(v) => update('yearsOfExperience', v.replace(/[^0-9]/g, ''))}
-              placeholder="e.g. 5" placeholderTextColor={colors.muted} keyboardType="number-pad" returnKeyType="done"
-            />
-          </View>
-
           {/* Bio */}
           <View style={styles.fieldGroup}>
             <View style={styles.fieldLabelRow}>
@@ -421,21 +439,6 @@ export default function DJEditProfileScreen() {
           {/* ─── Artist Details ─── */}
           <View style={[styles.sectionDivider, { borderTopColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Artist Details</Text>
-          </View>
-
-          {/* Gender */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Gender</Text>
-            <View style={styles.chipWrap}>
-              {(['Male', 'Female', 'Other'] as Gender[]).map((g) => {
-                const isSelected = gender === g;
-                return (
-                  <Pressable key={g} style={[styles.chip, { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: isSelected ? colors.primary : colors.border }]} onPress={() => setGender(g)}>
-                    <Text style={[styles.chipText, { color: isSelected ? '#fff' : colors.foreground }]}>{g}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
           </View>
 
           {/* Primary Genre */}
