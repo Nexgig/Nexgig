@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   connectedWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   disconnectIconBtn: { padding: 7, borderRadius: 20 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   disconnectAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 96, borderRadius: 14, marginLeft: 8 },
   disconnectActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
