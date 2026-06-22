@@ -12,11 +12,6 @@
 - Wizards split (OPTIONAL polish, low value): create-venue / manager-register / artist-setup → separate route screens for native back-gesture. They already work as single-screen wizards with slide animation. (L469-471)
 - Notification + push-tap deep-link routing: tapping a notification (in-app AND push) should open the specific screen by type/related_id, not just the notifications list. Booking→booking-detail (partly handled via the "Booking not found" fix), venue/lineup→my-venues. (L364 / L843)
 
-**VERIFY ON DEVICE (no code — just testing)**
-- KeyboardAvoidingView on Add/Block slot modal — reworked many times historically; just confirm lower fields aren't covered by the keyboard. (L626)
-- Full signup matrix: new artist signup shows everything immediately; appears in others' Network; survives sign-out/in on email + Apple + Google. (L981) Also re-test MANAGER signup after the June 15 changes — Company Name (not bio/years) saves + shows, and persists across sign-out/in.
-- Manager email + phone DEDICATED change flows (the verification + "Updated"-alert ones in manager edit-profile) — confirm they actually persist to Supabase. The main profile save now persists everything, but these two separate flows were not audited.
-
 **OPTIONAL polish (decide if worth it)**
 - Hide "Pending verification" pill from non-owners — one-line conditional. (L929)
 - Gate the × cancel button off for null-artist booking rows (harmless no-op today). (L973)
@@ -28,7 +23,14 @@
 - Email infra: welcome email; lineup-add email (with venue rules); venue-rules-on-acceptance email. (L935-937)
 - Maps: location picker at venue creation + "Open in Google Maps" on booking-detail. (L923)
 - Calendar: artist Google Calendar sync (scope TBD). (L946)
-- App Store: reviewer demo accounts + notes; privacy/Data Safety forms. (L830-831)
+- App Store / TestFlight launch path (ordered, parked until ready):
+    1. Paid Apple Developer account ($99/yr).
+    2. Create the app record in App Store Connect (bundle com.nexgig.app).
+    3. Production build: `eas build --profile production --platform ios` (NOT the dev/preview build we develop on).
+    4. Submit: `eas submit --profile production --platform ios` → uploads to App Store Connect (~10–30 min to process).
+    5. TestFlight INTERNAL testing (you + up to 100 team members, no Apple review) — install via the TestFlight app; RETEST core flows in release mode: full signup matrix, booking confirm/decline/cancel, invoice + PDF download, push notifications. (Release builds can behave differently from the dev build.)
+    6. TestFlight EXTERNAL testers (up to 10k via email/public link) — requires a light Beta App Review (~1 day).
+    7. Public App Store listing: screenshots, description/keywords, reviewer demo accounts (working manager + artist logins) + review notes, privacy/Data Safety answers → full Apple review. (L830-831)
 - Dep alignment before the production release build: run `npx expo install @react-navigation/bottom-tabs @react-navigation/native` to pin them to SDK 54's expected versions — currently ahead (7.8.12 / 7.1.25 vs 7.4.0 / 7.1.8). Harmless in dev (flagged by `expo install --check`), but worth pinning for the App Store build + a quick navigation smoke-test after. Not urgent.
 - Payments: Tap Payments integration.
 - Venue verification gate v2 (only if show-only proves too soft) + internal admin screen. (L928)
@@ -653,7 +655,7 @@
 - [x] Artist add/block slot: time pickers and Full Day on same row, default start 21:00 end 01:00, dropdown scrolls to selected time
 - [x] Make everything inside Add/Block slot modal 20% smaller (text, padding, spacing, inputs)
 - [x] Add swipe-down-to-dismiss gesture on the Add/Block slot modal
-- [ ] Add KeyboardAvoidingView to Add/Block slot modal so lower fields aren't covered by keyboard
+- [x] Add KeyboardAvoidingView to Add/Block slot modal so lower fields aren't covered by keyboard — device-tested June 22 2026 (lower fields not covered).
 - [x] Manager Add Slot modal: full-height, compact sizing (20% smaller), horizontally scrollable venue pills
 - [x] Manager Bulk Add Slots modal: full-height, compact sizing (20% smaller), horizontally scrollable venue pills
 - [x] Manager Add Slot modal: open partially (leave calendar header + month title visible), not full screen
@@ -1008,7 +1010,7 @@
 - [x] [ROOT CAUSE A — own profile tab blank] artist-setup.tsx writes the full artists row to Supabase but only called setCurrentUser — it NEVER populated useLineupStore.artistProfiles, where the profile + edit-profile screens read genres/instruments/gender/rate/nationality/links from. So the artist's own profile tab was blank right after signup. FIX: artist-setup.tsx now also calls updateArtistProfile(user.id, {...}) right after setCurrentUser with the full field set. (Earlier I only fixed the re-sign-in path; the immediately-after-signup path was still broken — this closes it.)
 - [x] [ROOT CAUSE B — network artist preview blank] artist-profile-view.tsx fetched the artists row with `.eq('user_id', artistId)`, but the artists table is keyed by `id` (signup writes `id: user.id`; sign-in + edit-profile both query `.eq('id', ...)`). So the preview query matched nothing and the whole profile came back empty. FIX: changed to `.eq('id', artistId)` and rewrote the field mapping to the ACTUAL columns (primary_genre, secondary_genres, instruments, min_rate, gender, based_in, nationality, instagram/soundcloud/mixcloud/spotify_url, is_history_hidden) — the old mapping read non-existent columns (energy_types, social_links, rate_per_hour, user_id). Array.isArray guards on the array columns.
 - [x] [Re-sign-in hydration — still correct] sign-in.tsx + oauth-buttons.tsx hydrate currentUser + artistProfiles for returning artists (email/Apple/Google), and manager bio/based_in/years on both paths. Kept.
-- [ ] [VERIFY on device] After these fixes, test the FULL matrix: (1) brand-new artist signup → profile tab shows everything immediately (no refresh); (2) that artist appears correctly in another user's Network > Artists preview; (3) sign out → sign back in (email + Apple + Google) → everything still there. NOTE: any artist who signed up BEFORE these fixes may still have an empty local profile store until one clean re-sign-in (the data is in Supabase; re-sign-in now hydrates it).
+- [x] [VERIFIED on device June 22 2026] FULL matrix passed: (1) brand-new artist signup → profile tab shows everything immediately (no refresh); (2) that artist appears correctly in another user's Network > Artists preview; (3) sign out → sign back in (email + Apple + Google) → everything still there; (4) manager signup Company Name saves, shows, and persists across sign-out/in.
 - [x] [Network preview minor] explore.tsx artist list query — reviewed and left as-is intentionally (the DETAIL screen does its own full fetch, so no change needed).
 - [x] ["Filled = filled everywhere" — single source of truth] Confirmed the real artists-table schema (21 cols, keyed by id, no user_id/energy_types/social_links/rate_per_hour, and NO is_history_hidden column). Two hardening changes so filled fields always show on every screen: (1) lib/store.ts updateArtistProfile now MERGES onto existing + always keeps userId — a partial update (history-hide toggle sending only {isHistoryHidden}) can no longer wipe the rest or create a half-empty profile (this was the user's "maybe history-hide is hiding the others" suspicion — plausible when the store was empty). (2) profile.tsx now fetches the artist's OWN row from Supabase on every tab open and repopulates both currentUser (fullName/legalName/username/bio/location/years/photo) and artistProfiles (genres/instruments/gender/rate/nationality/links). Supabase is the source of truth; the local store is just a cache the screen reads. This makes the own-profile tab correct even for old accounts / reinstalls / pre-fix signups, with no manual re-sign-in. Network preview (artist-profile-view) already fetches Supabase directly → same truth. pnpm check passed.
 - [x] [Profile/preview layout parity (June 2026)] (1) profile.tsx: split the single "Music" card into separate "Music Genres" + "Instruments" cards to match the preview. (2) artist-profile-view.tsx: bio + years_of_experience were read from the users row (which doesn't store them) — now read from the artists row (fetchedProfile) via resolved `bio`/`yearsOfExperience` fallbacks. (3) ALSO the preview had a guard `if (djFromStore) return` that skipped the Supabase fetch when the artist was in the local store — and the stored ArtistProfile carries no bio/years, so they never showed. Changed to ALWAYS fetch the full row from Supabase (source of truth) and prefer fetched over store; spinner only when nothing cached. (4) Moved the Links/Instagram card above History in the preview to match profile order. All verified on device.
@@ -1163,3 +1165,11 @@ All device-tested and working. Required SQL (ALL RUN): `ALTER TABLE public.manag
 - [x] [Calendar] Added a centered "+ Create Venue" button to the manager calendar empty state, shown ONLY when the manager has 0 venues (existing `venues.length === 0` branch). Replaced the bare EmptyState with an inline icon+title+subtitle+Pressable → router.push('/(manager)/create-venue'); removed the now-unused EmptyState import.
 - [x] [Dashboard] Removed the "Add Set" option from the manager dashboard + FAB (now only New Venue + Find Artists).
 - [x] [Artist edit-profile] Verified + fixed June 15. The unsaved-changes-after-save bug is NOT present on the artist side (it uses a `baselineVersion` counter in the hasChanges deps that the manager screen lacked — setBaselineVersion on save forces the memo to recompute). BUT artist profile edits other than the photo were NOT persisting to Supabase (updateProfile + updateArtistProfile are local-only; the save only wrote profile_photo_url to users + artists). FIXED: the save now writes ALL editable fields to the artists row (full_name, full_legal_name, bio, based_in, nationality, gender, primary_genre, secondary_genres, instruments, min_rate, years_of_experience, the 4 social URLs, profile_photo_url) + the same error/0-row diagnostics as the manager. No SQL needed — artists already has an UPDATE policy + all these columns (mirrored from the artist-setup signup insert). NOTE: phone is intentionally NOT written to artists (no phone column there; artist phone uses the dedicated change flow / users table).
+
+## Session log — June 22 2026 (VERIFY-ON-DEVICE items confirmed by user)
+
+All three device-only verification items from the top "CURRENT OPEN ITEMS" block are now confirmed working and have been removed from that block.
+
+- [x] KeyboardAvoidingView on the artist Add/Block slot modal — lower fields are NOT covered by the keyboard. (verified on device)
+- [x] Full signup matrix — new artist signup shows everything immediately, appears correctly in others' Network, and survives sign-out/in on email + Apple + Google; manager signup Company Name (not bio/years) saves, shows, and persists across sign-out/in. (verified on device)
+- [x] Manager's dedicated email + phone change flows persist to Supabase — phone change writes to Supabase immediately; email is read-only (changed via admin@nexgigapp.com). (verified on device)
