@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { supabase } from '@/lib/supabase';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
@@ -439,7 +440,7 @@ export default function NetworkScreen() {
               const isConnected = globalLineup.some(
                 (r) => r.artistId === user.id && r.managerId === currentUser?.id && r.status === 'active'
               );
-              return (
+              const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: isConnected ? colors.success + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
                   onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
@@ -460,28 +461,13 @@ export default function NetworkScreen() {
                         )}
                       </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {profile?.primaryGenre ?? 'Artist'}{user.location ? ` · ${user.location}` : ''}
+                        {profile?.primaryGenre ?? 'Artist'}
                       </Text>
-                      {profile?.secondaryGenres && profile.secondaryGenres.length > 0 && (
-                        <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
-                          {profile.secondaryGenres.slice(0, 3).join(' · ')}
-                        </Text>
-                      )}
                     </View>
                   </View>
                   {isConnected ? (
-                    <View style={styles.connectedWrap}>
-                      <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
-                        <MaterialIcons name="check-circle" size={12} color={colors.success} />
-                        <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
-                      </View>
-                      <Pressable
-                        hitSlop={8}
-                        style={({ pressed }) => [styles.disconnectIconBtn, { backgroundColor: colors.error + '12', opacity: pressed ? 0.6 : 1 }]}
-                        onPress={(e) => { e.stopPropagation?.(); handleDisconnect(user); }}
-                      >
-                        <MaterialIcons name="link-off" size={16} color={colors.error} />
-                      </Pressable>
+                    <View style={[styles.addBtn, { backgroundColor: colors.success }]}>
+                      <MaterialIcons name="check" size={16} color="#fff" />
                     </View>
                   ) : (
                     <Pressable
@@ -497,6 +483,24 @@ export default function NetworkScreen() {
                   )}
                 </Pressable>
               );
+              if (isConnected) {
+                return (
+                  <Swipeable
+                    renderRightActions={() => (
+                      <Pressable
+                        style={({ pressed }) => [styles.disconnectAction, { opacity: pressed ? 0.8 : 1 }]}
+                        onPress={() => handleDisconnect(user)}
+                      >
+                        <MaterialIcons name="link-off" size={20} color="#fff" />
+                        <Text style={styles.disconnectActionText}>Disconnect</Text>
+                      </Pressable>
+                    )}
+                  >
+                    {rowContent}
+                  </Swipeable>
+                );
+              }
+              return rowContent;
             }}
           />
         )
@@ -599,5 +603,7 @@ const styles = StyleSheet.create({
   disconnectIconBtn: { padding: 7, borderRadius: 20 },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  disconnectAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 96, borderRadius: 14, marginLeft: 8 },
+  disconnectActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
 });
