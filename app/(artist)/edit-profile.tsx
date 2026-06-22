@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/components/screen-container';
@@ -11,6 +11,7 @@ import { uploadImageAsync } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
+import { PhoneInput } from '@/components/phone-input';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
 const GENRES: GenreType[] = [
@@ -121,9 +122,9 @@ export default function DJEditProfileScreen() {
 
   // Secure edit modals
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailForm, setEmailForm] = useState({ newEmail: '', confirmEmail: '', password: '' });
+  const [emailForm, setEmailForm] = useState({ newEmail: '', confirmEmail: '' });
   const [showPhoneModal, setShowPhoneModal] = useState(false);
-  const [phoneForm, setPhoneForm] = useState({ newPhone: '', confirmPhone: '', password: '' });
+  const [phoneForm, setPhoneForm] = useState({ newPhone: '' });
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -183,36 +184,33 @@ export default function DJEditProfileScreen() {
   };
 
   const openEmailModal = () => {
-    setEmailForm({ newEmail: '', confirmEmail: '', password: '' });
+    setEmailForm({ newEmail: '', confirmEmail: '' });
     setShowEmailModal(true);
   };
 
   const handleEmailChange = () => {
-    const { newEmail, confirmEmail, password } = emailForm;
+    const { newEmail, confirmEmail } = emailForm;
     if (!newEmail.trim()) { Alert.alert('Required', 'Please enter your new email address.'); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail.trim())) { Alert.alert('Invalid Email', 'Please enter a valid email address.'); return; }
     if (newEmail.trim().toLowerCase() === currentUser?.email?.toLowerCase()) { Alert.alert('Same Email', 'The new email is the same as your current email.'); return; }
     if (newEmail.trim() !== confirmEmail.trim()) { Alert.alert('Mismatch', 'The email addresses do not match.'); return; }
-    if (!password.trim() || password.length < 6) { Alert.alert('Invalid Password', 'Password must be at least 6 characters.'); return; }
     updateProfile({ email: newEmail.trim().toLowerCase() });
     setShowEmailModal(false);
     Alert.alert('Email Updated', `Your email has been changed to ${newEmail.trim().toLowerCase()}.`);
   };
 
   const openPhoneModal = () => {
-    setPhoneForm({ newPhone: '', confirmPhone: '', password: '' });
+    setPhoneForm({ newPhone: '' });
     setShowPhoneModal(true);
   };
 
   const handlePhoneChange = () => {
-    const { newPhone, confirmPhone, password } = phoneForm;
+    const { newPhone } = phoneForm;
     if (!newPhone.trim()) { Alert.alert('Required', 'Please enter your new phone number.'); return; }
     const digitsOnly = newPhone.replace(/[^0-9+]/g, '');
     if (digitsOnly.replace('+', '').length < 7) { Alert.alert('Invalid Phone', 'Please enter a valid phone number.'); return; }
     if (newPhone.trim() === currentUser?.phone) { Alert.alert('Same Number', 'The new phone number is the same as your current number.'); return; }
-    if (newPhone.trim() !== confirmPhone.trim()) { Alert.alert('Mismatch', 'The phone numbers do not match.'); return; }
-    if (!password.trim() || password.length < 6) { Alert.alert('Invalid Password', 'Password must be at least 6 characters.'); return; }
     updateProfile({ phone: newPhone.trim() });
     setShowPhoneModal(false);
     setForm((f) => ({ ...f, phone: newPhone.trim() }));
@@ -379,11 +377,11 @@ export default function DJEditProfileScreen() {
                 <Text style={[styles.secureFieldValue, { color: colors.foreground }]} numberOfLines={1}>{currentUser?.email ?? 'Not set'}</Text>
               </View>
               <View style={styles.secureFieldAction}>
-                <MaterialIcons name="lock" size={14} color={colors.muted} />
+                <MaterialIcons name="edit" size={14} color={colors.primary} />
                 <Text style={[styles.secureFieldActionText, { color: colors.primary }]}>Change</Text>
               </View>
             </Pressable>
-            <Text style={[styles.secureHint, { color: colors.muted }]}>Requires password confirmation to change</Text>
+            <Text style={[styles.secureHint, { color: colors.muted }]}>Tap to change</Text>
           </View>
 
           {/* Phone — Secure Edit */}
@@ -395,11 +393,11 @@ export default function DJEditProfileScreen() {
                 <Text style={[styles.secureFieldValue, { color: colors.foreground }]} numberOfLines={1}>{currentUser?.phone || 'Not set'}</Text>
               </View>
               <View style={styles.secureFieldAction}>
-                <MaterialIcons name="lock" size={14} color={colors.muted} />
+                <MaterialIcons name="edit" size={14} color={colors.primary} />
                 <Text style={[styles.secureFieldActionText, { color: colors.primary }]}>Change</Text>
               </View>
             </Pressable>
-            <Text style={[styles.secureHint, { color: colors.muted }]}>Requires password confirmation to change</Text>
+            <Text style={[styles.secureHint, { color: colors.muted }]}>Tap to change</Text>
           </View>
 
           {/* Based In */}
@@ -528,100 +526,78 @@ export default function DJEditProfileScreen() {
       </ScrollView>
 
       {/* EMAIL CHANGE MODAL */}
-      <Modal visible={showEmailModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-            <View style={styles.modalHeaderRow}>
-              <View style={[styles.modalIconCircle, { backgroundColor: colors.primary + '15' }]}>
-                <MaterialIcons name="email" size={22} color={colors.primary} />
+      <Modal visible={showEmailModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowEmailModal(false)}>
+        <View style={[styles.modalFull, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalFullHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Change Email</Text>
+            <Pressable onPress={() => setShowEmailModal(false)} hitSlop={8}>
+              <MaterialIcons name="close" size={24} color={colors.muted} />
+            </Pressable>
+          </View>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={styles.modalFullBody} keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalSubtitle, { color: colors.muted }]}>Current: {currentUser?.email ?? 'Not set'}</Text>
+              <View style={styles.modalFieldGroup}>
+                <Text style={[styles.modalFieldLabel, { color: colors.foreground }]}>New Email Address</Text>
+                <TextInput
+                  style={[styles.modalFieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  placeholder="Enter new email" placeholderTextColor={colors.muted}
+                  value={emailForm.newEmail}
+                  onChangeText={(v) => setEmailForm((f) => ({ ...f, newEmail: v }))}
+                  autoCapitalize="none" keyboardType="email-address" returnKeyType="next"
+                />
               </View>
-              <View style={styles.modalHeaderText}>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Change Email</Text>
-                <Text style={[styles.modalSubtitle, { color: colors.muted }]}>Current: {currentUser?.email}</Text>
+              <View style={styles.modalFieldGroup}>
+                <Text style={[styles.modalFieldLabel, { color: colors.foreground }]}>Confirm New Email</Text>
+                <TextInput
+                  style={[styles.modalFieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  placeholder="Re-enter new email" placeholderTextColor={colors.muted}
+                  value={emailForm.confirmEmail}
+                  onChangeText={(v) => setEmailForm((f) => ({ ...f, confirmEmail: v }))}
+                  autoCapitalize="none" keyboardType="email-address" returnKeyType="done"
+                />
               </View>
-            </View>
-            <View style={[styles.securityNotice, { backgroundColor: colors.warning + '12', borderColor: colors.warning + '30' }]}>
-              <MaterialIcons name="security" size={16} color={colors.warning} />
-              <Text style={[styles.securityNoticeText, { color: '#92400E' }]}>For your security, confirm the new email and enter your password.</Text>
-            </View>
-            <View style={styles.modalForm}>
-              {[
-                { label: 'New Email Address', key: 'newEmail', placeholder: 'Enter new email', keyboard: 'email-address' as const },
-                { label: 'Confirm New Email', key: 'confirmEmail', placeholder: 'Re-enter new email', keyboard: 'email-address' as const },
-                { label: 'Current Password', key: 'password', placeholder: 'Enter your password', keyboard: 'default' as const, secure: true },
-              ].map(({ label, key, placeholder, keyboard, secure }) => (
-                <View key={key} style={styles.modalFieldGroup}>
-                  <Text style={[styles.modalFieldLabel, { color: colors.foreground }]}>{label}</Text>
-                  <TextInput
-                    style={[styles.modalFieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder={placeholder} placeholderTextColor={colors.muted}
-                    value={(emailForm as Record<string, string>)[key]}
-                    onChangeText={(v) => setEmailForm((f) => ({ ...f, [key]: v }))}
-                    autoCapitalize="none" keyboardType={keyboard} secureTextEntry={secure} returnKeyType="next"
-                  />
-                </View>
-              ))}
-            </View>
-            <View style={styles.modalActions}>
+            </ScrollView>
+            <View style={[styles.modalFullFooter, { borderTopColor: colors.border }]}>
               <Pressable style={({ pressed }) => [styles.modalCancelBtn, { borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]} onPress={() => setShowEmailModal(false)}>
                 <Text style={[styles.modalCancelText, { color: colors.muted }]}>Cancel</Text>
               </Pressable>
               <Pressable style={({ pressed }) => [styles.modalConfirmBtn, { opacity: pressed ? 0.9 : 1 }]} onPress={handleEmailChange}>
-                <MaterialIcons name="lock" size={16} color="#fff" />
                 <Text style={styles.modalConfirmText}>Update Email</Text>
               </Pressable>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
       {/* PHONE CHANGE MODAL */}
-      <Modal visible={showPhoneModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-            <View style={styles.modalHeaderRow}>
-              <View style={[styles.modalIconCircle, { backgroundColor: colors.primary + '15' }]}>
-                <MaterialIcons name="phone" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.modalHeaderText}>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Change Phone Number</Text>
-                <Text style={[styles.modalSubtitle, { color: colors.muted }]}>Current: {currentUser?.phone || 'Not set'}</Text>
-              </View>
-            </View>
-            <View style={[styles.securityNotice, { backgroundColor: colors.warning + '12', borderColor: colors.warning + '30' }]}>
-              <MaterialIcons name="security" size={16} color={colors.warning} />
-              <Text style={[styles.securityNoticeText, { color: '#92400E' }]}>For your security, confirm the new number and enter your password.</Text>
-            </View>
-            <View style={styles.modalForm}>
-              {[
-                { label: 'New Phone Number', key: 'newPhone', placeholder: '+971 50 000 0000', keyboard: 'phone-pad' as const },
-                { label: 'Confirm New Number', key: 'confirmPhone', placeholder: 'Re-enter phone number', keyboard: 'phone-pad' as const },
-                { label: 'Current Password', key: 'password', placeholder: 'Enter your password', keyboard: 'default' as const, secure: true },
-              ].map(({ label, key, placeholder, keyboard, secure }) => (
-                <View key={key} style={styles.modalFieldGroup}>
-                  <Text style={[styles.modalFieldLabel, { color: colors.foreground }]}>{label}</Text>
-                  <TextInput
-                    style={[styles.modalFieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder={placeholder} placeholderTextColor={colors.muted}
-                    value={(phoneForm as Record<string, string>)[key]}
-                    onChangeText={(v) => setPhoneForm((f) => ({ ...f, [key]: v }))}
-                    keyboardType={keyboard} secureTextEntry={secure} returnKeyType="next"
-                  />
-                </View>
-              ))}
-            </View>
-            <View style={styles.modalActions}>
+      <Modal visible={showPhoneModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPhoneModal(false)}>
+        <View style={[styles.modalFull, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalFullHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Change Phone Number</Text>
+            <Pressable onPress={() => setShowPhoneModal(false)} hitSlop={8}>
+              <MaterialIcons name="close" size={24} color={colors.muted} />
+            </Pressable>
+          </View>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={styles.modalFullBody} keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalSubtitle, { color: colors.muted }]}>Current: {currentUser?.phone || 'Not set'}</Text>
+              <PhoneInput
+                label="New Phone Number"
+                optional={false}
+                value={phoneForm.newPhone}
+                onChange={(v) => setPhoneForm({ newPhone: v })}
+              />
+            </ScrollView>
+            <View style={[styles.modalFullFooter, { borderTopColor: colors.border }]}>
               <Pressable style={({ pressed }) => [styles.modalCancelBtn, { borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]} onPress={() => setShowPhoneModal(false)}>
                 <Text style={[styles.modalCancelText, { color: colors.muted }]}>Cancel</Text>
               </Pressable>
               <Pressable style={({ pressed }) => [styles.modalConfirmBtn, { opacity: pressed ? 0.9 : 1 }]} onPress={handlePhoneChange}>
-                <MaterialIcons name="lock" size={16} color="#fff" />
                 <Text style={styles.modalConfirmText}>Update Phone</Text>
               </Pressable>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </ScreenContainer>
@@ -682,4 +658,8 @@ const styles = StyleSheet.create({
   modalCancelText: { fontSize: 15, fontWeight: '600' },
   modalConfirmBtn: { flex: 1, backgroundColor: '#2563EB', borderRadius: 12, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
   modalConfirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  modalFull: { flex: 1 },
+  modalFullHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  modalFullBody: { padding: 20, gap: 18, flexGrow: 1 },
+  modalFullFooter: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 0.5 },
 });
