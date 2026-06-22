@@ -100,7 +100,16 @@ export default function ArtistNetworkScreen() {
       supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'pending'),
     ]);
     if (venuesRes.data) {
-      setVenues(venuesRes.data as VenueItem[]);
+      setVenues(venuesRes.data.map((v: any) => ({
+        id: v.id,
+        name: v.name,
+        venue_type: v.venue_type,
+        address: v.google_maps_location?.address ?? v.address ?? null,
+        genre_preferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
+        photo_urls: Array.isArray(v.photo_urls) ? v.photo_urls : null,
+        manager_id: v.manager_id,
+        verification_status: v.verification_status ?? null,
+      })) as VenueItem[]);
       // Cache full venue data so tapping a venue opens its detail complete (no fetch-on-open).
       useVenueDirectoryStore.getState().setVenues(venuesRes.data.map((v: any) => mapVenueRow(v)));
     }
@@ -297,14 +306,11 @@ export default function ArtistNetworkScreen() {
                           <MaterialIcons name="verified" size={15} color={colors.primary} />
                         )}
                       </View>
-                      <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {venue.venue_type}{venue.address ? ` · ${venue.address}` : ''}
-                      </Text>
-                      {venue.genre_preferences?.length > 0 && (
-                        <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
-                          {venue.genre_preferences.slice(0, 3).join(' · ')}
+                      {venue.address ? (
+                        <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                          {venue.address}
                         </Text>
-                      )}
+                      ) : null}
                     </View>
                   </View>
                   {isConnected ? (

@@ -541,20 +541,14 @@ export default function NetworkScreen() {
                     <View style={styles.titleRow}>
                       <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>
                       {venue.verificationStatus === 'verified' && (
-                        <View style={[styles.verifiedPill, { backgroundColor: colors.primary + '15' }]}>
-                          <MaterialIcons name="verified" size={11} color={colors.primary} />
-                          <Text style={[styles.verifiedPillText, { color: colors.primary }]}>Verified</Text>
-                        </View>
+                        <MaterialIcons name="verified" size={15} color={colors.primary} />
                       )}
                     </View>
-                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {venue.venueType}{venue.googleMapsLocation?.address ? ` · ${venue.googleMapsLocation.address}` : ''}
-                    </Text>
-                    {venue.genrePreferences && venue.genrePreferences.length > 0 && (
-                      <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
-                        {venue.genrePreferences.slice(0, 3).join(' · ')}
+                    {venue.googleMapsLocation?.address ? (
+                      <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                        {venue.googleMapsLocation.address}
                       </Text>
-                    )}
+                    ) : null}
                   </View>
                 </View>
                 <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
