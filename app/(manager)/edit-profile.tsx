@@ -157,7 +157,7 @@ export default function EditProfileScreen() {
     setShowPhoneModal(true);
   };
 
-  const handlePhoneChange = () => {
+  const handlePhoneChange = async () => {
     const { newPhone } = phoneForm;
 
     if (!newPhone.trim()) {
@@ -174,10 +174,28 @@ export default function EditProfileScreen() {
       Alert.alert('Same Number', 'The new phone number is the same as your current number.');
       return;
     }
+    if (!currentUser) return;
 
+    // Persist immediately to the managers row (the source sign-in re-hydrates from).
+    const { data, error } = await supabase
+      .from('managers')
+      .update({ phone: newPhone.trim() })
+      .eq('id', currentUser.id)
+      .select();
+    if (error) {
+      Alert.alert('Update failed', error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      Alert.alert('Update failed', 'Your phone number was not saved (0 rows updated). This usually means a missing row-level-security UPDATE policy on the managers table.');
+      return;
+    }
+
+    // Reflect locally + keep the form baseline in sync so the back-guard won't fire.
     updateProfile({ phone: newPhone.trim() });
-    setShowPhoneModal(false);
     setForm((f) => ({ ...f, phone: newPhone.trim() }));
+    setOriginalForm((o) => ({ ...o, phone: newPhone.trim() }));
+    setShowPhoneModal(false);
     Alert.alert('Phone Updated', `Your phone number has been changed to ${newPhone.trim()}.`);
   };
 
@@ -302,23 +320,17 @@ export default function EditProfileScreen() {
           {/* Email — Secure Edit */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.muted }]}>Email Address</Text>
-            <Pressable
-              onPress={openEmailModal}
-              style={({ pressed }) => [styles.secureField, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-            >
+            <View style={[styles.secureField, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.secureFieldContent}>
                 <MaterialIcons name="email" size={18} color={colors.muted} />
                 <Text style={[styles.secureFieldValue, { color: colors.foreground }]} numberOfLines={1}>
                   {currentUser?.email ?? 'Not set'}
                 </Text>
               </View>
-              <View style={styles.secureFieldAction}>
-                <MaterialIcons name="edit" size={14} color={colors.primary} />
-                <Text style={[styles.secureFieldActionText, { color: colors.primary }]}>Change</Text>
-              </View>
-            </Pressable>
+              <MaterialIcons name="lock-outline" size={16} color={colors.muted} />
+            </View>
             <Text style={[styles.secureHint, { color: colors.muted }]}>
-              Tap to change
+              To change your email, contact support.
             </Text>
           </View>
 
