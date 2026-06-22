@@ -182,7 +182,7 @@ export default function ArtistProfileViewScreen() {
       .then(({ data: p }) => {
         if (p) {
           setFetchedUser({
-            id: p.id, email: p.email ?? '', phone: '', accountType: 'artist',
+            id: p.id, email: p.email ?? '', phone: p.phone ?? '', accountType: 'artist',
             fullName: p.full_name, profilePhotoUrl: p.profile_photo_url,
             bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience ?? undefined,
             isPhoneVerified: false, isEmailVerified: false,
@@ -197,6 +197,7 @@ export default function ArtistProfileViewScreen() {
             minRate: p.min_rate ?? undefined,
             gender: p.gender ?? undefined,
             isHistoryHidden: p.is_history_hidden ?? false,
+            hasCompletedBooking: p.has_completed_booking ?? false,
             instagramUrl: p.instagram_url ?? undefined,
             soundcloudUrl: p.soundcloud_url ?? undefined,
             mixcloudUrl: p.mixcloud_url ?? undefined,
@@ -415,9 +416,14 @@ export default function ArtistProfileViewScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={[styles.djName, { color: colors.foreground }]}>
-                    {dj.fullName}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                      {dj.fullName}
+                    </Text>
+                    {profile?.hasCompletedBooking ? (
+                      <MaterialIcons name="verified" size={18} color={colors.primary} />
+                    ) : null}
+                  </View>
                   <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
                 </>
               )}
@@ -596,6 +602,27 @@ export default function ArtistProfileViewScreen() {
               </View>
             </View>
           )}
+
+          {/* Contact — shown only for artists on your lineup */}
+          {isConnected && (dj.email || dj.phone) ? (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.cardLabel, { color: colors.muted }]}>Contact</Text>
+              {dj.email ? (
+                <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`mailto:${dj.email}`)}>
+                  <MaterialIcons name="email" size={18} color={colors.muted} />
+                  <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.email}</Text>
+                  <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
+                </Pressable>
+              ) : null}
+              {dj.phone ? (
+                <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`tel:${dj.phone}`)}>
+                  <MaterialIcons name="phone" size={18} color={colors.muted} />
+                  <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.phone}</Text>
+                  <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
         </>
         ) : (
@@ -759,6 +786,8 @@ const styles = StyleSheet.create({
   rateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rateLabel: { fontSize: 13 },
   rateValue: { fontSize: 15, fontWeight: '700' },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  contactValue: { flex: 1, fontSize: 14, fontWeight: '500' },
   linksCol: { gap: 0 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 0.5 },
   linkIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
