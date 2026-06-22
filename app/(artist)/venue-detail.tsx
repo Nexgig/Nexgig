@@ -104,7 +104,12 @@ export default function ArtistVenueDetailScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
-          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Text style={[styles.title, { color: colors.foreground, flex: 0, flexShrink: 1 }]} numberOfLines={1}>{venue.name}</Text>
+            {venue.verificationStatus === 'verified' && (
+              <MaterialIcons name="verified" size={16} color={colors.primary} />
+            )}
+          </View>
           <Pressable onPress={() => setShowReport(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1, alignItems: 'flex-end' }]} hitSlop={8}>
             <MaterialIcons name="flag" size={20} color={colors.muted} />
           </Pressable>

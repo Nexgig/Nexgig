@@ -69,6 +69,7 @@ export default function ArtistProfileViewScreen() {
             gender: p.gender ?? undefined,
             basedIn: p.based_in, nationality: p.nationality,
             isHistoryHidden: p.is_history_hidden ?? false,
+            hasCompletedBooking: p.has_completed_booking ?? false,
             instagramUrl: p.instagram_url ?? undefined,
             soundcloudUrl: p.soundcloud_url ?? undefined,
             mixcloudUrl: p.mixcloud_url ?? undefined,
@@ -165,9 +166,14 @@ export default function ArtistProfileViewScreen() {
           <View style={styles.heroTopRow}>
             <AvatarImage uri={dj.profilePhotoUrl} name={dj.fullName} size={80} />
             <View style={styles.heroNameBlock}>
-              <Text style={[styles.djName, { color: colors.foreground }]}>
-                {dj.fullName}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                  {dj.fullName}
+                </Text>
+                {profile?.hasCompletedBooking ? (
+                  <MaterialIcons name="verified" size={18} color={colors.primary} />
+                ) : null}
+              </View>
               <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
             </View>
           </View>

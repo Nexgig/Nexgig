@@ -294,10 +294,7 @@ export default function ArtistNetworkScreen() {
                       <View style={styles.titleRow}>
                         <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>
                         {venue.verification_status === 'verified' && (
-                          <View style={[styles.verifiedPill, { backgroundColor: colors.primary + '15' }]}>
-                            <MaterialIcons name="verified" size={11} color={colors.primary} />
-                            <Text style={[styles.verifiedPillText, { color: colors.primary }]}>Verified</Text>
-                          </View>
+                          <MaterialIcons name="verified" size={15} color={colors.primary} />
                         )}
                       </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
@@ -381,13 +378,8 @@ export default function ArtistNetworkScreen() {
                       )}
                     </View>
                     <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {artist.primary_genre ?? 'Artist'}{artist.based_in ? ` · ${artist.based_in}` : ''}
+                      {artist.primary_genre ?? 'Artist'}
                     </Text>
-                    {artist.secondary_genres?.length > 0 && (
-                      <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
-                        {artist.secondary_genres.slice(0, 3).join(' · ')}
-                      </Text>
-                    )}
                   </View>
                 </View>
                 <View style={styles.rightWrap}>
