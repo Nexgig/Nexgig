@@ -175,8 +175,7 @@ export default function DJBookingDetailScreen() {
                 <MaterialIcons name="event" size={22} color={colors.primary} />
               </View>
               <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{slot.name}</Text>
-                <Text style={[styles.cardSub, { color: colors.muted }]}>{formatDate(slot.date)}</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{formatDate(slot.date)}</Text>
                 <Text style={[styles.cardSub, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
               </View>
             </View>
