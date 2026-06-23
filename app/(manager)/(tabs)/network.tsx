@@ -244,8 +244,19 @@ export default function NetworkScreen() {
           const { error } = await supabase.from('applications')
             .update({ status: 'declined', updated_at: new Date().toISOString() }).eq('id', app.id);
           setProcessingId(null);
-          if (error) Alert.alert('Error', error.message);
-          else setApplications((prev) => prev.filter((a) => a.id !== app.id));
+          if (error) { Alert.alert('Error', error.message); return; }
+          setApplications((prev) => prev.filter((a) => a.id !== app.id));
+          addNotification({
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            userId: app.artist_id,
+            type: 'lineup_declined',
+            title: 'Request Declined',
+            body: `Your request to join the lineup at ${app.venue?.name ?? 'the venue'} was not accepted.`,
+            isRead: false,
+            relatedId: app.venue_id,
+            relatedType: 'venue',
+            createdAt: new Date().toISOString(),
+          });
         },
       },
     ]);
