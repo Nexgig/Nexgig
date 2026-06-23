@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 type NetworkTab = 'venues' | 'artists';
 
@@ -40,6 +41,7 @@ export default function ArtistNetworkScreen() {
   const addNotification = useNotificationStore((s) => s.addNotification);
   const notifications = useNotificationStore((s) => s.notifications);
   const venueAssignments = useLineupStore((s) => s.venueAssignments);
+  const removeFromVenue = useLineupStore((s) => s.removeFromVenue);
   const markNetworkSeen = useNetworkSeenStore((s) => s.markNetworkSeen);
   const isFocused = useIsFocused();
 
@@ -190,6 +192,38 @@ export default function ArtistNetworkScreen() {
     ]);
   };
 
+  const handleLeaveVenue = (venue: VenueItem) => {
+    if (!currentUser) return;
+    Alert.alert('Leave Venue', `Leave the lineup at ${venue.name}? You can request to join again later.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave', style: 'destructive',
+        onPress: async () => {
+          const { error, count } = await supabase
+            .from('venue_assignments')
+            .delete({ count: 'exact' })
+            .eq('artist_id', currentUser.id)
+            .eq('venue_id', venue.id);
+          if (error) { Alert.alert('Error', error.message); return; }
+          if (!count) { Alert.alert('Could not leave', 'You were not removed — please try again.'); return; }
+          removeFromVenue(venue.id, currentUser.id);
+          const notifId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+          addNotification({
+            id: notifId,
+            userId: venue.manager_id,
+            type: 'lineup_removed' as any,
+            title: 'Artist Left Venue',
+            body: `${currentUser.fullName ?? 'An artist'} left the lineup at ${venue.name}.`,
+            isRead: false,
+            relatedId: venue.id,
+            relatedType: 'venue',
+            createdAt: new Date().toISOString(),
+          });
+        },
+      },
+    ]);
+  };
+
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
     const results = q
@@ -282,7 +316,7 @@ export default function ArtistNetworkScreen() {
               const isConnected = assignedVenueIds.has(venue.id);
               const hasApplied = appliedVenueIds.has(venue.id);
               const isApplying = applyingId === venue.id;
-              return (
+              const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, {
                     backgroundColor: colors.surface,
@@ -342,6 +376,24 @@ export default function ArtistNetworkScreen() {
                   )}
                 </Pressable>
               );
+              if (isConnected) {
+                return (
+                  <Swipeable
+                    renderRightActions={() => (
+                      <Pressable
+                        style={({ pressed }) => [styles.leaveAction, { opacity: pressed ? 0.8 : 1 }]}
+                        onPress={() => handleLeaveVenue(venue)}
+                      >
+                        <MaterialIcons name="logout" size={20} color="#fff" />
+                        <Text style={styles.leaveActionText}>Leave</Text>
+                      </Pressable>
+                    )}
+                  >
+                    {rowContent}
+                  </Swipeable>
+                );
+              }
+              return rowContent;
             }}
           />
         )
@@ -440,6 +492,8 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   applyBtnText: { fontSize: 12, fontWeight: '700' },
+  leaveAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 88, borderRadius: 14, marginLeft: 8 },
+  leaveActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
   statusBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
