@@ -155,6 +155,15 @@ export default function ArtistProfileViewScreen() {
     [allBookings, artistId, currentUser?.id]
   );
 
+  // This artist's GLOBAL completed gigs (venue + date + times only) via the public RPC,
+  // so the manager sees the same numbers as everyone else — not just gigs at their own venues.
+  const [publicGigs, setPublicGigs] = useState<{ venue_name: string; gig_date: string; start_time: string; end_time: string }[]>([]);
+  useEffect(() => {
+    if (!artistId) return;
+    supabase.rpc('get_artist_public_gigs', { p_artist_id: artistId })
+      .then(({ data }) => { if (Array.isArray(data)) setPublicGigs(data as any); });
+  }, [artistId]);
+
   const djFromStore = getArtistUser(artistId ?? '');
   const profileFromStore = getArtistProfile(artistId ?? '');
   // Full data cached when the manager browsed the Network list — lets this page open
@@ -245,12 +254,12 @@ export default function ArtistProfileViewScreen() {
       .sort((a, b) => (a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1);
   }, [bookings, allSlots, allVenues]);
 
-  // Monthly Plays: completed bookings in last 30 days
+  // Monthly Plays: completed gigs in the last 30 days (global, from the public RPC).
   const monthlyPlays = useMemo(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
-    return completedBookings.filter((b) => b.slot?.date && new Date(b.slot.date) >= cutoff).length;
-  }, [completedBookings]);
+    return publicGigs.filter((g) => g.gig_date && new Date(g.gig_date) >= cutoff).length;
+  }, [publicGigs]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleRemove = () => {
@@ -368,8 +377,8 @@ export default function ArtistProfileViewScreen() {
   const dj = resolvedDj ?? ({ id: artistId ?? '', fullName: '', accountType: 'artist' } as any);
   const profile = resolvedProfile;
 
-  const completedGigs = completedBookings.length;
-  const last5Gigs = completedBookings.slice(0, 5);
+  const completedGigs = publicGigs.length;
+  const last5Gigs = publicGigs.slice(0, 5);
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
   const mediaLinks = profile?.mediaLinks ?? {
     soundcloud: profile?.soundcloudUrl,
@@ -554,11 +563,10 @@ export default function ArtistProfileViewScreen() {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={[styles.monthTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  {last5Gigs.map((booking, idx) => (
-                    <Pressable
-                      key={booking.id}
-                      style={({ pressed }) => [styles.bookingSubRow, { backgroundColor: colors.background, borderTopColor: colors.border, opacity: pressed ? 0.8 : 1 }, idx === 0 && { borderTopWidth: 0 }]}
-                      onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
+                  {last5Gigs.map((gig, idx) => (
+                    <View
+                      key={idx}
+                      style={[styles.bookingSubRow, { backgroundColor: colors.background, borderTopColor: colors.border }, idx === 0 && { borderTopWidth: 0 }]}
                     >
                       <View style={styles.bookingSubLeft}>
                         <View style={[styles.bookingSubDot, { backgroundColor: colors.success + '20' }]}>
@@ -569,16 +577,13 @@ export default function ArtistProfileViewScreen() {
                             {dj.fullName}
                           </Text>
                           <Text style={[styles.bookingSubDetail, { color: colors.muted }]} numberOfLines={1}>
-                            {booking.venue?.name ?? booking.venueName ?? 'Unknown Venue'}
-                            {booking.slot?.date ? ` · ${formatDate(booking.slot.date)}` : ''}
-                            {booking.slot?.startTime && booking.slot?.endTime
-                              ? ` · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}`
-                              : ''}
+                            {gig.venue_name || 'Venue'}
+                            {gig.gig_date ? ` · ${formatDate(gig.gig_date)}` : ''}
+                            {gig.start_time && gig.end_time ? ` · ${formatTime(gig.start_time)}–${formatTime(gig.end_time)}` : ''}
                           </Text>
                         </View>
                       </View>
-                      <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
-                    </Pressable>
+                    </View>
                   ))}
                 </View>
               </ScrollView>
