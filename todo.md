@@ -12,11 +12,6 @@
 - Wizards split (OPTIONAL polish, low value): create-venue / manager-register / artist-setup → separate route screens for native back-gesture. They already work as single-screen wizards with slide animation. (L469-471)
 - Notification + push-tap deep-link routing: tapping a notification (in-app AND push) should open the specific screen by type/related_id, not just the notifications list. Booking→booking-detail (partly handled via the "Booking not found" fix), venue/lineup→my-venues. (L364 / L843)
 
-**OPTIONAL polish (decide if worth it)**
-- Hide "Pending verification" pill from non-owners — one-line conditional. (L929)
-- Gate the × cancel button off for null-artist booking rows (harmless no-op today). (L973)
-- Live-remove a just-deleted artist from Network (clears on refresh today). (L959)
-
 **BIGGER WORKSTREAMS (deliberately parked)**
 - Push: Android FCM credentials; same-day/day-before gig reminders. (iOS push already works end-to-end — registration, send, real-device tested.) (L839, L842)
 - Auth: OAuth-then-password collision; plain email+password signup sanity-check; Android Google sign-in. (L941-942, L853)  *(Signup-flow wrong-UUID finding — RESOLVED June 22 2026, confirmed a one-off via data audit; see bottom of file.)*
@@ -895,7 +890,7 @@
 ## G. Security to verify
 
 - [x] `.env` — confirmed contains only public Supabase keys (anon + url); now gitignored + untracked, no rotation needed
-- [~] Confirm Supabase RLS enabled with correct policies on all tables — `notifications` locked down (own-row read/update/delete; inserts only via service-role create-notification function). STILL TODO: verify the other 13 tables have sensible policies before launch
+- [x] Confirm Supabase RLS enabled with correct policies on all tables — DONE June 22 2026. Full audit (pg_tables + pg_policies); RLS enabled on all 15 tables. Fixed 3 real leaks: managers SELECT was `USING true` (every manager's email/phone readable by any authed user) → own-row `auth.uid() = id`; dropped broad "Authenticated can read bookings" (cross-artist history now only via the safe get_artist_public_gigs RPC); dropped broad "Authenticated can read lineup" on global_lineup. Tightened venues read to authenticated (dropped the no-login public read). Deduped redundant per-command policies on venues/slots/bookings/global_lineup/invoices/managers/artists (covered by each table's manager `ALL` policy or the authenticated read). Dropped the unused `invites` table. Accepted as-is per product: artists + venues + slots readable by any authed user (intended public/discovery; only PII is the known artists.email/phone caveat), and availability_blocks private-event name/location readable. Already correct: users (own-row), notifications (own-row + service-role insert), reports (insert-only), venue_assignments (manager ALL + artist leave/view-own).
 
 # ─────────────────────────────────────────────────────────
 # JUNE 2026 — Notifications, Network refactor, EAS/Push
@@ -1175,3 +1170,20 @@ All three device-only verification items from the top "CURRENT OPEN ITEMS" block
 - [x] KeyboardAvoidingView on the artist Add/Block slot modal — lower fields are NOT covered by the keyboard. (verified on device)
 - [x] Full signup matrix — new artist signup shows everything immediately, appears correctly in others' Network, and survives sign-out/in on email + Apple + Google; manager signup Company Name (not bio/years) saves, shows, and persists across sign-out/in. (verified on device)
 - [x] Manager's dedicated email + phone change flows persist to Supabase — phone change writes to Supabase immediately; email is read-only (changed via admin@nexgigapp.com). (verified on device)
+
+## Session log — June 2026 (latest: RLS audit + email-invite retirement + profile RPC + UI polish)
+
+Removed the stale "OPTIONAL polish" trio from the top block — all three were already resolved (pending-verification pill hidden from non-owners = done June 15; null-artist cancel button + live-remove-deleted-artist = explicit won't-do in the body).
+
+- [x] RLS audited + hardened on all 15 tables (full detail in section G): managers SELECT was `USING true` (email/phone leak) → own-row; dropped broad "Authenticated can read bookings" + "Authenticated can read lineup"; venues read tightened to authenticated; redundant per-command policies deduped. NOTE: if not done yet, run `drop table if exists public.invite_venues; drop table if exists public.invites cascade;` to finish the invite retirement.
+- [x] Retired the email-invite flow end-to-end: deleted `(manager)/invite-artist.tsx` + `lib/api.ts` (dead Manus helper layer), removed the dead invite `useEffect` + `handleSendInvite` from `(manager)/artist-profile-view.tsx`, repointed the My Artists FAB to Network → Artists (open-registration discovery). `send-invite-email` Edge Function now orphaned (delete in dashboard whenever).
+- [x] Signup-flow wrong-UUID finding RESOLVED — one-off dev-test artifact, data audit returned 0 mismatches (see bottom of file).
+- [x] Artist + manager artist-profile-view now show the viewed artist's REAL global completed gigs / monthly plays / history via a new `get_artist_public_gigs` SECURITY DEFINER RPC (returns only venue + date + times; manager's remove-warning keeps its own shared-gig count).
+- [x] Verified-badge consistency: icon-only ✓ next to the name on the network artist card, network venue card, venue-detail header, and My Venues (after the name, matching network); added the ✓ to the artist profile-view hero (both manager + artist sides).
+- [x] Network card polish: artist card subtitle → primary genre only (dropped location + secondary); venue cards → name + location only (fixed the artist-side address that never showed — now reads `google_maps_location.address`; manager venues map via `mapVenueRow` so location shows).
+- [x] Connect/Join controls unified: manager artist card connected = green ✓ pill matching Add + swipe-left to disconnect; artist venue Join pill matched to Add (+ "Sent" muted sibling + green ✓ when connected); artists can swipe-left to LEAVE a venue (deletes own `venue_assignments` row via a new "Artists can leave a venue" DELETE policy + notifies the manager).
+- [x] Notify the artist when a manager declines their venue join request (`lineup_declined` notification + push).
+- [x] Booking-detail slot card (both sides): dropped the slot-name line, now leads with date + time.
+- [x] Manager's view of a CONNECTED artist gets a Contact section (email + phone) — added `artists.phone` column + dual-write on the artist's phone change. Send Feedback now actually delivers (mailto to admin@nexgigapp.com, both sides); email-change hint names the support address.
+- [x] Edit-venue brought in line with create-venue: Preferred Energy options (Low/High/Mixed) + the full field order now match.
+- [x] Three VERIFY-ON-DEVICE items confirmed (KeyboardAvoidingView, full signup matrix, manager email/phone persistence) — logged just above.
