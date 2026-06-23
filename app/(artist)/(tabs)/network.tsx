@@ -322,7 +322,7 @@ export default function ArtistNetworkScreen() {
                       style={[
                         styles.applyBtn,
                         hasApplied
-                          ? { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }
+                          ? { backgroundColor: colors.border }
                           : { backgroundColor: colors.primary },
                       ]}
                       onPress={(e) => { e.stopPropagation(); !hasApplied && handleJoin(venue); }}
@@ -331,7 +331,7 @@ export default function ArtistNetworkScreen() {
                       {isApplying ? (
                         <ActivityIndicator size="small" color="#fff" />
                       ) : hasApplied ? (
-                        <Text style={[styles.applyBtnText, { color: colors.muted }]}>Requested</Text>
+                        <Text style={[styles.applyBtnText, { color: colors.muted }]}>Sent</Text>
                       ) : (
                         <>
                           <MaterialIcons name="add" size={14} color="#fff" />
