@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
+import { cityFromAddress } from '@/lib/places';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 type NetworkTab = 'venues' | 'artists';
@@ -19,6 +20,7 @@ type VenueItem = {
   address: string | null;
   genre_preferences: string[];
   photo_urls: string[] | null;
+  admin_photo_url: string | null;
   manager_id: string;
   verification_status: string | null;
 };
@@ -109,6 +111,7 @@ export default function ArtistNetworkScreen() {
         address: v.google_maps_location?.address ?? v.address ?? null,
         genre_preferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
         photo_urls: Array.isArray(v.photo_urls) ? v.photo_urls : null,
+        admin_photo_url: v.admin_photo_url ?? null,
         manager_id: v.manager_id,
         verification_status: v.verification_status ?? null,
       })) as VenueItem[]);
@@ -326,8 +329,8 @@ export default function ArtistNetworkScreen() {
                   onPress={() => router.push((`/(artist)/venue-detail?id=` + venue.id) as Href)}
                 >
                   <View style={styles.cardLeft}>
-                    {venue.photo_urls && venue.photo_urls.length > 0 ? (
-                      <Image source={{ uri: venue.photo_urls[0] }} style={styles.thumb} resizeMode="cover" />
+                    {(venue.photo_urls?.[0] || venue.admin_photo_url) ? (
+                      <Image source={{ uri: venue.photo_urls?.[0] || venue.admin_photo_url || undefined }} style={styles.thumb} resizeMode="cover" />
                     ) : (
                       <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
                         <MaterialIcons name="place" size={22} color={colors.muted} />
@@ -342,7 +345,7 @@ export default function ArtistNetworkScreen() {
                       </View>
                       {venue.address ? (
                         <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                          {venue.address}
+                          {cityFromAddress(venue.address)}
                         </Text>
                       ) : null}
                     </View>

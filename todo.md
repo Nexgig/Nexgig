@@ -9,14 +9,14 @@
 ## ⟢ CURRENT OPEN ITEMS (read this first)
 
 **MEDIUM / feature work**
-- Wizards split (OPTIONAL polish, low value): create-venue / manager-register / artist-setup → separate route screens for native back-gesture. They already work as single-screen wizards with slide animation. (L469-471)
-- Notification + push-tap deep-link routing: tapping a notification (in-app AND push) should open the specific screen by type/related_id, not just the notifications list. Booking→booking-detail (partly handled via the "Booking not found" fix), venue/lineup→my-venues. (L364 / L843)
+- Wizards split — PARKED (not needed now, revisit later): create-venue / manager-register / artist-setup → separate route screens for native back-gesture. They already work as single-screen wizards with slide animation. (L469-471)
+
+_(Notification deep-link — DONE June 23 2026: push-tap routing by payload + cold-start in app/_layout.tsx, plus in-app routing for booking/venue/lineup on both sides. Optional remainder for later: manager IN-APP `invoice_received` → invoice detail and `artist_joined` → My Artists, which currently fall back to the list.)_
 
 **BIGGER WORKSTREAMS (deliberately parked)**
 - Push: Android FCM credentials; same-day/day-before gig reminders. (iOS push already works end-to-end — registration, send, real-device tested.) (L839, L842)
 - Auth: OAuth-then-password collision; plain email+password signup sanity-check; Android Google sign-in. (L941-942, L853)  *(Signup-flow wrong-UUID finding — RESOLVED June 22 2026, confirmed a one-off via data audit; see bottom of file.)*
 - Email infra: welcome email; lineup-add email (with venue rules); venue-rules-on-acceptance email. (L935-937)
-- Maps: location picker at venue creation + "Open in Google Maps" on booking-detail. (L923)
 - Calendar: artist Google Calendar sync (scope TBD). (L946)
 - App Store / TestFlight launch path (ordered, parked until ready):
     1. Paid Apple Developer account ($99/yr).
@@ -396,7 +396,7 @@
 - [x] Fix: artist-cancelled bookings should not appear in New tab; only manager-cancelled should (add cancelledByArtist flag)
 - [x] Add 8 in-app notification triggers for artists (new request, cancelled, slot deleted, past confirmation, lineup add/remove, venue assign/remove)
 - [x] Add 8 in-app notification triggers for artists (new request, cancelled, slot deleted, past confirmation, lineup add/remove, venue assign/remove)
-- [ ] Notification deep-link: booking notifications → booking detail with back → notifications; venue/lineup → artist venues screen
+- [x] Notification deep-link: booking notifications → booking detail with back → notifications; venue/lineup → artist venues screen — DONE (in-app routing live on both sides; push-tap routing added June 23 2026)
 - [x] Rename all roster references to lineup (Global Lineup = artists connected to manager, Lineup = artists assigned to venue)
 - [x] Create artist my-venues screen showing assigned venues with venue profiles
 - [x] Fix New Gig Request notification: add venue/date/slot details to body, add relatedId/relatedType so it navigates to booking detail on tap
@@ -867,7 +867,7 @@
 - [x] Register device push tokens on sign-in and store per user in Supabase — `lib/notifications-push.ts` registers + saves to new `users.push_token` column; called from app/_layout on sign-in
 - [x] Send push on key events — `create-notification` Edge Function now sends Expo push to the recipient's push_token (best-effort); tested working on a physical iPhone
 - [ ] Wire same-day / day-before gig reminders (artist settings toggles exist; need real scheduling on a dev/EAS build)
-- [ ] Push-tap deep-link: route by notification type/related_id (currently always opens notifications list) — tie in with the "Booking not found" fix below
+- [x] Push-tap deep-link: route by notification type/related_id — DONE June 23 2026 (app/_layout.tsx routeFromPush + cold-start via getLastNotificationResponseAsync; payload already carried type/related_id/related_type from create-notification). Needs a real EAS build to device-test (push doesn't work in Expo Go).
 
 ## E. Sign in with Apple + Google
 
@@ -947,7 +947,7 @@
 - [x] Add a "disconnect" icon to each artist's profile card on the manager's "My Artists" page that removes that artist from THIS manager's connections — i.e. remove them from the manager's global lineup AND from all of the manager's venue assignments (call useLineupStore.removeFromGlobalLineup(artistId) locally + delete/deactivate the corresponding global_lineup and venue_assignments rows in Supabase for this manager). Add a confirmation step before disconnecting.
 - [x] [Self-view] Artist should see their OWN card in Network > Artists so they can preview how their profile looks to other artists — currently self is likely filtered out. Either include self in the list (clearly marked "You"), or add a "Preview my profile" affordance that opens the read-only artist-profile-view of themselves.
 - [x] [Venue copy] In create-venue (and edit-venue), add a short note near the Rules field telling the manager that a venue's rules are sent to the artist when they join the lineup / are accepted — DONE June 15.
-- [ ] [Maps] Capture a real Google Maps location for venues (Venue type already has googleMapsLocation; today it's address text only). Add a location/place picker at venue creation, persist lat/lng (or a maps URL) on the venue, snapshot it onto booking records, and add an "Open in Google Maps" button on the booking-detail screen that launches turn-by-turn navigation (Linking.openURL) so the artist can navigate to the gig.
+- [x] [Maps] DONE June 24 2026 — Google Places venue location picker + "Open in Google Maps" + admin fallback photo + short-city display. See the June 24 2026 session log at the bottom of this file.
 
 ## Venue verification / moderation (June 2026)
 
@@ -1187,3 +1187,29 @@ Removed the stale "OPTIONAL polish" trio from the top block — all three were a
 - [x] Manager's view of a CONNECTED artist gets a Contact section (email + phone) — added `artists.phone` column + dual-write on the artist's phone change. Send Feedback now actually delivers (mailto to admin@nexgigapp.com, both sides); email-change hint names the support address.
 - [x] Edit-venue brought in line with create-venue: Preferred Energy options (Low/High/Mixed) + the full field order now match.
 - [x] Three VERIFY-ON-DEVICE items confirmed (KeyboardAvoidingView, full signup matrix, manager email/phone persistence) — logged just above.
+
+## Session log — June 23 2026 (venue-delete history preservation, artist completed gigs, invoices for deleted venues, rate removal)
+
+All committed (commit 29c33d2 for the venue/booking/invoice batch; rate-removal a follow-up commit). Device-tested by user.
+
+- [x] **Venue "delete" now HIDES instead of hard-deleting** — edit-venue sets `is_hidden = true` (keeps the row + slots alive so completed gigs keep resolving the real venue name everywhere), cancels the venue's pending/confirmed bookings + notifies those artists, and still removes venue_assignments. Completed gigs are preserved as history. `is_hidden` already existed in the DB and both Network lists already filtered it; only `sync.ts` needed to READ `is_hidden` (was hardcoded false) so the hide persists across reload. My Venues already filtered `!isHidden`.
+- [x] **Manager calendar shows hidden venues' booked slots** — scoped slot rendering to include hidden venues but ONLY slots that already have a booking (history shows, no empty-slot clutter); filter tabs + add-slot stay on active venues.
+- [x] **Artist completed gigs were invisible — TWO root causes fixed.** (1) Artist `_layout` booking loader SKIPPED completed bookings on sign-in (`else if (!isCompleted || status!=='completed')`) — and the booking store isn't persisted, so they vanished every sign-out/in. Now loads all bookings incl. completed. (2) Artist dashboard auto-complete required the slot in-store, but the artist app never loads slots, so past confirmed gigs never flipped to completed → fell into a gap (not upcoming, not completed). Now falls back to the booking's `slotDate`/`slotStartTime` snapshot. Fixes dashboard COMPLETED count, Completed Gigs screen, and profile History.
+- [x] **Invoices work for deleted/hidden venues** — `invoices.tsx` New-Invoice list no longer drops a venue missing from the store (falls back to booking `venueName` snapshot); `invoice-gigs` header uses snapshot + passes managerId/venueName params; `invoice-preview` fetches the still-existing venue row from Supabase for name/manager/billing (billing is in separate `billing_company_*` columns that no artist-side loader maps), with snapshot param fallback + a send guard blocking an invoice with no resolved manager. Send now inserts to Supabase FIRST and only marks sent/notifies on success (was silently swallowing insert errors). Manager profile re-pulls invoices on focus (realtime INSERT on `invoices` may not be firing — table likely not in the realtime publication; optional `alter publication supabase_realtime add table public.invoices;`). RLS on invoices confirmed correct (manager SELECT `manager_id = auth.uid()` exists).
+- [x] **Verified badge on the artist's OWN profile tab** — blue `verified` icon next to the name, same rule as elsewhere (`has_completed_booking` flag, now mapped into the own-profile fetch, OR loaded completed gigs).
+- [x] **Booking-detail keeps the venue name when the venue is gone** — both manager + artist booking-detail venue cards fall back to the booking `venueName` snapshot; manager date/time card also falls back to slot snapshot (cascades away with a hard-deleted venue). Artist side previously showed NO venue card on normal gigs (artist app has no venues in store) — now shows it via snapshot.
+- [x] **Removed the artist RATE field from everywhere** — dropped the Minimum Rate input + "visible to managers" note from signup (step 3 is now just Instruments) and artist edit-profile, the rate display card from the artist's own profile, and the manager-only rate card from the manager's artist-profile-view. No longer written to the artists row. `min_rate` DB column + `minRate` type field left in place (unused, harmless) — drop the column later if wanted.
+
+## Session log — June 24 2026 (Google Places venue location + admin fallback photo + city display)
+
+Why a custom picker: the old `react-native-google-places-autocomplete` lib uses the LEGACY Places API, which Google no longer lets NEW Cloud projects enable (frozen Mar 1 2025). Our project is new, so that lib was dead — built on Places API (New) via a server-side proxy instead.
+
+- [x] **places-proxy Edge Function** (deployed via dashboard, NOT in repo — same as the other functions). Proxies Places API (New) autocomplete + details so the API key (`GOOGLE_PLACES_KEY` secret) never ships in the app bundle. UAE-only (`includedRegionCodes: ['ae']`), session tokens, tight field mask. Verify-JWT ON (only signed-in app users can call it). GOTCHA hit during setup: it was first deployed under the wrong name `smooth-task` → app got non-2xx until redeployed as `places-proxy`.
+- [x] **lib/places.ts** (new) — `placesAutocomplete` / `placeDetails` (call the proxy via supabase.functions.invoke, JWT auto-attached), `newPlacesSessionToken`, and `cityFromAddress` (scans for the 7 UAE emirates and returns just the emirate for short card display; falls back to the segment before the country).
+- [x] **create-venue + edit-venue** — replaced the dead library with a custom Google autocomplete (search box + tappable suggestions, 300ms debounce). create: picking a place is REQUIRED to pass step 1 (no manual free-type — per Tuts). edit: existing location kept untouched unless the address is edited, then a re-pick is required. Stores `{ lat, lng, address, place_id }`; the address SAVED is the short `secondary` line (e.g. "Palm Jumeirah - Dubai"), not Google's full formattedAddress.
+- [x] **Storage round-trip fix (real bug)** — there was NO `google_maps_location` column; both loaders (sync.ts syncVenues + store.ts mapVenueRow) read it and always fell back to lat/lng 0,0, so venue coordinates were silently dropped on EVERY reload. Both now build googleMapsLocation from the flat `lat`/`lng`/`address`/`place_id` columns. SQL run: `alter table public.venues add column if not exists place_id text;` and `... add column if not exists admin_photo_url text;`.
+- [x] **Open in Google Maps** — was already on booking-detail (both sides); now reads the stored place_id/coords correctly. Confirmed working on device.
+- [x] **Admin fallback photo** — `admin_photo_url` column + `adminPhotoUrl` on the Venue type, mapped in both loaders. Shared `venuePhotoUri()` resolver (manager photo → admin photo → icon) applied to venue-detail, my-venues, and network venue cards on BOTH sides (artist network uses its own VenueItem type, so `admin_photo_url` was added there too). Admin sets it directly in Supabase (`admin_photo_url` = a public image URL); only shows when the venue has no manager-uploaded photo. (Built; quick device-check of the fallback still recommended.)
+- [x] **City-only address display** — `cityFromAddress` applied to every venue/booking card: manager + artist venue-detail, manager + artist booking-detail, both my-venues, both network. Shows "Dubai" instead of the full street line; works on old long addresses too. Manager My Venues card ALSO had the venue type removed from the subtitle (city only now).
+
+NOTE: the old `react-native-google-places-autocomplete` package + the `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` env var are now unused but left in place (harmless, per "don't clean up unprompted"). `venueTypeLabel` in manager my-venues is now an unused local (harmless).

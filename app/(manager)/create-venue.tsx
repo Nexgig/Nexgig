@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Platform, useWindowDimensions } from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSuggestion } from '@/lib/places';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -45,7 +45,6 @@ const SUB_VIBES: SubVibe[] = [
   'Melodic', 'Groovy', 'Underground', 'Commercial', 'High Energy',
   'Chill', 'Dark', 'Tribal', 'Percussive', 'Urban', 'Soul',
 ];
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 const TOTAL_STEPS = 4;
 
 const ANIM_DURATION = 350;
@@ -58,7 +57,8 @@ export default function CreateVenueScreen() {
   const addVenue = useVenueStore((s) => s.addVenue);
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const assignToVenue = useLineupStore((s) => s.assignToVenue);
-  const placesRef = useRef<any>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionTokenRef = useRef<string>(newPlacesSessionToken());
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -66,6 +66,9 @@ export default function CreateVenueScreen() {
   const [displayStep, setDisplayStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [addressCoords, setAddressCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [form, setForm] = useState({
     name: '',
     venueType: '' as VenueType | '',
@@ -120,6 +123,43 @@ export default function CreateVenueScreen() {
 
   const update = (key: string, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
 
+  const runAddressSearch = (text: string) => {
+    update('address', text);
+    // typing invalidates any prior selection — manager must pick from the list again
+    setSelectedPlaceId(null);
+    setAddressCoords(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (text.trim().length < 2) { setSuggestions([]); setSearchingPlaces(false); return; }
+    setSearchingPlaces(true);
+    debounceRef.current = setTimeout(async () => {
+      const results = await placesAutocomplete(text, sessionTokenRef.current);
+      setSuggestions(results);
+      setSearchingPlaces(false);
+    }, 300);
+  };
+
+  const selectPlace = async (s: PlaceSuggestion) => {
+    setSuggestions([]);
+    update('address', s.secondary || s.primary || s.full);
+    const details = await placeDetails(s.placeId, sessionTokenRef.current);
+    if (details && details.lat != null && details.lng != null) {
+      setAddressCoords({ lat: details.lat, lng: details.lng });
+      setSelectedPlaceId(details.placeId);
+      update('address', s.secondary || s.primary || s.full);
+      // next search starts a fresh billing session
+      sessionTokenRef.current = newPlacesSessionToken();
+    } else {
+      Alert.alert('Try again', "Couldn't load that location. Please select it again.");
+    }
+  };
+
+  const clearAddress = () => {
+    update('address', '');
+    setAddressCoords(null);
+    setSelectedPlaceId(null);
+    setSuggestions([]);
+  };
+
   const toggleItem = <T extends string>(key: string, item: T, current: T[]) => {
     setForm((f) => ({
       ...f,
@@ -134,8 +174,8 @@ export default function CreateVenueScreen() {
     if (!form.name.trim() || !form.venueType) {
       Alert.alert('Required', 'Please enter venue name and type.'); return;
     }
-    if (!form.address.trim()) {
-      Alert.alert('Required', 'Please enter and select a venue address.'); return;
+    if (!form.address.trim() || !selectedPlaceId || !addressCoords) {
+      Alert.alert('Select your venue', 'Please search and tap your venue from the Google list.'); return;
     }
   }
 
@@ -163,6 +203,7 @@ export default function CreateVenueScreen() {
     address: form.address,
     lat: addressCoords?.lat ?? null,
     lng: addressCoords?.lng ?? null,
+    place_id: selectedPlaceId,
     capacity: form.capacity || null,
     vibe_description: form.vibeDescription || null,
     preferred_energy: form.preferredEnergy,
@@ -196,7 +237,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     managerId: user.id,
     name: form.name,
     venueType: form.venueType as VenueType,
-    googleMapsLocation: { lat: addressCoords?.lat ?? 0, lng: addressCoords?.lng ?? 0, address: form.address || '' },
+    googleMapsLocation: { lat: addressCoords?.lat ?? 0, lng: addressCoords?.lng ?? 0, address: form.address || '', placeId: selectedPlaceId ?? undefined },
     capacity: form.capacity || undefined,
     vibeDescription: form.vibeDescription || undefined,
     preferredEnergy: form.preferredEnergy as unknown as VenueEnergy[],
@@ -300,71 +341,49 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Address *</Text>
-                {GOOGLE_MAPS_API_KEY ? (
-                  <View style={[styles.placesContainer, { borderColor: form.address ? colors.primary : colors.border }]}>
-                    <GooglePlacesAutocomplete
-                      ref={placesRef}
-                      placeholder="Search address..."
-                      fetchDetails
-                      onPress={(data, details) => {
-                        update('address', data.description);
-                        if (details?.geometry?.location) {
-                          setAddressCoords({
-                            lat: details.geometry.location.lat,
-                            lng: details.geometry.location.lng,
-                          });
-                        }
-                      }}
-                      query={{ key: GOOGLE_MAPS_API_KEY, language: 'en', components: 'country:ae' }}
-                      styles={{
-                        textInput: {
-                          backgroundColor: colors.surface,
-                          color: colors.foreground,
-                          fontSize: 15,
-                          borderRadius: 10,
-                          paddingHorizontal: 12,
-                          height: 46,
-                          borderWidth: 0,
-                        },
-                        listView: {
-                          backgroundColor: colors.surface,
-                          borderRadius: 10,
-                          marginTop: 4,
-                        },
-                        row: { backgroundColor: colors.surface, paddingVertical: 10, paddingHorizontal: 12 },
-                        description: { color: colors.foreground, fontSize: 14 },
-                        separator: { backgroundColor: colors.border, height: 0.5 },
-                      }}
-                      textInputProps={{ placeholderTextColor: colors.muted }}
-                      enablePoweredByContainer={false}
-                      keyboardShouldPersistTaps="handled"
+                <View>
+                  <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: selectedPlaceId ? colors.primary : colors.border }]}>
+                    <MaterialIcons name={selectedPlaceId ? 'place' : 'search'} size={18} color={selectedPlaceId ? colors.primary : colors.muted} />
+                    <TextInput
+                      style={[styles.searchInput, { color: colors.foreground }]}
+                      placeholder="Search your venue on Google..."
+                      placeholderTextColor={colors.muted}
+                      value={form.address}
+                      onChangeText={runAddressSearch}
+                      autoCorrect={false}
                     />
                     {form.address ? (
-                      <Pressable
-                        style={styles.clearAddressBtn}
-                        onPress={() => {
-                          update('address', '');
-                          setAddressCoords(null);
-                          placesRef.current?.clear();
-                        }}
-                      >
+                      <Pressable onPress={clearAddress} hitSlop={8}>
                         <MaterialIcons name="close" size={18} color={colors.muted} />
                       </Pressable>
                     ) : null}
                   </View>
-                ) : (
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder="e.g. Level 54, Address Sky View, Dubai"
-                    placeholderTextColor={colors.muted}
-                    value={form.address}
-                    onChangeText={(v) => update('address', v)}
-                    returnKeyType="done"
-                  />
-                )}
-                {!GOOGLE_MAPS_API_KEY && (
-                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to enable address autocomplete</Text>
-                )}
+                  {searchingPlaces && (
+                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Searching…</Text>
+                  )}
+                  {suggestions.length > 0 && (
+                    <View style={[styles.suggestList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {suggestions.map((s) => (
+                        <Pressable
+                          key={s.placeId}
+                          style={({ pressed }) => [styles.suggestRow, { borderBottomColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                          onPress={() => selectPlace(s)}
+                        >
+                          <MaterialIcons name="place" size={16} color={colors.muted} style={{ marginTop: 1 }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.suggestPrimary, { color: colors.foreground }]} numberOfLines={1}>{s.primary}</Text>
+                            {!!s.secondary && <Text style={[styles.suggestSecondary, { color: colors.muted }]} numberOfLines={1}>{s.secondary}</Text>}
+                          </View>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                  {selectedPlaceId ? (
+                    <Text style={{ color: colors.primary, fontSize: 12, marginTop: 6 }}>✓ Location selected</Text>
+                  ) : (
+                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Search and tap your venue to set its location.</Text>
+                  )}
+                </View>
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Preferred Energy (optional)</Text>
@@ -547,4 +566,10 @@ const styles = StyleSheet.create({
   instagramRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, overflow: 'hidden' },
   instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },
   instagramInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 15 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, height: 46 },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  suggestList: { borderWidth: 1, borderRadius: 10, marginTop: 6, overflow: 'hidden' },
+  suggestRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  suggestPrimary: { fontSize: 14, fontWeight: '500' },
+  suggestSecondary: { fontSize: 12, marginTop: 1 },
 });

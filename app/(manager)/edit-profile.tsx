@@ -330,7 +330,7 @@ export default function EditProfileScreen() {
               <MaterialIcons name="lock-outline" size={16} color={colors.muted} />
             </View>
             <Text style={[styles.secureHint, { color: colors.muted }]}>
-              To change your email, contact support.
+              To change your email, email admin@nexgigapp.com.
             </Text>
           </View>
 

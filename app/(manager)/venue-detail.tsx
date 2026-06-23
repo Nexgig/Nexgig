@@ -7,9 +7,10 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
 
@@ -140,9 +141,9 @@ export default function VenueDetailScreen() {
           )}
         </View>
 
-        {/* Venue Photo */}
-        {venue.photoUrls.length > 0 && (
-          <Image source={{ uri: venue.photoUrls[0] }} style={styles.venuePhoto} />
+        {/* Venue Photo — manager's upload, else admin-curated fallback */}
+        {venuePhotoUri(venue) && (
+          <Image source={{ uri: venuePhotoUri(venue) }} style={styles.venuePhoto} />
         )}
 
         {/* Venue Info */}
@@ -168,7 +169,7 @@ export default function VenueDetailScreen() {
           )}
           <View style={styles.locationRow}>
             <MaterialIcons name="location-on" size={16} color={colors.muted} />
-            <Text style={[styles.locationText, { color: colors.muted }]}>{venue.googleMapsLocation?.address}</Text>
+            <Text style={[styles.locationText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation?.address)}</Text>
           </View>
           {venue.capacity && (
             <View style={styles.locationRow}>

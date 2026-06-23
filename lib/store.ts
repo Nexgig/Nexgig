@@ -786,7 +786,8 @@ export function mapVenueRow(data: any): Venue {
     name: data.name,
     venueType: data.venue_type,
     photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls : [],
-    googleMapsLocation: data.google_maps_location ?? { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0 },
+    adminPhotoUrl: data.admin_photo_url ?? undefined,
+    googleMapsLocation: { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0, placeId: data.place_id ?? undefined },
     capacity: data.capacity ?? undefined,
     vibeDescription: data.vibe_description ?? undefined,
     preferredEnergy: Array.isArray(data.preferred_energy) ? data.preferred_energy : [],
@@ -803,6 +804,14 @@ export function mapVenueRow(data: any): Venue {
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   } as Venue;
+}
+
+// Resolve which photo a venue card should show: the manager's uploaded photo
+// takes priority; if there is none, fall back to the admin-curated photo; if
+// neither, return undefined so the caller renders its icon placeholder.
+export function venuePhotoUri(venue?: { photoUrls?: string[]; adminPhotoUrl?: string } | null): string | undefined {
+  if (!venue) return undefined;
+  return (Array.isArray(venue.photoUrls) && venue.photoUrls[0]) || venue.adminPhotoUrl || undefined;
 }
 
 interface VenueDirectoryState {

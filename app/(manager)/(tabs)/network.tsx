@@ -4,7 +4,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
+import { cityFromAddress } from '@/lib/places';
 import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -529,8 +530,8 @@ export default function NetworkScreen() {
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
               >
                 <View style={styles.cardLeft}>
-                  {venue.photoUrls && venue.photoUrls.length > 0 ? (
-                    <Image source={{ uri: venue.photoUrls[0] }} style={styles.thumb} resizeMode="cover" />
+                  {venuePhotoUri(venue) ? (
+                    <Image source={{ uri: venuePhotoUri(venue) }} style={styles.thumb} resizeMode="cover" />
                   ) : (
                     <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
                       <MaterialIcons name="place" size={22} color={colors.muted} />
@@ -545,7 +546,7 @@ export default function NetworkScreen() {
                     </View>
                     {venue.googleMapsLocation?.address ? (
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {venue.googleMapsLocation.address}
+                        {cityFromAddress(venue.googleMapsLocation.address)}
                       </Text>
                     ) : null}
                   </View>

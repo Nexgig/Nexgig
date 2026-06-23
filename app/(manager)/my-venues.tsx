@@ -6,7 +6,8 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuthStore, useVenueStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, venuePhotoUri } from '@/lib/store';
+import { cityFromAddress } from '@/lib/places';
 import { useColors } from '@/hooks/use-colors';
 import type { Venue } from '@/lib/types';
 
@@ -62,9 +63,9 @@ export default function ManagerMyVenuesScreen() {
               onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
             >
               <View style={styles.cardLeft}>
-                {venue.photoUrls && venue.photoUrls.length > 0 ? (
+                {venuePhotoUri(venue) ? (
                   <Image
-                    source={{ uri: venue.photoUrls[0] }}
+                    source={{ uri: venuePhotoUri(venue) }}
                     style={[styles.iconWrap, { borderColor: colors.border }]}
                     resizeMode="cover"
                   />
@@ -83,8 +84,7 @@ export default function ManagerMyVenuesScreen() {
                     )}
                   </View>
                   <Text style={[styles.venueType, { color: colors.muted }]} numberOfLines={1}>
-                    {venueTypeLabel}
-                    {venue.googleMapsLocation?.address ? ` · ${venue.googleMapsLocation.address}` : ''}
+                    {cityFromAddress(venue.googleMapsLocation?.address)}
                   </Text>
                   {venue.capacity ? (
                     <Text style={[styles.capacity, { color: colors.muted }]}>

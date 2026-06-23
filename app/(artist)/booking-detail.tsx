@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useCalendarJumpStore, useReviewStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { isPastStart } from '@/lib/utils';
 
@@ -200,7 +201,7 @@ export default function DJBookingDetailScreen() {
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>{venue.name}</Text>
                 <Text style={[styles.cardSub, { color: colors.muted }]}>{venue.venueType}</Text>
                 {venue.googleMapsLocation?.address && (
-                  <Text style={[styles.cardSub, { color: colors.muted }]}>{venue.googleMapsLocation.address}</Text>
+                  <Text style={[styles.cardSub, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
                 )}
               </View>
             </View>
@@ -226,6 +227,23 @@ export default function DJBookingDetailScreen() {
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>{booking.venueName}</Text>
               </View>
             </View>
+          ) : null}
+
+          {/* Open in Google Maps — directions to the venue (venue gigs only) */}
+          {!booking.isArtistCreated && (venue?.googleMapsLocation?.address || (venue?.googleMapsLocation?.lat && venue?.googleMapsLocation?.lng) || venue?.name || booking.venueName) ? (
+            <Pressable
+              style={({ pressed }) => [styles.calendarBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => {
+                const loc = venue?.googleMapsLocation;
+                const url = (loc?.lat && loc?.lng)
+                  ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                  : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || booking.venueName || '')}`;
+                Linking.openURL(url);
+              }}
+            >
+              <MaterialIcons name="directions" size={18} color={colors.primary} />
+              <Text style={[styles.calendarBtnText, { color: colors.primary }]}>Open in Google Maps</Text>
+            </Pressable>
           ) : null}
 
           {/* Slot / Day Details */}

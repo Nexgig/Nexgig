@@ -7,10 +7,11 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 
 export default function ArtistVenueDetailScreen() {
@@ -116,8 +117,8 @@ export default function ArtistVenueDetailScreen() {
         </View>
 
         {/* Venue Photo */}
-        {venue.photoUrls && venue.photoUrls.length > 0 && (
-          <Image source={{ uri: venue.photoUrls[0] }} style={styles.venuePhoto} resizeMode="cover" />
+        {venuePhotoUri(venue) && (
+          <Image source={{ uri: venuePhotoUri(venue) }} style={styles.venuePhoto} resizeMode="cover" />
         )}
 
         {/* Venue Info Card */}
@@ -126,7 +127,7 @@ export default function ArtistVenueDetailScreen() {
           {venue.googleMapsLocation?.address ? (
             <View style={styles.infoRow}>
               <MaterialIcons name="location-on" size={16} color={colors.muted} />
-              <Text style={[styles.infoText, { color: colors.muted }]}>{venue.googleMapsLocation.address}</Text>
+              <Text style={[styles.infoText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
             </View>
           ) : null}
           {venue.capacity ? (

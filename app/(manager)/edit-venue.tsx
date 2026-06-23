@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { uploadImageAsync } from '@/lib/upload';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { formatDate } from '@/lib/conflict-detection';
+import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSuggestion } from '@/lib/places';
 
 // ── Option arrays — kept in sync with create-venue.tsx ───────────────────────
 const VENUE_TYPES: VenueType[] = [
@@ -84,6 +85,17 @@ export default function EditVenueScreen() {
     venue?.photoUrls?.[0] ?? null
   );
   const [saving, setSaving] = useState(false);
+  const [addressCoords, setAddressCoords] = useState<{ lat: number; lng: number } | null>(
+    venue?.googleMapsLocation && (venue.googleMapsLocation.lat || venue.googleMapsLocation.lng)
+      ? { lat: venue.googleMapsLocation.lat, lng: venue.googleMapsLocation.lng }
+      : null
+  );
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(venue?.googleMapsLocation?.placeId ?? null);
+  const [locationDirty, setLocationDirty] = useState(false);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [searchingPlaces, setSearchingPlaces] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionTokenRef = useRef<string>(newPlacesSessionToken());
 
   // Track original values for change detection
   const originalForm = useRef({ ...form });
@@ -165,6 +177,46 @@ export default function EditVenueScreen() {
         : [...f.subVibe, v],
     }));
 
+  // ── Google Places address search ──────────────────────────────────────────
+  const runAddressSearch = (text: string) => {
+    setForm((f) => ({ ...f, address: text }));
+    // editing the address invalidates the saved location — must re-pick from Google
+    setLocationDirty(true);
+    setSelectedPlaceId(null);
+    setAddressCoords(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (text.trim().length < 2) { setSuggestions([]); setSearchingPlaces(false); return; }
+    setSearchingPlaces(true);
+    debounceRef.current = setTimeout(async () => {
+      const results = await placesAutocomplete(text, sessionTokenRef.current);
+      setSuggestions(results);
+      setSearchingPlaces(false);
+    }, 300);
+  };
+
+  const selectPlace = async (s: PlaceSuggestion) => {
+    setSuggestions([]);
+    setForm((f) => ({ ...f, address: s.secondary || s.primary || s.full }));
+    const details = await placeDetails(s.placeId, sessionTokenRef.current);
+    if (details && details.lat != null && details.lng != null) {
+      setAddressCoords({ lat: details.lat, lng: details.lng });
+      setSelectedPlaceId(details.placeId);
+      setForm((f) => ({ ...f, address: s.secondary || s.primary || s.full }));
+      setLocationDirty(false);
+      sessionTokenRef.current = newPlacesSessionToken();
+    } else {
+      Alert.alert('Try again', "Couldn't load that location. Please select it again.");
+    }
+  };
+
+  const clearAddress = () => {
+    setForm((f) => ({ ...f, address: '' }));
+    setAddressCoords(null);
+    setSelectedPlaceId(null);
+    setSuggestions([]);
+    setLocationDirty(true);
+  };
+
   // ── Photo picker ──────────────────────────────────────────────────────────
   const handlePickPhoto = () => {
     Alert.alert('Change Venue Photo', 'Choose an option', [
@@ -207,6 +259,7 @@ export default function EditVenueScreen() {
   const handleSave = async () => {
     if (!form.name.trim()) { Alert.alert('Required', 'Please enter a venue name.'); return; }
     if (!form.address.trim()) { Alert.alert('Required', 'Please enter an address.'); return; }
+    if (locationDirty && !selectedPlaceId) { Alert.alert('Select your venue', 'You changed the address — please tap your venue from the Google list.'); return; }
     if (saving) return;
     setSaving(true);
     // Upload a newly-picked venue photo (local file) to Storage; existing remote URLs pass through.
@@ -224,7 +277,12 @@ export default function EditVenueScreen() {
     const updates = {
       name: form.name.trim(),
       venueType: form.venueType,
-      googleMapsLocation: { ...venue.googleMapsLocation, address: form.address.trim() },
+      googleMapsLocation: {
+        lat: addressCoords?.lat ?? venue.googleMapsLocation?.lat ?? 0,
+        lng: addressCoords?.lng ?? venue.googleMapsLocation?.lng ?? 0,
+        address: form.address.trim(),
+        placeId: selectedPlaceId ?? venue.googleMapsLocation?.placeId ?? undefined,
+      },
       capacity: form.capacity,
       vibeDescription: form.vibeDescription,
       preferredEnergy: form.preferredEnergy as unknown as EnergyType[],
@@ -247,6 +305,9 @@ export default function EditVenueScreen() {
       name: form.name.trim(),
       venue_type: form.venueType,
       address: form.address.trim(),
+      lat: addressCoords?.lat ?? venue.googleMapsLocation?.lat ?? null,
+      lng: addressCoords?.lng ?? venue.googleMapsLocation?.lng ?? null,
+      place_id: selectedPlaceId ?? venue.googleMapsLocation?.placeId ?? null,
       capacity: form.capacity || null,
       vibe_description: form.vibeDescription || null,
       preferred_energy: form.preferredEnergy,
@@ -404,14 +465,45 @@ export default function EditVenueScreen() {
           {/* Address */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Address *</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="Enter venue address"
-              placeholderTextColor={colors.muted}
-              value={form.address}
-              onChangeText={(v) => setForm((f) => ({ ...f, address: v }))}
-              returnKeyType="done"
-            />
+            <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: selectedPlaceId ? colors.primary : colors.border }]}>
+              <MaterialIcons name={selectedPlaceId ? 'place' : 'search'} size={18} color={selectedPlaceId ? colors.primary : colors.muted} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.foreground }]}
+                placeholder="Search your venue on Google..."
+                placeholderTextColor={colors.muted}
+                value={form.address}
+                onChangeText={runAddressSearch}
+                autoCorrect={false}
+              />
+              {form.address ? (
+                <Pressable onPress={clearAddress} hitSlop={8}>
+                  <MaterialIcons name="close" size={18} color={colors.muted} />
+                </Pressable>
+              ) : null}
+            </View>
+            {searchingPlaces && (
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Searching…</Text>
+            )}
+            {suggestions.length > 0 && (
+              <View style={[styles.suggestList, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {suggestions.map((s) => (
+                  <Pressable
+                    key={s.placeId}
+                    style={({ pressed }) => [styles.suggestRow, { borderBottomColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                    onPress={() => selectPlace(s)}
+                  >
+                    <MaterialIcons name="place" size={16} color={colors.muted} style={{ marginTop: 1 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.suggestPrimary, { color: colors.foreground }]} numberOfLines={1}>{s.primary}</Text>
+                      {!!s.secondary && <Text style={[styles.suggestSecondary, { color: colors.muted }]} numberOfLines={1}>{s.secondary}</Text>}
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {locationDirty && !selectedPlaceId && form.address.trim().length > 0 && (
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Tap your venue from the list to set its location.</Text>
+            )}
           </View>
 
           {/* Preferred Energy */}
@@ -662,6 +754,12 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { fontSize: 13, fontWeight: '600' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, height: 46 },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  suggestList: { borderWidth: 1, borderRadius: 10, marginTop: 6, overflow: 'hidden' },
+  suggestRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  suggestPrimary: { fontSize: 14, fontWeight: '500' },
+  suggestSecondary: { fontSize: 12, marginTop: 1 },
   colorSwatch: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   headerSaveBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#2563EB', borderRadius: 20 },
   headerSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },

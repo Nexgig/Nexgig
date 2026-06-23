@@ -4,7 +4,8 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
+import { cityFromAddress } from '@/lib/places';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import type { Venue } from '@/lib/types';
@@ -43,8 +44,9 @@ export default function ArtistMyVenuesScreen() {
           useVenueStore.getState().addVenue({
             id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
             photoUrls: v.photo_urls ?? [],
+            adminPhotoUrl: v.admin_photo_url ?? undefined,
             genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
-            googleMapsLocation: v.google_maps_location, color: v.color ?? '#2563EB',
+            googleMapsLocation: { address: v.address ?? '', lat: v.lat ?? 0, lng: v.lng ?? 0, placeId: v.place_id ?? undefined }, color: v.color ?? '#2563EB',
             isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
             createdAt: v.created_at, updatedAt: v.updated_at,
           });
@@ -142,9 +144,9 @@ export default function ArtistMyVenuesScreen() {
               onPress={() => handleVenuePress(venue.id)}
             >
               <View style={styles.cardLeft}>
-                {venue.photoUrls && venue.photoUrls.length > 0 ? (
+                {venuePhotoUri(venue) ? (
                   <Image
-                    source={{ uri: venue.photoUrls[0] }}
+                    source={{ uri: venuePhotoUri(venue) }}
                     style={[styles.iconWrap, { borderColor: colors.border }]}
                     resizeMode="cover"
                   />
@@ -159,7 +161,7 @@ export default function ArtistMyVenuesScreen() {
                   </Text>
                   <Text style={[styles.venueType, { color: colors.muted }]} numberOfLines={1}>
                     {venueTypeLabel}
-                    {venue.googleMapsLocation?.address ? ` · ${venue.googleMapsLocation.address}` : ''}
+                    {venue.googleMapsLocation?.address ? ` · ${cityFromAddress(venue.googleMapsLocation.address)}` : ''}
                   </Text>
                   {isHighlighted && (
                     <Text style={[styles.newLabel, { color: colors.primary }]}>Newly assigned</Text>

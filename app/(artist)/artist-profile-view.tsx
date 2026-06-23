@@ -38,6 +38,7 @@ export default function ArtistProfileViewScreen() {
   const [fetchedProfile, setFetchedProfile] = useState<any>(null);
   const [isFetching, setIsFetching] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [publicGigs, setPublicGigs] = useState<{ venue_name: string; gig_date: string; start_time: string; end_time: string }[]>([]);
 
   useEffect(() => {
     if (!artistId) return;
@@ -46,6 +47,10 @@ export default function ArtistProfileViewScreen() {
     // bio/years, so those would otherwise never show. Only show the spinner if
     // we have nothing to display yet.
     if (!djFromStore && !dirEntry) setIsFetching(true);
+    // Public gig history (venue + date + times only) via a SECURITY DEFINER RPC,
+    // so we can show this artist's real completed gigs without exposing private booking fields.
+    supabase.rpc('get_artist_public_gigs', { p_artist_id: artistId })
+      .then(({ data }) => { if (Array.isArray(data)) setPublicGigs(data as any); });
     // Read the public profile from the artists table only (world-readable to
     // authenticated users). The artists row carries name/photo/bio/based_in/years
     // plus genre/links — so we no longer read the users table here (it holds
@@ -86,31 +91,12 @@ export default function ArtistProfileViewScreen() {
   const dj = fetchedUser ?? dirEntry?.user ?? djFromStore;
   const profile = fetchedProfile ?? dirEntry?.profile ?? profileFromStore;
 
-  // All completed bookings for this artist (public gig history)
-  const completedBookings = useMemo(() => {
-    return allBookings
-      .filter((b) => b.artistId === artistId && (b.isCompleted || b.status === 'completed'))
-      .map((b) => {
-        const slot = allSlots.find((s) => s.id === b.slotId);
-        const venue = allVenues.find((v) => v.id === b.venueId);
-        const resolvedSlot = slot ?? (b.slotDate ? {
-          id: b.slotId, venueId: b.venueId, date: b.slotDate,
-          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
-          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
-        } : undefined);
-        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as unknown as typeof venue : undefined);
-        return { ...b, slot: resolvedSlot, venue: resolvedVenue };
-      })
-      .filter((b) => b.slot?.date)
-      .sort((a, b) => (a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1);
-  }, [allBookings, artistId, allSlots, allVenues]);
-
-  // Monthly Plays: completed bookings in last 30 days
+  // Monthly Plays: completed gigs in the last 30 days (from the public RPC).
   const monthlyPlays = useMemo(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
-    return completedBookings.filter((b) => b.slot?.date && new Date(b.slot.date) >= cutoff).length;
-  }, [completedBookings]);
+    return publicGigs.filter((g) => g.gig_date && new Date(g.gig_date) >= cutoff).length;
+  }, [publicGigs]);
 
   if (isFetching) {
     return (
@@ -132,8 +118,8 @@ export default function ArtistProfileViewScreen() {
     );
   }
 
-  const completedGigs = completedBookings.length;
-  const last5Gigs = completedBookings.slice(0, 5);
+  const completedGigs = publicGigs.length;
+  const last5Gigs = publicGigs.slice(0, 5);
   const memberSince = formatMemberSince(dj.createdAt);
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
   const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
@@ -300,9 +286,9 @@ export default function ArtistProfileViewScreen() {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={[styles.monthTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  {last5Gigs.map((booking, idx) => (
+                  {last5Gigs.map((gig, idx) => (
                     <View
-                      key={booking.id}
+                      key={idx}
                       style={[styles.bookingSubRow, { backgroundColor: colors.background, borderTopColor: colors.border }, idx === 0 && { borderTopWidth: 0 }]}
                     >
                       <View style={styles.bookingSubLeft}>
@@ -314,11 +300,9 @@ export default function ArtistProfileViewScreen() {
                             {dj.fullName}
                           </Text>
                           <Text style={[styles.bookingSubDetail, { color: colors.muted }]} numberOfLines={1}>
-                            {(booking.venue as { name?: string } | undefined)?.name ?? (booking as Record<string, unknown>).venueName as string ?? 'Unknown Venue'}
-                            {booking.slot?.date ? ` · ${formatDate(booking.slot.date)}` : ''}
-                            {booking.slot?.startTime && booking.slot?.endTime
-                              ? ` · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}`
-                              : ''}
+                            {gig.venue_name || 'Venue'}
+                            {gig.gig_date ? ` · ${formatDate(gig.gig_date)}` : ''}
+                            {gig.start_time && gig.end_time ? ` · ${formatTime(gig.start_time)}–${formatTime(gig.end_time)}` : ''}
                           </Text>
                         </View>
                       </View>

@@ -2,7 +2,7 @@ import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, LogBox } from "react-native";
@@ -73,18 +73,70 @@ export default function RootLayout() {
     }
   }, [currentUser?.id]);
 
-  // Handle taps on a push notification — route to the notifications screen.
+  // Route a tapped push notification to the right screen from its data payload.
+  // The create-notification Edge Function sends { type, related_id, related_type }.
+  // Mirrors the in-app notification tap routing; falls back to the list.
+  const routeFromPush = useCallback((data: Record<string, any> | null | undefined) => {
+    const accountType = useAuthStore.getState().currentUser?.accountType;
+    if (!accountType || !data) return;
+    const base = accountType === 'manager' ? '/(manager)' : '/(artist)';
+    const type = data.type as string | undefined;
+    const relatedId = data.related_id as string | undefined;
+    const relatedType = data.related_type as string | undefined;
+
+    if (relatedType === 'booking' && relatedId) {
+      router.push(`${base}/booking-detail?id=${relatedId}` as any);
+      return;
+    }
+    if (accountType === 'artist' && type === 'venue_assigned') {
+      router.push(`${base}/my-venues${relatedId ? `?highlightVenueId=${relatedId}` : ''}` as any);
+      return;
+    }
+    if (accountType === 'artist' && (type === 'lineup_added' || type === 'lineup_removed' || type === 'venue_removed')) {
+      router.push(`${base}/my-venues` as any);
+      return;
+    }
+    router.push(`${base}/notifications` as any);
+  }, [router]);
+
+  // Holds a tap that arrived before the user was hydrated (cold start, or a tap
+  // during the auth-store rehydrate), flushed by the effect below once signed in.
+  const pendingPushData = useRef<Record<string, any> | null>(null);
+
+  // Cold start: if a tapped push launched the app, capture it for the flush effect.
+  useEffect(() => {
+    let mounted = true;
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (mounted && response) {
+        pendingPushData.current = response.notification.request.content.data as Record<string, any>;
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // Warm taps (app already open): route now if the user is ready, else queue it.
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { type?: string } | undefined;
-      const accountType = useAuthStore.getState().currentUser?.accountType;
-      if (!accountType) return;
-      const base = accountType === 'manager' ? '/(manager)' : '/(artist)';
-      router.push(`${base}/notifications` as any);
-      void data;
+      const data = response.notification.request.content.data as Record<string, any> | undefined;
+      if (useAuthStore.getState().currentUser?.accountType) {
+        routeFromPush(data);
+      } else {
+        pendingPushData.current = data ?? null;
+      }
     });
     return () => sub.remove();
-  }, []);
+  }, [routeFromPush]);
+
+  // Flush a queued tap once the user is hydrated. Small defer so the navigator and
+  // initial (auth-gate) route are mounted before we push on top of them.
+  useEffect(() => {
+    if (currentUser?.id && pendingPushData.current) {
+      const data = pendingPushData.current;
+      pendingPushData.current = null;
+      const t = setTimeout(() => routeFromPush(data), 400);
+      return () => clearTimeout(t);
+    }
+  }, [currentUser?.id, routeFromPush]);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
     setInsets(metrics.insets);

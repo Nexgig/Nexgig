@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -46,6 +46,10 @@ export default function SendFeedbackScreen() {
       list.push(entry);
       await AsyncStorage.setItem(STORAGE_KEY_FEEDBACK, JSON.stringify(list));
     } catch { /* ignore */ }
+    // Open the user's mail app addressed to support so the message actually reaches us.
+    const catLabel = CATEGORIES.find((c) => c.value === category)?.label ?? 'Feedback';
+    const mailSubject = subject.trim() ? `[${catLabel}] ${subject.trim()}` : `[${catLabel}]`;
+    try { await Linking.openURL(`mailto:admin@nexgigapp.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message.trim())}`); } catch { /* ignore */ }
     setIsSending(false);
     setSuccess(true);
   }, [subject, message, category]);

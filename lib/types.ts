@@ -175,6 +175,7 @@ export interface Venue {
   genrePreferences: GenreType[];
   vibeDescription?: string;
   photoUrls: string[];
+  adminPhotoUrl?: string; // admin-curated fallback photo; shown only when the manager hasn't uploaded one
   instagramUrl?: string;
   musicLink?: string;
   audienceType?: AudienceType[];
