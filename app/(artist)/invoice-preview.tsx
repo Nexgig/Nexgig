@@ -3,21 +3,23 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform } from '
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, useLineupStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, useLineupStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { supabase } from '@/lib/supabase';
-import type { Invoice, InvoiceGig } from '@/lib/types';
+import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
 
 export default function InvoicePreviewScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { venueId, gigsJson, total, invoiceId, readOnly } = useLocalSearchParams<{
+  const { venueId, gigsJson, total, invoiceId, readOnly, managerId: paramManagerId, venueName: paramVenueName } = useLocalSearchParams<{
     venueId?: string;
     gigsJson?: string;
     total?: string;
     invoiceId?: string;
     readOnly?: string;
+    managerId?: string;
+    venueName?: string;
   }>();
   const currentUser = useAuthStore((s) => s.currentUser);
   const venue = useVenueStore((s) => s.getVenueById(venueId ?? ''));
@@ -31,6 +33,32 @@ export default function InvoicePreviewScreen() {
   const isReadOnly = readOnly === '1';
   const existingInvoice = invoiceId ? invoices.find((inv) => inv.id === invoiceId) : null;
 
+  // When creating a new invoice for a venue that's no longer in the local store
+  // (manager hid/deleted it, or the artist left it), fetch the still-existing venue
+  // row from Supabase so the invoice keeps the real name, manager, and billing details.
+  const [fetchedVenue, setFetchedVenue] = useState<Venue | null>(null);
+  useEffect(() => {
+    // Always fetch the venue row when creating an invoice. Billing (legal name, TRN,
+    // address) lives in separate columns that no artist-side venue loader maps, so the
+    // in-store venue has no billing — the DB row is the only reliable source.
+    if (existingInvoice || !venueId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from('venues').select('*').eq('id', venueId).maybeSingle();
+      if (cancelled || !data) return;
+      setFetchedVenue({
+        ...mapVenueRow(data),
+        billing: (data.billing_company_name || data.billing_trn_number || data.billing_company_address) ? {
+          companyName: data.billing_company_name ?? '',
+          companyAddress: data.billing_company_address ?? '',
+          trnNumber: data.billing_trn_number ?? '',
+        } : (data.billing ?? undefined),
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [existingInvoice, venueId]);
+  const effVenue = fetchedVenue ?? venue;
+
   const gigs: InvoiceGig[] = useMemo(() => {
     if (existingInvoice) return existingInvoice.gigs;
     try { return JSON.parse(gigsJson ?? '[]'); } catch { return []; }
@@ -41,8 +69,8 @@ export default function InvoicePreviewScreen() {
   // Find the manager for this venue
   const managerId = useMemo(() => {
     if (existingInvoice) return existingInvoice.managerId;
-    return venue?.managerId ?? '';
-  }, [venue, existingInvoice]);
+    return effVenue?.managerId ?? paramManagerId ?? '';
+  }, [effVenue, existingInvoice, paramManagerId]);
 
   const invoiceNumber = useMemo(() => {
     if (existingInvoice) return existingInvoice.invoiceNumber;
@@ -54,14 +82,18 @@ export default function InvoicePreviewScreen() {
   const artistName = existingInvoice?.artistLegalName ?? currentUser?.fullLegalName ?? currentUser?.fullName ?? '';
   const artistEmail = existingInvoice?.artistEmail ?? currentUser?.email ?? '';
   const artistLocation = existingInvoice?.artistLocation ?? currentUser?.location ?? '';
-  const venueName = existingInvoice?.venueName ?? venue?.name ?? '';
-  const venueLegalName = existingInvoice?.venueLegalName ?? venue?.billing?.companyName ?? venue?.name ?? '';
-  const venueTrnNumber = existingInvoice?.venueTrnNumber ?? venue?.billing?.trnNumber ?? '';
-  const venueAddress = existingInvoice?.venueAddress ?? venue?.billing?.companyAddress ?? venue?.googleMapsLocation?.address ?? '';
+  const venueName = existingInvoice?.venueName ?? effVenue?.name ?? paramVenueName ?? '';
+  const venueLegalName = existingInvoice?.venueLegalName ?? effVenue?.billing?.companyName ?? effVenue?.name ?? paramVenueName ?? '';
+  const venueTrnNumber = existingInvoice?.venueTrnNumber ?? effVenue?.billing?.trnNumber ?? '';
+  const venueAddress = existingInvoice?.venueAddress ?? effVenue?.billing?.companyAddress ?? effVenue?.googleMapsLocation?.address ?? '';
   const sentDate = existingInvoice ? new Date(existingInvoice.sentAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   const handleSend = async () => {
     if (!currentUser || !venueId) return;
+    if (!managerId) {
+      Alert.alert('One moment', 'Still loading the venue details — please try again in a second.');
+      return;
+    }
     Alert.alert(
       'Send Invoice',
       `Send this invoice for AED ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} to ${venueName}?`,
@@ -96,9 +128,8 @@ export default function InvoicePreviewScreen() {
               sentAt: new Date().toISOString(),
               status: 'sent',
             };
-            addInvoice(newInvoice);
-
-            // Save to Supabase
+            // Save to Supabase FIRST — only mark sent locally + notify the manager if it
+            // actually persisted, so a blocked insert can't masquerade as a sent invoice.
             const { error: invError } = await supabase.from('invoices').insert({
               id: newInvoice.id,
               artist_id: currentUser.id,
@@ -117,7 +148,13 @@ export default function InvoicePreviewScreen() {
               status: 'sent',
               sent_at: newInvoice.sentAt,
             });
-            if (invError) console.warn('Invoice insert error:', invError.message);
+            if (invError) {
+              console.warn('Invoice insert error:', invError.message);
+              setIsSending(false);
+              Alert.alert('Invoice not sent', `Could not save the invoice: ${invError.message}`);
+              return;
+            }
+            addInvoice(newInvoice);
 
             // Send notification to manager
             addNotification({

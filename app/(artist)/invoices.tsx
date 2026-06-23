@@ -50,7 +50,14 @@ export default function InvoicesScreen() {
     );
     const venueIds = [...new Set(invoiceableBookings.map((b) => b.venueId))];
     return venueIds.map((vid) => {
-      const venue = allVenues.find((v) => v.id === vid);
+      // Fall back to the booking's venueName snapshot when the venue isn't in the
+      // store (manager deleted/hid it, or the artist left it). The gig was still
+      // performed, so it must stay invoiceable — never drop it from the list.
+      const liveVenue = allVenues.find((v) => v.id === vid);
+      const snapshotName = invoiceableBookings.find((b) => b.venueId === vid)?.venueName;
+      const venue = liveVenue ?? (snapshotName
+        ? ({ id: vid, name: snapshotName, color: '#2563EB' } as typeof allVenues[number])
+        : undefined);
       // Count uninvoiced gigs: completed or confirmed, not yet in any sent invoice
       const invoicedBookingIds = new Set(
         invoices

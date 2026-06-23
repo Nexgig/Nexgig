@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -57,6 +57,42 @@ export default function ManagerProfileScreen() {
     }
     setRefreshing(false);
   }, [currentUser?.id, invoicesList]);
+
+  // Re-pull invoices from Supabase every time the Profile tab gains focus, so a newly
+  // sent invoice shows up without depending on the realtime INSERT firing or an app
+  // restart. Reads store state via getState() to avoid a stale-closure dedupe check.
+  useFocusEffect(
+    useCallback(() => {
+      if (!currentUser?.id) return;
+      let cancelled = false;
+      (async () => {
+        const { data } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('manager_id', currentUser.id)
+          .order('sent_at', { ascending: false });
+        if (cancelled || !data) return;
+        const store = useInvoiceStore.getState();
+        data.forEach((inv: any) => {
+          if (store.invoices.some((i) => i.id === inv.id)) return;
+          store.addInvoice({
+            id: inv.id, venueId: inv.venue_id, venueName: inv.venue_name,
+            artistId: inv.artist_id, artistLegalName: inv.artist_legal_name,
+            artistEmail: inv.artist_email ?? '', artistLocation: inv.artist_location ?? '',
+            managerId: inv.manager_id, managerName: '',
+            venueLegalName: inv.venue_legal_name ?? inv.venue_name,
+            venueTrnNumber: inv.venue_trn_number ?? '', venueAddress: inv.venue_address ?? '',
+            gigs: inv.gigs ?? [], totalAmount: parseFloat(inv.total_amount),
+            invoiceNumber: inv.invoice_number ?? '', sentAt: inv.sent_at, status: inv.status,
+            isReadByManager: inv.is_read_by_manager ?? false,
+            isDeletedByManager: inv.is_deleted_by_manager ?? false,
+          });
+        });
+      })();
+      return () => { cancelled = true; };
+    }, [currentUser?.id])
+  );
+
   const managerBasedIn = currentUser?.location ?? '';
   const managerBasedInCountry = managerBasedIn ? COUNTRIES.find((c) => c.name === managerBasedIn) : undefined;
 

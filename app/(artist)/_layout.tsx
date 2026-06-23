@@ -50,7 +50,11 @@ export default function DJLayout() {
               cancelledAt: booking.cancelledAt,
               isCompleted: booking.isCompleted,
             });
-          } else if (!booking.isCompleted || booking.status !== 'completed') {
+          } else {
+            // Add everything that isn't already in the store — INCLUDING completed gigs.
+            // (Private events live in availability_blocks, not here, so they're untouched.)
+            // Previously completed bookings were skipped, so after sign-out/in they vanished
+            // from the dashboard COMPLETED count, Completed Gigs, and History.
             bookingStore.addBooking(booking);
           }
         });

@@ -75,6 +75,7 @@ export default function ArtistProfileScreen() {
         mixcloudUrl: data.mixcloud_url ?? undefined,
         spotifyUrl: data.spotify_url ?? undefined,
         isHistoryHidden: data.is_history_hidden ?? false,
+        hasCompletedBooking: data.has_completed_booking ?? false,
       });
       updateProfile({
         fullName: data.full_name ?? currentUser.fullName,
@@ -222,9 +223,14 @@ export default function ArtistProfileScreen() {
               </View>
             )}
             <View style={styles.profileNameBlock}>
-              <Text style={[styles.name, { color: colors.foreground }]}>
-                {currentUser?.fullName}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                  {currentUser?.fullName}
+                </Text>
+                {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
+                  <MaterialIcons name="verified" size={18} color={colors.primary} />
+                ) : null}
+              </View>
               <Text style={[styles.genre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
             </View>
           </View>

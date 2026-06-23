@@ -152,8 +152,9 @@ export default function DJBookingDetailScreen() {
             </View>
           )}
 
-          {/* Venue Card */}
-          {venue && (
+          {/* Venue Card — falls back to the booking's venueName snapshot when the venue
+              has been deleted, so completed-gig history keeps the real venue name. */}
+          {venue ? (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
                 <MaterialIcons name="business" size={22} color={colors.primary} />
@@ -166,10 +167,19 @@ export default function DJBookingDetailScreen() {
                 )}
               </View>
             </View>
-          )}
+          ) : booking.venueName ? (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
+                <MaterialIcons name="business" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{booking.venueName}</Text>
+              </View>
+            </View>
+          ) : null}
 
-          {/* Slot Details */}
-          {slot && (
+          {/* Slot Details — snapshot fallback when the slot is gone (deleted venue) */}
+          {slot ? (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
                 <MaterialIcons name="event" size={22} color={colors.primary} />
@@ -179,7 +189,21 @@ export default function DJBookingDetailScreen() {
                 <Text style={[styles.cardSub, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
               </View>
             </View>
-          )}
+          ) : (booking.slotDate || booking.slotStartTime) ? (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
+                <MaterialIcons name="schedule" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.cardInfo}>
+                {booking.slotDate ? (
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{formatDate(booking.slotDate)}</Text>
+                ) : null}
+                {booking.slotStartTime && booking.slotEndTime ? (
+                  <Text style={[styles.cardSub, { color: colors.muted }]}>{formatTime(booking.slotStartTime)} – {formatTime(booking.slotEndTime)}</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
 
           {/* Venue Vibe */}
           {venue && venue.vibeDescription && (

@@ -42,6 +42,11 @@ export default function InvoiceGigsScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const slots = useSlotStore((s) => s.slots);
   const venue = useVenueStore((s) => s.getVenueById(venueId));
+  // Fall back to the booking's snapshot name when the venue isn't in the store
+  // (manager deleted/hid it, or the artist left it).
+  const venueName = venue?.name
+    ?? allBookings.find((b) => b.venueId === venueId && !!b.venueName)?.venueName
+    ?? 'Venue';
   const invoices = useInvoiceStore((s) => s.invoices);
   const getReminder = useInvoiceReminderStore((s) => s.getReminder);
   const setReminder = useInvoiceReminderStore((s) => s.setReminder);
@@ -164,12 +169,17 @@ export default function InvoiceGigsScreen() {
       endTime: g.slot?.endTime ?? g.booking.slotEndTime ?? '',
       price: parseFloat(g.price),
     }));
+    const refBooking = selectedGigs[0]?.booking;
     router.push({
       pathname: '/(artist)/invoice-preview' as any,
       params: {
         venueId,
         gigsJson: JSON.stringify(gigsData),
         total: total.toString(),
+        // Carry the manager + venue name from the booking snapshot so the invoice is
+        // complete even when the venue is no longer in the artist's store.
+        managerId: refBooking?.managerId ?? '',
+        venueName,
       },
     });
   };
@@ -231,7 +241,7 @@ export default function InvoiceGigsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{venue?.name ?? 'Venue'}</Text>
+          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>Select gigs & enter prices</Text>
         </View>
         {/* Bell icon */}

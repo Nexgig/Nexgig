@@ -4,12 +4,14 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useVenueStore } from '@/lib/store';
+import { useVenueStore, useBookingStore, useSlotStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueType, EnergyType, GenreType, AudienceType, SubVibe } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { supabase } from '@/lib/supabase';
 import { uploadImageAsync } from '@/lib/upload';
+import { syncBookingStatus } from '@/lib/booking-sync';
+import { formatDate } from '@/lib/conflict-detection';
 
 // ── Option arrays — kept in sync with create-venue.tsx ───────────────────────
 const VENUE_TYPES: VenueType[] = [
@@ -53,7 +55,11 @@ export default function EditVenueScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const venue = useVenueStore((s) => s.getVenueById(id));
   const updateVenue = useVenueStore((s) => s.updateVenue);
-  const deleteVenue = useVenueStore((s) => s.deleteVenue);
+  const hideVenue = useVenueStore((s) => s.hideVenue);
+  const bookings = useBookingStore((s) => s.bookings);
+  const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const getSlotById = useSlotStore((s) => s.getSlotById);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [form, setForm] = useState({
     name: venue?.name ?? '',
@@ -265,18 +271,65 @@ export default function EditVenueScreen() {
 
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = () => {
+    // Active bookings (pending/confirmed) for this venue — these get cancelled + the artist notified.
+    // Completed bookings are left untouched so gig history is preserved (matches the FK SET NULL design).
+    const activeBookings = bookings.filter(
+      (b) =>
+        b.venueId === venue.id &&
+        (b.status === 'requested' || b.status === 'past_confirmation' || b.status === 'confirmed')
+    );
+    const n = activeBookings.length;
+    const cancelNotice =
+      n > 0
+        ? `\n\n${n} pending/confirmed booking${n > 1 ? 's' : ''} will be cancelled and the affected artist${n > 1 ? 's' : ''} notified.`
+        : '';
     Alert.alert(
       'Delete Venue',
-      `Are you sure you want to permanently delete "${venue.name}"? This will also remove all associated slots. This cannot be undone.`,
+      `Delete "${venue.name}"? It'll be removed from your venues and the network.${cancelNotice} Completed gigs stay in your history. This can't be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            deleteVenue(venue.id);
+            // 1. Cancel active bookings + notify artists (mirrors the slot-card cancel logic in calendar.tsx)
+            const nowIso = new Date().toISOString();
+            for (const booking of activeBookings) {
+              const slot = getSlotById(booking.slotId);
+              const isRequested = booking.status === 'requested' || booking.status === 'past_confirmation';
+              const snapDate = booking.slotDate ?? slot?.date;
+              updateBookingStatus(booking.id, 'cancelled', {
+                cancelledAt: nowIso,
+                slotDate: snapDate,
+                slotName: booking.slotName ?? slot?.name,
+                slotStartTime: booking.slotStartTime ?? slot?.startTime,
+                slotEndTime: booking.slotEndTime ?? slot?.endTime,
+                venueName: booking.venueName ?? venue.name,
+                ...(isRequested ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
+              });
+              syncBookingStatus(booking.id, 'cancelled', {
+                cancelledAt: nowIso,
+                ...(isRequested ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
+              });
+              addNotification({
+                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                userId: booking.artistId,
+                type: isRequested ? 'booking_request_cancelled' : 'booking_cancelled',
+                title: isRequested ? 'Request Cancelled' : 'Booking Cancelled',
+                body: `${booking.venueName ?? venue.name} — ${snapDate ? formatDate(snapDate) : ''}`,
+                isRead: false,
+                relatedId: booking.id,
+                relatedType: 'booking',
+                createdAt: nowIso,
+              });
+            }
+            // 2. Hide the venue instead of deleting it. Keeping the row (and its slots)
+            //    alive means completed gigs keep resolving the real venue name everywhere
+            //    — history, dashboard, calendar. Hidden venues are filtered out of My
+            //    Venues and both network lists, so it disappears from the active surfaces.
+            hideVenue(venue.id);
             await supabase.from('venue_assignments').delete().eq('venue_id', venue.id);
-            await supabase.from('venues').delete().eq('id', venue.id);
+            await supabase.from('venues').update({ is_hidden: true }).eq('id', venue.id);
             router.replace('/(manager)/(tabs)/profile' as any);
           },
         },
@@ -332,23 +385,6 @@ export default function EditVenueScreen() {
             />
           </View>
 
-          {/* Venue Color */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Venue Color</Text>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 4 }}>This color identifies your venue on the calendar</Text>
-            <View style={styles.chipRow}>
-              {VENUE_COLORS.map((c) => (
-                <Pressable
-                  key={c.hex}
-                  style={[styles.colorSwatch, { backgroundColor: c.hex, borderColor: form.color === c.hex ? '#fff' : 'transparent', borderWidth: form.color === c.hex ? 2.5 : 0 }]}
-                  onPress={() => setForm((f) => ({ ...f, color: c.hex }))}
-                >
-                  {form.color === c.hex && <MaterialIcons name="check" size={16} color="#fff" />}
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
           {/* Venue Type */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Venue Type</Text>
@@ -376,6 +412,42 @@ export default function EditVenueScreen() {
               onChangeText={(v) => setForm((f) => ({ ...f, address: v }))}
               returnKeyType="done"
             />
+          </View>
+
+          {/* Preferred Energy */}
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Energy</Text>
+            <View style={styles.chipRow}>
+              {VENUE_ENERGY_OPTIONS.map((e) => {
+                const selected = form.preferredEnergy.includes(e);
+                return (
+                  <Pressable
+                    key={e}
+                    style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]}
+                    onPress={() => toggleEnergy(e)}
+                  >
+                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{e}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Venue Color */}
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Venue Color</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 4 }}>This color identifies your venue on the calendar</Text>
+            <View style={styles.chipRow}>
+              {VENUE_COLORS.map((c) => (
+                <Pressable
+                  key={c.hex}
+                  style={[styles.colorSwatch, { backgroundColor: c.hex, borderColor: form.color === c.hex ? '#fff' : 'transparent', borderWidth: form.color === c.hex ? 2.5 : 0 }]}
+                  onPress={() => setForm((f) => ({ ...f, color: c.hex }))}
+                >
+                  {form.color === c.hex && <MaterialIcons name="check" size={16} color="#fff" />}
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           {/* Capacity */}
@@ -407,19 +479,19 @@ export default function EditVenueScreen() {
             />
           </View>
 
-          {/* Preferred Energy */}
+          {/* Audience Type */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Energy</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Audience Type</Text>
             <View style={styles.chipRow}>
-              {VENUE_ENERGY_OPTIONS.map((e) => {
-                const selected = form.preferredEnergy.includes(e);
+              {AUDIENCE_TYPES.map((a) => {
+                const selected = form.audienceType.includes(a);
                 return (
                   <Pressable
-                    key={e}
+                    key={a}
                     style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]}
-                    onPress={() => toggleEnergy(e)}
+                    onPress={() => toggleAudience(a)}
                   >
-                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{e}</Text>
+                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{a}</Text>
                   </Pressable>
                 );
               })}
@@ -439,25 +511,6 @@ export default function EditVenueScreen() {
                     onPress={() => toggleGenre(g)}
                   >
                     <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{g}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Audience Type */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Audience Type</Text>
-            <View style={styles.chipRow}>
-              {AUDIENCE_TYPES.map((a) => {
-                const selected = form.audienceType.includes(a);
-                return (
-                  <Pressable
-                    key={a}
-                    style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]}
-                    onPress={() => toggleAudience(a)}
-                  >
-                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{a}</Text>
                   </Pressable>
                 );
               })}

@@ -155,9 +155,20 @@ export default function CalendarScreen() {
     setCalendarRefreshing(false);
   }, [currentUser]);
   const managerVenueIds = useMemo(() => venues.map((v) => v.id), [venues]);
+  // Hidden ("deleted") venues for this manager. Their completed gigs must stay on the
+  // calendar, so we still render their slots — but ONLY ones that already have a booking
+  // (history), never empty future slots, so a removed venue adds no clutter.
+  const hiddenVenueIds = useMemo(
+    () => new Set(allVenues.filter((v) => v.managerId === currentUser?.id && v.isHidden).map((v) => v.id)),
+    [allVenues, currentUser?.id]
+  );
   const allManagerSlots = useMemo(
-    () => allSlots.filter((s) => managerVenueIds.includes(s.venueId)),
-    [allSlots, managerVenueIds]
+    () => allSlots.filter((s) => {
+      if (managerVenueIds.includes(s.venueId)) return true;
+      if (hiddenVenueIds.has(s.venueId)) return allBookings.some((b) => b.slotId === s.id);
+      return false;
+    }),
+    [allSlots, managerVenueIds, hiddenVenueIds, allBookings]
   );
   const monthSlots = useMemo(() => {
     if (venueFilter !== 'all') return allSlots.filter((s) => s.venueId === venueFilter);

@@ -217,6 +217,15 @@ export default function DJBookingDetailScreen() {
                 <Text style={[styles.cardSub, { color: colors.muted }]}>Private Event</Text>
               </View>
             </View>
+          ) : booking.venueName ? (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
+                <MaterialIcons name="business" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{booking.venueName}</Text>
+              </View>
+            </View>
           ) : null}
 
           {/* Slot / Day Details */}

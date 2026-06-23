@@ -83,21 +83,28 @@ export default function DJHomeScreen() {
 
   const nowDT = nowLocalDateTimeStr();
 
-  // Auto-complete confirmed bookings whose slot start time has passed
+  // Auto-complete confirmed bookings whose start time has passed.
+  // The artist's store does NOT hold the manager's slots, so we fall back to the
+  // snapshot fields saved on the booking itself (slotDate/slotStartTime, written at
+  // creation). Without this fallback the slot lookup always failed on the artist side,
+  // so a past confirmed gig never flipped to completed — it disappeared from the
+  // dashboard COMPLETED count, the Completed Gigs screen, and profile History.
   useEffect(() => {
     bookings
-      .filter((b) => b.status === 'confirmed' && !b.isCompleted)
+      .filter((b) => b.status === 'confirmed' && !b.isCompleted && !b.isArtistCreated)
       .forEach((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
-        if (slot && isPastStart(slot.date, slot.startTime)) {
+        const date = slot?.date ?? b.slotDate;
+        const startTime = slot?.startTime ?? b.slotStartTime;
+        if (date && startTime && isPastStart(date, startTime)) {
           const venue = allVenues.find((v) => v.id === b.venueId);
           updateBookingStatus(b.id, 'completed', {
             isCompleted: true,
-            slotDate: slot.date,
-            slotName: slot.name,
-            slotStartTime: slot.startTime,
-            slotEndTime: slot.endTime,
-            venueName: venue?.name,
+            slotDate: date,
+            slotName: slot?.name ?? b.slotName,
+            slotStartTime: startTime,
+            slotEndTime: slot?.endTime ?? b.slotEndTime,
+            venueName: venue?.name ?? b.venueName,
           });
         }
       });

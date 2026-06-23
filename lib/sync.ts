@@ -57,7 +57,7 @@ async function syncVenues(managerId: string) {
     subVibe: v.sub_vibe ?? [],
     billing: v.billing ?? undefined,
     color: v.color ?? '#2563EB',
-    isHidden: false,
+    isHidden: v.is_hidden ?? false,
     isComplete: v.is_complete ?? false,
     verificationStatus: v.verification_status ?? 'pending',
     hasCompletedBooking: v.has_completed_booking ?? undefined,
