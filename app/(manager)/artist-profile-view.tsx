@@ -59,70 +59,10 @@ export default function ArtistProfileViewScreen() {
   const [showReport, setShowReport] = useState(false);
 
   // ── Invite state ──────────────────────────────────────────────────────────
-  const [inviteStatus, setInviteStatus] = useState<'none' | 'pending'>('none');
-  const [isSending, setIsSending] = useState(false);
-
-  // Check if artist is connected or has a pending invite
   const isConnected = useMemo(
     () => globalLineup.some((r) => r.artistId === artistId && r.managerId === currentUser?.id && r.status === 'active'),
     [globalLineup, artistId, currentUser?.id]
   );
-
-  useEffect(() => {
-    if (!currentUser?.id || !artistId || isConnected) return;
-    supabase
-      .from('invites')
-      .select('id, status')
-      .eq('manager_id', currentUser.id)
-      .eq('artist_id', artistId)
-      .eq('status', 'pending')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setInviteStatus('pending');
-      });
-  }, [currentUser?.id, artistId, isConnected]);
-
-
-  const handleSendInvite = async () => {
-    if (!currentUser || !artistId || !dj) return;
-    Alert.alert(
-      'Invite to Lineup',
-      `Send ${dj.fullName} an invitation to join your lineup? They will be added to all your venues upon acceptance.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send Invite',
-          onPress: async () => {
-            setIsSending(true);
-            const { data, error } = await supabase
-              .from('invites')
-              .insert({ manager_id: currentUser.id, artist_id: artistId, venue_ids: [], status: 'pending' })
-              .select('id')
-              .single();
-            if (error) {
-              setIsSending(false);
-              Alert.alert('Error', error.message);
-              return;
-            }
-            addNotification({
-              id: `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              userId: artistId,
-              type: 'manager_invite',
-              title: 'Lineup Invitation',
-              body: `${currentUser.fullName ?? 'A manager'} invited you to join their lineup.`,
-              isRead: false,
-              relatedId: data.id,
-              relatedType: 'invite',
-              createdAt: new Date().toISOString(),
-            });
-            setIsSending(false);
-            setInviteStatus('pending');
-            Alert.alert('Invite Sent!', `${dj.fullName} will be notified in their app.`);
-          },
-        },
-      ]
-    );
-  };
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const myVenues = useMemo(

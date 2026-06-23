@@ -483,7 +483,7 @@ export default function RosterScreen() {
       {/* FAB */}
       <Pressable
         style={[styles.fabWrapper, { bottom: Math.max(insets.bottom, 8) + 24 }]}
-        onPress={() => router.push('/(manager)/invite-artist' as Href)}
+        onPress={() => router.push('/(manager)/(tabs)/network?tab=artists' as Href)}
       >
         <LinearGradient
           colors={['#3D7EE8', '#1A56C4']}
