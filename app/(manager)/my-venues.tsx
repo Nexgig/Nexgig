@@ -74,9 +74,14 @@ export default function ManagerMyVenuesScreen() {
                   </View>
                 )}
                 <View style={styles.info}>
-                  <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
-                    {venue.name}
-                  </Text>
+                  <View style={styles.nameRow}>
+                    {venue.verificationStatus === 'verified' && (
+                      <MaterialIcons name="verified" size={15} color={colors.primary} />
+                    )}
+                    <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                      {venue.name}
+                    </Text>
+                  </View>
                   <Text style={[styles.venueType, { color: colors.muted }]} numberOfLines={1}>
                     {venueTypeLabel}
                     {venue.googleMapsLocation?.address ? ` · ${venue.googleMapsLocation.address}` : ''}
@@ -86,22 +91,17 @@ export default function ManagerMyVenuesScreen() {
                       Capacity: {venue.capacity}
                     </Text>
                   ) : null}
-                  {venue.verificationStatus === 'verified' ? (
-                    <View style={[styles.verifyPill, { backgroundColor: colors.primary + '15' }]}>
-                      <MaterialIcons name="verified" size={11} color={colors.primary} />
-                      <Text style={[styles.verifyPillText, { color: colors.primary }]}>Verified</Text>
-                    </View>
-                  ) : venue.verificationStatus === 'rejected' ? (
+                  {venue.verificationStatus === 'rejected' ? (
                     <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
                       <MaterialIcons name="cancel" size={11} color={colors.error} />
                       <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
                     </View>
-                  ) : (
+                  ) : venue.verificationStatus !== 'verified' ? (
                     <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
                       <MaterialIcons name="schedule" size={11} color={colors.warning} />
                       <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
                     </View>
-                  )}
+                  ) : null}
                 </View>
               </View>
               <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
@@ -146,7 +146,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   info: { flex: 1 },
-  venueName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  venueName: { fontSize: 15, fontWeight: '700' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
   venueType: { fontSize: 13, marginBottom: 2 },
   capacity: { fontSize: 12 },
   verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
