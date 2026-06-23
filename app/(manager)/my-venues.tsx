@@ -75,12 +75,12 @@ export default function ManagerMyVenuesScreen() {
                 )}
                 <View style={styles.info}>
                   <View style={styles.nameRow}>
-                    {venue.verificationStatus === 'verified' && (
-                      <MaterialIcons name="verified" size={15} color={colors.primary} />
-                    )}
                     <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                       {venue.name}
                     </Text>
+                    {venue.verificationStatus === 'verified' && (
+                      <MaterialIcons name="verified" size={15} color={colors.primary} />
+                    )}
                   </View>
                   <Text style={[styles.venueType, { color: colors.muted }]} numberOfLines={1}>
                     {venueTypeLabel}
