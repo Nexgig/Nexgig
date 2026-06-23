@@ -152,15 +152,7 @@ export default function NetworkScreen() {
     setVenuesLoading(true);
     const { data } = await supabase.from('venues').select('*').neq('is_hidden', true);
     if (data) {
-      setSbVenues(data.map((v: any) => ({
-        id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
-        photoUrls: v.photo_urls ?? [],
-        genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
-        googleMapsLocation: v.google_maps_location, color: v.color ?? '#2563EB',
-        isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
-        verificationStatus: v.verification_status ?? 'pending',
-        createdAt: v.created_at, updatedAt: v.updated_at,
-      })));
+      setSbVenues(data.map((v: any) => mapVenueRow(v)));
       // Cache full venue data so tapping a venue opens its detail complete (no fetch-on-open).
       useVenueDirectoryStore.getState().setVenues(data.map((v: any) => mapVenueRow(v)));
     }
