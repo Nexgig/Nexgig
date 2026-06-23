@@ -28,7 +28,8 @@ const VENUE_COLORS = [
   { hex: '#14B8A6', label: 'Teal' },
   { hex: '#A855F7', label: 'Violet' },
 ];
-const ENERGY_TYPES: EnergyType[] = ['Lounge', 'Warm-up', 'Sunset', 'Peak Time', 'Closing', 'All Night Long'];
+const VENUE_ENERGY_OPTIONS = ['Low', 'High', 'Mixed'] as const;
+type VenueEnergyOption = typeof VENUE_ENERGY_OPTIONS[number];
 const GENRE_PREFS: GenreType[] = [
   'House', 'Tech House', 'Afro House', 'Melodic House & Techno', 'Techno',
   'Deep House', 'EDM / Commercial', 'Hip Hop / R&B', 'Open Format',
@@ -60,7 +61,7 @@ export default function EditVenueScreen() {
     address: venue?.googleMapsLocation?.address ?? '',
     capacity: venue?.capacity ?? '',
     vibeDescription: venue?.vibeDescription ?? '',
-    preferredEnergy: (venue?.preferredEnergy ?? []) as EnergyType[],
+    preferredEnergy: (venue?.preferredEnergy ?? []) as unknown as VenueEnergyOption[],
     genrePreferences: (venue?.genrePreferences ?? []) as GenreType[],
     audienceType: (venue?.audienceType ?? []) as AudienceType[],
     subVibe: (venue?.subVibe ?? []) as SubVibe[],
@@ -126,7 +127,7 @@ export default function EditVenueScreen() {
   }
 
   // ── Toggle helpers ────────────────────────────────────────────────────────
-  const toggleEnergy = (e: EnergyType) =>
+  const toggleEnergy = (e: VenueEnergyOption) =>
     setForm((f) => ({
       ...f,
       preferredEnergy: f.preferredEnergy.includes(e)
@@ -220,7 +221,7 @@ export default function EditVenueScreen() {
       googleMapsLocation: { ...venue.googleMapsLocation, address: form.address.trim() },
       capacity: form.capacity,
       vibeDescription: form.vibeDescription,
-      preferredEnergy: form.preferredEnergy,
+      preferredEnergy: form.preferredEnergy as unknown as EnergyType[],
       genrePreferences: form.genrePreferences,
       audienceType: form.audienceType,
       subVibe: form.subVibe,
@@ -410,7 +411,7 @@ export default function EditVenueScreen() {
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Energy</Text>
             <View style={styles.chipRow}>
-              {ENERGY_TYPES.map((e) => {
+              {VENUE_ENERGY_OPTIONS.map((e) => {
                 const selected = form.preferredEnergy.includes(e);
                 return (
                   <Pressable
