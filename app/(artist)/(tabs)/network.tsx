@@ -314,25 +314,29 @@ export default function ArtistNetworkScreen() {
                     </View>
                   </View>
                   {isConnected ? (
-                    <View style={[styles.connectedBadge, { backgroundColor: colors.success + '15', borderColor: colors.success + '40' }]}>
-                      <MaterialIcons name="check-circle" size={12} color={colors.success} />
-                      <Text style={[styles.connectedText, { color: colors.success }]}>Connected</Text>
+                    <View style={[styles.applyBtn, { backgroundColor: colors.success }]}>
+                      <MaterialIcons name="check" size={16} color="#fff" />
                     </View>
                   ) : (
                     <Pressable
-                      style={[styles.applyBtn, {
-                        backgroundColor: hasApplied ? colors.surface : colors.primary,
-                        borderColor: hasApplied ? colors.border : colors.primary,
-                      }]}
+                      style={[
+                        styles.applyBtn,
+                        hasApplied
+                          ? { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }
+                          : { backgroundColor: colors.primary },
+                      ]}
                       onPress={(e) => { e.stopPropagation(); !hasApplied && handleJoin(venue); }}
                       disabled={hasApplied || isApplying}
                     >
                       {isApplying ? (
                         <ActivityIndicator size="small" color="#fff" />
+                      ) : hasApplied ? (
+                        <Text style={[styles.applyBtnText, { color: colors.muted }]}>Requested</Text>
                       ) : (
-                        <Text style={[styles.applyBtnText, { color: hasApplied ? colors.muted : '#fff' }]}>
-                          {hasApplied ? 'Requested' : 'Join'}
-                        </Text>
+                        <>
+                          <MaterialIcons name="add" size={14} color="#fff" />
+                          <Text style={[styles.applyBtnText, { color: '#fff' }]}>Join</Text>
+                        </>
                       )}
                     </Pressable>
                   )}
@@ -434,8 +438,8 @@ const styles = StyleSheet.create({
   youPillText: { fontSize: 10, fontWeight: '700' },
   connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 },
   connectedText: { fontSize: 11, fontWeight: '700' },
-  applyBtn: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, minWidth: 70, alignItems: 'center' },
-  applyBtnText: { fontSize: 13, fontWeight: '700' },
+  applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
+  applyBtnText: { fontSize: 12, fontWeight: '700' },
   statusBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
