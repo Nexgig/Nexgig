@@ -19,7 +19,7 @@
 
 **BIGGER WORKSTREAMS (deliberately parked)**
 - Push: Android FCM credentials; same-day/day-before gig reminders. (iOS push already works end-to-end — registration, send, real-device tested.) (L839, L842)
-- Auth: OAuth-then-password collision; plain email+password signup sanity-check; Android Google sign-in; + the signup-flow INSERT-bug investigation checklist at the very bottom of this file. (L941-942, L853, L1095-1099)
+- Auth: OAuth-then-password collision; plain email+password signup sanity-check; Android Google sign-in. (L941-942, L853)  *(Signup-flow wrong-UUID finding — RESOLVED June 22 2026, confirmed a one-off via data audit; see bottom of file.)*
 - Email infra: welcome email; lineup-add email (with venue rules); venue-rules-on-acceptance email. (L935-937)
 - Maps: location picker at venue creation + "Open in Google Maps" on booking-detail. (L923)
 - Calendar: artist Google Calendar sync (scope TBD). (L946)
@@ -1094,9 +1094,11 @@ NOTE: (manager)/invite-artist.tsx is still live (referenced once) — this is th
 - [x] Confirmed cleanup of dead code tidy from earlier today survived: BookingTabIcon removed, statusColors / statusBar / statusDot / statusText styles removed from both booking-detail files, stale `<Stack.Screen name="requests" />` cleaned from (artist)/_layout.tsx.
 - [x] Caught + fixed regression from the dead-code tidy: I had removed `hasCompletedBooking` from ArtistProfile in types.ts, breaking the manager Network card's badge read. Restored the field; restored the manager Network seeder line; removed two stray `hasCompletedBooking: false` lines from Venue object constructions (manager _layout.tsx + create-venue.tsx) that were never legitimate on the Venue type — those were the source of the TS errors.
 
-### CRITICAL finding — signup-flow bug, NOT fixed (logged for auth pass)
+### ✅ RESOLVED June 22 2026 — signup-flow "wrong-UUID" finding was a one-off, NOT a recurring bug
 
-**Symptom user reported:** New artist account `elieturk0@gmail.com` had the verified badge in the Network list but the History card on their own Profile said "No completed gigs yet," while the booking was visible on the manager's calendar.
+**RESOLUTION (June 22 2026):** Re-investigated. `signUp()` inserts the users row with the fresh `data.user.id`, and the artists table's RLS `WITH CHECK (auth.uid() = id)` means a wrong-UUID artists row can only be created while a *manager* session is still live at insert time — which is unreachable in normal use (signed-in users never reach the artist-signup screen). The full signup matrix was verified working on June 22. A data audit returned **0 rows** for BOTH checks (artists rows whose id isn't an artist user; artist users with no profile row at their uid) — no mismatches anywhere. Conclusion: the original break was a one-off from a dev test session (signed in as a manager, then manually completing a new artist signup on the same device), not a production bug. No code change needed. The checklist below is kept only for reference / re-use if it ever recurs.
+
+**[Original finding, kept for reference] Symptom user reported:** New artist account `elieturk0@gmail.com` had the verified badge in the Network list but the History card on their own Profile said "No completed gigs yet," while the booking was visible on the manager's calendar.
 
 **Diagnosis (SQL forensic):**
 - `public.users.id = 8361a0f9-b94d-4e9d-b320-ae5b9e080e86` (account_type='artist', email='elieturk0@gmail.com') — the actual auth user.
