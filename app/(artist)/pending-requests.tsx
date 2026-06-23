@@ -37,7 +37,7 @@ export default function ArtistPendingRequestsScreen() {
       userId: managerId,
       type,
       title: titles[type],
-      body: `${artistName} at ${venueName} — ${date}`,
+      body: `${artistName} · ${venueName} — ${date}`,
       isRead: false,
       relatedId: bookingId,
       relatedType: 'booking',

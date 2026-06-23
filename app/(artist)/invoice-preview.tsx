@@ -162,7 +162,7 @@ export default function InvoicePreviewScreen() {
               userId: managerId,
               type: 'invoice_received',
               title: 'Invoice Received',
-              body: `${artistName} sent an invoice for ${venueName} — AED ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+              body: `${artistName} · ${venueName} — AED ${Math.round(totalAmount).toLocaleString()}`,
               relatedId: newInvoice.id,
               isRead: false,
               createdAt: new Date().toISOString(),

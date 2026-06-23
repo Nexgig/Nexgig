@@ -123,7 +123,12 @@ export default function VenueDetailScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
-          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Text style={[styles.title, { color: colors.foreground, flex: 0, flexShrink: 1 }]} numberOfLines={1}>{venue.name}</Text>
+            {venue.verificationStatus === 'verified' && (
+              <MaterialIcons name="verified" size={16} color={colors.primary} />
+            )}
+          </View>
           {isOwner ? (
             <Pressable onPress={() => router.push(('/(manager)/edit-venue?id=' + venue.id) as Href)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]}>
               <MaterialIcons name="edit" size={22} color={colors.foreground} />
@@ -146,24 +151,21 @@ export default function VenueDetailScreen() {
             <Text style={[styles.venueType, { color: colors.muted }]}>{venue.venueType}</Text>
             <StatusBadge status={venue.isHidden ? 'hidden' : 'active'} />
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {venue.verificationStatus === 'verified' ? (
-              <View style={[styles.verifyPill, { backgroundColor: colors.primary + '15' }]}>
-                <MaterialIcons name="verified" size={13} color={colors.primary} />
-                <Text style={[styles.verifyPillText, { color: colors.primary }]}>Verified</Text>
-              </View>
-            ) : isOwner && venue.verificationStatus === 'rejected' ? (
-              <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
-                <MaterialIcons name="cancel" size={13} color={colors.error} />
-                <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
-              </View>
-            ) : isOwner ? (
-              <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
-                <MaterialIcons name="schedule" size={13} color={colors.warning} />
-                <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
-              </View>
-            ) : null}
-          </View>
+          {isOwner && venue.verificationStatus !== 'verified' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {venue.verificationStatus === 'rejected' ? (
+                <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
+                  <MaterialIcons name="cancel" size={13} color={colors.error} />
+                  <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
+                </View>
+              ) : (
+                <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
+                  <MaterialIcons name="schedule" size={13} color={colors.warning} />
+                  <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
+                </View>
+              )}
+            </View>
+          )}
           <View style={styles.locationRow}>
             <MaterialIcons name="location-on" size={16} color={colors.muted} />
             <Text style={[styles.locationText, { color: colors.muted }]}>{venue.googleMapsLocation?.address}</Text>
@@ -401,8 +403,8 @@ Linking.openURL(url);
                                 id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                                 userId: a.artistId,
                                 type: 'venue_removed',
-                                title: 'Removed from Lineup',
-                                body: `You have been removed from the lineup at ${venue.name}.`,
+                                title: 'Removed from Venue',
+                                body: `${venue.name}`,
                                 isRead: false,
                                 relatedId: a.venueId,
                                 relatedType: 'venue',

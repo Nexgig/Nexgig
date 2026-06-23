@@ -127,15 +127,13 @@ export default function DJAvailabilityScreen() {
       booking_declined: 'Booking Declined',
       booking_cancelled: 'Booking Cancelled',
     };
-    const dateStr = b.resolvedDate
-      ? new Date(b.resolvedDate + 'T00:00:00').toLocaleDateString('en-AE', { weekday: 'short', month: 'short', day: 'numeric' })
-      : '';
+    const dateStr = b.resolvedDate ? formatDate(b.resolvedDate) : '';
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: b.managerId,
       type,
       title: titles[type],
-      body: `${currentUser.fullName} at ${b.resolvedVenueName ?? 'a venue'} — ${dateStr}`,
+      body: `${currentUser.fullName} · ${b.resolvedVenueName ?? 'a venue'} — ${dateStr}`,
       isRead: false,
       relatedId: b.id,
       relatedType: 'booking',

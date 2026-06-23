@@ -101,7 +101,7 @@ export default function RosterScreen() {
             userId: artistId,
             type: 'lineup_removed',
             title: 'Removed from Lineup',
-            body: `${currentUser?.fullName ?? 'A manager'} removed you from their artist lineup.`,
+            body: `${currentUser?.fullName ?? 'A manager'}`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });
@@ -141,7 +141,7 @@ export default function RosterScreen() {
               userId: assignDJId,
               type: 'venue_assigned',
               title: 'Assigned to Venue',
-              body: `${currentUser?.fullName ?? 'A manager'} assigned you to ${venueName}.`,
+              body: `${venueName}`,
               isRead: false,
               relatedId: venueId,
               relatedType: 'venue',
@@ -173,7 +173,7 @@ export default function RosterScreen() {
             userId: assignDJId,
             type: 'venue_removed',
             title: 'Removed from Venue',
-            body: `${currentUser?.fullName ?? 'A manager'} removed you from ${venueName}.`,
+            body: `${venueName}`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });

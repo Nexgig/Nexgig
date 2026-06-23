@@ -222,7 +222,7 @@ export default function NetworkScreen() {
             userId: app.artist_id,
             type: 'lineup_added' as any,
             title: 'Application Accepted',
-            body: `Your request to join the lineup at ${app.venue?.name ?? 'the venue'} has been accepted.`,
+            body: `${app.venue?.name ?? 'the venue'}`,
             isRead: false,
             relatedId: app.venue_id,
             relatedType: 'venue',
@@ -251,7 +251,7 @@ export default function NetworkScreen() {
             userId: app.artist_id,
             type: 'lineup_declined',
             title: 'Request Declined',
-            body: `Your request to join the lineup at ${app.venue?.name ?? 'the venue'} was not accepted.`,
+            body: `${app.venue?.name ?? 'the venue'}`,
             isRead: false,
             relatedId: app.venue_id,
             relatedType: 'venue',
@@ -305,16 +305,12 @@ export default function NetworkScreen() {
       });
     });
 
-    // 4. Informational notification to the artist
-    const venueText = managerVenues.length > 0
-      ? ` You've been added to ${managerVenues.length} venue${managerVenues.length > 1 ? 's' : ''}.`
-      : '';
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artist.id,
       type: 'lineup_added' as any,
-      title: 'Added to Roster',
-      body: `${currentUser.fullName ?? 'A manager'} added you to their roster.${venueText}`,
+      title: 'Added to Lineup',
+      body: `${currentUser.fullName ?? 'A manager'}`,
       isRead: false,
       relatedId: currentUser.id,
       relatedType: 'manager',
@@ -348,7 +344,7 @@ export default function NetworkScreen() {
             userId: artist.id,
             type: 'lineup_removed' as any,
             title: 'Removed from Lineup',
-            body: `${currentUser.fullName ?? 'A manager'} removed you from their artist lineup.`,
+            body: `${currentUser.fullName ?? 'A manager'}`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });
