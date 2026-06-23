@@ -300,24 +300,6 @@ export default function ArtistProfileScreen() {
             </View>
           )}
 
-          {/* Rates */}
-          {profile && profile.minRate !== undefined && profile.minRate !== null && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.cardHeader}>
-                <Text style={[styles.cardLabel, { color: colors.muted }]}>Rate (AED)</Text>
-                <View style={[styles.privateBadge, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <MaterialIcons name="lock" size={10} color={colors.muted} />
-                  <Text style={[styles.privateText, { color: colors.muted }]}>Private</Text>
-                </View>
-              </View>
-              <View style={styles.rateRow}>
-                <Text style={[styles.rateLabel, { color: colors.muted }]}>Minimum</Text>
-                <Text style={[styles.rateValue, { color: colors.foreground }]}>AED {profile.minRate.toLocaleString()}</Text>
-              </View>
-            </View>
-          )}
-
-
 
           {/* Links */}
           {hasLinks && (

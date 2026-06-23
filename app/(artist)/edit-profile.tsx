@@ -46,7 +46,6 @@ export default function DJEditProfileScreen() {
     soundcloudUrl: djProfile?.soundcloudUrl ?? '',
     mixcloudUrl: djProfile?.mixcloudUrl ?? '',
     spotifyUrl: djProfile?.spotifyUrl ?? '',
-    minRate: djProfile?.minRate?.toString() ?? '',
   });
 
   const [primaryGenre, setPrimaryGenre] = useState<GenreType>(
@@ -76,7 +75,6 @@ export default function DJEditProfileScreen() {
     soundcloudUrl: djProfile?.soundcloudUrl ?? '',
     mixcloudUrl: djProfile?.mixcloudUrl ?? '',
     spotifyUrl: djProfile?.spotifyUrl ?? '',
-    minRate: djProfile?.minRate?.toString() ?? '',
   });
   const originalGenre = useRef(primaryGenre);
   const originalSecondary = useRef(secondaryGenres);
@@ -96,7 +94,6 @@ export default function DJEditProfileScreen() {
       form.soundcloudUrl !== f.soundcloudUrl ||
       form.mixcloudUrl !== f.mixcloudUrl ||
       form.spotifyUrl !== f.spotifyUrl ||
-      form.minRate !== f.minRate ||
       primaryGenre !== originalGenre.current ||
       JSON.stringify(secondaryGenres) !== JSON.stringify(originalSecondary.current) ||
       JSON.stringify(instruments) !== JSON.stringify(originalInstruments.current) ||
@@ -213,7 +210,8 @@ export default function DJEditProfileScreen() {
     if (newPhone.trim() === currentUser?.phone) { Alert.alert('Same Number', 'The new phone number is the same as your current number.'); return; }
     if (!currentUser) return;
 
-    // Artist phone lives on the users row (artists has no phone column); that's also where sign-in reads it from.
+    // Persist to BOTH the users row (where sign-in reads it back) and the artists row
+    // (world-readable, so a connected manager can see it on the artist profile).
     const { data, error } = await supabase
       .from('users')
       .update({ phone: newPhone.trim() })
@@ -221,6 +219,11 @@ export default function DJEditProfileScreen() {
       .select();
     if (error) { Alert.alert('Update failed', error.message); return; }
     if (!data || data.length === 0) { Alert.alert('Update failed', 'Your phone number was not saved (0 rows updated).'); return; }
+    const { error: artistErr } = await supabase
+      .from('artists')
+      .update({ phone: newPhone.trim() })
+      .eq('id', currentUser.id);
+    if (artistErr) { Alert.alert('Update failed', artistErr.message); return; }
 
     // Reflect locally + keep the form baseline in sync so the back-guard won't fire.
     updateProfile({ phone: newPhone.trim() });
@@ -262,7 +265,6 @@ export default function DJEditProfileScreen() {
         primaryGenre,
         secondaryGenres,
         instruments,
-        minRate: form.minRate ? parseFloat(form.minRate) : undefined,
         basedIn: form.basedIn || undefined,
         nationality: form.nationality || undefined,
         instagramUrl: form.instagramUrl.trim() || undefined,
@@ -291,7 +293,6 @@ export default function DJEditProfileScreen() {
           primary_genre: primaryGenre || null,
           secondary_genres: secondaryGenres,
           instruments: instruments,
-          min_rate: form.minRate ? parseFloat(form.minRate) : null,
           instagram_url: form.instagramUrl.trim() || null,
           soundcloud_url: form.soundcloudUrl.trim() || null,
           mixcloud_url: form.mixcloudUrl.trim() || null,
@@ -392,7 +393,7 @@ export default function DJEditProfileScreen() {
               </View>
               <MaterialIcons name="lock-outline" size={16} color={colors.muted} />
             </View>
-            <Text style={[styles.secureHint, { color: colors.muted }]}>To change your email, contact support.</Text>
+            <Text style={[styles.secureHint, { color: colors.muted }]}>To change your email, email admin@nexgigapp.com.</Text>
           </View>
 
           {/* Phone — Secure Edit */}
@@ -494,17 +495,6 @@ export default function DJEditProfileScreen() {
                 );
               })}
             </View>
-          </View>
-
-          {/* Minimum Rate */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Minimum Rate (AED)</Text>
-            <Text style={[styles.fieldHint, { color: colors.muted }]}>Only visible to managers</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              value={form.minRate} onChangeText={(v) => update('minRate', v.replace(/[^0-9]/g, ''))}
-              placeholder="e.g. 3000" placeholderTextColor={colors.muted} keyboardType="number-pad" returnKeyType="done"
-            />
           </View>
 
           {/* ─── Links ─── */}

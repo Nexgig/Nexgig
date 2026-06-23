@@ -328,7 +328,6 @@ export default function ArtistProfileViewScreen() {
   };
   const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
   const instruments: string[] = profile?.instruments ?? [];
-  const minRate = profile?.minRate;
 
   return (
     <ScreenContainer>
@@ -529,23 +528,6 @@ export default function ArtistProfileViewScreen() {
               </ScrollView>
             )}
           </View>
-          )}
-
-          {/* Rates — manager-only private section */}
-          {minRate !== undefined && minRate !== null && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.ratesHeader}>
-                <Text style={[styles.cardLabel, { color: colors.muted }]}>Rate (AED)</Text>
-                <View style={[styles.privateBadge, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <MaterialIcons name="lock" size={10} color={colors.muted} />
-                  <Text style={[styles.privateText, { color: colors.muted }]}>Private</Text>
-                </View>
-              </View>
-              <View style={styles.rateRow}>
-                <Text style={[styles.rateLabel, { color: colors.muted }]}>Minimum</Text>
-                <Text style={[styles.rateValue, { color: colors.foreground }]}>AED {minRate.toLocaleString()}</Text>
-              </View>
-            </View>
           )}
 
           {/* Contact — shown only for artists on your lineup */}

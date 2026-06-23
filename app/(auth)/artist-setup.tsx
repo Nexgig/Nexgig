@@ -62,7 +62,6 @@ export default function DJSetupScreen() {
     primaryGenre: '' as GenreType | '',
     secondaryGenres: [] as GenreType[],
     instruments: [] as InstrumentType[],
-    minRate: '',
     soundcloud: '', mixcloud: '', instagram: '', spotify: '',
   });
   const [usernameError, setUsernameError] = useState('');
@@ -208,7 +207,6 @@ export default function DJSetupScreen() {
   primary_genre: form.primaryGenre || null,
   secondary_genres: form.secondaryGenres,
   instruments: form.instruments,
-  min_rate: form.minRate ? parseFloat(form.minRate) : null,
   instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
   soundcloud_url: form.soundcloud || null,
   mixcloud_url: form.mixcloud || null,
@@ -248,7 +246,6 @@ export default function DJSetupScreen() {
       primaryGenre: (form.primaryGenre || undefined) as GenreType,
       secondaryGenres: form.secondaryGenres,
       instruments: form.instruments,
-      minRate: form.minRate ? parseFloat(form.minRate) : undefined,
       basedIn: form.basedIn || undefined,
       nationality: form.nationality || undefined,
       instagramUrl: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : undefined,
@@ -282,7 +279,7 @@ export default function DJSetupScreen() {
             <Text style={[styles.title, { color: colors.foreground }]}>
               {displayStep === 1 && 'Your Identity'}
               {displayStep === 2 && 'Your Sound'}
-              {displayStep === 3 && 'Rate & Instruments'}
+              {displayStep === 3 && 'Instruments'}
               {displayStep === 4 && 'Media Links'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
@@ -382,19 +379,9 @@ export default function DJSetupScreen() {
             </View>
           )}
 
-          {/* Step 3: Rate & Instruments */}
+          {/* Step 3: Instruments */}
           {displayStep === 3 && (
             <View style={styles.form}>
-              <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <MaterialIcons name="lock" size={16} color={colors.muted} />
-                <Text style={[styles.infoText, { color: colors.muted }]}>Your rate is only visible to managers.</Text>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Minimum Rate (AED, optional)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="3000" placeholderTextColor={colors.muted}
-                  value={form.minRate} onChangeText={(v) => update('minRate', v)} keyboardType="number-pad" returnKeyType="done" />
-              </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Instruments</Text>
                 <View style={styles.chipGrid}>
