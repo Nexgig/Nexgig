@@ -23,6 +23,14 @@ _(Notification deep-link — DONE June 23–24 2026: push-tap routing by payload
     5. TestFlight INTERNAL testing (you + up to 100 team members, no Apple review) — install via the TestFlight app; RETEST core flows in release mode: full signup matrix, booking confirm/decline/cancel, invoice + PDF download, push notifications. (Release builds can behave differently from the dev build.)
     6. TestFlight EXTERNAL testers (up to 10k via email/public link) — requires a light Beta App Review (~1 day).
     7. Public App Store listing: screenshots, description/keywords, reviewer demo accounts (working manager + artist logins) + review notes, privacy/Data Safety answers → full Apple review. (L830-831)
+- Google Play launch path (INDEPENDENT of Apple — neither blocks the other; can run in parallel, before, or after iOS). The two items with LEAD TIME are flagged — start those early if Play matters:
+    1. **Google Play Developer account — one-time $25** (not yearly, unlike Apple's $99/yr). Register at play.google.com/console. ⚠️ If registering as an ORGANISATION, Google now requires D-U-N-S verification (can take a few days). Individual account is faster but shows your name publicly. ← LEAD TIME.
+    2. **FCM service-account key** — the SAME key from the Android-push work above. `eas submit --platform android` uses it to upload to Play. Finishing the org-policy/key step unblocks BOTH push and Play submission. (Already in progress.)
+    3. Production AAB build: `eas build --profile production --platform android` (Play wants `.aab`, not the dev `.apk`).
+    4. Play Console listing: title, short + full description, screenshots, content-rating questionnaire, Data safety form, target-audience declaration, privacy policy URL.
+    5. **Closed/internal testing track FIRST** — newer personal Play accounts must run closed testing with ~12+ testers for ~14 days before they can apply for production access. ← LEAD TIME (start this early to avoid a 2-week launch delay).
+    6. Submit to production: `eas submit --profile production --platform android` → uploads the AAB to Play Console → Google review (usually faster than Apple, can be hours–days).
+    Note: production build uses Google Play App Signing with a DIFFERENT SHA-1 — add it to the Nexgig Android OAuth client at submission so Google sign-in keeps working in the Play build.
 - Dep alignment before the production release build: run `npx expo install @react-navigation/bottom-tabs @react-navigation/native` to pin them to SDK 54's expected versions — currently ahead (7.8.12 / 7.1.25 vs 7.4.0 / 7.1.8). Harmless in dev (flagged by `expo install --check`), but worth pinning for the App Store build + a quick navigation smoke-test after. Not urgent.
 - Payments: Tap Payments integration.
 
