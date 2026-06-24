@@ -10,6 +10,7 @@ import { useColors } from '@/hooks/use-colors';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { supabase } from '@/lib/supabase';
+import { sendEmail } from '@/lib/send-email';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
 type NetworkTab = 'artists' | 'venues';
@@ -229,6 +230,12 @@ export default function NetworkScreen() {
             relatedType: 'venue',
             createdAt: new Date().toISOString(),
           });
+          // Lineup-add email for this specific venue (server fetches its rules).
+          sendEmail(app.artist_id, 'lineup_added', {
+            managerName: currentUser.fullName ?? 'A manager',
+            managerId: currentUser.id,
+            venueId: app.venue_id,
+          });
           Alert.alert('Accepted!', `${app.artist?.full_name} has been added to your lineup.`);
         },
       },
@@ -316,6 +323,12 @@ export default function NetworkScreen() {
       relatedId: currentUser.id,
       relatedType: 'manager',
       createdAt: new Date().toISOString(),
+    });
+
+    // Lineup-add email listing all the manager's venues + rules (server-side).
+    sendEmail(artist.id, 'lineup_added', {
+      managerName: currentUser.fullName ?? 'A manager',
+      managerId: currentUser.id,
     });
 
     setProcessingId(null);

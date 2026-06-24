@@ -13,6 +13,7 @@ import { PhoneInput } from '@/components/phone-input';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
+import { sendEmail } from '@/lib/send-email';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
 
@@ -253,6 +254,9 @@ export default function DJSetupScreen() {
       mixcloudUrl: form.mixcloud || undefined,
       spotifyUrl: form.spotify || undefined,
     });
+
+    // Welcome email (transactional, fire-and-forget — never blocks signup).
+    sendEmail(user.id, 'welcome_artist');
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
     router.replace('/(artist)/(tabs)/dashboard' as Href);

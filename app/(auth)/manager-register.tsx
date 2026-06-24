@@ -13,6 +13,7 @@ import { STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(manager)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
+import { sendEmail } from '@/lib/send-email';
 
 const TOTAL_STEPS = 2;
 const ANIM_DURATION = 350;
@@ -181,6 +182,9 @@ export default function ManagerRegisterScreen() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Welcome email (transactional, fire-and-forget — never blocks signup).
+    sendEmail(user.id, 'welcome_manager');
 
     await AsyncStorage.setItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
     router.replace('/(manager)/(tabs)/dashboard' as Href);

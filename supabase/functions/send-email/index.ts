@@ -1,0 +1,266 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+  });
+
+function isUuid(v: unknown): v is string {
+  return typeof v === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+const FROM = 'Nexgig <notifications@nexgigapp.com>';
+
+// ─── Shared HTML shell ───────────────────────────────────────────────────────
+// Wraps body content in a consistent Nexgig-branded layout.
+function shell(innerHtml: string): string {
+  return `
+  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#F3F4F6; padding:24px;">
+    <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden;">
+      <div style="background:#2563EB; padding:24px 32px;">
+        <div style="color:#ffffff; font-size:22px; font-weight:800; letter-spacing:0.5px;">NEXGIG</div>
+        <div style="color:#DBEAFE; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:2px;">Every booking, verified.</div>
+      </div>
+      <div style="padding:32px;">
+        ${innerHtml}
+      </div>
+      <div style="padding:16px 32px; border-top:1px solid #F3F4F6;">
+        <div style="color:#9CA3AF; font-size:12px;">Sent by Nexgig &middot; nexgigapp.com</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+const h1 = (text: string) =>
+  `<h1 style="font-size:22px; font-weight:800; color:#111827; margin:0 0 16px;">${text}</h1>`;
+const p = (text: string) =>
+  `<p style="color:#4B5563; font-size:15px; line-height:1.6; margin:0 0 14px;">${text}</p>`;
+
+function escapeHtml(s: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// Renders one venue block: name in bold, rules below (or a muted "no rules" line).
+function venueBlock(name: string, rules: string | null): string {
+  const safeName = escapeHtml(name || 'Venue');
+  const trimmedRules = (rules ?? '').trim();
+  if (trimmedRules) {
+    return `
+      <div style="margin:0 0 18px;">
+        <div style="font-size:15px; font-weight:700; color:#111827; margin:0 0 4px;">${safeName}</div>
+        <div style="color:#4B5563; font-size:14px; line-height:1.55; white-space:pre-line;">${escapeHtml(trimmedRules)}</div>
+      </div>`;
+  }
+  return `
+      <div style="margin:0 0 18px;">
+        <div style="font-size:15px; font-weight:700; color:#111827; margin:0 0 4px;">${safeName}</div>
+        <div style="color:#9CA3AF; font-size:13px; font-style:italic;">(joined — no specific rules)</div>
+      </div>`;
+}
+
+// Builds the venues + rules section for the lineup_added email.
+// If venueId is provided, fetches just that venue; otherwise all the manager's
+// non-hidden venues. Returns '' if nothing resolvable (caller falls back).
+async function buildVenuesHtml(
+  admin: SupabaseClient,
+  managerId: string | null,
+  venueId: string | null,
+): Promise<string> {
+  let rows: { name: string; rules_template: string | null }[] | null = null;
+
+  if (venueId && isUuid(venueId)) {
+    const { data } = await admin
+      .from('venues').select('name, rules_template').eq('id', venueId).maybeSingle();
+    if (data) rows = [data];
+  } else if (managerId && isUuid(managerId)) {
+    const { data } = await admin
+      .from('venues')
+      .select('name, rules_template')
+      .eq('manager_id', managerId)
+      .neq('is_hidden', true)
+      .order('name', { ascending: true });
+    if (data) rows = data;
+  }
+
+  if (!rows || rows.length === 0) return '';
+
+  const heading = `<p style="color:#111827; font-size:15px; font-weight:700; margin:6px 0 12px;">${rows.length > 1 ? 'Venues & rules' : 'Venue & rules'}</p>`;
+  return heading + rows.map((r) => venueBlock(r.name, r.rules_template)).join('');
+}
+
+// ─── Templates ───────────────────────────────────────────────────────────────
+type TemplateResult = { subject: string; html: string };
+
+function renderTemplate(
+  template: string,
+  recipientName: string,
+  data: Record<string, unknown>,
+  venuesHtml: string,
+): TemplateResult | null {
+  const name = escapeHtml(recipientName || 'there');
+
+  switch (template) {
+    // Generic test/ping email — used to prove the pipe end to end.
+    case 'test': {
+      return {
+        subject: 'Nexgig email test',
+        html: shell(
+          h1('It works!') +
+          p(`Hi ${name},`) +
+          p('This is a test email from Nexgig confirming that transactional email is set up correctly.') +
+          p('If you received this, the pipe is live.'),
+        ),
+      };
+    }
+
+    // Welcome email — artist variant.
+    case 'welcome_artist': {
+      return {
+        subject: 'Welcome to Nexgig',
+        html: shell(
+          h1('Welcome to Nexgig!') +
+          p(`Hi ${name},`) +
+          p('Your artist profile is live. Managers across the UAE can now discover you, add you to their lineups, and send you booking requests.') +
+          p('Keep your profile complete — profile photo, music genres, and links help venues find the right fit.'),
+        ),
+      };
+    }
+
+    // Welcome email — manager variant.
+    case 'welcome_manager': {
+      return {
+        subject: 'Welcome to Nexgig',
+        html: shell(
+          h1('Welcome to Nexgig!') +
+          p(`Hi ${name},`) +
+          p('Your manager account is ready. Create your venues, build your artist lineup, and manage every booking in one place.') +
+          p('Start by adding a venue, then browse the Network to connect with artists.'),
+        ),
+      };
+    }
+
+    // Added to a manager's lineup. data.managerName; venuesHtml built server-side.
+    case 'lineup_added': {
+      const managerName = escapeHtml(String(data.managerName ?? 'A manager'));
+      return {
+        subject: `${managerName} added you to their lineup on Nexgig`,
+        html: shell(
+          h1("You're on the lineup!") +
+          p(`Hi ${name},`) +
+          p(`<strong>${managerName}</strong> has added you to their artist lineup on Nexgig.`) +
+          (venuesHtml || p('Open the app to see the venues and details.')),
+        ),
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+
+    if (!resendApiKey) return json({ error: 'Email is not configured' }, 500);
+
+    // 1. Caller must be a logged-in user (verify their token).
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) return json({ error: 'Missing authorization header' }, 401);
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) return json({ error: 'Invalid or expired session' }, 401);
+
+    // 2. Parse + validate the payload.
+    const payload = await req.json();
+    const { to_user_id, template, data = {} } = payload ?? {};
+
+    if (!isUuid(to_user_id)) return json({ error: 'Invalid recipient to_user_id' }, 400);
+    if (typeof template !== 'string' || template.length === 0) {
+      return json({ error: 'Invalid template' }, 400);
+    }
+
+    // 3. Look up the recipient's email + name server-side (service role).
+    //    Check artists first, then managers (a user id lives in exactly one).
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    let toEmail: string | null = null;
+    let toName = '';
+
+    const { data: artistRow } = await admin
+      .from('artists').select('email, full_name').eq('id', to_user_id).maybeSingle();
+    if (artistRow?.email) {
+      toEmail = artistRow.email;
+      toName = artistRow.full_name ?? '';
+    } else {
+      const { data: managerRow } = await admin
+        .from('managers').select('email, full_name').eq('id', to_user_id).maybeSingle();
+      if (managerRow?.email) {
+        toEmail = managerRow.email;
+        toName = managerRow.full_name ?? '';
+      }
+    }
+
+    if (!toEmail) return json({ error: 'Recipient has no email on file' }, 404);
+
+    // 4. For lineup_added, build the venues + rules section server-side.
+    let venuesHtml = '';
+    if (template === 'lineup_added') {
+      const d = data as Record<string, unknown>;
+      const managerId = typeof d.managerId === 'string' ? d.managerId : null;
+      const venueId = typeof d.venueId === 'string' ? d.venueId : null;
+      venuesHtml = await buildVenuesHtml(admin, managerId, venueId);
+    }
+
+    // 5. Render the template.
+    const rendered = renderTemplate(template, toName, data as Record<string, unknown>, venuesHtml);
+    if (!rendered) return json({ error: `Unknown template: ${template}` }, 400);
+
+    // 6. Send via Resend.
+    const emailResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: FROM,
+        to: [toEmail],
+        subject: rendered.subject,
+        html: rendered.html,
+      }),
+    });
+
+    const result = await emailResponse.json();
+
+    if (!emailResponse.ok) {
+      return json({ error: 'Resend rejected the email', details: result }, 502);
+    }
+
+    return json({ success: true, id: result?.id ?? null }, 200);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return json({ error: message }, 500);
+  }
+});
