@@ -10,6 +10,8 @@
 
 **MEDIUM / feature work**
 
+_(Invoice reminders — DONE June 24 2026: artist gets a LOCAL notification at 10:00 AM on each venue's reminder day ("Time to send your invoice for [venue]"), skipped if already invoiced that month. Engine `lib/invoice-reminders.ts` (mirrors lib/reminders.ts); re-armed on app open (artist `_layout.tsx`), after a reminder-day change (invoices.tsx Save), and after an invoice is sent (invoice-preview.tsx). Local-only, same app-open-reschedule tradeoff as gig reminders. The reminder day previously only colored a badge — it now actually notifies.)_
+
 _(Notification deep-link — DONE June 23–24 2026: push-tap routing by payload + cold-start in app/_layout.tsx, plus in-app routing for booking/venue/lineup on both sides. Manager IN-APP `invoice_received` tap now routes to the manager Profile tab (where invoices live) — done June 24. The old `artist_joined → My Artists` idea is obsolete: no such notification exists in the current model (artists self-register / apply; managers see join requests via the Network badge).)_
 
 **BIGGER WORKSTREAMS (deliberately parked)**
