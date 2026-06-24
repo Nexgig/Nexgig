@@ -9,9 +9,8 @@
 ## ⟢ CURRENT OPEN ITEMS (read this first)
 
 **MEDIUM / feature work**
-- Wizards split — PARKED (not needed now, revisit later): create-venue / manager-register / artist-setup → separate route screens for native back-gesture. They already work as single-screen wizards with slide animation. (L469-471)
 
-_(Notification deep-link — DONE June 23 2026: push-tap routing by payload + cold-start in app/_layout.tsx, plus in-app routing for booking/venue/lineup on both sides. Optional remainder for later: manager IN-APP `invoice_received` → invoice detail and `artist_joined` → My Artists, which currently fall back to the list.)_
+_(Notification deep-link — DONE June 23–24 2026: push-tap routing by payload + cold-start in app/_layout.tsx, plus in-app routing for booking/venue/lineup on both sides. Manager IN-APP `invoice_received` tap now routes to the manager Profile tab (where invoices live) — done June 24. The old `artist_joined → My Artists` idea is obsolete: no such notification exists in the current model (artists self-register / apply; managers see join requests via the Network badge).)_
 
 **BIGGER WORKSTREAMS (deliberately parked)**
 - Push (Android FCM credentials) — IN PROGRESS June 24 2026, see session log at bottom. Gig reminders DONE (local notifications, multi-select offsets). iOS push already works end-to-end. (L839, L842)
@@ -26,7 +25,6 @@ _(Notification deep-link — DONE June 23 2026: push-tap routing by payload + co
     7. Public App Store listing: screenshots, description/keywords, reviewer demo accounts (working manager + artist logins) + review notes, privacy/Data Safety answers → full Apple review. (L830-831)
 - Dep alignment before the production release build: run `npx expo install @react-navigation/bottom-tabs @react-navigation/native` to pin them to SDK 54's expected versions — currently ahead (7.8.12 / 7.1.25 vs 7.4.0 / 7.1.8). Harmless in dev (flagged by `expo install --check`), but worth pinning for the App Store build + a quick navigation smoke-test after. Not urgent.
 - Payments: Tap Payments integration.
-- Venue verification gate v2 (only if show-only proves too soft) + internal admin screen. (L928)
 
 **LINT HYGIENE (deferred — "clean as you touch")**
 - 9 cosmetic unescaped-apostrophe errors, ~80 unused-import/var warnings, ~40 hook-dependency warnings (case-by-case ONLY — bulk-fixing has caused infinite loops), ~7 duplicate-import warnings. Full catalogue in the June 15 lint session log near the bottom.
