@@ -87,6 +87,8 @@ export default function ManagerNotificationsScreen() {
     markAsRead(notif.id);
     if (notif.relatedType === 'booking' && notif.relatedId) {
       router.push(('/(manager)/booking-detail?id=' + notif.relatedId) as Href);
+    } else if (notif.type === 'invoice_received') {
+      router.push('/(manager)/(tabs)/profile' as Href);
     }
   };
 
