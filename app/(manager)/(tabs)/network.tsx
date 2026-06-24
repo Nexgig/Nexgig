@@ -237,7 +237,6 @@ export default function NetworkScreen() {
             managerId: currentUser.id,
             venueId: app.venue_id,
           });
-          Alert.alert('Accepted!', `${app.artist?.full_name} has been added to your lineup.`);
         },
       },
     ]);
