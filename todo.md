@@ -15,8 +15,6 @@ _(Notification deep-link — DONE June 23 2026: push-tap routing by payload + co
 
 **BIGGER WORKSTREAMS (deliberately parked)**
 - Push: Android FCM credentials; same-day/day-before gig reminders. (iOS push already works end-to-end — registration, send, real-device tested.) (L839, L842)
-- Auth: OAuth-then-password collision; plain email+password signup sanity-check; Android Google sign-in. (L941-942, L853)  *(Signup-flow wrong-UUID finding — RESOLVED June 22 2026, confirmed a one-off via data audit; see bottom of file.)*
-- Email infra: welcome email; lineup-add email (with venue rules); venue-rules-on-acceptance email. (L935-937)
 - Calendar: artist Google Calendar sync (scope TBD). (L946)
 - App Store / TestFlight launch path (ordered, parked until ready):
     1. Paid Apple Developer account ($99/yr).
@@ -955,13 +953,20 @@ _(Notification deep-link — DONE June 23 2026: push-tap routing by payload + co
 - [ ] [Review — FUTURE, decide later] If show-only proves too soft, tighten the gate WITHOUT changing the data model: options in increasing strictness — (a) hide pending venues from Discovery until verified, (b) block the FIRST artist assignment / Send Bookings on a never-verified venue with a "Pending verification" message. Also still open: notify the manager when we verify/reject; auto-flag risky new venues (new manager, dup name+address, no maps location, banned words) server-side via a Postgres insert trigger so the review queue stays small; lock `verification_status` to service-role-only in RLS so managers can't self-verify; build a small internal admin screen (v2) instead of editing rows by hand.
 - [x] [Review — optional polish] DONE June 15: hid the "Pending verification" + "Not approved" pills from NON-owners on (manager)/venue-detail.tsx — non-owners now only ever see the "Verified" badge (gated both the rejected + pending branches behind `isOwner`, added `: null` fallback). Artist-side venue-detail never rendered the pill, so no change needed there.
 
-## Email + onboarding (June 2026) — NEEDS EMAIL INFRA FIRST
+## Email + onboarding (June 2026) — DONE June 24 2026 (Resend transactional email)
 
-> NOTE: All four email items below require a transactional email path that does not exist yet — decision needed: send via a Supabase Edge Function using a provider (Resend / Postmark / SendGrid) with a verified sending domain (nexgigapp.com, SPF/DKIM). Build that foundation once, then all four reuse it. Respect each user's Email Preferences toggle.
+> NOTE: Foundation built — a generic `send-email` Edge Function sends transactional email via Resend from `notifications@nexgigapp.com` on the verified domain nexgigapp.com (DKIM/SPF/MX in Squarespace DNS, domain shows Verified in Resend, eu-west-1). The function verifies the caller is a logged-in user, looks up the recipient's email server-side (artists then managers by id), renders a branded HTML template, and sends. App-side one-line helper `lib/send-email.ts` `sendEmail(toUserId, template, data)` (fire-and-forget; never blocks the user action). These are OPERATIONAL/transactional emails — they always send and are NOT gated by the local "Product Updates" toggle (which is for future marketing and the server can't read it anyway). Test verified end-to-end on device.
 
-- [ ] [Email] Welcome email on first signup (artist + manager) — when a new account finishes onboarding, send a welcome email. Separate copy for artist vs manager. Trigger on first account-row creation.
-- [ ] [Email] When a manager adds an artist to their lineup, email the artist that they've been added. If the manager's venues have rules, include each venue and its rules; if a venue has no rules, just say they've joined (no rules section). Pull venue rules from the venues table.
-- [ ] [Email] Gig/venue-rules email when an artist applies to / is accepted at a venue — send the venue's rules to the artist on acceptance (ties to the create-venue copy note above). Confirm exact trigger: on join-the-lineup acceptance and/or on booking confirmation.
+- [x] [Email] Welcome email on first signup (artist + manager) — DONE. `welcome_artist` / `welcome_manager` templates. Triggered after the artists/managers row is created: artist-setup.tsx (after artists upsert) + manager-register.tsx (after managers upsert). Both fire for ALL signup paths (email + Google + Apple) because every path funnels through that single row-creation point. Device-tested ✅.
+- [x] [Email] Manager adds an artist to their lineup — DONE. `lineup_added` template, triggered in network.tsx `handleAddToRoster` with `{ managerName, managerId }`. The Edge Function builds the venue+rules section SERVER-SIDE: queries the manager's non-hidden venues (`manager_id = X, is_hidden != true`), renders each venue's name + `rules_template` (venues with no rules show "(joined — no specific rules)"). No rules data crosses the client.
+- [x] [Email] Gig/venue-rules email on acceptance — DONE (same `lineup_added` template, one-venue variant). Triggered in network.tsx `handleAccept` (manager accepts an artist's join application to a SPECIFIC venue) with `{ managerName, managerId, venueId }` — the Edge Function fetches just that one venue's rules when `venueId` is passed.
+
+### Email infra implementation notes (June 24 2026)
+- Edge Function `send-email` deployed via dashboard Code tab (same as the others; no CLI on this Mac). Reuses the project-wide `RESEND_API_KEY` secret (Tuts created a fresh key + replaced the secret value; the old month-old key was only ever used by the now-orphaned `send-invite-email` function and was deleted in Resend for a clean start).
+- Templates live IN the function (`renderTemplate`): `test`, `welcome_artist`, `welcome_manager`, `lineup_added`. Shared branded `shell()` wrapper (blue #2563EB header "NEXGIG / Every booking, verified.", footer). No emojis (per Tuts). Welcome emails are link-free (mobile app, no useful web link).
+- Repo source of truth for the function: `supabase/functions/send-email/index.ts`. App helper + template union type: `lib/send-email.ts`.
+- A temporary "Send Test Email (TEMP)" button was added to manager settings ADVANCED to verify the pipe, then REMOVED after the test email landed.
+- Respecting Email Preferences "Product Updates" toggle: deliberately NOT applied to these (they're transactional, not marketing). Keep that toggle for a future marketing/broadcast path.
 
 ## Auth flows to verify (June 2026)
 
