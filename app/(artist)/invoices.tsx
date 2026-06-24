@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
+import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Invoice } from '@/lib/types';
@@ -222,6 +223,8 @@ export default function InvoicesScreen() {
                 if (reminderVenueId && currentUser) {
                   setReminder(reminderVenueId, currentUser.id, reminderDay);
                   setReminderVenueId(null);
+                  // Re-arm local invoice reminders so the new day takes effect.
+                  rescheduleInvoiceReminders(currentUser.id);
                 }
               }}
             >

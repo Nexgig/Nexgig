@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore, loadNotificationsFromSupabase } from '@/lib/store';
 import { rescheduleArtistReminders } from '@/lib/reminders';
+import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import type { Booking } from '@/lib/types';
 
 export default function DJLayout() {
@@ -187,7 +188,11 @@ export default function DJLayout() {
         });
       });
     };
-    fetchInvoices();
+    fetchInvoices().then(() => {
+      // Schedule local invoice reminders once bookings (completed gigs) + invoices
+      // (sent-this-month check) are loaded. Safe to call repeatedly.
+      rescheduleInvoiceReminders(currentUser.id);
+    });
 
     // Load notifications from Supabase
     loadNotificationsFromSupabase(currentUser.id);

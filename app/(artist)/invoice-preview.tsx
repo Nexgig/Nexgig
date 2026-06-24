@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, useLineupStore, mapVenueRow } from '@/lib/store';
+import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { supabase } from '@/lib/supabase';
@@ -155,6 +156,10 @@ export default function InvoicePreviewScreen() {
               return;
             }
             addInvoice(newInvoice);
+
+            // Re-arm local invoice reminders so this now-invoiced venue stops
+            // reminding this month.
+            rescheduleInvoiceReminders(currentUser.id);
 
             // Send notification to manager
             addNotification({
