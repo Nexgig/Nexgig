@@ -136,6 +136,16 @@ const config: ExpoConfig = {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
         },
+        ios: {
+          // Firebase/Google pods (pulled in via google-services.json +
+          // google-signin) are Swift static-lib pods whose deps don't define
+          // modules; modular headers let them be imported when built static.
+          extraPods: [
+            { name: "GoogleUtilities", modular_headers: true },
+            { name: "RecaptchaInterop", modular_headers: true },
+            { name: "AppCheckCore", modular_headers: true },
+          ],
+        },
       },
     ],
   ],
