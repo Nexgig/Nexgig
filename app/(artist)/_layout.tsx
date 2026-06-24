@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore, loadNotificationsFromSupabase } from '@/lib/store';
+import { rescheduleArtistReminders } from '@/lib/reminders';
 import type { Booking } from '@/lib/types';
 
 export default function DJLayout() {
@@ -60,7 +61,11 @@ export default function DJLayout() {
         });
       }
     };
-    fetchBookings();
+    fetchBookings().then(() => {
+      // Schedule local gig reminders from the freshly-loaded confirmed bookings
+      // + the artist's saved reminder offsets. Safe to call repeatedly.
+      rescheduleArtistReminders(currentUser.id);
+    });
 
     // Fetch venue assignments so artist sees their venues after reload
     const fetchVenueAssignments = async () => {

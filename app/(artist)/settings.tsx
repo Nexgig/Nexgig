@@ -8,6 +8,8 @@ import { useColors } from '@/hooks/use-colors';
 import { useThemeContext } from '@/lib/theme-provider';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { DeleteAccountModal } from '@/components/delete-account-modal';
+import { REMINDER_PRESETS, getReminderOffsets, setReminderOffsets, rescheduleArtistReminders } from '@/lib/reminders';
+import * as Notifications from 'expo-notifications'; // TEMP: reminder debug button
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 export const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
@@ -16,8 +18,6 @@ export const DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS = 'nexgig:dj:notif:bookingReq
 export const DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES = 'nexgig:dj:notif:bookingUpdates';
 export const DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES = 'nexgig:dj:notif:lineupVenues';
 export const DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES = 'nexgig:dj:emailProductUpdates';
-export const DJ_STORAGE_KEY_REMINDER_SAME_DAY = 'nexgig:dj:reminderSameDay';
-export const DJ_STORAGE_KEY_REMINDER_DAY_BEFORE = 'nexgig:dj:reminderDayBefore';
 export const DJ_STORAGE_KEY_LANGUAGE = 'nexgig:dj:language';
 export const DJ_STORAGE_KEY_FEEDBACK = 'nexgig:dj:feedback';
 
@@ -35,6 +35,7 @@ export default function DJSettingsScreen() {
   const router = useRouter();
   const colors = useColors();
   const { setColorScheme } = useThemeContext();
+  const currentUserId = useAuthStore((s) => s.currentUser?.id);
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [defaultCalendarView, setDefaultCalendarView] = useState<CalendarViewMode>('month');
@@ -43,8 +44,7 @@ export default function DJSettingsScreen() {
   const [notifBookingUpdates, setNotifBookingUpdates] = useState(true);
   const [notifLineupVenues, setNotifLineupVenues] = useState(true);
   const [emailProductUpdates, setEmailProductUpdates] = useState(true);
-  const [reminderSameDay, setReminderSameDay] = useState(true);
-  const [reminderDayBefore, setReminderDayBefore] = useState(true);
+  const [reminderOffsets, setReminderOffsetsState] = useState<number[]>([]);
   const [language, setLanguage] = useState<LanguageOption>('en');
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -53,15 +53,13 @@ export default function DJSettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [dcv, app, nbr, nbu, nlv, epu, rsd, rdb, lang] = await Promise.all([
+        const [dcv, app, nbr, nbu, nlv, epu, lang] = await Promise.all([
           AsyncStorage.getItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
           AsyncStorage.getItem(DJ_STORAGE_KEY_APPEARANCE),
           AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS),
           AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES),
           AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES),
           AsyncStorage.getItem(DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES),
-          AsyncStorage.getItem(DJ_STORAGE_KEY_REMINDER_SAME_DAY),
-          AsyncStorage.getItem(DJ_STORAGE_KEY_REMINDER_DAY_BEFORE),
           AsyncStorage.getItem(DJ_STORAGE_KEY_LANGUAGE),
         ]);
         if (dcv !== null) setDefaultCalendarView(dcv === 'week' ? 'week' : dcv === 'today' ? 'today' : 'month');
@@ -70,9 +68,9 @@ export default function DJSettingsScreen() {
         if (nbu !== null) setNotifBookingUpdates(nbu === 'true');
         if (nlv !== null) setNotifLineupVenues(nlv === 'true');
         if (epu !== null) setEmailProductUpdates(epu === 'true');
-        if (rsd !== null) setReminderSameDay(rsd === 'true');
-        if (rdb !== null) setReminderDayBefore(rdb === 'true');
         if (lang !== null) setLanguage(lang as LanguageOption);
+        // Reminder offsets come from the reminders module (its own storage key + default).
+        setReminderOffsetsState(await getReminderOffsets());
       } finally {
         setLoading(false);
       }
@@ -112,15 +110,17 @@ export default function DJSettingsScreen() {
     await AsyncStorage.setItem(DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES, String(val));
   }, []);
 
-  const saveReminderSameDay = useCallback(async (val: boolean) => {
-    setReminderSameDay(val);
-    await AsyncStorage.setItem(DJ_STORAGE_KEY_REMINDER_SAME_DAY, String(val));
-  }, []);
-
-  const saveReminderDayBefore = useCallback(async (val: boolean) => {
-    setReminderDayBefore(val);
-    await AsyncStorage.setItem(DJ_STORAGE_KEY_REMINDER_DAY_BEFORE, String(val));
-  }, []);
+  const saveReminderOffset = useCallback(async (minutes: number) => {
+    setReminderOffsetsState((prev) => {
+      const next = prev.includes(minutes)
+        ? prev.filter((m) => m !== minutes)
+        : [...prev, minutes].sort((a, b) => a - b);
+      // Persist + reschedule off the new value (state update is async).
+      setReminderOffsets(next);
+      if (currentUserId) rescheduleArtistReminders(currentUserId);
+      return next;
+    });
+  }, [currentUserId]);
 
   const saveLanguage = useCallback(async (lang: LanguageOption) => {
     setLanguage(lang);
@@ -144,8 +144,6 @@ export default function DJSettingsScreen() {
               AsyncStorage.removeItem(DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES),
               AsyncStorage.removeItem(DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES),
               AsyncStorage.removeItem(DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES),
-              AsyncStorage.removeItem(DJ_STORAGE_KEY_REMINDER_SAME_DAY),
-              AsyncStorage.removeItem(DJ_STORAGE_KEY_REMINDER_DAY_BEFORE),
               AsyncStorage.removeItem(DJ_STORAGE_KEY_LANGUAGE),
             ]);
             setDefaultCalendarView('month');
@@ -154,8 +152,11 @@ export default function DJSettingsScreen() {
             setNotifBookingUpdates(true);
             setNotifLineupVenues(true);
             setEmailProductUpdates(true);
-            setReminderSameDay(true);
-            setReminderDayBefore(true);
+            // Reset reminders to the default offsets (3h + 1 day) + reschedule.
+            const defaults = [180, 1440];
+            setReminderOffsetsState(defaults);
+            await setReminderOffsets(defaults);
+            if (currentUserId) rescheduleArtistReminders(currentUserId);
             setLanguage('en');
             setColorScheme('light');
           },
@@ -336,28 +337,36 @@ export default function DJSettingsScreen() {
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
+          {/* Gig reminders — multi-select offset chips */}
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <MaterialIcons name="alarm" size={20} color={colors.primary} />
               <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Same Day Reminder</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>3 hours before your booking</Text>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Gig Reminders</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Get reminded before your confirmed gigs — pick any</Text>
               </View>
             </View>
-            <Switch value={reminderSameDay} onValueChange={saveReminderSameDay} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
           </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <MaterialIcons name="alarm" size={20} color={colors.primary} />
-              <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Day Before Reminder</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>24 hours before your booking</Text>
-              </View>
-            </View>
-            <Switch value={reminderDayBefore} onValueChange={saveReminderDayBefore} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+          <View style={styles.chipWrap}>
+            {REMINDER_PRESETS.map((preset) => {
+              const selected = reminderOffsets.includes(preset.minutes);
+              return (
+                <Pressable
+                  key={preset.minutes}
+                  style={[
+                    styles.chip,
+                    { borderColor: colors.border },
+                    selected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  ]}
+                  onPress={() => saveReminderOffset(preset.minutes)}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    { color: selected ? '#fff' : colors.foreground },
+                  ]}>{preset.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
 
         </View>
@@ -554,6 +563,9 @@ const styles = StyleSheet.create({
   settingDesc: { fontSize: 12, lineHeight: 17 },
   divider: { height: 0.5, marginHorizontal: 16 },
   segmentRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
+  chip: { borderWidth: 1, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  chipText: { fontSize: 13, fontWeight: '700' },
   segmentBtn: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', gap: 2 },
   segmentText: { fontSize: 13, fontWeight: '700' },
   resetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
