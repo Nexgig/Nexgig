@@ -17,14 +17,14 @@ _(Notification deep-link — DONE June 23–24 2026: push-tap routing by payload
 **BIGGER WORKSTREAMS (deliberately parked)**
 - Push (Android FCM credentials) — IN PROGRESS June 24 2026, see session log at bottom. Gig reminders DONE (local notifications, multi-select offsets). iOS push already works end-to-end. (L839, L842)
 - Calendar: artist Google Calendar sync (scope TBD). (L946)
-- App Store / TestFlight launch path (ordered, parked until ready):
-    1. Paid Apple Developer account ($99/yr).
-    2. Create the app record in App Store Connect (bundle com.nexgig.app).
-    3. Production build: `eas build --profile production --platform ios` (NOT the dev/preview build we develop on).
-    4. Submit: `eas submit --profile production --platform ios` → uploads to App Store Connect (~10–30 min to process).
-    5. TestFlight INTERNAL testing (you + up to 100 team members, no Apple review) — install via the TestFlight app; RETEST core flows in release mode: full signup matrix, booking confirm/decline/cancel, invoice + PDF download, push notifications. (Release builds can behave differently from the dev build.)
-    6. TestFlight EXTERNAL testers (up to 10k via email/public link) — requires a light Beta App Review (~1 day).
-    7. Public App Store listing: screenshots, description/keywords, reviewer demo accounts (working manager + artist logins) + review notes, privacy/Data Safety answers → full Apple review. (L830-831)
+- App Store / TestFlight launch path — IN PROGRESS June 25 2026: **iOS build submitted to TestFlight** (steps 1-4 DONE). ASC App ID 6784020757, bundle com.nexgig.app, build #4, v1.0.0.
+    1. ✅ Paid Apple Developer account (elieturk@live.com, Team 9F4MZ3T94X Individual). NOTE: had to accept an updated Apple Developer Program License Agreement at developer.apple.com before the bundle ID would register; EU trader-status (DSA) banner can be left as-is for a UAE launch (blocks EU distribution only, not the build).
+    2. ✅ App record auto-created in App Store Connect by `eas submit` (ASC App ID 6784020757).
+    3. ✅ Production build: `eas build --profile production --platform ios`. GOTCHA (fixed): adding `google-services.json` pulled Firebase pods (AppCheckCore/GoogleUtilities/RecaptchaInterop) into the iOS build; pod install failed with "Swift pods cannot be integrated as static libraries." FIX = `expo-build-properties` → `ios.extraPods` with `modular_headers: true` for those 3 pods (committed in app.config.ts). `expo-build-properties` has NO `useModularHeaders` key — use `extraPods` instead.
+    4. ✅ Submit: `eas submit --profile production --platform ios` → auto-created an App Store Connect API key (ADMIN) on EAS servers, uploaded the .ipa. Apple processes ~5-30 min.
+    5. ⬜ NEXT: TestFlight INTERNAL testing — install via the TestFlight app on iPhone (elieturk@live.com already added as internal tester), RETEST core flows in RELEASE mode: full signup matrix, booking confirm/decline/cancel, invoice + PDF download, push + local notifications (gig + invoice reminders), venue picker / Open in Maps. Clear the export-compliance prompt if it appears (should auto-pass — ITSAppUsesNonExemptEncryption=false already set).
+    6. ⬜ TestFlight EXTERNAL testers (up to 10k via email/public link) — requires a light Beta App Review (~1 day).
+    7. ⬜ Public App Store listing → full Apple review. PREP STATUS: privacy-policy URL ✅ live (https://nexgig.github.io/legal/privacy-policy.html) + terms ✅; still need (a) two reviewer demo accounts (manager + artist, seeded), (b) screenshots from the TestFlight build. Full listing copy drafted in `app-store-listing.md` at repo root. (L830-831)
 - Google Play launch path (INDEPENDENT of Apple — neither blocks the other; can run in parallel, before, or after iOS). The two items with LEAD TIME are flagged — start those early if Play matters:
     1. **Google Play Developer account — one-time $25** (not yearly, unlike Apple's $99/yr). Register at play.google.com/console. ⚠️ If registering as an ORGANISATION, Google now requires D-U-N-S verification (can take a few days). Individual account is faster but shows your name publicly. ← LEAD TIME.
     2. **FCM service-account key** — the SAME key from the Android-push work above. `eas submit --platform android` uses it to upload to Play. Finishing the org-policy/key step unblocks BOTH push and Play submission. (Already in progress.)

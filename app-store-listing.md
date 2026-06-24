@@ -67,7 +67,11 @@ https://nexgigapp.com   (confirm a support/contact page exists, or use a mailto/
 https://nexgigapp.com
 
 ## Privacy Policy URL (REQUIRED)
-https://nexgigapp.com/privacy   ← must exist and be reachable before review. If not live yet, create it.
+https://nexgig.github.io/legal/privacy-policy.html   ← CONFIRMED live + opens (tested). Use this exact URL in App Store Connect.
+
+## Terms of Service URL (in-app, not required by Apple but good to have)
+https://nexgig.github.io/legal/terms-of-service.html   ← CONFIRMED live + opens.
+Both legal links are wired into the in-app Settings > About section (manager + artist).
 
 ---
 
