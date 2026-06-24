@@ -965,7 +965,7 @@ _(Notification deep-link — DONE June 23 2026: push-tap routing by payload + co
 
 ## Auth flows to verify (June 2026)
 
-- [ ] [Investigate/Auth] OAuth-then-password collision — a user signs up with Google or Apple (no password set), then later tries to sign in with email + password using the same email. They have no password. Decide + handle: detect the account was created via OAuth and either steer them to "Continue with Google/Apple," or offer a "set a password" / reset-password flow to add password auth to the existing account. Document current behavior (Supabase likely returns invalid-credentials) and add a clear, friendly message.
+- [x] [Auth] OAuth-then-password collision — DONE June 24 2026. Sign-in now detects when a failed email+password attempt is actually an OAuth-only account and shows "This account was created with Google/Apple — tap Continue with [provider]" instead of a generic wrong-password error. Powered by a `login_hint(p_email)` SECURITY DEFINER SQL function that returns the provider off `auth.users.raw_app_meta_data` (callable by anon; sign-in.tsx calls it in the catch block, falls back to "Incorrect email or password" if unavailable). Mild email-enumeration tradeoff accepted. Device-tested ✅. (plain email+password sanity-check + Android Google sign-in still open below)
 - [ ] [Investigate/Auth] Plain email + password signup sanity-check — confirm the full flow works end-to-end for users who DON'T use Google/Apple: account-type selection, users + managers/artists row creation, email confirmation (if enabled in Supabase), and sign-in afterward. Document expected behavior and fix any gaps.
 
 ## Calendar sync (June 2026)

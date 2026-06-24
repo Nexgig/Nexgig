@@ -133,6 +133,27 @@ export default function SignInScreen() {
         Alert.alert('Error', 'Account not found. Please register first.');
       }
     } catch (error: any) {
+      const msg = (error?.message ?? '').toLowerCase();
+      const isBadCreds = msg.includes('invalid login credentials') || msg.includes('invalid credentials');
+      if (isBadCreds) {
+        // Could be a wrong password OR an account that was created via Google/Apple
+        // (which has no password). Ask the backend which provider this email uses.
+        try {
+          const { data: hint } = await supabase.rpc('login_hint', { p_email: email.trim().toLowerCase() });
+          if (hint === 'google') {
+            Alert.alert('Use Google to sign in', 'This account was created with Google. Tap “Continue with Google” below to sign in.');
+            return;
+          }
+          if (hint === 'apple') {
+            Alert.alert('Use Apple to sign in', 'This account was created with Apple. Tap “Continue with Apple” below to sign in.');
+            return;
+          }
+        } catch {
+          // hint lookup unavailable — fall through to the generic message
+        }
+        Alert.alert('Sign In Failed', 'Incorrect email or password.');
+        return;
+      }
       Alert.alert('Sign In Failed', error.message ?? 'Something went wrong.');
     } finally {
       setIsLoading(false);
