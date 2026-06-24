@@ -163,16 +163,17 @@ export default function NetworkScreen() {
 
   const getProfile = (userId: string) => sbProfiles.find((p) => p.userId === userId);
 
-  // Artist IDs with a pending application — shown at the top of the Artists tab
-  const applicantIds = useMemo(
-    () => new Set(applications.map((a) => a.artist_id)),
+  // Map artist_id -> their pending application, so an applicant row shows
+  // Accept/Decline inline instead of the Add button (no separate section).
+  const appByArtistId = useMemo(
+    () => new Map(applications.map((a) => [a.artist_id, a])),
     [applications]
   );
 
   const filteredArtists = useMemo(
-    () => [...sbArtists.filter((u) => u.id !== currentUser?.id && !applicantIds.has(u.id))]
+    () => [...sbArtists.filter((u) => u.id !== currentUser?.id)]
       .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase())),
-    [sbArtists, currentUser?.id, applicantIds]
+    [sbArtists, currentUser?.id]
   );
 
   const filteredVenues = useMemo(
@@ -402,60 +403,22 @@ export default function NetworkScreen() {
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListHeaderComponent={
-              applications.length > 0 ? (
-                <View style={{ gap: 12, marginBottom: 4 }}>
-                  <Text style={[styles.sectionLabel, { color: colors.muted }]}>JOIN REQUESTS</Text>
-                  {applications.map((app) => {
-                    const isProcessing = processingId === app.id;
-                    return (
-                      <View key={app.id} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.primary + '40' }]}>
-                        <View style={styles.cardTop}>
-                          <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                            {app.artist?.profile_photo_url
-                              ? <Image source={{ uri: app.artist.profile_photo_url }} style={styles.thumb} resizeMode="cover" />
-                              : <MaterialIcons name="person" size={22} color={colors.muted} />}
-                          </View>
-                          <View style={styles.cardInfo}>
-                            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{app.artist?.full_name ?? 'Unknown Artist'}</Text>
-                            <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                              {app.artist?.primary_genre ?? 'Artist'}{app.artist?.based_in ? ` · ${app.artist.based_in}` : ''}
-                            </Text>
-                            <Text style={[styles.cardVenue, { color: colors.primary }]} numberOfLines={1}>→ wants to join {app.venue?.name ?? 'a venue'}</Text>
-                          </View>
-                        </View>
-                        <View style={styles.actions}>
-                          <Pressable style={[styles.declineBtn, { borderColor: colors.border }]} onPress={() => handleDecline(app)} disabled={isProcessing}>
-                            <Text style={[styles.declineBtnText, { color: colors.muted }]}>Decline</Text>
-                          </Pressable>
-                          <Pressable style={[styles.acceptBtn, { backgroundColor: colors.primary }]} onPress={() => handleAccept(app)} disabled={isProcessing}>
-                            {isProcessing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.acceptBtnText}>Accept</Text>}
-                          </Pressable>
-                        </View>
-                      </View>
-                    );
-                  })}
-                  <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 8 }]}>ALL ARTISTS</Text>
-                </View>
-              ) : null
-            }
             ListEmptyComponent={
-              applications.length > 0 ? null : (
-                <View style={styles.emptyWrap}>
-                  <MaterialIcons name="people" size={48} color={colors.muted} />
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.muted }]}>No artists have signed up yet</Text>
-                </View>
-              )
+              <View style={styles.emptyWrap}>
+                <MaterialIcons name="people" size={48} color={colors.muted} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>No artists have signed up yet</Text>
+              </View>
             }
             renderItem={({ item: user }) => {
               const profile = getProfile(user.id);
+              const pendingApp = appByArtistId.get(user.id);
               const isConnected = globalLineup.some(
                 (r) => r.artistId === user.id && r.managerId === currentUser?.id && r.status === 'active'
               );
               const rowContent = (
                 <Pressable
-                  style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: isConnected ? colors.success + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
+                  style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: pendingApp ? colors.primary + '40' : isConnected ? colors.success + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
                   onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
                 >
                   <View style={styles.cardLeft}>
@@ -474,11 +437,34 @@ export default function NetworkScreen() {
                         )}
                       </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {profile?.primaryGenre ?? 'Artist'}
+                        {pendingApp ? `Wants to join ${pendingApp.venue?.name ?? 'a venue'}` : (profile?.primaryGenre ?? 'Artist')}
                       </Text>
                     </View>
                   </View>
-                  {isConnected ? (
+                  {pendingApp ? (
+                    processingId === pendingApp.id ? (
+                      <View style={[styles.respondBtn, { backgroundColor: colors.primary }]}>
+                        <ActivityIndicator size="small" color="#fff" />
+                      </View>
+                    ) : (
+                      <View style={styles.respondRow}>
+                        <Pressable
+                          style={({ pressed }) => [styles.respondBtn, { backgroundColor: '#EF4444', opacity: pressed ? 0.85 : 1 }]}
+                          onPress={(e) => { e.stopPropagation?.(); handleDecline(pendingApp); }}
+                          hitSlop={6}
+                        >
+                          <MaterialIcons name="close" size={18} color="#fff" />
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [styles.respondBtn, { backgroundColor: colors.success, opacity: pressed ? 0.85 : 1 }]}
+                          onPress={(e) => { e.stopPropagation?.(); handleAccept(pendingApp); }}
+                          hitSlop={6}
+                        >
+                          <MaterialIcons name="check" size={18} color="#fff" />
+                        </Pressable>
+                      </View>
+                    )
+                  ) : isConnected ? (
                     <View style={[styles.addBtn, { backgroundColor: colors.success }]}>
                       <MaterialIcons name="check" size={16} color="#fff" />
                     </View>
@@ -610,6 +596,8 @@ const styles = StyleSheet.create({
   disconnectIconBtn: { padding: 7, borderRadius: 20 },
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  respondBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   disconnectAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 96, borderRadius: 14, marginLeft: 8 },
   disconnectActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
