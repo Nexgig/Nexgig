@@ -172,6 +172,12 @@ export default function ManagerProfileScreen() {
               <MaterialIcons name="email" size={16} color={colors.muted} />
               <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>
             </View>
+            {currentUser?.companyName ? (
+              <View style={styles.accountRow}>
+                <MaterialIcons name="business" size={16} color={colors.muted} />
+                <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.companyName}</Text>
+              </View>
+            ) : null}
             {currentUser?.phone && (
               <View style={styles.accountRow}>
                 <MaterialIcons name="phone" size={16} color={colors.muted} />

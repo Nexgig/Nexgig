@@ -411,7 +411,7 @@ export default function SettingsScreen() {
               <MaterialIcons name="person-add" size={20} color={colors.primary} />
               <View style={styles.settingText}>
                 <Text style={[styles.settingTitle, { color: colors.foreground }]}>New Artist Joined</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>New artist joins via invite</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Artist added to lineup</Text>
               </View>
             </View>
             <Switch value={notifNewArtist} onValueChange={saveNotifNewArtist} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
