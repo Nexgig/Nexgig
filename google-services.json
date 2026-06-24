@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "718321313770",
+    "project_id": "nexgigapp-b34e6",
+    "storage_bucket": "nexgigapp-b34e6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718321313770:android:9fa2737253c21fa942f493",
+        "android_client_info": {
+          "package_name": "com.nexgig.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCT-Ya6_XQPw7W_IzcXc1oza3aAowiAfkg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
