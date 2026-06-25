@@ -330,16 +330,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. Cé La Vi Dubai" placeholderTextColor={colors.muted} value={form.name} onChangeText={(v) => update('name', v)} returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Venue Type *</Text>
-                <View style={styles.chipGrid}>
-                  {VENUE_TYPES.map((t) => (
-                    <Pressable key={t} style={[styles.chip, { borderColor: form.venueType === t ? colors.primary : colors.border, backgroundColor: form.venueType === t ? colors.primary : colors.surface }]} onPress={() => update('venueType', t)}>
-                      <Text style={[styles.chipText, { color: form.venueType === t ? '#fff' : colors.foreground }]}>{t}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Address *</Text>
                 <View>
                   <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: selectedPlaceId ? colors.primary : colors.border }]}>
@@ -383,6 +373,16 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                   ) : (
                     <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Search and tap your venue to set its location.</Text>
                   )}
+                </View>
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Venue Type *</Text>
+                <View style={styles.chipGrid}>
+                  {VENUE_TYPES.map((t) => (
+                    <Pressable key={t} style={[styles.chip, { borderColor: form.venueType === t ? colors.primary : colors.border, backgroundColor: form.venueType === t ? colors.primary : colors.surface }]} onPress={() => update('venueType', t)}>
+                      <Text style={[styles.chipText, { color: form.venueType === t ? '#fff' : colors.foreground }]}>{t}</Text>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
               <View style={styles.fieldGroup}>

@@ -202,6 +202,7 @@ export default function DJSetupScreen() {
   full_name: form.fullName.trim(),
   full_legal_name: form.fullLegalName.trim(),
   username: form.username.trim().toLowerCase(),
+  phone: form.phone.trim(),
   bio: form.bio || null,
   based_in: form.basedIn || null,
   nationality: form.nationality || null,
@@ -269,7 +270,7 @@ export default function DJSetupScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 40 + keyboardHeight }]} keyboardShouldPersistTaps="handled">
         <Animated.View style={animatedStyle}>
           <View style={styles.header}>
             <Pressable onPress={handleBack} style={styles.backBtn}>

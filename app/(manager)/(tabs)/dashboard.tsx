@@ -305,10 +305,10 @@ export default function ManagerDashboard() {
           />
         </View>
 
-        {/* Confirmed Bookings */}
+        {/* Upcoming Bookings */}
         <View style={styles.section}>
           <SectionHeader
-            title="Confirmed Bookings"
+            title="Upcoming Bookings"
             actionLabel="See all"
             onAction={() => router.push('/(manager)/confirmed-bookings' as Href)}
           />
