@@ -19,6 +19,8 @@ function isUuid(v: unknown): v is string {
 }
 
 const FROM = 'Nexgig <notifications@nexgigapp.com>';
+// Where report + feedback notifications are delivered.
+const ADMIN_EMAIL = 'admin@nexgigapp.com';
 
 // ─── Shared HTML shell ───────────────────────────────────────────────────────
 // Wraps body content in a consistent Nexgig-branded layout.
@@ -101,6 +103,56 @@ async function buildVenuesHtml(
 
 // ─── Templates ───────────────────────────────────────────────────────────────
 type TemplateResult = { subject: string; html: string };
+
+// Renders a labelled row for the admin report/feedback emails.
+function adminRow(label: string, value: string): string {
+  return `<p style="margin:0 0 8px; font-size:14px; color:#4B5563;"><strong style="color:#111827;">${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
+}
+
+// Admin-notification templates (report / feedback). These render purely from
+// `data` and are delivered to ADMIN_EMAIL — no recipient-user lookup.
+function renderAdminTemplate(
+  template: string,
+  data: Record<string, unknown>,
+): TemplateResult | null {
+  const str = (v: unknown) => (v === null || v === undefined || v === '') ? '—' : String(v);
+
+  switch (template) {
+    case 'report_admin': {
+      const type = str(data.reportedType);
+      const name = str(data.reportedName);
+      return {
+        subject: `[Report] ${type}: ${name}`,
+        html: shell(
+          h1('New Report') +
+          adminRow('Type', type) +
+          adminRow('Reported ' + type, `${name} (id: ${str(data.reportedId)})`) +
+          adminRow('Reason', str(data.reason)) +
+          adminRow('Details', str(data.details)) +
+          adminRow('Reporter id', str(data.reporterId)),
+        ),
+      };
+    }
+    case 'feedback_admin': {
+      const cat = str(data.category);
+      const subj = str(data.subject);
+      return {
+        subject: `[Feedback] ${cat}${subj !== '—' ? ': ' + subj : ''}`,
+        html: shell(
+          h1('New Feedback') +
+          adminRow('Category', cat) +
+          adminRow('Subject', subj) +
+          adminRow('From', `${str(data.userName)} (${str(data.accountType)})`) +
+          adminRow('User email', str(data.userEmail)) +
+          adminRow('User id', str(data.userId)) +
+          `<div style="margin-top:14px; padding:14px; background:#F9FAFB; border-radius:10px; white-space:pre-line; color:#111827; font-size:15px; line-height:1.55;">${escapeHtml(str(data.message))}</div>`,
+        ),
+      };
+    }
+    default:
+      return null;
+  }
+}
 
 function renderTemplate(
   template: string,
@@ -194,10 +246,39 @@ serve(async (req) => {
     const payload = await req.json();
     const { to_user_id, template, data = {} } = payload ?? {};
 
-    if (!isUuid(to_user_id)) return json({ error: 'Invalid recipient to_user_id' }, 400);
     if (typeof template !== 'string' || template.length === 0) {
       return json({ error: 'Invalid template' }, 400);
     }
+
+    // 2a. ADMIN-notification templates (report / feedback): no recipient user —
+    //     render from `data` and deliver to the admin inbox. Any logged-in user
+    //     may trigger these (already verified above).
+    if (template === 'report_admin' || template === 'feedback_admin') {
+      const renderedAdmin = renderAdminTemplate(template, data as Record<string, unknown>);
+      if (!renderedAdmin) return json({ error: `Unknown template: ${template}` }, 400);
+
+      const adminResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: FROM,
+          to: [ADMIN_EMAIL],
+          subject: renderedAdmin.subject,
+          html: renderedAdmin.html,
+        }),
+      });
+      const adminResult = await adminResponse.json();
+      if (!adminResponse.ok) {
+        return json({ error: 'Resend rejected the email', details: adminResult }, 502);
+      }
+      return json({ success: true, id: adminResult?.id ?? null }, 200);
+    }
+
+    // 2b. User-targeted templates require a valid recipient.
+    if (!isUuid(to_user_id)) return json({ error: 'Invalid recipient to_user_id' }, 400);
 
     // 3. Look up the recipient's email + name server-side (service role).
     //    Check artists first, then managers (a user id lives in exactly one).

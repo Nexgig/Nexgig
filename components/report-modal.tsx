@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { useAuthStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { sendAdminEmail } from '@/lib/send-email';
 
 interface ReportModalProps {
   visible: boolean;
@@ -21,6 +25,8 @@ const REASONS: { value: string; label: string }[] = [
 
 export function ReportModal({ visible, onClose, reportedType, reportedId, reportedName }: ReportModalProps) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const currentUser = useAuthStore((s) => s.currentUser);
 
   const [reason, setReason] = useState<string | null>(null);
@@ -45,35 +51,50 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
     if (!reason || !currentUser?.id || submitting) return;
     setSubmitting(true);
     const selected = REASONS.find((r) => r.value === reason);
-    // Email the report to admin (same mechanism as Send Feedback: opens the user's
-    // mail app pre-filled). Fire-and-forget — a failure must not block confirmation.
-    const typeLabel = reportedType === 'artist' ? 'Artist' : 'Venue';
-    const mailSubject = `[Report] ${typeLabel}: ${reportedName ?? reportedId}`;
-    const mailBody =
-      `Report type: ${typeLabel}\n` +
-      `Reported ${reportedType}: ${reportedName ?? '(unnamed)'} (id: ${reportedId})\n` +
-      `Reason: ${selected?.label ?? reason}\n` +
-      `Details: ${details.trim() || '(none)'}\n` +
-      `Reporter id: ${currentUser.id}`;
+    const reasonLabel = selected?.label ?? reason;
+    // 1. Save the report to Supabase (best-effort).
     try {
-      await Linking.openURL(
-        `mailto:admin@nexgigapp.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`
-      );
+      await supabase.from('reports').insert({
+        reporter_id: currentUser.id,
+        reported_type: reportedType,
+        reported_id: reportedId,
+        reason: reasonLabel,
+        details: details.trim() || null,
+      });
     } catch {
-      /* ignore — still show confirmation so the user isn't blocked */
+      /* best-effort; still notify + confirm so the user isn't blocked */
     }
+    // 2. Email the report to admin server-side (no mail-app popup).
+    sendAdminEmail('report_admin', {
+      reportedType,
+      reportedId,
+      reportedName: reportedName ?? null,
+      reason: reasonLabel,
+      details: details.trim() || null,
+      reporterId: currentUser.id,
+    });
     setSubmitting(false);
     setDone(true);
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={handleClose}>
-      <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+      <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            {done ? 'Report submitted' : `Report ${reportedType === 'artist' ? 'Artist' : 'Venue'}`}
+          </Text>
+          <Pressable onPress={handleClose} hitSlop={8} disabled={submitting} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+            <MaterialIcons name="close" size={24} color={colors.muted} />
+          </Pressable>
+        </View>
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           {done ? (
-            <>
+            <View style={styles.doneWrap}>
               <View style={[styles.iconWrap, { backgroundColor: '#22C55E18' }]}>
-                <MaterialIcons name="check-circle" size={28} color="#22C55E" />
+                <MaterialIcons name="check-circle" size={40} color="#22C55E" />
               </View>
               <Text style={[styles.title, { color: colors.foreground }]}>Report submitted</Text>
               <Text style={[styles.body, { color: colors.muted }]}>
@@ -85,59 +106,63 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
               >
                 <Text style={styles.fullBtnText}>Done</Text>
               </Pressable>
-            </>
+            </View>
           ) : (
             <>
-              <View style={[styles.iconWrap, { backgroundColor: '#EF444418' }]}>
-                <MaterialIcons name="flag" size={26} color="#EF4444" />
-              </View>
-              <Text style={[styles.title, { color: colors.foreground }]}>
-                Report {reportedType === 'artist' ? 'Artist' : 'Venue'}
-              </Text>
-              <Text style={[styles.body, { color: colors.muted }]}>
-                {reportedName ? `Tell us what's wrong with "${reportedName}".` : 'Tell us what\u2019s wrong.'} Your report is confidential.
-              </Text>
+              <ScrollView
+                contentContainerStyle={[styles.scroll, { paddingBottom: 24 + keyboardHeight }]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={[styles.iconWrap, { backgroundColor: '#EF444418', alignSelf: 'center' }]}>
+                  <MaterialIcons name="flag" size={28} color="#EF4444" />
+                </View>
+                <Text style={[styles.body, { color: colors.muted, textAlign: 'center', marginBottom: 8 }]}>
+                  {reportedName ? `Tell us what's wrong with "${reportedName}".` : 'Tell us what’s wrong.'} Your report is confidential.
+                </Text>
 
-              <View style={styles.reasons}>
-                {REASONS.map((r) => {
-                  const active = reason === r.value;
-                  return (
-                    <Pressable
-                      key={r.value}
-                      style={({ pressed }) => [
-                        styles.reasonRow,
-                        {
-                          borderColor: active ? colors.primary : colors.border,
-                          backgroundColor: active ? colors.primary + '12' : colors.background,
-                          opacity: pressed ? 0.8 : 1,
-                        },
-                      ]}
-                      onPress={() => setReason(r.value)}
-                    >
-                      <MaterialIcons
-                        name={active ? 'radio-button-checked' : 'radio-button-unchecked'}
-                        size={20}
-                        color={active ? colors.primary : colors.muted}
-                      />
-                      <Text style={[styles.reasonText, { color: colors.foreground }]}>{r.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                <View style={styles.reasons}>
+                  {REASONS.map((r) => {
+                    const active = reason === r.value;
+                    return (
+                      <Pressable
+                        key={r.value}
+                        style={({ pressed }) => [
+                          styles.reasonRow,
+                          {
+                            borderColor: active ? colors.primary : colors.border,
+                            backgroundColor: active ? colors.primary + '12' : colors.surface,
+                            opacity: pressed ? 0.8 : 1,
+                          },
+                        ]}
+                        onPress={() => setReason(r.value)}
+                      >
+                        <MaterialIcons
+                          name={active ? 'radio-button-checked' : 'radio-button-unchecked'}
+                          size={20}
+                          color={active ? colors.primary : colors.muted}
+                        />
+                        <Text style={[styles.reasonText, { color: colors.foreground }]}>{r.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
 
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-                value={details}
-                onChangeText={setDetails}
-                placeholder="Add details (optional)"
-                placeholderTextColor={colors.muted}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-                editable={!submitting}
-              />
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  value={details}
+                  onChangeText={setDetails}
+                  placeholder="Add details (optional)"
+                  placeholderTextColor={colors.muted}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  editable={!submitting}
+                />
+              </ScrollView>
 
-              <View style={styles.actions}>
+              {/* Fixed footer actions */}
+              <View style={[styles.footer, { borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
                 <Pressable
                   style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
                   onPress={handleClose}
@@ -157,27 +182,30 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
               </View>
             </>
           )}
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 380, borderRadius: 20, borderWidth: 1, padding: 24, gap: 12, alignItems: 'center' },
-  iconWrap: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '800' },
-  body: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  screen: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  headerTitle: { fontSize: 18, fontWeight: '800' },
+  scroll: { padding: 20, gap: 12 },
+  iconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  title: { fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  body: { fontSize: 14, lineHeight: 20 },
   reasons: { width: '100%', gap: 8, marginTop: 4 },
-  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 14 },
   reasonText: { fontSize: 14, fontWeight: '600' },
-  input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 70 },
-  actions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 },
+  input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 100, marginTop: 4 },
+  footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 0.5 },
   cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   cancelText: { fontSize: 15, fontWeight: '700' },
   submitBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   submitText: { fontSize: 15, fontWeight: '700' },
-  fullBtn: { width: '100%', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
+  fullBtn: { width: '100%', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   fullBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { sendAdminEmail } from '@/lib/send-email';
 
 export const STORAGE_KEY_FEEDBACK = 'nexgig:mgr:feedback';
 
@@ -21,6 +23,7 @@ export default function SendFeedbackScreen() {
   const router = useRouter();
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
+  const currentUser = useAuthStore((s) => s.currentUser);
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -34,25 +37,32 @@ export default function SendFeedbackScreen() {
       return;
     }
     setIsSending(true);
-    const entry = {
-      subject: subject.trim(),
-      message: message.trim(),
-      category,
-      sentAt: new Date().toISOString(),
-    };
-    try {
-      const existing = await AsyncStorage.getItem(STORAGE_KEY_FEEDBACK);
-      const list = existing ? JSON.parse(existing) : [];
-      list.push(entry);
-      await AsyncStorage.setItem(STORAGE_KEY_FEEDBACK, JSON.stringify(list));
-    } catch { /* ignore */ }
-    // Open the user's mail app addressed to support so the message actually reaches us.
     const catLabel = CATEGORIES.find((c) => c.value === category)?.label ?? 'Feedback';
-    const mailSubject = subject.trim() ? `[${catLabel}] ${subject.trim()}` : `[${catLabel}]`;
-    try { await Linking.openURL(`mailto:admin@nexgigapp.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message.trim())}`); } catch { /* ignore */ }
+    // 1. Save the feedback to Supabase (best-effort).
+    try {
+      await supabase.from('feedback').insert({
+        user_id: currentUser?.id ?? null,
+        account_type: 'manager',
+        category,
+        subject: subject.trim() || null,
+        message: message.trim(),
+      });
+    } catch {
+      /* best-effort; still notify + confirm so the user isn't blocked */
+    }
+    // 2. Email the feedback to admin server-side (no mail-app popup).
+    sendAdminEmail('feedback_admin', {
+      accountType: 'manager',
+      category: catLabel,
+      subject: subject.trim() || null,
+      message: message.trim(),
+      userId: currentUser?.id ?? null,
+      userName: currentUser?.fullName ?? null,
+      userEmail: currentUser?.email ?? null,
+    });
     setIsSending(false);
     setSuccess(true);
-  }, [subject, message, category]);
+  }, [subject, message, category, currentUser]);
 
   if (success) {
     return (
