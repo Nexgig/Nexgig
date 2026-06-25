@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   dropdownField: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
   dropdownFieldText: { flex: 1, fontSize: 15, fontWeight: '600' },
-  dropdownMenu: { borderWidth: 1, borderRadius: 12, marginTop: 6, overflow: 'hidden' },
+  dropdownMenu: { position: 'absolute', top: '100%', left: 0, right: 0, borderWidth: 1, borderRadius: 12, marginTop: 6, overflow: 'hidden', zIndex: 20, elevation: 8, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
   dropdownItemText: { fontSize: 15 },
   input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 100, marginTop: 4 },
