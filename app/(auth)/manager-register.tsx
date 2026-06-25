@@ -207,7 +207,7 @@ export default function ManagerRegisterScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 40 + keyboardHeight }]} keyboardShouldPersistTaps="handled">
         <Animated.View style={animatedStyle}>
 
           {/* Header */}

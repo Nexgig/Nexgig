@@ -7,6 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe } from '@/lib/types';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
@@ -53,6 +54,7 @@ const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
 export default function CreateVenueScreen() {
   const router = useRouter();
   const colors = useColors();
+  const keyboardHeight = useKeyboardHeight();
   const currentUser = useAuthStore((s) => s.currentUser);
   const addVenue = useVenueStore((s) => s.addVenue);
   const globalLineup = useLineupStore((s) => s.globalLineup);
@@ -319,7 +321,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
       </View>
-      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 24 + keyboardHeight }]} keyboardShouldPersistTaps="handled">
         <Animated.View style={animatedStyle}>
         {/* spacer removed — header is now outside scroll */}
 
