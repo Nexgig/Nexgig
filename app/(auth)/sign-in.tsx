@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ScrollView, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { OAuthButtons } from '@/components/oauth-buttons';
@@ -17,7 +17,9 @@ export default function SignInScreen() {
   const keyboardHeight = useKeyboardHeight();
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
 
-  const [email, setEmail] = useState('');
+  // Email may be pre-filled when arriving from the welcome screen's email step.
+  const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(emailParam ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

@@ -2,7 +2,6 @@ import { View, Text, Pressable, StyleSheet, Platform, Alert } from 'react-native
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import type { User } from '@supabase/supabase-js';
 import { useAuthStore, useLineupStore } from '@/lib/store';
@@ -112,6 +111,7 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
 
     // Brand-new OAuth user → pick account type (name/email pre-filled).
     const params = new URLSearchParams();
+    params.set('oauth', '1');
     if (fullName) params.set('name', fullName);
     if (email) params.set('email', email);
     router.replace(`/(auth)/choose-account-type?${params.toString()}` as Href);
@@ -155,33 +155,31 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
       </View>
 
       {Platform.OS === 'ios' && (
-        <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-          buttonStyle={
-            onDark
-              ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-              : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-          }
-          cornerRadius={14}
-          style={styles.appleBtn}
+        <Pressable
+          style={({ pressed }) => [
+            styles.oauthBtn,
+            { opacity: pressed || busy === 'apple' ? 0.85 : 1 },
+          ]}
           onPress={handleApple}
-        />
+          disabled={!!busy}
+        >
+          <AntDesign name="apple" size={18} color="#FFFFFF" />
+          <Text style={styles.oauthText}>
+            {busy === 'apple' ? 'Signing in...' : 'Continue with Apple'}
+          </Text>
+        </Pressable>
       )}
 
       <Pressable
         style={({ pressed }) => [
-          styles.googleBtn,
-          {
-            backgroundColor: onDark ? '#FFFFFF' : '#FFFFFF',
-            borderColor: onDark ? '#FFFFFF' : '#D1D5DB',
-            opacity: pressed || busy === 'google' ? 0.85 : 1,
-          },
+          styles.oauthBtn,
+          { opacity: pressed || busy === 'google' ? 0.85 : 1 },
         ]}
         onPress={handleGoogle}
         disabled={!!busy}
       >
-        <AntDesign name="google" size={18} color="#4285F4" />
-        <Text style={styles.googleText}>
+        <AntDesign name="google" size={18} color="#FFFFFF" />
+        <Text style={styles.oauthText}>
           {busy === 'google' ? 'Signing in...' : 'Continue with Google'}
         </Text>
       </Pressable>
@@ -195,9 +193,9 @@ const styles = StyleSheet.create({
   line: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontWeight: '500' },
   appleBtn: { width: '100%', height: 52 },
-  googleBtn: {
+  oauthBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    borderWidth: 1, borderRadius: 14, paddingVertical: 15, width: '100%',
+    backgroundColor: '#000000', borderRadius: 14, paddingVertical: 15, width: '100%',
   },
-  googleText: { color: '#1F2937', fontSize: 16, fontWeight: '700' },
+  oauthText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

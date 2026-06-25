@@ -11,11 +11,14 @@ import { useColors } from '@/hooks/use-colors';
 export default function ChooseAccountTypeScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { name, email } = useLocalSearchParams<{ name?: string; email?: string }>();
+  const { name, email, oauth } = useLocalSearchParams<{ name?: string; email?: string; oauth?: string }>();
 
   const go = (type: 'manager' | 'artist') => {
     const route = type === 'manager' ? '/(auth)/manager-register' : '/(auth)/artist-setup';
-    const params = new URLSearchParams({ oauth: '1' });
+    const params = new URLSearchParams();
+    // Only carry oauth mode when arriving from an Apple/Google sign-in. New
+    // email/password signups omit it so the wizard collects email + password.
+    if (oauth === '1') params.set('oauth', '1');
     if (name) params.set('name', name);
     if (email) params.set('email', email);
     router.push(`${route}?${params.toString()}` as Href);
