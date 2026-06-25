@@ -82,16 +82,6 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
       <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {done ? 'Report submitted' : `Report ${reportedType === 'artist' ? 'Artist' : 'Venue'}`}
-          </Text>
-          <Pressable onPress={handleClose} hitSlop={8} disabled={submitting} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
-            <MaterialIcons name="close" size={24} color={colors.muted} />
-          </Pressable>
-        </View>
-
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           {done ? (
             <View style={styles.doneWrap}>
@@ -116,16 +106,22 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
-                <View style={[styles.iconWrap, { backgroundColor: '#EF444418', alignSelf: 'center' }]}>
-                  <MaterialIcons name="flag" size={28} color="#EF4444" />
+                {/* Header — back arrow, then title + subtitle underneath (matches Send Feedback) */}
+                <View style={styles.header}>
+                  <Pressable onPress={handleClose} disabled={submitting} style={styles.backBtn}>
+                    <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+                  </Pressable>
+                  <Text style={[styles.title, { color: colors.foreground }]}>
+                    Report {reportedType === 'artist' ? 'Artist' : 'Venue'}
+                  </Text>
+                  <Text style={[styles.subtitle, { color: colors.muted }]}>
+                    {reportedName ? `Tell us what's wrong with "${reportedName}".` : 'Tell us what’s wrong.'} Your report is confidential.
+                  </Text>
                 </View>
-                <Text style={[styles.body, { color: colors.muted, textAlign: 'center', marginBottom: 8 }]}>
-                  {reportedName ? `Tell us what's wrong with "${reportedName}".` : 'Tell us what’s wrong.'} Your report is confidential.
-                </Text>
 
                 {/* Reason — dropdown (collapses so the details body sits higher) */}
-                <View style={{ zIndex: 10 }}>
-                  <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Reason</Text>
+                <View style={[styles.section, { zIndex: 10 }]}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>Reason</Text>
                   {(() => {
                     const selected = REASONS.find((r) => r.value === reason);
                     return (
@@ -165,38 +161,41 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
                   )}
                 </View>
 
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                  value={details}
-                  onChangeText={setDetails}
-                  placeholder="Add details (optional)"
-                  placeholderTextColor={colors.muted}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  editable={!submitting}
-                />
-              </ScrollView>
+                {/* Details */}
+                <View style={styles.section}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>Details <Text style={{ color: colors.muted }}>(optional)</Text></Text>
+                  <TextInput
+                    style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                    value={details}
+                    onChangeText={setDetails}
+                    placeholder="Add details..."
+                    placeholderTextColor={colors.muted}
+                    multiline
+                    numberOfLines={6}
+                    textAlignVertical="top"
+                    editable={!submitting}
+                  />
+                </View>
 
-              {/* Fixed footer actions */}
-              <View style={[styles.footer, { borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+                {/* Single centered Submit button (matches the feedback screen) */}
                 <Pressable
-                  style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                  onPress={handleClose}
-                  disabled={submitting}
-                >
-                  <Text style={[styles.cancelText, { color: colors.foreground }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [styles.submitBtn, { backgroundColor: reason ? '#EF4444' : colors.border, opacity: pressed && reason ? 0.85 : 1 }]}
+                  style={({ pressed }) => [
+                    styles.sendBtn,
+                    { backgroundColor: reason ? '#EF4444' : colors.border, opacity: (pressed || submitting) && reason ? 0.85 : 1 },
+                  ]}
                   onPress={handleSubmit}
                   disabled={!reason || submitting}
                 >
-                  {submitting
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={[styles.submitText, { color: reason ? '#fff' : colors.muted }]}>Submit</Text>}
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="send" size={20} color={reason ? '#fff' : colors.muted} />
+                      <Text style={[styles.sendBtnText, { color: reason ? '#fff' : colors.muted }]}>Submit Report</Text>
+                    </>
+                  )}
                 </Pressable>
-              </View>
+              </ScrollView>
             </>
           )}
         </KeyboardAvoidingView>
@@ -207,27 +206,24 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
-  headerTitle: { fontSize: 18, fontWeight: '800' },
-  scroll: { padding: 20, gap: 12 },
+  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16 },
+  header: { marginBottom: 32 },
+  backBtn: { marginBottom: 20, alignSelf: 'flex-start', padding: 4 },
+  title: { fontSize: 26, fontWeight: '800', marginBottom: 6 },
+  subtitle: { fontSize: 14, lineHeight: 20 },
+  section: { marginBottom: 24 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 10 },
   iconWrap: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  title: { fontSize: 22, fontWeight: '800', textAlign: 'center' },
   body: { fontSize: 14, lineHeight: 20 },
-  reasons: { width: '100%', gap: 8, marginTop: 4 },
-  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 14 },
-  reasonText: { fontSize: 14, fontWeight: '600' },
   fieldLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
   dropdownField: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
   dropdownFieldText: { flex: 1, fontSize: 15, fontWeight: '600' },
   dropdownMenu: { position: 'absolute', top: '100%', left: 0, right: 0, borderWidth: 1, borderRadius: 12, marginTop: 6, overflow: 'hidden', zIndex: 20, elevation: 8, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
   dropdownItemText: { fontSize: 15 },
-  input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 100, marginTop: 4 },
-  footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 0.5 },
-  cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  cancelText: { fontSize: 15, fontWeight: '700' },
-  submitBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  submitText: { fontSize: 15, fontWeight: '700' },
+  textarea: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 140 },
+  sendBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 16, marginTop: 8 },
+  sendBtnText: { fontSize: 16, fontWeight: '700' },
   doneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   fullBtn: { width: '100%', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   fullBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
