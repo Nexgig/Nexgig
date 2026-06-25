@@ -97,9 +97,13 @@ export default function EditVenueScreen() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionTokenRef = useRef<string>(newPlacesSessionToken());
 
-  // Track original values for change detection
+  // Track original values for change detection. Kept in state (not just refs) so that
+  // resetting the baseline after a save actually re-triggers the hasChanges memo —
+  // a ref mutation alone wouldn't, which left "unsaved changes" showing post-save.
   const originalForm = useRef({ ...form });
   const originalPhoto = useRef<string | null>(venue?.photoUrls?.[0] ?? null);
+  // Bumped after every successful save so hasChanges recomputes against the new baseline.
+  const [savedTick, setSavedTick] = useState(0);
 
   const hasChanges = useMemo(() => {
     const o = originalForm.current;
@@ -122,7 +126,7 @@ export default function EditVenueScreen() {
       form.billingCompanyAddress !== o.billingCompanyAddress ||
       form.billingTrnNumber !== o.billingTrnNumber
     );
-  }, [form, photoUri]);
+  }, [form, photoUri, savedTick]);
 
   const handleBack = () => {
     if (!hasChanges) { router.back(); return; }
@@ -327,6 +331,7 @@ export default function EditVenueScreen() {
     originalForm.current = { ...form };
     originalPhoto.current = photoUrl;
     setPhotoUri(photoUrl);
+    setSavedTick((t) => t + 1);
     setSaving(false);
   };
 
