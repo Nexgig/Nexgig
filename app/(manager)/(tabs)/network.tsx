@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -36,6 +36,18 @@ export default function NetworkScreen() {
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'venues' ? 'venues' : 'artists');
+  // Apply the `tab` route param whenever the screen gains focus. Because this is a
+  // persistent tab, useState's initializer only runs on first mount — so navigating
+  // here with ?tab=artists while the screen is already alive (e.g. from the Profile
+  // tab's Artists card when there are no artists yet, mimicking the Discover button)
+  // would otherwise show whatever sub-tab was last open. This forces the requested tab.
+  useFocusEffect(
+    useCallback(() => {
+      if (initialTab === 'artists' || initialTab === 'venues') {
+        setActiveTab(initialTab);
+      }
+    }, [initialTab])
+  );
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
