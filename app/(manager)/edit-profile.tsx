@@ -292,7 +292,7 @@ export default function EditProfileScreen() {
         {/* Avatar with edit overlay */}
         <View style={styles.avatarSection}>
           <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
-            <AvatarImage uri={photoUri ?? undefined} name={currentUser?.fullName} size={90} />
+            <AvatarImage uri={photoUri ?? undefined} name={currentUser?.fullName} size={90} variant="manager" />
             <View style={styles.cameraOverlay}>
               <MaterialIcons name="camera-alt" size={18} color="#fff" />
             </View>
