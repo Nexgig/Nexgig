@@ -48,7 +48,9 @@ export function detectConflicts(
       const venueName = getVenueName(booking.venueId);
       conflicts.push({
         type: 'booking',
-        description: `Unavailable ${bStart}–${bEnd}`,
+        description: venueName && venueName !== 'Unknown Venue'
+          ? `Booked at ${venueName} ${bStart}–${bEnd}`
+          : `Unavailable ${bStart}–${bEnd}`,
         venueName,
         slotName: bookingSlot?.name ?? booking.slotName,
         startTime: bStart,
@@ -100,7 +102,9 @@ export function detectConflicts(
       )) {
         conflicts.push({
           type: 'booking',
-          description: 'Unavailable',
+          description: draft.venueName && draft.venueName !== 'Unknown Venue'
+            ? `Drafted at ${draft.venueName} ${draft.startTime}–${draft.endTime}`
+            : `Drafted ${draft.startTime}–${draft.endTime}`,
           venueName: draft.venueName,
           slotName: draft.slotName,
           startTime: draft.startTime,

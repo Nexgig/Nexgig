@@ -81,34 +81,37 @@ export default function AssignDJScreen() {
       (a) => a.venueId === slot.venueId && a.status === 'active'
     );
     const artistIds = assignmentsForSlot.map((a) => a.artistId);
-    if (artistIds.length === 0) return;
+    if (artistIds.length === 0) { setCrossConflicts(new Map()); return; }
 
+    let cancelled = false;
     Promise.all([
-      supabase
-        .from('bookings')
-        .select('id, artist_id, manager_id, venue_id, slot_date, slot_start_time, slot_end_time, venue_name, status')
-        .in('artist_id', artistIds)
-        .eq('slot_date', slot.date)
-        .in('status', ['confirmed', 'requested'])
-        .neq('manager_id', currentUser.id),
+      // Other managers' CONFIRMED bookings are not readable directly under RLS
+      // (managers can only see their own bookings). This SECURITY DEFINER RPC
+      // returns ONLY busy time-ranges — no venue, no manager — so we can flag the
+      // artist as unavailable without leaking where/with whom they're booked.
+      supabase.rpc('get_artist_busy_times', { p_artist_ids: artistIds, p_date: slot.date }),
+      // availability_blocks is world-readable to authenticated users, so this
+      // direct query works cross-manager and stays as-is.
       supabase
         .from('availability_blocks')
         .select('id, artist_id, start_time, end_time, is_full_day, block_type, event_name')
         .in('artist_id', artistIds)
         .eq('date', slot.date),
-    ]).then(([bookingsRes, blocksRes]) => {
+    ]).then(([busyRes, blocksRes]) => {
+      if (cancelled) return;
       const map = new Map<string, ConflictInfo[]>();
       const add = (artistId: string, c: ConflictInfo) => {
         map.set(artistId, [...(map.get(artistId) ?? []), c]);
       };
-      (bookingsRes.data ?? []).forEach((b: any) => {
-        if (!b.slot_start_time || !b.slot_end_time) return;
-        if (timesOverlap(b.slot_start_time, b.slot_end_time, slot.startTime, slot.endTime, slot.date, slot.date)) {
+      (busyRes.data ?? []).forEach((b: any) => {
+        if (!b.start_time || !b.end_time) return;
+        if (timesOverlap(b.start_time, b.end_time, slot.startTime, slot.endTime, slot.date, slot.date)) {
           add(b.artist_id, {
+            // Venue intentionally omitted — another manager's venue is private.
             type: 'booking',
-            description: `Unavailable ${b.slot_start_time}–${b.slot_end_time}`,
-            startTime: b.slot_start_time,
-            endTime: b.slot_end_time,
+            description: `Booked elsewhere ${b.start_time}–${b.end_time}`,
+            startTime: b.start_time,
+            endTime: b.end_time,
           });
         }
       });
@@ -124,9 +127,10 @@ export default function AssignDJScreen() {
           });
         }
       });
-      if (map.size > 0) setCrossConflicts(map);
+      setCrossConflicts(map);
     }).catch(() => {});
-  }, [slot?.id]);
+    return () => { cancelled = true; };
+  }, [slot?.id, slot?.date, slot?.venueId, currentUser?.id, isVenueLineupMode, venueAssignments]);
 
   const unassignedLineupArtists = useMemo(
     () => myGlobalLineup
