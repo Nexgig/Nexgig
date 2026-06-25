@@ -3,7 +3,6 @@ import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useAuthStore } from '@/lib/store';
-import { supabase } from '@/lib/supabase';
 
 interface ReportModalProps {
   visible: boolean;
@@ -46,20 +45,8 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
     if (!reason || !currentUser?.id || submitting) return;
     setSubmitting(true);
     const selected = REASONS.find((r) => r.value === reason);
-    try {
-      await supabase.from('reports').insert({
-        reporter_id: currentUser.id,
-        reported_type: reportedType,
-        reported_id: reportedId,
-        reason: selected?.label ?? reason,
-        details: details.trim() || null,
-      });
-    } catch {
-      /* best-effort; still show confirmation so the user isn't blocked */
-    }
-    // Also email the report to admin so it actually reaches us (same mechanism as
-    // Send Feedback: opens the user's mail app pre-filled). Fire-and-forget — a
-    // failure here must not block the confirmation.
+    // Email the report to admin (same mechanism as Send Feedback: opens the user's
+    // mail app pre-filled). Fire-and-forget — a failure must not block confirmation.
     const typeLabel = reportedType === 'artist' ? 'Artist' : 'Venue';
     const mailSubject = `[Report] ${typeLabel}: ${reportedName ?? reportedId}`;
     const mailBody =
@@ -73,7 +60,7 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
         `mailto:admin@nexgigapp.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`
       );
     } catch {
-      /* ignore — the Supabase row is still saved */
+      /* ignore — still show confirmation so the user isn't blocked */
     }
     setSubmitting(false);
     setDone(true);
