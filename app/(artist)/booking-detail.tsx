@@ -191,19 +191,37 @@ export default function DJBookingDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Venue Card */}
+          {/* Venue Card — the Maps button lives INSIDE the card (below the venue info),
+              matching the manager booking-detail. */}
           {venue ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
-                <MaterialIcons name="business" size={22} color={colors.primary} />
+            <View style={[styles.venueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.venueCardTop}>
+                <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
+                  <MaterialIcons name="business" size={22} color={colors.primary} />
+                </View>
+                <View style={styles.cardInfo}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{venue.name}</Text>
+                  <Text style={[styles.cardSub, { color: colors.muted }]}>{venue.venueType}</Text>
+                  {venue.googleMapsLocation?.address && (
+                    <Text style={[styles.cardSub, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
+                  )}
+                </View>
               </View>
-              <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{venue.name}</Text>
-                <Text style={[styles.cardSub, { color: colors.muted }]}>{venue.venueType}</Text>
-                {venue.googleMapsLocation?.address && (
-                  <Text style={[styles.cardSub, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
-                )}
-              </View>
+              {(venue?.googleMapsLocation?.address || (venue?.googleMapsLocation?.lat && venue?.googleMapsLocation?.lng) || venue?.name) ? (
+                <Pressable
+                  style={({ pressed }) => [styles.mapsRow, { borderTopColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => {
+                    const loc = venue?.googleMapsLocation;
+                    const url = (loc?.lat && loc?.lng)
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || '')}`;
+                    Linking.openURL(url);
+                  }}
+                >
+                  <MaterialIcons name="directions" size={18} color={colors.primary} />
+                  <Text style={[styles.mapsRowText, { color: colors.primary }]}>Open in Google Maps</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : booking.isArtistCreated ? (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -227,23 +245,6 @@ export default function DJBookingDetailScreen() {
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>{booking.venueName}</Text>
               </View>
             </View>
-          ) : null}
-
-          {/* Open in Google Maps — directions to the venue (venue gigs only) */}
-          {!booking.isArtistCreated && (venue?.googleMapsLocation?.address || (venue?.googleMapsLocation?.lat && venue?.googleMapsLocation?.lng) || venue?.name || booking.venueName) ? (
-            <Pressable
-              style={({ pressed }) => [styles.calendarBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => {
-                const loc = venue?.googleMapsLocation;
-                const url = (loc?.lat && loc?.lng)
-                  ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                  : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || booking.venueName || '')}`;
-                Linking.openURL(url);
-              }}
-            >
-              <MaterialIcons name="directions" size={18} color={colors.primary} />
-              <Text style={[styles.calendarBtnText, { color: colors.primary }]}>Open in Google Maps</Text>
-            </Pressable>
           ) : null}
 
           {/* Slot / Day Details */}
@@ -457,6 +458,10 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
   content: { padding: 20, gap: 14 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
+  venueCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  venueCardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  mapsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderTopWidth: StyleSheet.hairlineWidth },
+  mapsRowText: { fontSize: 14, fontWeight: '600' },
   cardIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
