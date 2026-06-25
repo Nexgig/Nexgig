@@ -4,14 +4,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useVenueStore, useBookingStore, useSlotStore, useNotificationStore } from '@/lib/store';
+import { useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueType, EnergyType, GenreType, AudienceType, SubVibe } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { supabase } from '@/lib/supabase';
 import { uploadImageAsync } from '@/lib/upload';
-import { syncBookingStatus } from '@/lib/booking-sync';
-import { formatDate } from '@/lib/conflict-detection';
 import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSuggestion } from '@/lib/places';
 
 // ── Option arrays — kept in sync with create-venue.tsx ───────────────────────
@@ -56,11 +54,6 @@ export default function EditVenueScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const venue = useVenueStore((s) => s.getVenueById(id));
   const updateVenue = useVenueStore((s) => s.updateVenue);
-  const hideVenue = useVenueStore((s) => s.hideVenue);
-  const bookings = useBookingStore((s) => s.bookings);
-  const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
-  const getSlotById = useSlotStore((s) => s.getSlotById);
-  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [form, setForm] = useState({
     name: venue?.name ?? '',
@@ -333,74 +326,6 @@ export default function EditVenueScreen() {
     setPhotoUri(photoUrl);
     setSavedTick((t) => t + 1);
     setSaving(false);
-  };
-
-  // ── Delete ────────────────────────────────────────────────────────────────
-  const handleDelete = () => {
-    // Active bookings (pending/confirmed) for this venue — these get cancelled + the artist notified.
-    // Completed bookings are left untouched so gig history is preserved (matches the FK SET NULL design).
-    const activeBookings = bookings.filter(
-      (b) =>
-        b.venueId === venue.id &&
-        (b.status === 'requested' || b.status === 'past_confirmation' || b.status === 'confirmed')
-    );
-    const n = activeBookings.length;
-    const cancelNotice =
-      n > 0
-        ? `\n\n${n} pending/confirmed booking${n > 1 ? 's' : ''} will be cancelled and the affected artist${n > 1 ? 's' : ''} notified.`
-        : '';
-    Alert.alert(
-      'Delete Venue',
-      `Delete "${venue.name}"? It'll be removed from your venues and the network.${cancelNotice} Completed gigs stay in your history. This can't be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            // 1. Cancel active bookings + notify artists (mirrors the slot-card cancel logic in calendar.tsx)
-            const nowIso = new Date().toISOString();
-            for (const booking of activeBookings) {
-              const slot = getSlotById(booking.slotId);
-              const isRequested = booking.status === 'requested' || booking.status === 'past_confirmation';
-              const snapDate = booking.slotDate ?? slot?.date;
-              updateBookingStatus(booking.id, 'cancelled', {
-                cancelledAt: nowIso,
-                slotDate: snapDate,
-                slotName: booking.slotName ?? slot?.name,
-                slotStartTime: booking.slotStartTime ?? slot?.startTime,
-                slotEndTime: booking.slotEndTime ?? slot?.endTime,
-                venueName: booking.venueName ?? venue.name,
-                ...(isRequested ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
-              });
-              syncBookingStatus(booking.id, 'cancelled', {
-                cancelledAt: nowIso,
-                ...(isRequested ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
-              });
-              addNotification({
-                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                userId: booking.artistId,
-                type: isRequested ? 'booking_request_cancelled' : 'booking_cancelled',
-                title: isRequested ? 'Request Cancelled' : 'Booking Cancelled',
-                body: `${booking.venueName ?? venue.name} — ${snapDate ? formatDate(snapDate) : ''}`,
-                isRead: false,
-                relatedId: booking.id,
-                relatedType: 'booking',
-                createdAt: nowIso,
-              });
-            }
-            // 2. Hide the venue instead of deleting it. Keeping the row (and its slots)
-            //    alive means completed gigs keep resolving the real venue name everywhere
-            //    — history, dashboard, calendar. Hidden venues are filtered out of My
-            //    Venues and both network lists, so it disappears from the active surfaces.
-            hideVenue(venue.id);
-            await supabase.from('venue_assignments').delete().eq('venue_id', venue.id);
-            await supabase.from('venues').update({ is_hidden: true }).eq('id', venue.id);
-            router.replace('/(manager)/(tabs)/profile' as any);
-          },
-        },
-      ]
-    );
   };
 
   return (
@@ -722,18 +647,6 @@ export default function EditVenueScreen() {
               returnKeyType="done"
             />
           </View>
-
-          {/* Delete Venue */}
-          <View style={[styles.dangerSection, { borderTopColor: colors.border }]}>
-            <Text style={[styles.dangerTitle, { color: colors.error }]}>Danger Zone</Text>
-            <Text style={[styles.dangerDesc, { color: colors.muted }]}>
-              Permanently delete this venue and all its associated data. This action cannot be undone.
-            </Text>
-            <Pressable style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.9 : 1 }]} onPress={handleDelete}>
-              <MaterialIcons name="delete" size={18} color="#fff" />
-              <Text style={styles.deleteBtnText}>Delete Venue</Text>
-            </Pressable>
-          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -768,9 +681,4 @@ const styles = StyleSheet.create({
   colorSwatch: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   headerSaveBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#2563EB', borderRadius: 20 },
   headerSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  dangerSection: { borderTopWidth: 1, paddingTop: 24, marginTop: 12, gap: 10 },
-  dangerTitle: { fontSize: 16, fontWeight: '800' },
-  dangerDesc: { fontSize: 13, lineHeight: 18 },
-  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#EF4444', borderRadius: 14, paddingVertical: 14, marginTop: 4 },
-  deleteBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

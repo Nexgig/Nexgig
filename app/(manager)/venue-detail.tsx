@@ -10,6 +10,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
@@ -31,7 +32,11 @@ export default function VenueDetailScreen() {
   const unhideVenue = useVenueStore((s) => s.unhideVenue);
   const isOwner = venue?.managerId === currentUser?.id;
   const getSlotsByVenue = useSlotStore((s) => s.getSlotsByVenue);
+  const getSlotById = useSlotStore((s) => s.getSlotById);
   const getBookingBySlot = useBookingStore((s) => s.getBookingBySlot);
+  const bookings = useBookingStore((s) => s.bookings);
+  const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const addNotification = useNotificationStore((s) => s.addNotification);
   // Subscribe to raw array for immediate reactivity on add/remove
   const allVenueAssignments = useLineupStore((s) => s.venueAssignments);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
@@ -114,6 +119,73 @@ export default function VenueDetailScreen() {
         ]
       );
     }
+  };
+
+  // ── Delete Venue ──────────────────────────────────────────────────────────
+  // Moved here from edit-venue's Danger Zone. Cancels active bookings + notifies
+  // affected artists, then soft-hides the venue (is_hidden=true) so completed-gig
+  // history keeps resolving the real venue name. Behaviour is identical to the old
+  // edit-venue handler — only the button's location changed.
+  const handleDelete = () => {
+    const activeBookings = bookings.filter(
+      (b) =>
+        b.venueId === venue.id &&
+        (b.status === 'requested' || b.status === 'past_confirmation' || b.status === 'confirmed')
+    );
+    const n = activeBookings.length;
+    const cancelNotice =
+      n > 0
+        ? `\n\n${n} pending/confirmed booking${n > 1 ? 's' : ''} will be cancelled and the affected artist${n > 1 ? 's' : ''} notified.`
+        : '';
+    Alert.alert(
+      'Delete Venue',
+      `Delete "${venue.name}"? It'll be removed from your venues and the network.${cancelNotice} Completed gigs stay in your history. This can't be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const nowIso = new Date().toISOString();
+            for (const booking of activeBookings) {
+              const slot = getSlotById(booking.slotId);
+              const isRequested = booking.status === 'requested' || booking.status === 'past_confirmation';
+              const snapDate = booking.slotDate ?? slot?.date;
+              updateBookingStatus(booking.id, 'cancelled', {
+                cancelledAt: nowIso,
+                slotDate: snapDate,
+                slotName: booking.slotName ?? slot?.name,
+                slotStartTime: booking.slotStartTime ?? slot?.startTime,
+                slotEndTime: booking.slotEndTime ?? slot?.endTime,
+                venueName: booking.venueName ?? venue.name,
+                ...(isRequested ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
+              });
+              syncBookingStatus(booking.id, 'cancelled', {
+                cancelledAt: nowIso,
+                ...(isRequested ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
+              });
+              addNotification({
+                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                userId: booking.artistId,
+                type: isRequested ? 'booking_request_cancelled' : 'booking_cancelled',
+                title: isRequested ? 'Request Cancelled' : 'Booking Cancelled',
+                body: `${booking.venueName ?? venue.name} — ${snapDate ? formatDate(snapDate) : ''}`,
+                isRead: false,
+                relatedId: booking.id,
+                relatedType: 'booking',
+                createdAt: nowIso,
+              });
+            }
+            // Soft-hide rather than hard delete — keeps the row + slots alive so
+            // completed gigs keep resolving the real venue name everywhere.
+            hideVenue(venue.id);
+            await supabase.from('venue_assignments').delete().eq('venue_id', venue.id);
+            await supabase.from('venues').update({ is_hidden: true }).eq('id', venue.id);
+            router.replace('/(manager)/(tabs)/profile' as any);
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -281,11 +353,11 @@ Linking.openURL(url);
             )}
             {isOwner && (
             <Pressable
-              style={({ pressed }) => [styles.greyBtn, { opacity: pressed ? 0.7 : 1, borderColor: colors.border }]}
-              onPress={handleToggleHideVenue}
+              style={({ pressed }) => [styles.greyBtn, { opacity: pressed ? 0.7 : 1, borderColor: colors.error }]}
+              onPress={handleDelete}
             >
-              <MaterialIcons name={venue.isHidden ? 'visibility' : 'visibility-off'} size={18} color={colors.muted} />
-              <Text style={[styles.greyBtnText, { color: colors.muted }]}>{venue.isHidden ? 'Unhide Venue' : 'Hide Venue'}</Text>
+              <MaterialIcons name="delete" size={18} color={colors.error} />
+              <Text style={[styles.greyBtnText, { color: colors.error }]}>Delete Venue</Text>
             </Pressable>
             )}
           </View>
