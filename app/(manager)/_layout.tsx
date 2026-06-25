@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase, useArtistDirectoryStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase, useArtistDirectoryStore, mapVenueRow } from '@/lib/store';
 
 export default function ManagerLayout() {
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -23,33 +23,17 @@ export default function ManagerLayout() {
         const store = useVenueStore.getState();
         store.clearVenues();
         venuesData.forEach((v) => {
+          // Use the shared mapper so photo_urls AND admin_photo_url are mapped
+          // (the old manual map hardcoded photoUrls:[] and omitted adminPhotoUrl,
+          // so admin-curated photos never showed on manager screens). Billing
+          // isn't part of mapVenueRow, so layer it on top.
           const venue: Venue = {
-            id: v.id,
-            managerId: v.manager_id,
-            name: v.name,
-            venueType: v.venue_type,
-            googleMapsLocation: { lat: v.lat ?? 0, lng: v.lng ?? 0, address: v.address ?? '' },
-            capacity: v.capacity ?? undefined,
-            vibeDescription: v.vibe_description ?? undefined,
-            preferredEnergy: Array.isArray(v.preferred_energy) ? v.preferred_energy : [],
-            genrePreferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
-            audienceType: Array.isArray(v.audience_type) ? v.audience_type : [],
-            subVibe: Array.isArray(v.sub_vibe) ? v.sub_vibe : [],
-            rulesTemplate: v.rules_template ?? undefined,
-            instagramUrl: v.instagram_url ?? undefined,
-            musicLink: v.music_link ?? undefined,
-            color: v.color ?? '#2563EB',
+            ...mapVenueRow(v),
             billing: v.billing_company_name ? {
               companyName: v.billing_company_name,
               companyAddress: v.billing_company_address,
               trnNumber: v.billing_trn_number,
             } : undefined,
-            photoUrls: [],
-            isHidden: v.is_hidden ?? false,
-            isComplete: true,
-            verificationStatus: v.verification_status ?? 'pending',
-            createdAt: v.created_at,
-            updatedAt: v.updated_at,
           };
           store.addVenue(venue);
         });
