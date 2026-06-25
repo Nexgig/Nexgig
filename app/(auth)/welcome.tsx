@@ -103,10 +103,10 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 32,
-    paddingTop: 32,
-    gap: 32,
+    paddingTop: 64,
+    gap: 28,
   },
   logoSection: {
     alignItems: 'center',
