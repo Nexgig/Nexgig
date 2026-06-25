@@ -126,8 +126,6 @@ serve(async (req) => {
       { table: 'availability_blocks', column: 'artist_id' },
       { table: 'applications', column: 'artist_id' },
       { table: 'applications', column: 'manager_id' },
-      { table: 'invites', column: 'artist_id' },
-      { table: 'invites', column: 'manager_id' },
       { table: 'draft_assignments', column: 'artist_id' },
       { table: 'draft_assignments', column: 'manager_id' },
     ];
