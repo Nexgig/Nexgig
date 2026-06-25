@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useAuthStore } from '@/lib/store';
@@ -56,6 +56,24 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
       });
     } catch {
       /* best-effort; still show confirmation so the user isn't blocked */
+    }
+    // Also email the report to admin so it actually reaches us (same mechanism as
+    // Send Feedback: opens the user's mail app pre-filled). Fire-and-forget — a
+    // failure here must not block the confirmation.
+    const typeLabel = reportedType === 'artist' ? 'Artist' : 'Venue';
+    const mailSubject = `[Report] ${typeLabel}: ${reportedName ?? reportedId}`;
+    const mailBody =
+      `Report type: ${typeLabel}\n` +
+      `Reported ${reportedType}: ${reportedName ?? '(unnamed)'} (id: ${reportedId})\n` +
+      `Reason: ${selected?.label ?? reason}\n` +
+      `Details: ${details.trim() || '(none)'}\n` +
+      `Reporter id: ${currentUser.id}`;
+    try {
+      await Linking.openURL(
+        `mailto:admin@nexgigapp.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`
+      );
+    } catch {
+      /* ignore — the Supabase row is still saved */
     }
     setSubmitting(false);
     setDone(true);
