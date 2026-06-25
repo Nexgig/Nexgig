@@ -30,12 +30,14 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
   const currentUser = useAuthStore((s) => s.currentUser);
 
   const [reason, setReason] = useState<string | null>(null);
+  const [reasonOpen, setReasonOpen] = useState(false);
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
   const reset = () => {
     setReason(null);
+    setReasonOpen(false);
     setDetails('');
     setSubmitting(false);
     setDone(false);
@@ -78,7 +80,7 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleClose}>
       <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -121,31 +123,46 @@ export function ReportModal({ visible, onClose, reportedType, reportedId, report
                   {reportedName ? `Tell us what's wrong with "${reportedName}".` : 'Tell us what’s wrong.'} Your report is confidential.
                 </Text>
 
-                <View style={styles.reasons}>
-                  {REASONS.map((r) => {
-                    const active = reason === r.value;
+                {/* Reason — dropdown (collapses so the details body sits higher) */}
+                <View style={{ zIndex: 10 }}>
+                  <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Reason</Text>
+                  {(() => {
+                    const selected = REASONS.find((r) => r.value === reason);
                     return (
                       <Pressable
-                        key={r.value}
                         style={({ pressed }) => [
-                          styles.reasonRow,
-                          {
-                            borderColor: active ? colors.primary : colors.border,
-                            backgroundColor: active ? colors.primary + '12' : colors.surface,
-                            opacity: pressed ? 0.8 : 1,
-                          },
+                          styles.dropdownField,
+                          { backgroundColor: colors.surface, borderColor: reasonOpen ? colors.primary : colors.border, opacity: pressed ? 0.85 : 1 },
                         ]}
-                        onPress={() => setReason(r.value)}
+                        onPress={() => setReasonOpen((o) => !o)}
+                        disabled={submitting}
                       >
-                        <MaterialIcons
-                          name={active ? 'radio-button-checked' : 'radio-button-unchecked'}
-                          size={20}
-                          color={active ? colors.primary : colors.muted}
-                        />
-                        <Text style={[styles.reasonText, { color: colors.foreground }]}>{r.label}</Text>
+                        <Text style={[styles.dropdownFieldText, { color: selected ? colors.foreground : colors.muted }]}>
+                          {selected ? selected.label : 'Select a reason'}
+                        </Text>
+                        <MaterialIcons name={reasonOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
                       </Pressable>
                     );
-                  })}
+                  })()}
+                  {reasonOpen && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {REASONS.map((r) => {
+                        const active = reason === r.value;
+                        return (
+                          <Pressable
+                            key={r.value}
+                            style={({ pressed }) => [styles.dropdownItem, { backgroundColor: pressed ? colors.primary + '12' : 'transparent' }]}
+                            onPress={() => { setReason(r.value); setReasonOpen(false); }}
+                          >
+                            <Text style={[styles.dropdownItemText, { color: active ? colors.primary : colors.foreground, fontWeight: active ? '700' : '500' }]}>
+                              {r.label}
+                            </Text>
+                            {active && <MaterialIcons name="check" size={18} color={colors.primary} style={{ marginLeft: 'auto' }} />}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
 
                 <TextInput
@@ -199,6 +216,12 @@ const styles = StyleSheet.create({
   reasons: { width: '100%', gap: 8, marginTop: 4 },
   reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 14 },
   reasonText: { fontSize: 14, fontWeight: '600' },
+  fieldLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  dropdownField: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
+  dropdownFieldText: { flex: 1, fontSize: 15, fontWeight: '600' },
+  dropdownMenu: { borderWidth: 1, borderRadius: 12, marginTop: 6, overflow: 'hidden' },
+  dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
+  dropdownItemText: { fontSize: 15 },
   input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 100, marginTop: 4 },
   footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 0.5 },
   cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },

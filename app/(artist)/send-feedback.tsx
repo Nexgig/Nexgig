@@ -28,6 +28,7 @@ export default function SendFeedbackScreen() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [category, setCategory] = useState<FeedbackCategory>('general');
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -113,37 +114,45 @@ export default function SendFeedbackScreen() {
             </Text>
           </View>
 
-          {/* Category */}
-          <View style={styles.section}>
+          {/* Category — dropdown (collapses to a single row so the body sits higher) */}
+          <View style={[styles.section, { zIndex: 10 }]}>
             <Text style={[styles.label, { color: colors.foreground }]}>Category</Text>
-            <View style={styles.categoryRow}>
-              {CATEGORIES.map((cat) => {
-                const active = category === cat.value;
-                return (
-                  <Pressable
-                    key={cat.value}
-                    style={({ pressed }) => [
-                      styles.categoryChip,
-                      {
-                        borderColor: active ? colors.primary : colors.border,
-                        backgroundColor: active ? colors.primary + '18' : colors.surface,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                    onPress={() => setCategory(cat.value)}
-                  >
-                    <MaterialIcons
-                      name={cat.icon as any}
-                      size={16}
-                      color={active ? colors.primary : colors.muted}
-                    />
-                    <Text style={[styles.categoryChipText, { color: active ? colors.primary : colors.muted }]}>
-                      {cat.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {(() => {
+              const selected = CATEGORIES.find((c) => c.value === category)!;
+              return (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.dropdownField,
+                    { backgroundColor: colors.surface, borderColor: categoryOpen ? colors.primary : colors.border, opacity: pressed ? 0.85 : 1 },
+                  ]}
+                  onPress={() => setCategoryOpen((o) => !o)}
+                >
+                  <MaterialIcons name={selected.icon as any} size={18} color={colors.primary} />
+                  <Text style={[styles.dropdownFieldText, { color: colors.foreground }]}>{selected.label}</Text>
+                  <MaterialIcons name={categoryOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
+                </Pressable>
+              );
+            })()}
+            {categoryOpen && (
+              <View style={[styles.dropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {CATEGORIES.map((cat) => {
+                  const active = category === cat.value;
+                  return (
+                    <Pressable
+                      key={cat.value}
+                      style={({ pressed }) => [styles.dropdownItem, { backgroundColor: pressed ? colors.primary + '12' : 'transparent' }]}
+                      onPress={() => { setCategory(cat.value); setCategoryOpen(false); }}
+                    >
+                      <MaterialIcons name={cat.icon as any} size={18} color={active ? colors.primary : colors.muted} />
+                      <Text style={[styles.dropdownItemText, { color: active ? colors.primary : colors.foreground, fontWeight: active ? '700' : '500' }]}>
+                        {cat.label}
+                      </Text>
+                      {active && <MaterialIcons name="check" size={18} color={colors.primary} style={{ marginLeft: 'auto' }} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </View>
 
           {/* Subject */}
@@ -201,9 +210,11 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 10 },
   required: { fontWeight: '700' },
-  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: 22, paddingVertical: 8, paddingHorizontal: 14 },
-  categoryChipText: { fontSize: 13, fontWeight: '600' },
+  dropdownField: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
+  dropdownFieldText: { flex: 1, fontSize: 15, fontWeight: '600' },
+  dropdownMenu: { borderWidth: 1, borderRadius: 12, marginTop: 6, overflow: 'hidden' },
+  dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
+  dropdownItemText: { fontSize: 15 },
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
   textarea: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, minHeight: 140 },
   sendBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 16, marginTop: 8 },
