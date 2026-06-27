@@ -256,7 +256,6 @@ export default function ArtistNetworkScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>Venues & artists</Text>
       </View>
 
       {/* Sub-tabs */}
@@ -322,8 +321,8 @@ export default function ArtistNetworkScreen() {
               const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, {
-                    backgroundColor: colors.surface,
-                    borderColor: isConnected ? colors.success + '40' : colors.border,
+                    backgroundColor: 'transparent',
+                    borderColor: colors.border,
                     opacity: pressed ? 0.85 : 1,
                   }]}
                   onPress={() => router.push((`/(artist)/venue-detail?id=` + venue.id) as Href)}
@@ -351,9 +350,12 @@ export default function ArtistNetworkScreen() {
                     </View>
                   </View>
                   {isConnected ? (
-                    <View style={[styles.applyBtn, { backgroundColor: colors.success }]}>
-                      <MaterialIcons name="check" size={16} color="#fff" />
-                    </View>
+                    <Pressable
+                      style={({ pressed }) => [styles.applyBtn, { borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                      onPress={(e) => { e.stopPropagation(); handleLeaveVenue(venue); }}
+                    >
+                      <Text style={[styles.applyBtnText, { color: colors.foreground }]}>Connected</Text>
+                    </Pressable>
                   ) : (
                     <Pressable
                       style={[
@@ -371,8 +373,8 @@ export default function ArtistNetworkScreen() {
                         <Text style={[styles.applyBtnText, { color: colors.muted }]}>Sent</Text>
                       ) : (
                         <>
-                          <MaterialIcons name="add" size={14} color="#fff" />
-                          <Text style={[styles.applyBtnText, { color: '#fff' }]}>Join</Text>
+                          <MaterialIcons name="link" size={14} color="#fff" />
+                          <Text style={[styles.applyBtnText, { color: '#fff' }]}>Connect</Text>
                         </>
                       )}
                     </Pressable>
@@ -424,7 +426,7 @@ export default function ArtistNetworkScreen() {
             }
             renderItem={({ item: artist }) => (
               <Pressable
-                style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push((`/(artist)/artist-profile-view?artistId=` + artist.id) as Href)}
               >
                 <View style={styles.cardLeft}>
@@ -477,16 +479,16 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },
-  list: { padding: 16, gap: 12, flexGrow: 1 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  thumb: { width: 48, height: 48, borderRadius: 12, borderWidth: 1 },
+  thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  cardTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
   verifiedPillText: { fontSize: 10, fontWeight: '700' },
-  cardSub: { fontSize: 13, marginBottom: 2 },
+  cardSub: { fontSize: 13, marginBottom: 0 },
   cardMeta: { fontSize: 12 },
   rightWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   youPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

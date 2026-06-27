@@ -71,7 +71,7 @@ export default function ArtistBookingsScreen() {
   const tabs: { key: Tab; label: string; count: number; color: string }[] = [
     { key: 'pending', label: 'Pending', count: pendingBookings.length, color: colors.warning },
     { key: 'upcoming', label: 'Upcoming', count: upcomingBookings.length, color: colors.success },
-    { key: 'completed', label: 'Completed', count: completedBookings.length, color: colors.primary },
+    { key: 'completed', label: 'Completed', count: completedBookings.length, color: '#2563EB' },
   ];
 
   const activeData =

@@ -196,7 +196,7 @@ export default function ArtistProfileScreen() {
               style={({ pressed }) => [styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
               onPress={() => router.push('/(artist)/settings' as Href)}
             >
-              <MaterialIcons name="settings" size={20} color={colors.foreground} />
+              <MaterialIcons name="settings" size={22} color={colors.foreground} />
             </Pressable>
           </View>
         </View>
@@ -255,7 +255,7 @@ export default function ArtistProfileScreen() {
             style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push('/(artist)/completed-gigs' as Href)}
           >
-            <Text style={[styles.statValue, { color: colors.primary }]}>{completedBookings.length}</Text>
+            <Text style={[styles.statValue, { color: '#2563EB' }]}>{completedBookings.length}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>Completed Gigs</Text>
           </Pressable>
         </View>
@@ -463,13 +463,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   title: { fontSize: 24, fontWeight: '800' },
   headerRight: { flexDirection: 'row', gap: 8 },
-  notifBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   profileCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14, position: 'relative' },
   heroEditBtn: { position: 'absolute', top: 12, right: 12, zIndex: 1, padding: 4 },
   profileTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  profilePhoto: { width: 80, height: 80, borderRadius: 16, borderWidth: 1 },
+  profilePhoto: { width: 80, height: 80, borderRadius: 40, borderWidth: 1 },
   profileNameBlock: { flex: 1, gap: 4 },
   profileBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileInfo: { flex: 1, gap: 4 },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   subSectionLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
   editBioContainer: { gap: 10 },
   bioInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, minHeight: 90, textAlignVertical: 'top' },
-  saveBioBtn: { backgroundColor: '#2563EB', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  saveBioBtn: { backgroundColor: '#E2674A', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   saveBioBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   primaryChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },

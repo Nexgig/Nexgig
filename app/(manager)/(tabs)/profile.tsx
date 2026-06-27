@@ -117,7 +117,7 @@ export default function ManagerProfileScreen() {
             style={({ pressed }) => [styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
             onPress={() => router.push('/(manager)/settings' as Href)}
           >
-            <MaterialIcons name="settings" size={20} color={colors.foreground} />
+            <MaterialIcons name="settings" size={22} color={colors.foreground} />
           </Pressable>
         </View>
 
@@ -133,7 +133,7 @@ export default function ManagerProfileScreen() {
           <AvatarImage uri={currentUser?.profilePhotoUrl} name={currentUser?.fullName} size={80} variant="manager" />
           <View style={styles.profileInfo}>
             <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName}</Text>
-            <Text style={[styles.role, { color: colors.primary }]}>Venue Manager</Text>
+            <Text style={[styles.role, { color: colors.foreground }]}>Venue Manager</Text>
             {managerBasedInCountry && (
               <View style={styles.locationRow}>
                 <MaterialIcons name="location-on" size={14} color={colors.muted} />
@@ -363,7 +363,7 @@ function generateManagerInvoiceHTML(inv: Invoice): string {
   `).join('');
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:40px;color:#1a1a1a}
-    h1{font-size:28px;margin-bottom:4px}.inv-num{color:#2563EB;font-size:16px;margin-bottom:8px}
+    h1{font-size:28px;margin-bottom:4px}.inv-num{color:#E2674A;font-size:16px;margin-bottom:8px}
     .date{color:#666;font-size:14px;margin-bottom:24px}.parties{display:flex;gap:40px;margin-bottom:24px}
     .party{flex:1}.party-label{font-size:10px;font-weight:700;color:#999;letter-spacing:1px;margin-bottom:4px}
     .party-name{font-size:15px;font-weight:700;margin-bottom:2px}.party-detail{font-size:12px;color:#666}
@@ -371,8 +371,8 @@ function generateManagerInvoiceHTML(inv: Invoice): string {
     th{background:#f0f4ff;text-align:left;padding:10px 12px;font-size:12px;font-weight:700;border-bottom:1px solid #e5e7eb}
     th:last-child{text-align:right}td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f0f0f0}
     td:last-child{text-align:right;font-weight:600}
-    .total-row{display:flex;justify-content:flex-end;align-items:center;gap:16px;padding:16px 0;border-top:2px solid #2563EB}
-    .total-label{font-size:14px;font-weight:700}.total-value{font-size:22px;font-weight:800;color:#2563EB}
+    .total-row{display:flex;justify-content:flex-end;align-items:center;gap:16px;padding:16px 0;border-top:2px solid #E2674A}
+    .total-label{font-size:14px;font-weight:700}.total-value{font-size:22px;font-weight:800;color:#E2674A}
   </style></head><body>
     <h1>INVOICE</h1><div class="inv-num">${inv.invoiceNumber}</div>
     <div class="date">Date: ${new Date(inv.sentAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
@@ -420,7 +420,7 @@ const invStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   title: { fontSize: 24, fontWeight: '800' },
-  iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, position: 'relative' },
   editBtn: { position: 'absolute', top: 12, right: 12, zIndex: 1, padding: 4 },
   profileInfo: { flex: 1, gap: 4 },

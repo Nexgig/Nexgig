@@ -280,7 +280,7 @@ export default function InvoiceGigsScreen() {
             <Text style={[styles.totalValue, { color: colors.foreground }]}>AED {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
           <Pressable
-            style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced ? '#2563EB' : colors.border }]}
+            style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced ? '#E2674A' : colors.border }]}
             onPress={handleContinue}
             disabled={selectedGigs.length === 0 || !allPriced}
           >

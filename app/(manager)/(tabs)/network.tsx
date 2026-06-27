@@ -385,7 +385,6 @@ export default function NetworkScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>Artists & venues</Text>
       </View>
 
       {/* Sub-tabs */}
@@ -429,7 +428,7 @@ export default function NetworkScreen() {
               );
               const rowContent = (
                 <Pressable
-                  style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: pendingApp ? colors.primary + '40' : isConnected ? colors.success + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
+                  style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: pendingApp ? colors.primary + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
                   onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
                 >
                   <View style={styles.cardLeft}>
@@ -476,9 +475,13 @@ export default function NetworkScreen() {
                       </View>
                     )
                   ) : isConnected ? (
-                    <View style={[styles.addBtn, { backgroundColor: colors.success }]}>
-                      <MaterialIcons name="check" size={16} color="#fff" />
-                    </View>
+                    <Pressable
+                      style={({ pressed }) => [styles.addBtn, { borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                      onPress={(e) => { e.stopPropagation?.(); handleDisconnect(user); }}
+                      hitSlop={6}
+                    >
+                      <Text style={[styles.addBtnText, { color: colors.foreground }]}>Connected</Text>
+                    </Pressable>
                   ) : (
                     <Pressable
                       style={({ pressed }) => [styles.addBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
@@ -488,7 +491,7 @@ export default function NetworkScreen() {
                     >
                       {processingId === user.id
                         ? <ActivityIndicator size="small" color="#fff" />
-                        : <><MaterialIcons name="person-add" size={14} color="#fff" /><Text style={styles.addBtnText}>Add</Text></>}
+                        : <><MaterialIcons name="link" size={14} color="#fff" /><Text style={styles.addBtnText}>Connect</Text></>}
                     </Pressable>
                   )}
                 </Pressable>
@@ -536,7 +539,7 @@ export default function NetworkScreen() {
             }
             renderItem={({ item: venue }) => (
               <Pressable
-                style={({ pressed }) => [styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
               >
                 <View style={styles.cardLeft}>
@@ -578,20 +581,20 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontSize: 13, fontWeight: '600' },
-  list: { padding: 16, gap: 12, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  cardTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
   verifiedPillText: { fontSize: 10, fontWeight: '700' },
-  cardSub: { fontSize: 13, marginBottom: 2 },
+  cardSub: { fontSize: 13, marginBottom: 0 },
   cardMeta: { fontSize: 12 },
   cardVenue: { fontSize: 13, fontWeight: '600' },
-  thumb: { width: 48, height: 48, borderRadius: 12, borderWidth: 1 },
+  thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   actions: { flexDirection: 'row', gap: 10 },
   declineBtn: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   declineBtnText: { fontSize: 14, fontWeight: '600' },
@@ -608,7 +611,7 @@ const styles = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  respondBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  respondBtn: { borderRadius: 10, paddingHorizontal: 13, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   disconnectAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 96, borderRadius: 14, marginLeft: 8 },
   disconnectActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },

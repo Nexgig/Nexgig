@@ -29,7 +29,7 @@ const NOTIF_ICONS: Record<string, string> = {
 };
 
 const NOTIF_COLORS: Record<string, string> = {
-  booking_request: '#2E75B6',
+  booking_request: '#E2674A',
   booking_confirmed: '#22C55E',
   booking_declined: '#EF4444',
   booking_cancelled: '#94A3B8',

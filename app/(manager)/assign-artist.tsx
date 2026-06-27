@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   sectionTitle: { fontSize: 14, fontWeight: '700' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10 },
-  artistPhoto: { width: 48, height: 48, borderRadius: 12, borderWidth: 1 },
+  artistPhoto: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   djInfo: { flex: 1 },
   djNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   djName: { fontSize: 15, fontWeight: '700' },

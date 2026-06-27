@@ -486,7 +486,7 @@ export default function RosterScreen() {
         onPress={() => router.push('/(manager)/(tabs)/network?tab=artists' as Href)}
       >
         <LinearGradient
-          colors={['#3D7EE8', '#1A56C4']}
+          colors={['#E8775A', '#C94E30']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.fab}
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, flex: 1 },
   backBtn: { width: 32, alignItems: 'flex-start' },
-  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#1A56C4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
+  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
   fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   discoverBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   discoverBtnText: { fontSize: 13, fontWeight: '700' },
@@ -580,6 +580,6 @@ const styles = StyleSheet.create({
   sheetActions: { flexDirection: 'row', gap: 12, paddingBottom: 44 },
   cancelBtn: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   cancelBtnText: { fontSize: 15, fontWeight: '600' },
-  confirmBtn: { flex: 1, backgroundColor: '#2E75B6', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  confirmBtn: { flex: 1, backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   confirmBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

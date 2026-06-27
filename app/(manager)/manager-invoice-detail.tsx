@@ -57,7 +57,7 @@ function generateInvoiceHTML(data: {
       .brand-slogan { font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
       .inv-meta { text-align: right; }
       .inv-label { font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
-      .inv-num { color: #2563EB; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+      .inv-num { color: #E2674A; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
       .inv-date { color: #666; font-size: 13px; }
       .divider { border: none; border-top: 1px solid #e5e7eb; margin-bottom: 24px; }
       .parties { display: flex; gap: 40px; margin-bottom: 28px; }
@@ -70,9 +70,9 @@ function generateInvoiceHTML(data: {
       th:last-child { text-align: right; }
       td { padding: 12px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
       td:last-child { text-align: right; font-weight: 600; }
-      .total-row { display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 16px 0 8px; border-top: 2px solid #2563EB; }
+      .total-row { display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 16px 0 8px; border-top: 2px solid #E2674A; }
       .total-label { font-size: 14px; font-weight: 700; }
-      .total-value { font-size: 22px; font-weight: 800; color: #2563EB; }
+      .total-value { font-size: 22px; font-weight: 800; color: #E2674A; }
       .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
       .footer-text { font-size: 11px; color: #666; }
       .sent-badge { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.5px; }

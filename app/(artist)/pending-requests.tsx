@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -143,100 +142,71 @@ export default function ArtistPendingRequestsScreen() {
 
   const renderCard = ({ item }: { item: typeof pendingRequests[number] }) => {
     const isManagerCancelled = item.status === 'cancelled';
+    const venuePhoto = item.venue ? venuePhotoUri(item.venue) : undefined;
+    const dateLine = item.resolvedDate
+      ? `${formatDate(item.resolvedDate)}${item.resolvedStart ? ` · ${formatTime(item.resolvedStart)}–${formatTime(item.resolvedEnd ?? '')}` : ''}`
+      : '';
+    const cancelledLine = item.resolvedDate ? `Cancelled by manager · ${formatDate(item.resolvedDate)}` : 'Cancelled by manager';
 
     return (
       <Pressable
-        style={({ pressed }) => [
-          styles.card,
-          {
-            backgroundColor: colors.surface,
-            borderColor: isManagerCancelled ? colors.error : colors.border,
-            opacity: pressed ? 0.85 : 1,
-          },
-          isManagerCancelled && styles.cancelledCard,
-        ]}
+        style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
         onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}
       >
-        {/* Red left border for cancelled */}
-        {isManagerCancelled && (
-          <View style={[styles.cancelledBar, { backgroundColor: colors.error }]} />
+        {/* Venue photo */}
+        {venuePhoto ? (
+          <Image source={{ uri: venuePhoto }} style={styles.photo} resizeMode="cover" />
+        ) : (
+          <View style={[styles.photo, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+            <MaterialIcons name="place" size={20} color={colors.muted} />
+          </View>
         )}
 
-        <View style={[styles.cardInner, isManagerCancelled && styles.cardInnerWithBar]}>
-          {/* Cancellation notice banner */}
-          {isManagerCancelled && (
-            <View style={[styles.cancelBanner, { backgroundColor: colors.error + '18' }]}>
-              <MaterialIcons name="cancel" size={13} color={colors.error} />
-              <Text style={[styles.cancelBannerText, { color: colors.error }]}>Booking Cancelled by Manager</Text>
-            </View>
-          )}
-
-          {/* Header row */}
-          <View style={styles.cardHeader}>
-            <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
-              {item.resolvedVenueName}
+        {/* Info */}
+        <View style={styles.info}>
+          <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
+            {item.resolvedVenueName}
+          </Text>
+          {isManagerCancelled ? (
+            <Text style={[styles.cancelledText, { color: colors.error }]} numberOfLines={1}>
+              {cancelledLine}
             </Text>
-            {item.status === 'past_confirmation' ? (
-              <View style={[styles.completedGigBadge, { backgroundColor: colors.primary + '22', borderColor: colors.primary }]}>
-                <Text style={[styles.completedGigBadgeText, { color: colors.primary }]}>Completed Gig</Text>
-              </View>
-            ) : (
-              <StatusBadge status={item.status} />
-            )}
-          </View>
-
-          {/* Date / time */}
-          {item.resolvedDate && (
-            <View style={styles.slotRow}>
-              <MaterialIcons name="event" size={14} color={colors.muted} />
-              <Text style={[styles.slotText, { color: colors.muted }]}>
-                {formatDate(item.resolvedDate)}
-                {item.resolvedStart ? ` · ${formatTime(item.resolvedStart)}–${formatTime(item.resolvedEnd ?? '')}` : ''}
-              </Text>
-            </View>
-          )}
-
-          {/* Slot name */}
-          {item.resolvedSlotName && (
-            <View style={styles.slotRow}>
-              <MaterialIcons name="label" size={14} color={colors.muted} />
-              <Text style={[styles.slotText, { color: colors.muted }]}>{item.resolvedSlotName}</Text>
-            </View>
-          )}
-
-          {/* Accept / Decline action buttons */}
-          {!isManagerCancelled && (
-            <View style={styles.actionRow}>
-              {/* Decline */}
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, styles.declineBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
-                onPress={(e) => { e.stopPropagation?.(); handleDecline(item); }}
-              >
-                <MaterialIcons name="close" size={18} color={colors.error} />
-                <Text style={[styles.actionBtnText, { color: colors.error }]}>Decline</Text>
-              </Pressable>
-
-              {/* Confirm */}
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, styles.confirmBtn, { backgroundColor: colors.success, opacity: pressed ? 0.8 : 1 }]}
-                onPress={(e) => { e.stopPropagation?.(); handleConfirm(item); }}
-              >
-                <MaterialIcons name="check" size={18} color="#000" />
-                <Text style={[styles.actionBtnText, { color: '#000' }]}>Confirm</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Dismiss button — manager-cancelled bookings */}
-          {isManagerCancelled && (
-            <Pressable
-              style={({ pressed }) => [styles.dismissBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
-              onPress={(e) => { e.stopPropagation?.(); handleDismiss(item.id); }}
-            >
-              <Text style={[styles.dismissBtnText, { color: colors.error }]}>Dismiss</Text>
-            </Pressable>
+          ) : (
+            <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
+              {dateLine}
+            </Text>
           )}
         </View>
+
+        {/* Right-side actions */}
+        {isManagerCancelled ? (
+          <Pressable
+            style={({ pressed }) => [styles.dismissBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
+            onPress={(e) => { e.stopPropagation?.(); handleDismiss(item.id); }}
+            hitSlop={6}
+          >
+            <Text style={[styles.dismissBtnText, { color: colors.error }]}>Dismiss</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.respondRow}>
+            {/* Decline */}
+            <Pressable
+              style={({ pressed }) => [styles.respondBtn, { backgroundColor: '#EF4444', opacity: pressed ? 0.85 : 1 }]}
+              onPress={(e) => { e.stopPropagation?.(); handleDecline(item); }}
+              hitSlop={6}
+            >
+              <MaterialIcons name="close" size={18} color="#fff" />
+            </Pressable>
+            {/* Confirm */}
+            <Pressable
+              style={({ pressed }) => [styles.respondBtn, { backgroundColor: colors.success, opacity: pressed ? 0.85 : 1 }]}
+              onPress={(e) => { e.stopPropagation?.(); handleConfirm(item); }}
+              hitSlop={6}
+            >
+              <MaterialIcons name="check" size={18} color="#fff" />
+            </Pressable>
+          </View>
+        )}
       </Pressable>
     );
   };
@@ -278,53 +248,23 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700' },
-  list: { padding: 16, gap: 12, flexGrow: 1 },
+  list: { paddingHorizontal: 20, paddingVertical: 8, gap: 2, flexGrow: 1 },
 
-  // Card base
-  card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  cancelledCard: { borderLeftWidth: 0 },
-  cancelledBar: { width: 4, position: 'absolute', top: 0, bottom: 0, left: 0, borderTopLeftRadius: 16, borderBottomLeftRadius: 16 },
-  cardInner: { padding: 16, gap: 8 },
-  cardInnerWithBar: { paddingLeft: 20 },
+  // Flat IG row
+  card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
+  photo: { width: 48, height: 48, borderRadius: 24 },
+  info: { flex: 1 },
+  venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
+  time: { fontSize: 13 },
+  cancelledText: { fontSize: 13, fontWeight: '600' },
 
-  // Cancellation banner
-  cancelBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  cancelBannerText: { fontSize: 12, fontWeight: '700' },
+  // Accept / Decline (match manager venue-join buttons)
+  respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  respondBtn: { borderRadius: 10, paddingHorizontal: 13, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
 
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  venueName: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 8 },
-  slotRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  slotText: { fontSize: 13 },
-
-  // Action buttons
-  actionRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 10,
-    paddingVertical: 10,
-  },
-  declineBtn: { borderWidth: 1.5 },
-  confirmBtn: {},
-  actionBtnText: { fontSize: 14, fontWeight: '700' },
-
-  // Dismiss button
-  dismissBtn: {
-    alignSelf: 'flex-end',
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    marginTop: 4,
-  },
-  dismissBtnText: { fontSize: 14, fontWeight: '700' },
-
-  // Completed Gig badge
-  completedGigBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
-  completedGigBadgeText: { fontSize: 11, fontWeight: '700' },
+  // Dismiss (manager-cancelled)
+  dismissBtn: { borderWidth: 1.5, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 16 },
+  dismissBtnText: { fontSize: 13, fontWeight: '700' },
 
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },

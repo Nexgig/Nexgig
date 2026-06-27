@@ -397,7 +397,7 @@ export default function ArtistProfileViewScreen() {
             <Text style={[styles.statLabel, { color: colors.muted }]}>Monthly Plays</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{completedGigs}</Text>
+            <Text style={[styles.statValue, { color: '#2563EB' }]}>{completedGigs}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>Completed Gigs</Text>
           </View>
         </View>
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
   reportBtn: { padding: 4 },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  heroPhoto: { width: 80, height: 80, borderRadius: 16 },
+  heroPhoto: { width: 80, height: 80, borderRadius: 40 },
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   djName: { fontSize: 22, fontWeight: '800' },
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 0, maxHeight: '88%' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 18 },
   sheetArtistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  sheetPhoto: { width: 40, height: 40, borderRadius: 10 },
+  sheetPhoto: { width: 40, height: 40, borderRadius: 20 },
   sheetTitle: { fontSize: 17, fontWeight: '700' },
   sheetSub: { fontSize: 13, marginTop: 1 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8 },

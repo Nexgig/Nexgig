@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
@@ -35,7 +35,7 @@ export default function ArtistCompletedGigsScreen() {
         createdAt: b.createdAt,
       } : undefined);
       const resolvedVenueName = venue?.name ?? b.venueName ?? 'Unknown Venue';
-      return { ...b, slot: resolvedSlot, resolvedVenueName };
+      return { ...b, slot: resolvedSlot, resolvedVenueName, venue };
     })
     .sort((a, b) => ((a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1)),
     [bookings, currentUser?.id, slots, allVenues]
@@ -68,29 +68,33 @@ export default function ArtistCompletedGigsScreen() {
             <Text style={[styles.emptySubtitle, { color: colors.muted }]}>Completed bookings will appear here</Text>
           </View>
         }
-        renderItem={({ item: booking }) => (
+        renderItem={({ item: booking }) => {
+          const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
+          return (
           <Pressable
-            style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
           >
-            <View style={styles.cardLeft}>
-              <View style={[styles.iconCircle, { backgroundColor: colors.success + '20' }]}>
-                <MaterialIcons name="check" size={20} color={colors.success} />
+            {venuePhoto ? (
+              <Image source={{ uri: venuePhoto }} style={styles.photo} resizeMode="cover" />
+            ) : (
+              <View style={[styles.photo, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                <MaterialIcons name="place" size={20} color={colors.muted} />
               </View>
-              <View style={styles.info}>
-                <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
-                  {booking.resolvedVenueName}
-                </Text>
-                <Text style={[styles.time, { color: colors.muted }]}>
-                  {booking.slot
-                    ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}`
-                    : ''}
-                </Text>
-              </View>
+            )}
+            <View style={styles.info}>
+              <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
+                {booking.resolvedVenueName}
+              </Text>
+              <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
+                {booking.slot
+                  ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}`
+                  : ''}
+              </Text>
             </View>
-            <StatusBadge status={booking.status} />
           </Pressable>
-        )}
+          );
+        }}
       />
     </ScreenContainer>
   );
@@ -100,13 +104,14 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700' },
-  list: { padding: 20, gap: 10, flexGrow: 1 },
-  card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14 },
+  list: { paddingHorizontal: 20, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
+  photo: { width: 48, height: 48, borderRadius: 24 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },
-  venueName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  time: { fontSize: 12 },
+  venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
+  time: { fontSize: 13 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },

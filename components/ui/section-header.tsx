@@ -12,7 +12,7 @@ export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderPro
       <Text className="text-base font-semibold text-foreground">{title}</Text>
       {actionLabel && onAction && (
         <Pressable onPress={onAction}>
-          <Text className="text-sm text-primary font-medium">{actionLabel}</Text>
+          <Text className="text-sm text-foreground font-medium">{actionLabel}</Text>
         </Pressable>
       )}
     </View>

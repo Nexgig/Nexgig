@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, LogBox } from "react-native";
 import "@/lib/_core/nativewind-pressable";
-import { ThemeProvider } from "@/lib/theme-provider";
+import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -32,6 +32,15 @@ const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+// Drive the OS status bar (clock, signal, battery) from the APP's active theme
+// rather than the device scheme. `style="auto"` keys off the device's color
+// scheme, so a phone in dark mode would paint white icons on our white (light)
+// background and make them invisible. Light theme -> dark icons; dark -> light.
+function ThemedStatusBar() {
+  const { colorScheme } = useThemeContext();
+  return <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />;
+}
 
 export default function RootLayout() {
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
@@ -184,7 +193,7 @@ export default function RootLayout() {
           <Stack.Screen name="(manager)" />
           <Stack.Screen name="(artist)" />
         </Stack>
-        <StatusBar style="auto" />
+        <ThemedStatusBar />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

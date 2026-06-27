@@ -35,7 +35,7 @@ for (let h = 0; h < 24; h++) {
 const STATUS_COLORS = {
   pending: '#F59E0B',   // Orange
   confirmed: '#22C55E', // Green  (also used for Private Event)
-  completed: '#2563EB', // Blue — matches app primary (colors.primary)
+  completed: '#2563EB', // Blue
   cancelled: '#EF4444', // Red    (also used for Block/Unavailable)
 };
 

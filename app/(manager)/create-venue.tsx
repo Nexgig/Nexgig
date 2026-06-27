@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '500' },
   colorSwatch: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   fixedBtnContainer: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth },
-  nextBtn: { backgroundColor: '#2563EB', borderRadius: 14, padding: 16, alignItems: 'center' },
+  nextBtn: { backgroundColor: '#E2674A', borderRadius: 14, padding: 16, alignItems: 'center' },
   nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   placesContainer: { borderWidth: 1, borderRadius: 10, overflow: 'hidden', position: 'relative' },
   clearAddressBtn: { position: 'absolute', right: 10, top: 14, zIndex: 10 },

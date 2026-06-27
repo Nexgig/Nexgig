@@ -62,9 +62,8 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#2563EB",
+      backgroundColor: "#E2674A",
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
     edgeToEdgeEnabled: true,
@@ -105,7 +104,7 @@ const config: ExpoConfig = {
     [
       "expo-notifications",
       {
-        color: "#2563EB",
+        color: "#E2674A",
       },
     ],
     [
@@ -127,9 +126,9 @@ const config: ExpoConfig = {
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#2563EB",
+        backgroundColor: "#E2674A",
         dark: {
-          backgroundColor: "#2563EB",
+          backgroundColor: "#E2674A",
         },
       },
     ],

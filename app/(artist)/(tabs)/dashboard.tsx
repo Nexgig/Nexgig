@@ -1,12 +1,11 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { SectionHeader } from '@/components/ui/section-header';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore, venuePhotoUri } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -174,17 +173,13 @@ export default function DJHomeScreen() {
     [bookings, slots, allVenues]
   );
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
   return (
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { color: colors.muted }]}>{greeting}</Text>
-            <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName?.split(' ')[0] ?? 'Artist'}</Text>
+            <Image source={require('../../../assets/images/home-logo.png')} style={styles.headerLogo} resizeMode="contain" />
           </View>
           <View style={styles.headerRight}>
             <Pressable
@@ -205,7 +200,7 @@ export default function DJHomeScreen() {
         <View style={styles.summaryRow}>
           <SummaryCard label="CONFIRMED" value={confirmedCount} color={colors.success} colors={colors} onPress={() => router.push('/(artist)/confirmed-gigs' as Href)} />
           <SummaryCard label="PENDING" value={pendingCount} color={colors.warning} colors={colors} onPress={() => router.push('/(artist)/pending-requests' as Href)} />
-          <SummaryCard label="COMPLETED" value={completedBookings.length} color={colors.primary} colors={colors} onPress={() => router.push('/(artist)/completed-gigs' as Href)} />
+          <SummaryCard label="COMPLETED" value={completedBookings.length} color="#2563EB" colors={colors} onPress={() => router.push('/(artist)/completed-gigs' as Href)} />
         </View>
 
         {/* Upcoming Gigs */}
@@ -221,26 +216,34 @@ export default function DJHomeScreen() {
               <Text style={[styles.emptyText, { color: colors.muted }]}>No upcoming gigs</Text>
             </View>
           ) : (
-            upcomingBookings.map((booking) => (
+            upcomingBookings.map((booking) => {
+              const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
+              return (
               <Pressable
                 key={booking.id}
-                style={({ pressed }) => [styles.gigCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.gigCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
               >
-                <View style={[styles.gigColorBar, { backgroundColor: booking.status === 'confirmed' ? colors.success : colors.warning }]} />
+                {venuePhoto ? (
+                  <Image source={{ uri: venuePhoto }} style={styles.gigPhoto} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.gigPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                    <MaterialIcons name={booking.isArtistCreated ? 'event' : 'place'} size={20} color={colors.muted} />
+                  </View>
+                )}
                 <View style={styles.gigInfo}>
                   <Text style={[styles.gigVenue, { color: colors.foreground }]} numberOfLines={1}>
                     {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
                   </Text>
-                  <Text style={[styles.gigSlot, { color: colors.muted }]}>
+                  <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
                     {booking.isArtistCreated && booking.slotDate
                       ? `${formatDate(booking.slotDate)}${booking.slotStartTime ? ` · ${formatTime(booking.slotStartTime)}–${formatTime(booking.slotEndTime ?? '')}` : ''}`
                       : booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                <StatusBadge status={booking.status} />
               </Pressable>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -278,6 +281,7 @@ function SummaryCard({ label, value, color, colors, onPress }: {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  headerLogo: { width: 24, height: 44 },
   greeting: { fontSize: 13, marginBottom: 2 },
   name: { fontSize: 22, fontWeight: '800' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -294,10 +298,10 @@ const styles = StyleSheet.create({
   section: { marginBottom: 28 },
   emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
-  gigCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10, gap: 12 },
-  gigColorBar: { width: 4, height: 44, borderRadius: 2 },
+  gigCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
+  gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
-  gigVenue: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
   // Completed Gigs section — mirrors manager dashboard styles
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
@@ -319,6 +323,6 @@ const styles = StyleSheet.create({
   venueChipRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 2 },
   venueChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6 },
   venueChipText: { fontSize: 13, fontWeight: '600' },
-  invoiceFab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
-  fabBadge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#2563EB' },
+  invoiceFab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#E2674A', alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
+  fabBadge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#E2674A' },
 });

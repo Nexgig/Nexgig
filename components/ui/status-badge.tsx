@@ -8,7 +8,7 @@ const BADGE_STYLES: Record<string, { bg: string; text: string; label: string }> 
   draft:            { bg: 'bg-[#8E8E93]',  text: 'text-[#000000]',    label: 'Draft' },
   requested:        { bg: 'bg-warning',     text: 'text-[#000000]',    label: 'Pending' },
   confirmed:        { bg: 'bg-success',     text: 'text-[#000000]',    label: 'Confirmed' },
-  completed:        { bg: 'bg-primary',     text: 'text-[#FFFFFF]',    label: 'Completed' },
+  completed:        { bg: 'bg-[#2563EB]',  text: 'text-[#FFFFFF]',    label: 'Completed' },
   past_confirmation:{ bg: 'bg-warning',     text: 'text-[#000000]',    label: 'Pending' },
   declined:         { bg: 'bg-error',       text: 'text-[#000000]',    label: 'Declined' },
   cancelled:        { bg: 'bg-error',       text: 'text-[#000000]',    label: 'Cancelled' },

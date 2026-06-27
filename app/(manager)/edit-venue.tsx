@@ -679,6 +679,6 @@ const styles = StyleSheet.create({
   suggestPrimary: { fontSize: 14, fontWeight: '500' },
   suggestSecondary: { fontSize: 12, marginTop: 1 },
   colorSwatch: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  headerSaveBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#2563EB', borderRadius: 20 },
+  headerSaveBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#E2674A', borderRadius: 20 },
   headerSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

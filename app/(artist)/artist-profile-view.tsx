@@ -181,7 +181,7 @@ export default function ArtistProfileViewScreen() {
             <Text style={[styles.statLabel, { color: colors.muted }]}>Monthly Plays</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{completedGigs}</Text>
+            <Text style={[styles.statValue, { color: '#2563EB' }]}>{completedGigs}</Text>
             <Text style={[styles.statLabel, { color: colors.muted }]}>Completed Gigs</Text>
           </View>
         </View>

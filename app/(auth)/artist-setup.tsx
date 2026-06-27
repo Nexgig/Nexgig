@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 13, lineHeight: 18, flex: 1 },
   fieldHint: { fontSize: 12, marginTop: -4 },
   errorText: { fontSize: 12, marginTop: 2 },
-  nextBtn: { backgroundColor: '#2E75B6', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  nextBtn: { backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   instagramRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },

@@ -1565,7 +1565,9 @@ if (newBookingId) {
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={{ flex: 1 }} />
             <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
             {totalPeriodDraftCount > 0 && (
             <Pressable
               style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
@@ -1581,6 +1583,7 @@ if (newBookingId) {
               </View>
             </Pressable>
             )}
+            </View>
           </View>
 
           {/* Mode Toggle — ordered so the default view is always first */}
@@ -1621,7 +1624,7 @@ if (newBookingId) {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
               {/* All option */}
               <Pressable
-                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: venueFilter === 'all' ? colors.primary : colors.surface }]}
+                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: venueFilter === 'all' ? colors.primary : 'transparent' }]}
                 onPress={() => setVenueFilter('all')}
               >
                 <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? '#fff' : colors.foreground }]}>All</Text>
@@ -1629,7 +1632,7 @@ if (newBookingId) {
               {venues.map((v) => (
                 <Pressable
                   key={v.id}
-                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: venueFilter === v.id ? colors.primary : colors.surface }]}
+                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: venueFilter === v.id ? colors.primary : 'transparent' }]}
                   onPress={() => setVenueFilter(v.id)}
                 >
                   <Text style={[styles.venueTabText, { color: venueFilter === v.id ? '#fff' : colors.foreground }]}>{v.name}</Text>
@@ -1836,7 +1839,7 @@ if (newBookingId) {
                     else if (hasRequested) dots = [colors.warning];                       // orange only
                     else if (hasDraft) dots = [colors.muted];                             // grey only
                     else if (allConfirmed) dots = [colors.success];                       // green only
-                    else if (hasCompleted) dots = [colors.primary];                       // blue for completed
+                    else if (hasCompleted) dots = ['#2563EB'];                       // blue for completed
                     else dots = [];
                     if (hasDeclined) dots = [...dots.filter((d) => d !== colors.error), colors.error]; // red for declined/cancelled
                   } else {
@@ -1871,7 +1874,7 @@ if (newBookingId) {
                 {[
                   { color: colors.warning, label: 'Requested' },
                   { color: colors.success, label: 'Confirmed' },
-                  { color: colors.primary, label: 'Completed' },
+                  { color: '#2563EB', label: 'Completed' },
                   { color: colors.error, label: 'Declined / Cancelled' },
                 ].map((item) => (
                   <View key={item.label} style={styles.dotLegendItem}>
@@ -2547,7 +2550,7 @@ if (newBookingId) {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   title: { fontSize: 22, fontWeight: '800' },
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },
@@ -2591,8 +2594,8 @@ const styles = StyleSheet.create({
   // Venue tabs
   venueScroll: { marginTop: 10, flexGrow: 0 },
   venueScrollContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 4, paddingTop: 4, alignItems: 'center' },
-  venueTab: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'visible' as const },
-  venueTabText: { fontSize: 14, fontWeight: '600', flexShrink: 0 },
+  venueTab: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  venueTabText: { fontSize: 13, fontWeight: '700', flexShrink: 0 },
   // Month view
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   monthNavBtn: { padding: 4 },
@@ -2614,7 +2617,7 @@ const styles = StyleSheet.create({
   slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
   slotHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconActionBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
+  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   addSetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   noSlotsCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
   noSlotsText: { fontSize: 14 },
@@ -2659,7 +2662,7 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: 'row', gap: 12 },
   modalCancelBtn: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   modalCancelText: { fontSize: 15, fontWeight: '600' },
-  modalConfirmBtn: { flex: 1, backgroundColor: '#2E75B6', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  modalConfirmBtn: { flex: 1, backgroundColor: '#E2674A', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   modalConfirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   sendAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   sendAllBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },

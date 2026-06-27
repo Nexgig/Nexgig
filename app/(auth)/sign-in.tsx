@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   passwordInput: { flex: 1, paddingVertical: 14, fontSize: 15 },
   eyeBtn: { padding: 4 },
   signInBtn: {
-    backgroundColor: '#2563EB', borderRadius: 14, paddingVertical: 16,
+    backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16,
     alignItems: 'center', marginTop: 8,
   },
   signInBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

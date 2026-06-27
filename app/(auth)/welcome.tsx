@@ -50,7 +50,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#2563EB' }]}>
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#E2674A' }]}>
       <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: 32 + keyboardHeight }]}
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryBtnText: {
-    color: '#2563EB',
+    color: '#E2674A',
     fontSize: 16,
     fontWeight: '700',
   },

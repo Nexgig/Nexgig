@@ -6,9 +6,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { SectionHeader } from '@/components/ui/section-header';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -242,9 +241,6 @@ export default function ManagerDashboard() {
     return Object.entries(map).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
   }, [filteredCompletedBookings]);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-
   const tabBarHeight = 56 + Math.max(insets.bottom, 8);
 
   const fabActions = [
@@ -262,8 +258,7 @@ export default function ManagerDashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.greeting, { color: colors.muted }]}>{greeting}</Text>
-            <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName?.split(' ')[0] ?? 'Manager'}</Text>
+            <Image source={require('../../../assets/images/home-logo.png')} style={styles.headerLogo} resizeMode="contain" />
           </View>
           <View style={styles.headerRight}>
             <Pressable
@@ -299,7 +294,7 @@ export default function ManagerDashboard() {
           <SummaryCard
             label="COMPLETED"
             value={completedCount}
-            color={colors.primary}
+            color="#2563EB"
             colors={colors}
             onPress={() => router.push('/(manager)/completed-gigs' as Href)}
           />
@@ -318,31 +313,33 @@ export default function ManagerDashboard() {
               <Text style={[styles.emptyText, { color: colors.muted }]}>No upcoming bookings</Text>
             </View>
           ) : (
-            upcomingBookings.map((booking) => (
+            upcomingBookings.map((booking) => {
+              const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
+              return (
               <Pressable
                 key={booking.id}
-                style={({ pressed }) => [styles.bookingCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
               >
-                <View style={styles.bookingCardLeft}>
-                  {booking.dj?.profilePhotoUrl ? (
-                    <Image source={{ uri: booking.dj.profilePhotoUrl }} style={styles.djPhoto} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.djPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                      <MaterialIcons name="person" size={22} color={colors.muted} />
-                    </View>
-                  )}
-                  <View style={styles.bookingInfo}>
-                    <Text style={[styles.bookingDJ, { color: colors.foreground }]} numberOfLines={1}>{booking.dj?.fullName ?? 'Unknown Artist'}</Text>
-                    <Text style={[styles.bookingVenue, { color: colors.muted }]} numberOfLines={1}>{booking.venue?.name ?? 'Unknown Venue'}</Text>
-                    <Text style={[styles.bookingTime, { color: colors.muted }]}>
-                      {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
-                    </Text>
+                {venuePhoto ? (
+                  <Image source={{ uri: venuePhoto }} style={styles.gigPhoto} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.gigPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
+                    <MaterialIcons name="place" size={20} color={colors.muted} />
                   </View>
+                )}
+                <View style={styles.gigInfo}>
+                  <Text style={[styles.bookingDJ, { color: colors.foreground }]} numberOfLines={1}>
+                    {booking.dj?.fullName ?? 'Unknown Artist'}
+                    {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
+                  </Text>
+                  <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
+                    {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
+                  </Text>
                 </View>
-                <StatusBadge status={booking.status} />
               </Pressable>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -409,8 +406,8 @@ export default function ManagerDashboard() {
                       >
                         <MaterialIcons name="calendar-today" size={14} color={colors.muted} style={{ marginRight: 8 }} />
                         <Text style={[styles.monthLabel, { color: colors.foreground }]}>{month}</Text>
-                        <View style={[styles.monthBadge, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30', marginRight: 8 }]}>
-                          <Text style={[styles.monthBadgeText, { color: colors.primary }]}>{monthBookings.length}</Text>
+                        <View style={[styles.monthBadge, { backgroundColor: colors.muted + '15', borderColor: colors.muted + '30', marginRight: 8 }]}>
+                          <Text style={[styles.monthBadgeText, { color: colors.muted }]}>{monthBookings.length}</Text>
                         </View>
                         <MaterialIcons
                           name={isExpanded ? 'expand-less' : 'expand-more'}
@@ -460,7 +457,7 @@ export default function ManagerDashboard() {
         onPress={() => toggleFab(!fabSheetOpen)}
       >
         <LinearGradient
-          colors={['#3D7EE8', '#1A56C4']}
+          colors={['#E8775A', '#C94E30']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.fab}
@@ -524,6 +521,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   headerLeft: {},
+  headerLogo: { width: 24, height: 44 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   greeting: { fontSize: 13, marginBottom: 2 },
   name: { fontSize: 22, fontWeight: '800' },
@@ -537,14 +535,15 @@ const styles = StyleSheet.create({
   section: { marginBottom: 28 },
   emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
-  bookingCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10 },
-  bookingCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  djPhoto: { width: 44, height: 44, borderRadius: 12 },
-  bookingInfo: { flex: 1 },
-  bookingDJ: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
+  gigPhoto: { width: 48, height: 48, borderRadius: 24 },
+  gigInfo: { flex: 1 },
+  bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingVenue: { fontSize: 13, marginBottom: 2 },
   bookingTime: { fontSize: 12 },
-  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#1A56C4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
+  bookingSub: { fontSize: 13 },
+  venueBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 36, marginLeft: 12 },
+  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
   fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   fabOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
   fabPopup: { position: 'absolute', borderRadius: 16, borderWidth: 1, minWidth: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 12, overflow: 'hidden' },
