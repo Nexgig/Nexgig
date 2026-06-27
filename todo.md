@@ -25,6 +25,7 @@ _  • "Add Block" control → style it like the "Add Set" pill (consistent pill
 _  • Tab headers — fix the Calendar / My Profile / tab headers on BOTH artist and manager sides (consistency pass)._
 _  • Finish design IMAGES — finalize the app's image assets (logo / brand / avatar / illustration art) so they match the new minimal direction._
 _  • CLEAN asset images — audit `assets/images/`, remove unused/orphaned image files (and any retired icons from the old blue theme), keep the asset folder lean. Verify nothing still imports a removed asset before deleting._
+_  • UNIFIED TIME FORMAT — time is shown inconsistently (e.g. dashboard shows "8 PM" but the calendar shows "20:00" for the same slot). Make it consistent app-wide AND add a Settings toggle (12h AM/PM vs 24h) the user picks; every time display reads from that preference. Implementation: a single shared `formatTime` helper (note `lib/conflict-detection.ts` already exports a formatTime — likely the place, or a new one) that takes the user's 12h/24h setting; store the choice in settings (AsyncStorage, same pattern as other settings toggles) + expose via a hook/store so all screens re-render on change. Audit every time render (dashboard, calendar, booking-detail, assign-artist, invoices, pending-requests, profiles) so none format time inline — all go through the shared helper. Default 12h AM/PM (matches dashboard today)._
 _)_
 
 _(BUGS (NOT STARTED, logged June 27 2026):_
