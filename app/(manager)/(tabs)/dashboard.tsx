@@ -356,7 +356,8 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             dashboardBookingsPreview.map((booking) => {
-              const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
+              const liveVenue = allVenues.find((v) => v.id === booking.venueId);
+              const venuePhoto = venuePhotoUri(liveVenue ?? booking.venue);
               return (
               <Pressable
                 key={booking.id}
