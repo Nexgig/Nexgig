@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/components/screen-container';

@@ -1,4 +1,4 @@
-import { View, type ViewProps } from "react-native";
+import { View, type ViewProps } from '@/lib/rn';
 
 import { cn } from "@/lib/utils";
 

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Animated, Image, RefreshControl } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Animated, Image, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { Wordmark } from '@/components/wordmark';
+import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
@@ -258,7 +260,7 @@ export default function ManagerDashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Image source={require('../../../assets/images/home-logo.png')} style={styles.headerLogo} resizeMode="contain" />
+            <Wordmark size={26} />
           </View>
           <View style={styles.headerRight}>
             <Pressable
@@ -510,7 +512,7 @@ function SummaryCard({ label, value, color, colors, onPress, zeroAction }: {
       onPress={handlePress}
     >
       <Text style={[styles.summaryValue, { color }]}>{showPlus ? '+' : value}</Text>
-      <Text style={[styles.summaryLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.summaryLabel, { color: colors.muted }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
     </Pressable>
   );
 }
@@ -552,7 +554,7 @@ const styles = StyleSheet.create({
   fabPopupLabel: { fontSize: 15, fontWeight: '600' },
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  collapseTitle: { fontSize: 16, fontWeight: '700' },
+  collapseTitle: { fontSize: 18, fontFamily: fonts.display },
   collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   collapseBadgeText: { fontSize: 12, fontWeight: '600' },
   monthTable: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },

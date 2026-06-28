@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, Modal, ScrollView, Alert } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';

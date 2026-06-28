@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Text, View } from '@/lib/rn';
 import { cn } from '@/lib/utils';
 import type { BookingStatus, LineupStatus, InviteStatus } from '@/lib/types';
 

@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, Image, ActivityIndicator } from '@/lib/rn';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';

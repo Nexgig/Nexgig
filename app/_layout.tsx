@@ -5,7 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { Platform, LogBox } from "react-native";
+import { Platform, LogBox } from '@/lib/rn';
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
 import {
@@ -21,10 +21,17 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore, resetAllStores } from "@/lib/store";
 import { registerForPushNotifications } from "@/lib/notifications-push";
 import * as Notifications from "expo-notifications";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import { FONT_ASSETS } from "@/lib/fonts";
 
 // Silence React Native's internal SafeAreaView deprecation warning.
 // It originates from RN's own Button/InputAccessoryView components, not our code.
 LogBox.ignoreLogs([/SafeAreaView has been deprecated/]);
+
+// Keep the native splash on screen until our custom fonts have loaded so text
+// doesn't flash in the system font first.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -52,9 +59,18 @@ export default function RootLayout() {
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
 
+  const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
+
   useEffect(() => {
     initManusRuntime();
   }, []);
+
+  // Hide the splash once fonts are ready (or failed — don't trap the user).
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
 
   // Clear stale/invalid session on app launch
   useEffect(() => {
@@ -183,6 +199,11 @@ export default function RootLayout() {
       },
     };
   }, [initialInsets, initialFrame]);
+
+  // Don't render the app tree until fonts are ready (splash stays up).
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>

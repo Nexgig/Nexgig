@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Platform, View, Text, StyleSheet } from 'react-native';
+import { Platform, View, Text, StyleSheet } from '@/lib/rn';
 import { useColors } from '@/hooks/use-colors';
 import { useAuthStore, useBookingStore, useNotificationStore, useNetworkSeenStore } from '@/lib/store';
 import { useMemo } from 'react';

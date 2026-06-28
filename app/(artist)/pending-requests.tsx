@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Alert, Image } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';

@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, Alert } from '@/lib/rn';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';

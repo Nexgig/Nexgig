@@ -1,4 +1,5 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable } from '@/lib/rn';
+import { fonts } from '@/lib/fonts';
 
 interface SectionHeaderProps {
   title: string;
@@ -9,7 +10,7 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderProps) {
   return (
     <View className="flex-row items-center justify-between mb-3">
-      <Text className="text-base font-semibold text-foreground">{title}</Text>
+      <Text className="text-lg text-foreground" style={{ fontFamily: fonts.display }}>{title}</Text>
       {actionLabel && onAction && (
         <Pressable onPress={onAction}>
           <Text className="text-sm text-foreground font-medium">{actionLabel}</Text>

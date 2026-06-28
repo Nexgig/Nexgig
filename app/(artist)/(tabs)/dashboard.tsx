@@ -1,8 +1,9 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore, venuePhotoUri } from '@/lib/store';
@@ -179,7 +180,7 @@ export default function DJHomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Image source={require('../../../assets/images/home-logo.png')} style={styles.headerLogo} resizeMode="contain" />
+            <Wordmark size={26} />
           </View>
           <View style={styles.headerRight}>
             <Pressable

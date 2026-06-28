@@ -8,7 +8,7 @@ import {
   Pressable,
   StyleSheet,
   Platform,
-} from 'react-native';
+} from '@/lib/rn';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useColors } from '@/hooks/use-colors';
 

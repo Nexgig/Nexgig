@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, FlatList, Modal,
   TextInput, Alert, ScrollView,
-} from 'react-native';
+} from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';

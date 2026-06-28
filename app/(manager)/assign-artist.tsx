@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';

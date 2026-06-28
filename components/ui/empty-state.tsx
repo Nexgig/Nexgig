@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text } from '@/lib/rn';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useColors } from '@/hooks/use-colors';
 

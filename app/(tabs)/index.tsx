@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from '@/lib/rn';
 import { useRouter, Redirect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { useAuthStore } from '@/lib/store';

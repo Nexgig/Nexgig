@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking } from '@/lib/rn';
 import { useMemo } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';

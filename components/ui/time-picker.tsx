@@ -1,8 +1,8 @@
 import { useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, type ViewToken } from 'react-native';
+import { View, Text, StyleSheet, FlatList, type ViewToken } from '@/lib/rn';
 import { useColors } from '@/hooks/use-colors';
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+import { Platform } from '@/lib/rn';
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_COUNT = 5;

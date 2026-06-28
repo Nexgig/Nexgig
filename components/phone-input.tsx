@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Modal, FlatList } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Modal, FlatList } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 
