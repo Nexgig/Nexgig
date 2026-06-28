@@ -379,8 +379,8 @@ export default function ManagerDashboard() {
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                {/* Status dot (pending / confirmed / completed) */}
-                <View style={[styles.statusDot, { backgroundColor: booking.dotColor }]} />
+                {/* Status dot — Clash Display period, like the Nexgig "." */}
+                <Text allowFontScaling={false} style={[styles.statusDot, { color: booking.dotColor }]}>.</Text>
               </Pressable>
               );
             })
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
   bookingVenue: { fontSize: 13, marginBottom: 2 },
   bookingTime: { fontSize: 12 },
   bookingSub: { fontSize: 13 },
-  statusDot: { width: 9, height: 9, borderRadius: 5, marginLeft: 10 },
+  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
   venueBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 36, marginLeft: 12 },
   fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
   fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },

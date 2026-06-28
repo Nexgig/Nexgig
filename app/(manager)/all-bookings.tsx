@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
 // Full list of the manager's bookings — pending + confirmed + completed, all
@@ -71,15 +72,15 @@ export default function AllBookingsScreen() {
         {/* Legend */}
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.statusDot, { backgroundColor: '#F59E0B' }]} />
+            <Text allowFontScaling={false} style={[styles.legendDot, { color: '#F59E0B' }]}>.</Text>
             <Text style={[styles.legendText, { color: colors.muted }]}>Pending</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.statusDot, { backgroundColor: '#22C55E' }]} />
+            <Text allowFontScaling={false} style={[styles.legendDot, { color: '#22C55E' }]}>.</Text>
             <Text style={[styles.legendText, { color: colors.muted }]}>Confirmed</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.statusDot, { backgroundColor: '#2563EB' }]} />
+            <Text allowFontScaling={false} style={[styles.legendDot, { color: '#2563EB' }]}>.</Text>
             <Text style={[styles.legendText, { color: colors.muted }]}>Completed</Text>
           </View>
         </View>
@@ -114,7 +115,7 @@ export default function AllBookingsScreen() {
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                <View style={[styles.statusDot, { backgroundColor: booking.dotColor }]} />
+                <Text allowFontScaling={false} style={[styles.statusDot, { color: booking.dotColor }]}>.</Text>
               </Pressable>
             );
           })
@@ -131,7 +132,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', marginBottom: 6 },
   subtitle: { fontSize: 14, lineHeight: 20 },
   legendRow: { flexDirection: 'row', gap: 18, marginBottom: 16 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { fontFamily: fonts.displayBold, fontSize: 26, lineHeight: 26, transform: [{ translateY: -7 }] },
   legendText: { fontSize: 12, fontWeight: '600' },
   emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
@@ -140,5 +142,5 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingSub: { fontSize: 13 },
-  statusDot: { width: 9, height: 9, borderRadius: 5, marginLeft: 10 },
+  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
 });
