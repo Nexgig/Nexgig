@@ -1288,9 +1288,9 @@ export default function DJAvailabilityScreen() {
                   >
                     <View style={[
                       styles.dayCircle,
-                      isSelected && { backgroundColor: colors.primary },
+                      isSelected && { borderWidth: 2, borderColor: colors.primary },
                     ]}>
-                      <Text style={[styles.dayNumber, { color: isSelected ? '#fff' : isToday ? STATUS_COLORS.cancelled : colors.foreground }]}>{dayNum}</Text>
+                      <Text style={[styles.dayNumber, { color: isToday ? STATUS_COLORS.cancelled : colors.foreground }]}>{dayNum}</Text>
                     </View>
                     {dots.length > 0 && (
                       <View style={styles.dotRow}>

@@ -1853,9 +1853,9 @@ if (newBookingId) {
                     >
                       <View style={[
                         styles.dayCircle,
-                        isSelected && { backgroundColor: colors.primary },
+                        isSelected && { borderWidth: 2, borderColor: colors.primary },
                       ]}>
-                        <Text style={[styles.dayNumber, { color: isSelected ? '#fff' : isToday ? colors.error : colors.foreground }]}>{day}</Text>
+                        <Text style={[styles.dayNumber, { color: isToday ? colors.error : colors.foreground }]}>{day}</Text>
                       </View>
                       {dots.length > 0 && (
                         <View style={styles.dotRow}>
