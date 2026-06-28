@@ -358,6 +358,7 @@ if (!lineupError && lineupData) {
       <Stack.Screen name="notifications" />
       <Stack.Screen name="pending-requests" />
       <Stack.Screen name="confirmed-bookings" />
+      <Stack.Screen name="all-bookings" />
       <Stack.Screen name="my-venues" />
       <Stack.Screen name="artists" />
       <Stack.Screen name="completed-gigs" />

@@ -61,6 +61,46 @@ export default function ManagerDashboard() {
     [bookings, slots, artistUsers, allVenues, nowDT]
   );
 
+  // Combined list for the "Bookings" section: pending + confirmed + completed,
+  // ALL dates. Resolves slot/venue/dj with snapshot fallback, tags each with a
+  // display status + dot color, and sorts active (pending/confirmed) first by
+  // soonest date, then completed by most-recent.
+  const dashboardBookings = useMemo(() => bookings
+    .filter((b) =>
+      b.status === 'requested' || b.status === 'past_confirmation' ||
+      b.status === 'confirmed' || b.status === 'completed' || b.isCompleted)
+    .map((b) => {
+      const slot = slots.find((s) => s.id === b.slotId);
+      const dj = b.artistId == null
+        ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
+        : artistUsers.find((u) => u.id === b.artistId);
+      const venue = allVenues.find((v) => v.id === b.venueId);
+      const resolvedSlot = slot ?? (b.slotDate ? {
+        id: b.slotId, venueId: b.venueId, date: b.slotDate,
+        name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+        endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
+      } : undefined);
+      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+      const isDone = b.status === 'completed' || b.isCompleted;
+      const isPending = b.status === 'requested' || b.status === 'past_confirmation';
+      const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
+      const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, statusKey, dotColor, isDone };
+    })
+    .sort((a, b) => {
+      // Active (pending/confirmed) above completed.
+      if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+      const da = a.slot?.date ?? '';
+      const db = b.slot?.date ?? '';
+      // Active: soonest first (ascending). Completed: most-recent first (descending).
+      if (!a.isDone) return da < db ? -1 : da > db ? 1 : 0;
+      return da > db ? -1 : da < db ? 1 : 0;
+    }),
+    [bookings, slots, artistUsers, allVenues]
+  );
+
+  const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
+
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
@@ -302,20 +342,20 @@ export default function ManagerDashboard() {
           />
         </View>
 
-        {/* Upcoming Bookings */}
+        {/* Bookings */}
         <View style={styles.section}>
           <SectionHeader
-            title="Upcoming Bookings"
+            title="Bookings"
             actionLabel="See all"
-            onAction={() => router.push('/(manager)/confirmed-bookings' as Href)}
+            onAction={() => router.push('/(manager)/all-bookings' as Href)}
           />
-          {upcomingBookings.length === 0 ? (
+          {dashboardBookingsPreview.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No upcoming bookings</Text>
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            upcomingBookings.map((booking) => {
+            dashboardBookingsPreview.map((booking) => {
               const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
               return (
               <Pressable
@@ -339,6 +379,8 @@ export default function ManagerDashboard() {
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
+                {/* Status dot (pending / confirmed / completed) */}
+                <View style={[styles.statusDot, { backgroundColor: booking.dotColor }]} />
               </Pressable>
               );
             })
@@ -544,6 +586,7 @@ const styles = StyleSheet.create({
   bookingVenue: { fontSize: 13, marginBottom: 2 },
   bookingTime: { fontSize: 12 },
   bookingSub: { fontSize: 13 },
+  statusDot: { width: 9, height: 9, borderRadius: 5, marginLeft: 10 },
   venueBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 36, marginLeft: 12 },
   fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
   fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
