@@ -2594,7 +2594,7 @@ const styles = StyleSheet.create({
   // Venue tabs
   venueScroll: { marginTop: 10, flexGrow: 0 },
   venueScrollContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 4, paddingTop: 4, alignItems: 'center' },
-  venueTab: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  venueTab: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   venueTabText: { fontSize: 13, fontWeight: '700', flexShrink: 0 },
   // Month view
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
