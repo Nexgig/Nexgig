@@ -1288,9 +1288,9 @@ export default function DJAvailabilityScreen() {
                   >
                     <View style={[
                       styles.dayCircle,
-                      isSelected && { borderWidth: 2, borderColor: colors.primary },
+                      isSelected && { backgroundColor: colors.primary },
                     ]}>
-                      <Text style={[styles.dayNumber, { color: isToday ? STATUS_COLORS.cancelled : colors.foreground }]}>{dayNum}</Text>
+                      <Text style={[styles.dayNumber, { color: isSelected ? '#fff' : isToday ? STATUS_COLORS.cancelled : colors.foreground }]}>{dayNum}</Text>
                     </View>
                     {dots.length > 0 && (
                       <View style={styles.dotRow}>
@@ -1806,7 +1806,7 @@ const styles = StyleSheet.create({
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 4 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-  dayCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  dayCircle: { width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 14, fontWeight: '600' },
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
   dot: { width: 4, height: 4, borderRadius: 2 },

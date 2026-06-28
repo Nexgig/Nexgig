@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 12, textAlign: 'right' },
   chipRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+  chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { fontSize: 13, fontWeight: '500' },
   infoBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
   infoText: { fontSize: 13, lineHeight: 18, flex: 1 },

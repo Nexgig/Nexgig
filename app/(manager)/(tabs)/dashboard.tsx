@@ -613,6 +613,6 @@ const styles = StyleSheet.create({
   bookingSubName: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
   bookingSubDetail: { fontSize: 12 },
   venueChipRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 2 },
-  venueChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, borderColor: 'transparent' },
+  venueChip: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, borderColor: 'transparent' },
   venueChipText: { fontSize: 13, fontWeight: '600' },
 });
