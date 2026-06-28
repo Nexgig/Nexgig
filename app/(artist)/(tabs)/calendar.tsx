@@ -1779,7 +1779,7 @@ const styles = StyleSheet.create({
   // Dot legend — 4 items, flex-wrap so they fit on narrow screens
   dotLegend: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 16 },
   dotLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  dotLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  dotLegendDot: { width: 8, height: 8, borderRadius: 0 },
   dotLegendText: { fontSize: 11 },
 
   // Week view (matching manager)
@@ -1809,7 +1809,7 @@ const styles = StyleSheet.create({
   dayCircle: { width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 14, fontWeight: '600' },
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
-  dot: { width: 4, height: 4, borderRadius: 2 },
+  dot: { width: 4, height: 4, borderRadius: 0 },
 
   // Selected date section
   slotsSection: { padding: 20 },
@@ -1828,7 +1828,7 @@ const styles = StyleSheet.create({
   slotDeleteBtn: { padding: 12 },
 
   // Add/Block button (matching manager Add Slot style)
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 },
+  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
   addSetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   // Empty day
