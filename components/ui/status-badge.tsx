@@ -34,7 +34,7 @@ export function StatusBadge({ status, label, size = 'sm', className }: StatusBad
   const displayLabel = label ?? style.label;
   return (
     <View className={cn(
-      'rounded-full items-center justify-center',
+      'rounded-md items-center justify-center',
       style.bg,
       size === 'sm' ? 'px-2 py-0.5' : 'px-3 py-1',
       className
