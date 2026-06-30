@@ -9,7 +9,8 @@ import { Wordmark } from '@/components/wordmark';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
+import { AvatarImage } from '@/components/ui/avatar-image';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -356,21 +357,13 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             dashboardBookingsPreview.map((booking) => {
-              const liveVenue = allVenues.find((v) => v.id === booking.venueId);
-              const venuePhoto = venuePhotoUri(liveVenue ?? booking.venue);
               return (
               <Pressable
                 key={booking.id}
                 style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
               >
-                {venuePhoto ? (
-                  <Image source={{ uri: venuePhoto }} style={styles.gigPhoto} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.gigPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                    <MaterialIcons name="place" size={20} color={colors.muted} />
-                  </View>
-                )}
+                <AvatarImage uri={booking.dj?.profilePhotoUrl} size={48} variant="artist" />
                 <View style={styles.gigInfo}>
                   <Text style={[styles.bookingDJ, { color: colors.foreground }]} numberOfLines={1}>
                     {booking.dj?.fullName ?? 'Unknown Artist'}
