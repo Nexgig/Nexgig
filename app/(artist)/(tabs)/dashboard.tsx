@@ -144,6 +144,11 @@ export default function DJHomeScreen() {
   // handles artist-created private events, tags each with a status + dot color,
   // and sorts active (pending/confirmed) first by soonest, completed most-recent.
   const dashboardBookings = useMemo(() => {
+    const invoicedIds = new Set(
+      allInvoices
+        .filter((inv) => inv.artistId === currentUser?.id && inv.status !== 'cancelled')
+        .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+    );
     const mapped = bookings
       .filter((b) =>
         b.status === 'requested' || b.status === 'past_confirmation' ||
@@ -161,7 +166,7 @@ export default function DJHomeScreen() {
         const isPending = b.status === 'requested' || b.status === 'past_confirmation';
         const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
         const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
-        return { ...b, slot: resolvedSlot, venue: resolvedVenue, statusKey, dotColor, isDone };
+        return { ...b, slot: resolvedSlot, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced: invoicedIds.has(b.id) };
       });
     return mapped.sort((a, b) => {
       if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
@@ -170,7 +175,7 @@ export default function DJHomeScreen() {
       if (!a.isDone) return da < db ? -1 : da > db ? 1 : 0;
       return da > db ? -1 : da < db ? 1 : 0;
     });
-  }, [bookings, slots, allVenues]);
+  }, [bookings, slots, allVenues, allInvoices, currentUser?.id]);
 
   const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
 
@@ -269,9 +274,16 @@ export default function DJHomeScreen() {
                   </View>
                 )}
                 <View style={styles.gigInfo}>
-                  <Text style={[styles.gigVenue, { color: colors.foreground }]} numberOfLines={1}>
-                    {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                      {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
+                    </Text>
+                    {booking.isInvoiced && (
+                      <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                        <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
                     {booking.isArtistCreated && booking.slotDate
                       ? `${formatDate(booking.slotDate)}${booking.slotStartTime ? ` · ${formatTime(booking.slotStartTime)}–${formatTime(booking.slotEndTime ?? '')}` : ''}`
@@ -340,6 +352,9 @@ const styles = StyleSheet.create({
   gigCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },

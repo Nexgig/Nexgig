@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useInvoiceStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -17,6 +17,13 @@ export default function ArtistCompletedGigsScreen() {
   const bookings = useBookingStore((s) => s.bookings);
   const slots = useSlotStore((s) => s.slots);
   const allVenues = useVenueStore((s) => s.venues);
+
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoicedBookingIds = useMemo(() => new Set(
+    allInvoices
+      .filter((inv) => inv.artistId === currentUser?.id && inv.status !== 'cancelled')
+      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+  ), [allInvoices, currentUser?.id]);
 
   // Completed gigs — with slot/venue snapshot fallback. The artist's local store may not
   // hold the manager's slots, so fall back to the slotDate/slotName/... fields stored on
@@ -36,10 +43,10 @@ export default function ArtistCompletedGigsScreen() {
         createdAt: b.createdAt,
       } : undefined);
       const resolvedVenueName = venue?.name ?? b.venueName ?? 'Unknown Venue';
-      return { ...b, slot: resolvedSlot, resolvedVenueName, venue };
+      return { ...b, slot: resolvedSlot, resolvedVenueName, venue, isInvoiced: invoicedBookingIds.has(b.id) };
     })
     .sort((a, b) => ((a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1)),
-    [bookings, currentUser?.id, slots, allVenues]
+    [bookings, currentUser?.id, slots, allVenues, invoicedBookingIds]
   );
 
   return (
@@ -84,9 +91,16 @@ export default function ArtistCompletedGigsScreen() {
               </View>
             )}
             <View style={styles.info}>
-              <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
-                {booking.resolvedVenueName}
-              </Text>
+              <View style={styles.titleRow}>
+                <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                  {booking.resolvedVenueName}
+                </Text>
+                {booking.isInvoiced && (
+                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
                 {booking.slot
                   ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}`
@@ -112,6 +126,9 @@ const styles = StyleSheet.create({
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   time: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },

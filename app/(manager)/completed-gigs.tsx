@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -20,6 +20,13 @@ export default function CompletedGigsScreen() {
   const slots = useSlotStore((s) => s.slots);
   const artistUsers = useLineupStore((s) => s.artistUsers);
 
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoicedBookingIds = useMemo(() => new Set(
+    allInvoices
+      .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
+      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+  ), [allInvoices, currentUser?.id]);
+
   const completedGigs = useMemo(() => {
     return allBookings
       .filter((b) => b.managerId === currentUser?.id && b.status === 'completed')
@@ -30,10 +37,10 @@ export default function CompletedGigsScreen() {
           ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
           : artistUsers.find((u) => u.id === b.artistId);
         const venue = allVenues.find((v) => v.id === b.venueId);
-        return { ...b, slot, dj, venue };
+        return { ...b, slot, dj, venue, isInvoiced: invoicedBookingIds.has(b.id) };
       })
       .sort((a, b) => (a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1);
-  }, [allBookings, currentUser?.id, slots, artistUsers, allVenues]);
+  }, [allBookings, currentUser?.id, slots, artistUsers, allVenues, invoicedBookingIds]);
 
   return (
     <ScreenContainer>
@@ -70,10 +77,17 @@ export default function CompletedGigsScreen() {
           >
             <AvatarImage uri={booking.dj?.profilePhotoUrl} size={48} variant="artist" />
             <View style={styles.info}>
-              <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
-                {booking.dj?.fullName ?? 'Unknown Artist'}
-                {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
-              </Text>
+              <View style={styles.titleRow}>
+                <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                  {booking.dj?.fullName ?? 'Unknown Artist'}
+                  {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
+                </Text>
+                {booking.isInvoiced && (
+                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
@@ -96,6 +110,9 @@ const styles = StyleSheet.create({
   photo: { width: 48, height: 48, borderRadius: 24 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   info: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   djName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   venueName: { fontSize: 13, marginBottom: 2 },
   time: { fontSize: 13 },

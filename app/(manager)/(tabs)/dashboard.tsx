@@ -10,7 +10,7 @@ import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -36,6 +36,14 @@ export default function ManagerDashboard() {
     () => allBookings.filter((b) => b.managerId === currentUser?.id),
     [allBookings, currentUser?.id]
   );
+
+  // Booking ids that appear in a non-cancelled invoice → "Invoiced" chip.
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoicedBookingIds = useMemo(() => new Set(
+    allInvoices
+      .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
+      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+  ), [allInvoices, currentUser?.id]);
 
   const nowDT = nowLocalDateTimeStr();
 
@@ -86,7 +94,8 @@ export default function ManagerDashboard() {
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
       const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
       const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
-      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, statusKey, dotColor, isDone };
+      const isInvoiced = invoicedBookingIds.has(b.id);
+      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced };
     })
     .sort((a, b) => {
       // Active (pending/confirmed) above completed.
@@ -97,7 +106,7 @@ export default function ManagerDashboard() {
       if (!a.isDone) return da < db ? -1 : da > db ? 1 : 0;
       return da > db ? -1 : da < db ? 1 : 0;
     }),
-    [bookings, slots, artistUsers, allVenues]
+    [bookings, slots, artistUsers, allVenues, invoicedBookingIds]
   );
 
   const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
@@ -365,10 +374,17 @@ export default function ManagerDashboard() {
               >
                 <AvatarImage uri={booking.dj?.profilePhotoUrl} size={48} variant="artist" />
                 <View style={styles.gigInfo}>
-                  <Text style={[styles.bookingDJ, { color: colors.foreground }]} numberOfLines={1}>
-                    {booking.dj?.fullName ?? 'Unknown Artist'}
-                    {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                      {booking.dj?.fullName ?? 'Unknown Artist'}
+                      {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
+                    </Text>
+                    {booking.isInvoiced && (
+                      <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                        <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
@@ -576,6 +592,9 @@ const styles = StyleSheet.create({
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingVenue: { fontSize: 13, marginBottom: 2 },
   bookingTime: { fontSize: 12 },

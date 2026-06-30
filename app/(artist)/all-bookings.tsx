@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useInvoiceStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -20,6 +20,13 @@ export default function AllBookingsScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const slots = useSlotStore((s) => s.slots);
   const allVenues = useVenueStore((s) => s.venues);
+
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoicedBookingIds = useMemo(() => new Set(
+    allInvoices
+      .filter((inv) => inv.artistId === currentUser?.id && inv.status !== 'cancelled')
+      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+  ), [allInvoices, currentUser?.id]);
 
   const bookings = useMemo(
     () => allBookings.filter((b) => b.artistId === currentUser?.id),
@@ -42,7 +49,8 @@ export default function AllBookingsScreen() {
       const isDone = b.status === 'completed' || b.isCompleted;
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
       const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
-      return { ...b, slot: resolvedSlot, venue: resolvedVenue, dotColor, isDone };
+      const isInvoiced = invoicedBookingIds.has(b.id);
+      return { ...b, slot: resolvedSlot, venue: resolvedVenue, dotColor, isDone, isInvoiced };
     })
     .sort((a, b) => {
       if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
@@ -51,7 +59,7 @@ export default function AllBookingsScreen() {
       if (!a.isDone) return da < db ? -1 : da > db ? 1 : 0;
       return da > db ? -1 : da < db ? 1 : 0;
     }),
-    [bookings, slots, allVenues]
+    [bookings, slots, allVenues, invoicedBookingIds]
   );
 
   return (
@@ -104,9 +112,16 @@ export default function AllBookingsScreen() {
                   </View>
                 )}
                 <View style={styles.gigInfo}>
-                  <Text style={[styles.gigVenue, { color: colors.foreground }]} numberOfLines={1}>
-                    {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                      {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
+                    </Text>
+                    {booking.isInvoiced && (
+                      <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                        <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
                     {booking.isArtistCreated && booking.slotDate
                       ? `${formatDate(booking.slotDate)}${booking.slotStartTime ? ` · ${formatTime(booking.slotStartTime)}–${formatTime(booking.slotEndTime ?? '')}` : ''}`
@@ -138,6 +153,9 @@ const styles = StyleSheet.create({
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },

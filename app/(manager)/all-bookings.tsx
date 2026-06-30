@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -26,6 +26,13 @@ export default function AllBookingsScreen() {
     [allBookings, currentUser?.id]
   );
 
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoicedBookingIds = useMemo(() => new Set(
+    allInvoices
+      .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
+      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+  ), [allInvoices, currentUser?.id]);
+
   const list = useMemo(() => bookings
     .filter((b) =>
       b.status === 'requested' || b.status === 'past_confirmation' ||
@@ -45,7 +52,8 @@ export default function AllBookingsScreen() {
       const isDone = b.status === 'completed' || b.isCompleted;
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
       const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
-      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, dotColor, isDone };
+      const isInvoiced = invoicedBookingIds.has(b.id);
+      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, dotColor, isDone, isInvoiced };
     })
     .sort((a, b) => {
       if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
@@ -54,7 +62,7 @@ export default function AllBookingsScreen() {
       if (!a.isDone) return da < db ? -1 : da > db ? 1 : 0;
       return da > db ? -1 : da < db ? 1 : 0;
     }),
-    [bookings, slots, artistUsers, allVenues]
+    [bookings, slots, artistUsers, allVenues, invoicedBookingIds]
   );
 
   return (
@@ -107,10 +115,17 @@ export default function AllBookingsScreen() {
                   </View>
                 )}
                 <View style={styles.gigInfo}>
-                  <Text style={[styles.bookingDJ, { color: colors.foreground }]} numberOfLines={1}>
-                    {booking.dj?.fullName ?? 'Unknown Artist'}
-                    {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                      {booking.dj?.fullName ?? 'Unknown Artist'}
+                      {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
+                    </Text>
+                    {booking.isInvoiced && (
+                      <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                        <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
@@ -140,6 +155,9 @@ const styles = StyleSheet.create({
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingSub: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
