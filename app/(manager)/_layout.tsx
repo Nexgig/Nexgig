@@ -341,6 +341,16 @@ if (!lineupError && lineupData) {
             });
           }
         )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'invoices', filter: `manager_id=eq.${currentUser.id}` },
+          (payload) => {
+            // An artist cancelling an invoice flips its status to 'cancelled' — sync
+            // the new status live so the manager sees the CANCELLED badge without a reload.
+            const inv = payload.new as any;
+            useInvoiceStore.getState().updateInvoiceStatus(inv.id, inv.status);
+          }
+        )
         .subscribe();
     }, 200);
     return () => { cancelled = true; clearTimeout(timer); if (invoiceChannel) supabase.removeChannel(invoiceChannel); };

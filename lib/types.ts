@@ -293,6 +293,7 @@ export type NotificationType =
   | 'venue_removed'
   | 'review_submitted'
   | 'invoice_received'
+  | 'invoice_cancelled'
   | 'manager_invite';
 
 // ─── Availability Block ─────────────────────────────────────────────────────
@@ -361,7 +362,7 @@ export interface ConflictInfo {
 
 // ─── Invoice ─────────────────────────────────────────────────────────────────
 
-export type InvoiceStatus = 'sent' | 'downloaded';
+export type InvoiceStatus = 'sent' | 'downloaded' | 'cancelled';
 
 export interface InvoiceGig {
   bookingId: string;

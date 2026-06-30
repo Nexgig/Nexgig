@@ -57,12 +57,13 @@ export default function InvoiceGigsScreen() {
     currentUser && venueId ? getReminder(venueId, currentUser.id) : 1
   );
 
-  // Build set of already-invoiced booking IDs for this venue/artist
+  // Build set of already-invoiced booking IDs for this venue/artist. Cancelled
+  // invoices are excluded so their gigs become available to invoice again.
   const invoicedBookingIds = useMemo(() => {
     if (!currentUser || !venueId) return new Set<string>();
     return new Set(
       invoices
-        .filter((inv) => inv.venueId === venueId && inv.artistId === currentUser.id)
+        .filter((inv) => inv.venueId === venueId && inv.artistId === currentUser.id && inv.status !== 'cancelled')
         .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
     );
   }, [invoices, currentUser, venueId]);

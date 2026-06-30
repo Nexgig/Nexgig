@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore, useInvoiceReminderStore, useNotificationStore } from '@/lib/store';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
@@ -23,6 +23,8 @@ export default function InvoicesScreen() {
   const allVenueAssignments = useLineupStore((s) => s.venueAssignments);
   const invoices = useInvoiceStore((s) => s.invoices);
   const getByArtist = useInvoiceStore((s) => s.getByArtist);
+  const cancelInvoice = useInvoiceStore((s) => s.cancelInvoice);
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const reminders = useInvoiceReminderStore((s) => s.reminders);
   const getReminder = useInvoiceReminderStore((s) => s.getReminder);
   const setReminder = useInvoiceReminderStore((s) => s.setReminder);
@@ -60,10 +62,12 @@ export default function InvoicesScreen() {
       const venue = liveVenue ?? (snapshotName
         ? ({ id: vid, name: snapshotName, color: '#2563EB' } as typeof allVenues[number])
         : undefined);
-      // Count uninvoiced gigs: completed or confirmed, not yet in any sent invoice
+      // Count uninvoiced gigs: completed or confirmed, not yet in any ACTIVE sent
+      // invoice. Cancelled invoices are excluded so their gigs become invoiceable
+      // again (the artist can re-invoice them).
       const invoicedBookingIds = new Set(
         invoices
-          .filter((inv) => inv.venueId === vid && inv.artistId === currentUser.id)
+          .filter((inv) => inv.venueId === vid && inv.artistId === currentUser.id && inv.status !== 'cancelled')
           .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
       );
       const uninvoicedCount = invoiceableBookings.filter(
@@ -117,8 +121,43 @@ export default function InvoicesScreen() {
     );
   };
 
+  // ── Cancel a sent invoice (soft cancel) ──
+  // Flips the invoice to 'cancelled' on both sides, frees up its gigs to be
+  // re-invoiced, and notifies the manager. No hard delete — both sides keep a
+  // visible CANCELLED record (audit trail).
+  const handleCancelInvoice = useCallback((inv: Invoice) => {
+    Alert.alert(
+      'Cancel Invoice',
+      `Cancel invoice ${inv.invoiceNumber} for ${inv.venueName}? The manager will be notified and the gigs on it will become available to invoice again.`,
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Cancel Invoice',
+          style: 'destructive',
+          onPress: () => {
+            cancelInvoice(inv.id);
+            // Notify the manager.
+            const artistName = currentUser?.fullName ?? 'The artist';
+            addNotification({
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: inv.managerId,
+              type: 'invoice_cancelled',
+              title: 'Invoice Cancelled',
+              body: `${artistName} cancelled invoice ${inv.invoiceNumber} · ${inv.venueName}`,
+              isRead: false,
+              relatedId: inv.id,
+              relatedType: 'invoice',
+              createdAt: new Date().toISOString(),
+            });
+          },
+        },
+      ]
+    );
+  }, [cancelInvoice, addNotification, currentUser]);
+
   const renderSentInvoice = ({ item }: { item: Invoice }) => {
     const sentDate = new Date(item.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    const isCancelled = item.status === 'cancelled';
     return (
       <Pressable
         style={({ pressed }) => [styles.sentCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
@@ -126,15 +165,32 @@ export default function InvoicesScreen() {
       >
         <View style={styles.sentCardTop}>
           <View style={styles.sentCardLeft}>
-            <Text style={[styles.sentInvoiceNumber, { color: colors.primary }]}>{item.invoiceNumber}</Text>
-            <Text style={[styles.sentVenue, { color: colors.foreground }]} numberOfLines={1}>{item.venueName}</Text>
+            <Text style={[styles.sentInvoiceNumber, { color: isCancelled ? colors.muted : colors.primary }]}>{item.invoiceNumber}</Text>
+            <Text style={[styles.sentVenue, { color: colors.foreground, textDecorationLine: isCancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{item.venueName}</Text>
             <Text style={[styles.sentDate, { color: colors.muted }]}>
               {item.gigs.length} gig{item.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
             </Text>
           </View>
           <View style={styles.sentCardRight}>
-            <Text style={[styles.sentAmount, { color: colors.primary }]}>AED {item.totalAmount.toLocaleString()}</Text>
+            <Text style={[styles.sentAmount, { color: isCancelled ? colors.muted : colors.primary, textDecorationLine: isCancelled ? 'line-through' : 'none' }]}>AED {item.totalAmount.toLocaleString()}</Text>
           </View>
+        </View>
+        {/* Bottom row: CANCELLED badge (left) + three-dots menu (right) */}
+        <View style={styles.sentCardBottom}>
+          {isCancelled ? (
+            <View style={[styles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
+              <Text style={[styles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
+            </View>
+          ) : <View />}
+          {!isCancelled && (
+            <Pressable
+              style={({ pressed }) => [styles.dotsBtn, { opacity: pressed ? 0.5 : 1 }]}
+              onPress={(e) => { e.stopPropagation?.(); handleCancelInvoice(item); }}
+              hitSlop={10}
+            >
+              <MaterialIcons name="more-horiz" size={22} color={colors.muted} />
+            </Pressable>
+          )}
         </View>
       </Pressable>
     );
@@ -268,6 +324,10 @@ const styles = StyleSheet.create({
   sentDate: { fontSize: 12 },
   sentCardRight: { alignItems: 'flex-end' },
   sentAmount: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
+  sentCardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, minHeight: 24 },
+  cancelledBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  cancelledBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  dotsBtn: { padding: 2, marginLeft: 'auto' },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },

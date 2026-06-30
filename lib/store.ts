@@ -894,6 +894,7 @@ interface InvoiceState {
   invoices: Invoice[];
   addInvoice: (invoice: Invoice) => void;
   updateInvoiceStatus: (id: string, status: InvoiceStatus) => void;
+  cancelInvoice: (id: string) => void;
   markInvoiceReadByManager: (id: string) => void;
   deleteInvoice: (id: string) => void;
   getByArtist: (artistId: string) => Invoice[];
@@ -916,6 +917,17 @@ export const useInvoiceStore = create<InvoiceState>()(
       updateInvoiceStatus: (id, status) => set((state) => ({
         invoices: state.invoices.map((inv) => inv.id === id ? { ...inv, status } : inv),
       })),
+      // Soft-cancel: flip status to 'cancelled' locally AND persist to Supabase so
+      // both sides see it cancelled. The gigs on a cancelled invoice free up again
+      // because the invoiced-booking-id calc excludes cancelled invoices.
+      cancelInvoice: (id) => {
+        set((state) => ({
+          invoices: state.invoices.map((inv) => inv.id === id ? { ...inv, status: 'cancelled' as InvoiceStatus } : inv),
+        }));
+        void supabase.from('invoices').update({ status: 'cancelled' }).eq('id', id).then(({ error }) => {
+          if (error) console.warn('cancelInvoice sync error:', error.message);
+        });
+      },
       markInvoiceReadByManager: (id) => {
         useInvoiceReadStore.getState().markRead(id);
         set((state) => ({

@@ -75,7 +75,12 @@ export default function ManagerProfileScreen() {
         if (cancelled || !data) return;
         const store = useInvoiceStore.getState();
         data.forEach((inv: any) => {
-          if (store.invoices.some((i) => i.id === inv.id)) return;
+          if (store.invoices.some((i) => i.id === inv.id)) {
+            // Already in store — just sync the status so a cancellation done while
+            // away propagates on focus (the dedupe below would otherwise skip it).
+            store.updateInvoiceStatus(inv.id, inv.status);
+            return;
+          }
           store.addInvoice({
             id: inv.id, venueId: inv.venue_id, venueName: inv.venue_name,
             artistId: inv.artist_id, artistLegalName: inv.artist_legal_name,
@@ -333,14 +338,19 @@ function InvoicesSection({ colors, currentUserId, router }: {
                 >
                   <View style={invStyles.cardTop}>
                     <View style={invStyles.cardLeft}>
-                      <Text style={[invStyles.artistNameLabel, { color: colors.primary }]} numberOfLines={1}>{inv.artistLegalName}</Text>
-                      <Text style={[invStyles.venueName, { color: colors.foreground }]} numberOfLines={1}>{inv.venueName}</Text>
+                      <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.primary }]} numberOfLines={1}>{inv.artistLegalName}</Text>
+                      <Text style={[invStyles.venueName, { color: colors.foreground, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
                       <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
                         {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
                       </Text>
+                      {inv.status === 'cancelled' && (
+                        <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
+                          <Text style={[invStyles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={invStyles.cardRight}>
-                      <Text style={[invStyles.amountText, { color: colors.primary }]}>AED {inv.totalAmount.toLocaleString()}</Text>
+                      <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.primary, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
                       {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: '#F97316' }]} />}
                     </View>
                   </View>
@@ -411,6 +421,8 @@ const invStyles = StyleSheet.create({
   artistNameLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
   venueName: { fontSize: 15, fontWeight: '700' },
   sentDateText: { fontSize: 12 },
+  cancelledBadge: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginTop: 4 },
+  cancelledBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   cardRight: { alignItems: 'flex-end', gap: 6 },
   amountText: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
