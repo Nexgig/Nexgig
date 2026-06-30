@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
 export default function ArtistCompletedGigsScreen() {
@@ -92,6 +93,7 @@ export default function ArtistCompletedGigsScreen() {
                   : ''}
               </Text>
             </View>
+            <Text allowFontScaling={false} style={[styles.statusDot, { color: '#2563EB' }]}>.</Text>
           </Pressable>
           );
         }}
@@ -112,6 +114,7 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   time: { fontSize: 13 },
+  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },

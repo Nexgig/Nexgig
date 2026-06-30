@@ -8,6 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
 export default function PendingRequestsScreen() {
@@ -60,19 +61,12 @@ export default function PendingRequestsScreen() {
           </View>
         }
         renderItem={({ item: booking }) => {
-          const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
           return (
           <Pressable
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
           >
-            {venuePhoto ? (
-              <Image source={{ uri: venuePhoto }} style={styles.photo} resizeMode="cover" />
-            ) : (
-              <View style={[styles.photo, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                <MaterialIcons name="place" size={20} color={colors.muted} />
-              </View>
-            )}
+            <AvatarImage uri={booking.dj?.profilePhotoUrl} size={48} variant="artist" />
             <View style={styles.info}>
               <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
                 {booking.dj?.fullName ?? 'Unknown Artist'}
@@ -82,7 +76,7 @@ export default function PendingRequestsScreen() {
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
-            <StatusBadge status={booking.status} />
+            <Text allowFontScaling={false} style={[styles.statusDot, { color: '#F59E0B' }]}>.</Text>
           </Pressable>
           );
         }}
@@ -103,6 +97,7 @@ const styles = StyleSheet.create({
   djName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   venueName: { fontSize: 13, marginBottom: 2 },
   time: { fontSize: 13 },
+  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
