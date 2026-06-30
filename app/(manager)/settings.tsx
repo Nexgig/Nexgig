@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Appearance } from 'react-native';
 import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -33,7 +34,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   // Theme mode lives in the ThemeProvider (single source of truth). 'system' there
   // follows the live OS theme, so switching to System applies the device theme now.
-  const { appearance, setAppearance } = useThemeContext();
+  const { appearance, setAppearance, colorScheme } = useThemeContext();
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [monthStartDay, setMonthStartDay] = useState(1);
@@ -247,6 +248,13 @@ export default function SettingsScreen() {
                 ]}>{m.label}</Text>
               </Pressable>
             ))}
+          </View>
+          {/* TEMP DEBUG — remove later. Shows live theme state on tap. */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 14, gap: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.foreground }}>mode (ctx): {appearance}</Text>
+            <Text style={{ fontSize: 12, color: colors.foreground }}>scheme (ctx): {colorScheme}</Text>
+            <Text style={{ fontSize: 12, color: colors.foreground }}>OS (Appearance): {Appearance.getColorScheme() ?? 'null'}</Text>
+            <Text style={{ fontSize: 12, color: colors.foreground }}>bg color: {colors.background}</Text>
           </View>
         </View>
 
