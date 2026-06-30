@@ -11,6 +11,7 @@ import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { isPastStart } from '@/lib/utils';
+import { rescheduleArtistReminders } from '@/lib/reminders';
 
 export default function DJBookingDetailScreen() {
   const router = useRouter();
@@ -157,6 +158,8 @@ export default function DJBookingDetailScreen() {
           syncBookingStatus(booking.id, 'declined', { hiddenFromCalendar: true });
           markRelatedNotificationsRead(booking.id);
           notifyManager('booking_declined');
+          // Drop any already-scheduled "gig in X hours" reminder for this gig.
+          if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
           router.back();
         }
       },
@@ -172,6 +175,8 @@ export default function DJBookingDetailScreen() {
           syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
           markRelatedNotificationsRead(booking.id);
           notifyManager('booking_cancelled');
+          // Drop any already-scheduled "gig in X hours" reminder for this gig.
+          if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
           router.back();
         }
       },

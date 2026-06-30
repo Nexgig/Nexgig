@@ -232,6 +232,58 @@ export default function DJLayout() {
               createdAt: n.created_at,
             }, ...state.notifications],
           }));
+          // Re-sync local gig reminders whenever a booking changes status under us.
+          // A cancelled/declined gig must drop its already-scheduled "gig in X hours"
+          // reminder (otherwise it still fires); a newly confirmed/requested gig should
+          // get its reminder without waiting for the next cold start.
+          //
+          // There is NO realtime subscription on the bookings table, so the local store
+          // still shows the OLD status when this notification arrives. rescheduleArtistReminders
+          // reads getConfirmedBookingsByDJ() from the local store, so we must first re-fetch
+          // the one affected booking from Supabase and apply it locally — otherwise a cancelled
+          // gig would still look confirmed and its reminder would be re-scheduled.
+          if (
+            (n.type === 'booking_cancelled' ||
+              n.type === 'booking_request_cancelled' ||
+              n.type === 'booking_confirmed' ||
+              n.type === 'booking_request') &&
+            n.related_id && n.related_type === 'booking'
+          ) {
+            (async () => {
+              const { data: b } = await supabase
+                .from('bookings')
+                .select('*')
+                .eq('id', n.related_id)
+                .maybeSingle();
+              if (b) {
+                const bookingStore = useBookingStore.getState();
+                const existing = bookingStore.bookings.find((bk) => bk.id === b.id);
+                if (existing) {
+                  bookingStore.updateBookingStatus(b.id, b.status, {
+                    confirmedAt: b.confirmed_at ?? undefined,
+                    cancelledAt: b.cancelled_at ?? undefined,
+                    isCompleted: b.is_completed ?? false,
+                  });
+                } else {
+                  bookingStore.addBooking({
+                    id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+                    managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
+                    confirmedAt: b.confirmed_at ?? undefined, cancelledAt: b.cancelled_at ?? undefined,
+                    cancellationReason: b.cancellation_reason ?? undefined,
+                    cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+                    cancelledAsRequest: b.cancelled_as_request ?? false,
+                    hiddenFromCalendar: b.hidden_from_calendar ?? false,
+                    hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
+                    slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
+                    slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+                    venueName: b.venue_name ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+                  });
+                }
+              }
+              // Now the store reflects the real status — rebuild reminders from it.
+              rescheduleArtistReminders(currentUser.id);
+            })();
+          }
         }
       )
       .subscribe();

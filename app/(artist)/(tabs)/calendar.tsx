@@ -17,6 +17,7 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { isPastStart, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
+import { rescheduleArtistReminders } from '@/lib/reminders';
 
 // Monday-first day labels (matching manager calendar)
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -743,6 +744,7 @@ export default function DJAvailabilityScreen() {
             hideFromCalendar(bookingId);
             syncBookingStatus(bookingId, 'declined', { hiddenFromCalendar: true });
             markRelatedNotificationsRead(bookingId);
+            if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
             if (booking) {
               notifyManager('booking_declined', { id: booking.id, managerId: booking.managerId, resolvedVenueName: venueName, resolvedDate: booking.slotDate ?? allSlots.find((s) => s.id === booking.slotId)?.date });
             }
@@ -955,6 +957,7 @@ export default function DJAvailabilityScreen() {
                         hideFromCalendar(b.id);
                         syncBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString(), hiddenFromCalendar: true });
                         markRelatedNotificationsRead(b.id);
+                        if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
                         const booking = allBookings.find((x) => x.id === b.id);
                         if (booking) { notifyManager('booking_cancelled', { ...b, managerId: booking.managerId }); }
                       }
@@ -1290,7 +1293,7 @@ export default function DJAvailabilityScreen() {
                       styles.dayCircle,
                       isSelected && { backgroundColor: colors.primary + '26' },
                     ]}>
-                      <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? STATUS_COLORS.cancelled : colors.foreground, fontWeight: isSelected ? '800' : '600' }]}>{dayNum}</Text>
+                      <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.primary : colors.foreground, fontWeight: isSelected ? '800' : '600' }]}>{dayNum}</Text>
                     </View>
                     {dots.length > 0 && (
                       <View style={styles.dotRow}>
