@@ -8,6 +8,7 @@ import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { todayLocalStr } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
@@ -78,7 +79,8 @@ export default function InvoicePreviewScreen() {
   const invoiceNumber = useMemo(() => {
     if (existingInvoice) return existingInvoice.invoiceNumber;
     const count = invoices.filter((inv) => inv.artistId === currentUser?.id).length + 1;
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    // Local date (not UTC) so the invoice number matches the day the artist sends it.
+    const dateStr = todayLocalStr().replace(/-/g, '');
     return `INV-${dateStr}-${String(count).padStart(3, '0')}`;
   }, [existingInvoice, invoices, currentUser]);
 

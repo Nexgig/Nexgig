@@ -16,7 +16,7 @@ import { DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(artist)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
-import { isPastStart, nowLocalDateTimeStr } from '@/lib/utils';
+import { isPastStart, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
 
 // Monday-first day labels (matching manager calendar)
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -329,7 +329,7 @@ export default function DJAvailabilityScreen() {
 
   // Upcoming confirmed gigs for sync
   const confirmedGigs = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalStr();
     return myBookings
       .filter((b) => b.status === 'confirmed' && b.resolvedDate && b.resolvedDate >= today)
       .sort((a, b) => (a.resolvedDate ?? '').localeCompare(b.resolvedDate ?? ''));

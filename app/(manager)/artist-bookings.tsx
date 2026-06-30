@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { todayLocalStr } from '@/lib/utils';
 
 type Tab = 'pending' | 'upcoming' | 'completed';
 
@@ -30,7 +31,9 @@ export default function ArtistBookingsScreen() {
     [allBookings, artistId, currentUser?.id]
   );
 
-  const today = new Date().toISOString().split('T')[0];
+  // Local date (not UTC) so a gig dated today doesn't drop out of Upcoming
+  // in the early hours (UTC+4 would still read yesterday from toISOString).
+  const today = todayLocalStr();
 
   // Enrich bookings with slot + venue data
   const enriched = useMemo(() => {

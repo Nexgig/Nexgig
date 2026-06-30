@@ -15,6 +15,20 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Returns the current LOCAL date as "YYYY-MM-DD".
+ * Use this instead of `new Date().toISOString().slice(0,10)` / `.split('T')[0]`,
+ * which return the UTC date and are a day behind in positive-offset timezones
+ * (e.g. Dubai, UTC+4) between local midnight and UTC midnight.
+ */
+export function todayLocalStr(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${day}`;
+}
+
+/**
  * Returns the current local datetime as a comparable string: "YYYY-MM-DDTHH:MM"
  * Used for upcoming/completed logic based on start time.
  */
