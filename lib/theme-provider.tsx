@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { View, useColorScheme as useSystemColorScheme } from "react-native";
+import { Appearance, View } from "react-native";
 import { colorScheme as nativewindColorScheme, vars } from "nativewind";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -20,10 +20,25 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // The OS theme. NOTE: we deliberately do NOT call Appearance.setColorScheme()
-  // on native, because doing so overrides what useSystemColorScheme() reports —
-  // which would make 'system' mode read a stale value and stop following the OS.
-  const systemScheme = useSystemColorScheme() ?? "light";
+  // The OS theme, kept in state and updated via an Appearance listener.
+  // We use Appearance.getColorScheme()/addChangeListener directly rather than RN's
+  // useColorScheme() hook, because that hook can return a stale value and fails to
+  // re-render consumers reliably when switching to 'system' — which forced an app
+  // restart to see the change. NOTE: we deliberately never call
+  // Appearance.setColorScheme(), since that would override what getColorScheme()
+  // reports and break 'system' following the OS.
+  const [systemScheme, setSystemScheme] = useState<ColorScheme>(
+    () => (Appearance.getColorScheme() ?? "light")
+  );
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(({ colorScheme: next }) => {
+      setSystemScheme(next ?? "light");
+    });
+    // Re-sync once on mount in case the value settled after first render.
+    setSystemScheme(Appearance.getColorScheme() ?? "light");
+    return () => sub.remove();
+  }, []);
+
   // Source of truth = the user's chosen MODE ('system' | 'light' | 'dark').
   const [appearance, setAppearanceState] = useState<AppearanceMode>('system');
   // The effective scheme is derived: 'system' follows the live OS theme.
