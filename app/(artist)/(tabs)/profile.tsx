@@ -9,6 +9,7 @@ import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, us
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { COUNTRIES } from '@/components/country-picker';
@@ -482,7 +483,7 @@ const styles = StyleSheet.create({
   // Stats
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4, marginTop: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
-  statValue: { fontSize: 28, fontWeight: '800' },
+  statValue: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
   statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
   // Cards
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },

@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { useMemo, useState, useCallback } from 'react';
 import { COUNTRIES } from '@/components/country-picker';
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 22, gap: 12 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
-  statNumber: { fontSize: 28, fontWeight: '800' },
+  statNumber: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
   statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   card: { borderRadius: 14, borderWidth: 1, padding: 12, gap: 10 },
   cardLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
