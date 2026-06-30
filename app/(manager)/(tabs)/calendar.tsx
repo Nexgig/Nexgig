@@ -176,7 +176,11 @@ export default function CalendarScreen() {
   }, [allSlots, venueFilter, allManagerSlots]);
 
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  // Use LOCAL date, not UTC. toISOString() returns UTC, so after local midnight
+  // (e.g. 1 AM in Dubai, UTC+4) it still reports the previous day — which made the
+  // manager calendar show "today" a day behind the artist side. formatDateStr reads
+  // local getFullYear/Month/Date, matching the artist calendar.
+  const todayStr = formatDateStr(today);
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState(todayStr);
