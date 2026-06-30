@@ -711,6 +711,42 @@ export const useNetworkSeenStore = create<NetworkSeenState>()(
   )
 );
 
+// ─── Booking Status Filter Store ──────────────────────────────────────────────
+// Per-user toggles for which statuses show in the dashboard "Bookings" section
+// (pending / confirmed / completed). Persisted so the choice survives restarts.
+// Default: all three on. Used by both the manager and artist dashboards.
+
+export interface BookingFilter {
+  pending: boolean;
+  confirmed: boolean;
+  completed: boolean;
+}
+
+const DEFAULT_BOOKING_FILTER: BookingFilter = { pending: true, confirmed: true, completed: true };
+
+interface BookingFilterState {
+  filters: Record<string, BookingFilter>; // userId -> filter
+  getFilter: (userId: string) => BookingFilter;
+  setFilter: (userId: string, key: keyof BookingFilter, value: boolean) => void;
+}
+
+export const useBookingFilterStore = create<BookingFilterState>()(
+  persist(
+    (set, get) => ({
+      filters: {},
+      getFilter: (userId) => get().filters[userId] ?? DEFAULT_BOOKING_FILTER,
+      setFilter: (userId, key, value) => set((state) => {
+        const current = state.filters[userId] ?? DEFAULT_BOOKING_FILTER;
+        return { filters: { ...state.filters, [userId]: { ...current, [key]: value } } };
+      }),
+    }),
+    {
+      name: 'nexgig:booking-filter',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
 // ─── Manager Profile Invoices Last-Seen Store ─────────────────────────────────
 // Tracks when the manager last opened the Profile tab, per user, so the Profile
 // tab can show a badge when new invoices have arrived since then. This is

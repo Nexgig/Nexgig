@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, Modal } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -7,7 +7,7 @@ import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore, useBookingFilterStore, venuePhotoUri } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -179,6 +179,16 @@ export default function DJHomeScreen() {
 
   const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
 
+  // Status filter for the Bookings section (persisted per user, default all on).
+  const bookingFilter = useBookingFilterStore((s) => s.getFilter(currentUser?.id ?? ''));
+  const setBookingFilter = useBookingFilterStore((s) => s.setFilter);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filteredDashboardBookings = useMemo(
+    () => dashboardBookings.filter((b) => bookingFilter[b.statusKey as 'pending' | 'confirmed' | 'completed']),
+    [dashboardBookings, bookingFilter]
+  );
+  const dashboardBookingsPreviewFiltered = useMemo(() => filteredDashboardBookings.slice(0, 6), [filteredDashboardBookings]);
+
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
   const venueCount = useMemo(() => {
@@ -251,14 +261,19 @@ export default function DJHomeScreen() {
             title="Bookings"
             actionLabel="See all"
             onAction={() => router.push('/(artist)/all-bookings' as Href)}
+            leftAccessory={
+              <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                <MaterialIcons name="tune" size={18} color={colors.muted} />
+              </Pressable>
+            }
           />
-          {dashboardBookingsPreview.length === 0 ? (
+          {dashboardBookingsPreviewFiltered.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            dashboardBookingsPreview.map((booking) => {
+            dashboardBookingsPreviewFiltered.map((booking) => {
               const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
               return (
               <Pressable
@@ -309,6 +324,35 @@ export default function DJHomeScreen() {
           <View style={styles.fabBadge} />
         )}
       </Pressable>
+
+      {/* Bookings status filter popup */}
+      <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
+        <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
+          <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
+            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Show in Bookings</Text>
+            {([
+              { key: 'pending' as const, label: 'Pending', dot: '#F59E0B' },
+              { key: 'confirmed' as const, label: 'Confirmed', dot: '#22C55E' },
+              { key: 'completed' as const, label: 'Completed', dot: '#2563EB' },
+            ]).map((opt) => {
+              const checked = bookingFilter[opt.key];
+              return (
+                <Pressable
+                  key={opt.key}
+                  style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => currentUser && setBookingFilter(currentUser.id, opt.key, !checked)}
+                >
+                  <Text allowFontScaling={false} style={[styles.filterRowDot, { color: opt.dot }]}>.</Text>
+                  <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>{opt.label}</Text>
+                  <View style={[styles.filterCheck, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : 'transparent' }]}>
+                    {checked && <MaterialIcons name="check" size={14} color="#fff" />}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -355,6 +399,13 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
+  filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  filterSheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, padding: 18, gap: 4 },
+  filterTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
+  filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 4 },
+  filterRowDot: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 30, width: 18, transform: [{ translateY: -8 }] },
+  filterRowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
+  filterCheck: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
