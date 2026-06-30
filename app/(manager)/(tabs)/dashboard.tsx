@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Animated, Image, RefreshControl, Modal } from '@/lib/rn';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, Modal } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -242,27 +240,6 @@ export default function ManagerDashboard() {
   const [completedOpen, setCompletedOpen] = useState(false);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
-  const [fabSheetOpen, setFabSheetOpen] = useState(false);
-  const insets = useSafeAreaInsets();
-  const fabRotation = useRef(new Animated.Value(0)).current;
-
-  const toggleFab = (open: boolean) => {
-    setFabSheetOpen(open);
-    Animated.timing(fabRotation, {
-      toValue: open ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const fabRotateStyle = {
-    transform: [{
-      rotate: fabRotation.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '45deg'],
-      }),
-    }],
-  };
 
   const toggleMonth = useCallback((month: string) => {
     setExpandedMonth((prev) => (prev === month ? null : month));
@@ -302,13 +279,6 @@ export default function ManagerDashboard() {
     });
     return Object.entries(map).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
   }, [filteredCompletedBookings]);
-
-  const tabBarHeight = 56 + Math.max(insets.bottom, 8);
-
-  const fabActions = [
-    { icon: 'add-business' as const, label: 'New Venue', onPress: () => { setFabSheetOpen(false); router.push('/(manager)/create-venue' as Href); } },
-    { icon: 'people' as const, label: 'Find Artists', onPress: () => { setFabSheetOpen(false); router.push('/(manager)/(tabs)/network?tab=artists' as Href); } },
-  ];
 
   return (
     <ScreenContainer>
@@ -520,50 +490,6 @@ export default function ManagerDashboard() {
 
       </ScrollView>
 
-      {/* FAB */}
-      <Pressable
-        style={[styles.fabWrapper, { bottom: 24 }]}
-        onPress={() => toggleFab(!fabSheetOpen)}
-      >
-        <LinearGradient
-          colors={['#E8775A', '#C94E30']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.fab}
-        >
-          <Animated.View style={fabRotateStyle}>
-            <MaterialIcons name="add" size={24} color="rgba(255,255,255,0.95)" />
-          </Animated.View>
-        </LinearGradient>
-      </Pressable>
-
-      {/* FAB Popup Menu */}
-      {fabSheetOpen && (
-        <>
-          {/* Backdrop */}
-          <Pressable style={styles.fabOverlay} onPress={() => toggleFab(false)} />
-          {/* Popup card above FAB */}
-          <View style={[styles.fabPopup, { backgroundColor: colors.surface, borderColor: colors.border, bottom: 24 + 50 + 12, right: 24 }]}>
-            {fabActions.map((action, idx) => (
-              <Pressable
-                key={action.label}
-                style={({ pressed }) => [
-                  styles.fabPopupRow,
-                  { borderTopColor: colors.border, opacity: pressed ? 0.7 : 1 },
-                  idx === 0 && { borderTopWidth: 0 },
-                ]}
-                onPress={action.onPress}
-              >
-                <View style={[styles.fabPopupIcon, { backgroundColor: colors.primary + '18' }]}>
-                  <MaterialIcons name={action.icon} size={20} color={colors.primary} />
-                </View>
-                <Text style={[styles.fabPopupLabel, { color: colors.foreground }]}>{action.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
-
       {/* Bookings status filter popup */}
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
@@ -652,13 +578,6 @@ const styles = StyleSheet.create({
   bookingSub: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
   venueBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 36, marginLeft: 12 },
-  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
-  fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
-  fabOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
-  fabPopup: { position: 'absolute', borderRadius: 16, borderWidth: 1, minWidth: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 12, overflow: 'hidden' },
-  fabPopupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderTopWidth: 0.5 },
-  fabPopupIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  fabPopupLabel: { fontSize: 15, fontWeight: '600' },
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   collapseTitle: { fontSize: 18, fontFamily: fonts.display },

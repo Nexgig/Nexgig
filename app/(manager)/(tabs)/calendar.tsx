@@ -196,6 +196,13 @@ export default function CalendarScreen() {
   // Dropdown time picker open state
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
+  // Merged Add-Set sheet mode: 'single' = one slot, 'multiple' = bulk templates.
+  // A ref mirrors the state so the swipe-down pan responder (created once) can read
+  // the current mode without being recreated — swipe-to-dismiss only in single mode
+  // so the bulk body's ScrollView can scroll freely in multiple mode.
+  const [slotSheetMode, setSlotSheetMode] = useState<'single' | 'multiple'>('single');
+  const slotSheetModeRef = useRef<'single' | 'multiple'>('single');
+  const setSlotMode = (m: 'single' | 'multiple') => { slotSheetModeRef.current = m; setSlotSheetMode(m); };
   const startTimeScrollRef = useRef<ScrollView>(null);
   const endTimeScrollRef = useRef<ScrollView>(null);
 
@@ -216,7 +223,7 @@ export default function CalendarScreen() {
   const slotModalTranslateY = useRef(new RNAnimated.Value(0)).current;
   const slotPanResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
+      onMoveShouldSetPanResponder: (_, g) => slotSheetModeRef.current === 'single' && g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
       onPanResponderMove: (_, g) => { if (g.dy > 0) slotModalTranslateY.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 80) {
@@ -234,7 +241,6 @@ export default function CalendarScreen() {
 
   // Bulk Add Sets modal
   type BulkSlotTemplate = { id: string; name: string; startTime: string; endTime: string };
-  const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkVenueIds, setBulkVenueIds] = useState<string[]>([]);
   const [bulkDays, setBulkDays] = useState<number[]>([]); // 0=Mon,1=Tue,...,6=Sun
   const [bulkTemplates, setBulkTemplates] = useState<BulkSlotTemplate[]>([
@@ -724,6 +730,27 @@ export default function CalendarScreen() {
     setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
     setStartTimeOpen(false);
     setEndTimeOpen(false);
+    // Initialize the "Multiple Sets" (bulk) fields too, so the in-sheet toggle is ready.
+    // Scope follows the active view: week view → week mode (pre-select its 7 days), else month mode.
+    const weekMode = calendarMode === 'week';
+    setBulkIsWeekMode(weekMode);
+    setBulkVenueIds(venues.length === 1 ? [venues[0].id] : (preselect ? [preselect] : []));
+    if (weekMode) {
+      const days: number[] = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        const jsDay = d.getDay();
+        days.push(jsDay === 0 ? 6 : jsDay - 1);
+      }
+      setBulkDays(days);
+    } else {
+      setBulkDays([]);
+    }
+    setBulkTemplates([{ id: '1', name: '', startTime: '20:00', endTime: '00:00' }]);
+    setBulkStartOpen(null);
+    setBulkEndOpen(null);
+    setSlotMode('single');
     setShowSlotModal(true);
   };
 
@@ -815,30 +842,6 @@ export default function CalendarScreen() {
     );
   };
 
-  const openBulkModal = (weekMode = false) => {
-    setBulkIsWeekMode(weekMode);
-    setBulkVenueIds(venues.length === 1 ? [venues[0].id] : []);
-    if (weekMode) {
-      // Pre-select all 7 days of the current week (Mon=0 ... Sun=6)
-      // weekStart is a Date; JS getDay() 0=Sun..6=Sat → convert to Mon=0..Sun=6
-      const days: number[] = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(weekStart);
-        d.setDate(d.getDate() + i);
-        const jsDay = d.getDay(); // 0=Sun..6=Sat
-        const monDay = jsDay === 0 ? 6 : jsDay - 1; // convert to Mon=0..Sun=6
-        days.push(monDay);
-      }
-      setBulkDays(days);
-    } else {
-      setBulkDays([]);
-    }
-    setBulkTemplates([{ id: '1', name: '', startTime: '20:00', endTime: '00:00' }]);
-    setBulkStartOpen(null);
-    setBulkEndOpen(null);
-    setShowBulkModal(true);
-  };
-
   const handleDeleteOpenSlots = useCallback(() => {
     let periodLabel: string;
     let openSlots: typeof allManagerSlots;
@@ -886,7 +889,8 @@ export default function CalendarScreen() {
           style: 'destructive',
           onPress: () => {
             openSlots.forEach((s) => deleteSlot(s.id));
-            setShowBulkModal(false);
+            setShowSlotModal(false);
+            setSlotMode('single');
           },
         },
       ]
@@ -975,7 +979,7 @@ export default function CalendarScreen() {
           text: 'Create',
           onPress: async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { bulkAddSlots(newSlots); setShowBulkModal(false); return; }
+            if (!user) { bulkAddSlots(newSlots); setShowSlotModal(false); setSlotMode('single'); return; }
             const supabaseSlots = newSlots.map((s) => ({
               venue_id: s.venueId,
               manager_id: user.id,
@@ -1000,7 +1004,8 @@ export default function CalendarScreen() {
             } else {
               bulkAddSlots(newSlots);
             }
-            setShowBulkModal(false);
+            setShowSlotModal(false);
+            setSlotMode('single');
           },
         },
       ]
@@ -1725,7 +1730,7 @@ if (newBookingId) {
                 </Pressable>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, width: 64, justifyContent: 'flex-end' }}>
                   <Pressable
-                    onPress={() => openBulkModal(true)}
+                    onPress={() => router.push('/(manager)/create-venue' as Href)}
                     style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                   >
                     <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
@@ -1785,7 +1790,7 @@ if (newBookingId) {
                 <Text style={[styles.monthTitle, { color: colors.foreground, flex: 1, textAlign: 'center' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
                   <Pressable
-                    onPress={() => openBulkModal(false)}
+                    onPress={() => router.push('/(manager)/create-venue' as Href)}
                     style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                   >
                     <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
@@ -2109,229 +2114,6 @@ if (newBookingId) {
         </View>
       </Modal>
 
-      {/* ═══════════════════ BULK ADD SLOTS SHEET ═══════════════════ */}
-      <Modal
-        visible={showBulkModal}
-        transparent
-        animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => { Keyboard.dismiss(); setShowBulkModal(false); }}
-      >
-        {/* Dim overlay — tap background to close */}
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => { Keyboard.dismiss(); setShowBulkModal(false); }}
-          />
-          <View style={[slotModalStyles.sheet, { backgroundColor: colors.background, height: slotModalHeight }]}>
-          {/* Drag handle */}
-          <View style={slotModalStyles.handleRow}>
-            <View style={[slotModalStyles.handle, { backgroundColor: colors.border }]} />
-          </View>
-          {/* Header */}
-          <View style={slotModalStyles.header}>
-            <Text style={[slotModalStyles.sheetTitle, { color: colors.foreground }]}>Multiple Sets</Text>
-            <Pressable
-              style={[slotModalStyles.closeBtn, { backgroundColor: colors.surface }]}
-              onPress={() => { Keyboard.dismiss(); setShowBulkModal(false); }}
-              hitSlop={8}
-            >
-              <MaterialIcons name="close" size={16} color={colors.muted} />
-            </Pressable>
-          </View>
-
-          {/* Scrollable content */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 16, paddingBottom: Math.max(insets.bottom, 24) + keyboardHeight }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled
-            scrollEventThrottle={16}
-          >
-            {/* Venues */}
-            <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>VENUES</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={[slotModalStyles.pillRow, { marginBottom: 16 }]}>
-              {venues.map((v) => {
-                const sel = bulkVenueIds.includes(v.id);
-                return (
-                  <Pressable
-                    key={v.id}
-                    onPress={() => setBulkVenueIds((prev) => sel ? prev.filter((id) => id !== v.id) : [...prev, v.id])}
-                    style={[slotModalStyles.venuePill, {
-                      backgroundColor: sel ? colors.primary : 'transparent',
-                      borderColor: sel ? colors.primary : colors.border,
-                    }]}
-                  >
-                    <Text style={[slotModalStyles.venuePillText, { color: sel ? '#fff' : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            {/* Days of week */}
-            <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>DAYS OF WEEK</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              {DAYS_SHORT.map((day, idx) => {
-                const sel = bulkDays.includes(idx);
-                return (
-                  <Pressable
-                    key={day}
-                    onPress={() => setBulkDays((prev) => sel ? prev.filter((d) => d !== idx) : [...prev, idx])}
-                    style={[slotModalStyles.venuePill, {
-                      backgroundColor: sel ? colors.primary : 'transparent',
-                      borderColor: sel ? colors.primary : colors.border,
-                      minWidth: 60,
-                      justifyContent: 'center',
-                    }]}
-                  >
-                    <Text style={[slotModalStyles.venuePillText, { color: sel ? '#fff' : colors.foreground }]}>{day}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Slot templates */}
-            <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>SLOT TEMPLATES</Text>
-
-            {bulkTemplates.map((tpl, tplIdx) => (
-              <View key={tpl.id} style={{ marginBottom: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14 }}>
-                {/* Template header */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>SLOT {tplIdx + 1}</Text>
-                  {bulkTemplates.length > 1 && (
-                    <Pressable onPress={() => setBulkTemplates((prev) => prev.filter((t) => t.id !== tpl.id))} style={{ padding: 4 }}>
-                      <MaterialIcons name="remove-circle-outline" size={18} color={colors.error} />
-                    </Pressable>
-                  )}
-                </View>
-
-                {/* Preset chips */}
-                <View style={[slotModalStyles.presetRow, { marginBottom: 8 }]}>
-                  {SLOT_PRESETS.map((preset) => (
-                    <Pressable
-                      key={preset.name}
-                      onPress={() => setBulkTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, name: preset.name, startTime: preset.start, endTime: preset.end } : t))}
-                      style={({ pressed }) => [slotModalStyles.presetChip, {
-                        backgroundColor: tpl.name === preset.name ? colors.primary + '18' : colors.surface,
-                        borderColor: tpl.name === preset.name ? colors.primary : colors.border,
-                        opacity: pressed ? 0.7 : 1,
-                      }]}
-                    >
-                      <Text style={[slotModalStyles.presetChipText, {
-                        color: tpl.name === preset.name ? colors.primary : colors.foreground,
-                        fontWeight: tpl.name === preset.name ? '700' : '500',
-                      }]}>{preset.name}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                {/* Time row */}
-                <View style={slotModalStyles.timeRow}>
-                  <View style={{ flex: 1, zIndex: bulkStartOpen === tpl.id ? 10 : 1 }}>
-                    <Text style={[slotModalStyles.fieldLabel, { color: colors.muted }]}>START</Text>
-                    <Pressable
-                      style={[slotModalStyles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      onPress={() => { setBulkStartOpen(bulkStartOpen === tpl.id ? null : tpl.id); setBulkEndOpen(null); }}
-                    >
-                      <Text style={[slotModalStyles.timeDropdownText, { color: colors.foreground }]}>{tpl.startTime}</Text>
-                      <MaterialIcons name={bulkStartOpen === tpl.id ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
-                    </Pressable>
-                    {bulkStartOpen === tpl.id && (
-                      <View style={[slotModalStyles.timeDropdownAbsolute, slotModalStyles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                        <ScrollView onLayout={(e) => { const idx = TIME_OPTIONS.indexOf(tpl.startTime); if (idx > 0) { const ref = e.target as unknown as ScrollView; setTimeout(() => (ref as any).scrollTo?.({ y: Math.max(0, idx * 36 - 36), animated: false }), 50); } }} style={slotModalStyles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                          {TIME_OPTIONS.map((t) => (
-                            <Pressable
-                              key={t}
-                              style={[slotModalStyles.timeOption, tpl.startTime === t && { backgroundColor: colors.primary + '15' }]}
-                              onPress={() => { setBulkTemplates((prev) => prev.map((tp) => tp.id === tpl.id ? { ...tp, startTime: t } : tp)); setBulkStartOpen(null); }}
-                            >
-                              <Text style={[slotModalStyles.timeOptionText, { color: tpl.startTime === t ? colors.primary : colors.foreground, fontWeight: tpl.startTime === t ? '700' : '400' }]}>{t}</Text>
-                              {tpl.startTime === t && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={slotModalStyles.timeSep}>
-                    <Text style={{ color: colors.muted, fontSize: 16 }}>→</Text>
-                  </View>
-
-                  <View style={{ flex: 1, zIndex: bulkEndOpen === tpl.id ? 10 : 1 }}>
-                    <Text style={[slotModalStyles.fieldLabel, { color: colors.muted }]}>END</Text>
-                    <Pressable
-                      style={[slotModalStyles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      onPress={() => { setBulkEndOpen(bulkEndOpen === tpl.id ? null : tpl.id); setBulkStartOpen(null); }}
-                    >
-                      <Text style={[slotModalStyles.timeDropdownText, { color: colors.foreground }]}>{tpl.endTime}</Text>
-                      <MaterialIcons name={bulkEndOpen === tpl.id ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
-                    </Pressable>
-                    {bulkEndOpen === tpl.id && (
-                      <View style={[slotModalStyles.timeDropdownAbsolute, slotModalStyles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                        <ScrollView onLayout={(e) => { const idx = TIME_OPTIONS.indexOf(tpl.endTime); if (idx > 0) { const ref = e.target as unknown as ScrollView; setTimeout(() => (ref as any).scrollTo?.({ y: Math.max(0, idx * 36 - 36), animated: false }), 50); } }} style={slotModalStyles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                          {TIME_OPTIONS.map((t) => (
-                            <Pressable
-                              key={t}
-                              style={[slotModalStyles.timeOption, tpl.endTime === t && { backgroundColor: colors.primary + '15' }]}
-                              onPress={() => { setBulkTemplates((prev) => prev.map((tp) => tp.id === tpl.id ? { ...tp, endTime: t } : tp)); setBulkEndOpen(null); }}
-                            >
-                              <Text style={[slotModalStyles.timeOptionText, { color: tpl.endTime === t ? colors.primary : colors.foreground, fontWeight: tpl.endTime === t ? '700' : '400' }]}>{t}</Text>
-                              {tpl.endTime === t && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-            ))}
-
-            {/* Add another template — minimal */}
-            <Pressable
-              onPress={() => setBulkTemplates((prev) => [...prev, { id: String(Date.now()), name: '', startTime: '21:00', endTime: '01:00' }])}
-              style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, opacity: pressed ? 0.5 : 1 }]}
-            >
-              <MaterialIcons name="add" size={16} color={colors.muted} />
-              <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '500' }}>Add Another Set</Text>
-            </Pressable>
-
-            {/* Create Sets button — below add template */}
-            <Pressable
-              onPress={handleBulkCreate}
-              style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8, marginBottom: 8, opacity: pressed ? 0.85 : 1 }]}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Create Sets</Text>
-            </Pressable>
-
-            {/* ── Delete All Open Slots ── */}
-            <View style={{ marginTop: 24, marginBottom: 8, paddingHorizontal: 4 }}>
-              <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 20 }} />
-              <Pressable
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: colors.error,
-                  opacity: pressed ? 0.6 : 1,
-                })}
-                onPress={handleDeleteOpenSlots}
-              >
-                <MaterialIcons name="delete-sweep" size={20} color={colors.error} />
-                <Text style={{ color: colors.error, fontSize: 14, fontWeight: '600' }}>{bulkIsWeekMode ? 'Delete All Empty Slots For This Week' : 'Delete All Empty Slots For This Month'}</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
       {/* ═══════════════════ ADD / EDIT SLOT SHEET ═══════════════════ */}
       <Modal
         visible={showSlotModal}
@@ -2361,19 +2143,44 @@ if (newBookingId) {
             <View style={slotModalStyles.header}>
               <View>
                 <Text style={[slotModalStyles.sheetTitle, { color: colors.foreground }]}>
-                  {new Date((calendarMode === 'week' || calendarMode === 'today' || editingSlot ? createSlotDate : selectedDate) + 'T00:00:00')
-                    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {slotSheetMode === 'multiple'
+                    ? (bulkIsWeekMode ? weekLabel : `${MONTHS[currentMonth]} ${currentYear}`)
+                    : new Date((calendarMode === 'week' || calendarMode === 'today' || editingSlot ? createSlotDate : selectedDate) + 'T00:00:00')
+                        .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </Text>
               </View>
               <Pressable
                 style={[slotModalStyles.closeBtn, { backgroundColor: colors.surface }]}
-                onPress={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); }}
+                onPress={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); setSlotMode('single'); }}
                 hitSlop={8}
               >
                 <MaterialIcons name="close" size={16} color={colors.muted} />
               </Pressable>
             </View>
 
+            {/* ── Single / Multiple toggle (create only) — styled like the Month/Week/Day view toggle ── */}
+            {!editingSlot && (
+              <View style={slotModalStyles.modeToggleWrap}>
+                <View style={[slotModalStyles.modeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Pressable
+                    style={[slotModalStyles.modeToggleBtn, slotSheetMode === 'single' && { backgroundColor: colors.primary }]}
+                    onPress={() => setSlotMode('single')}
+                  >
+                    <Text style={[slotModalStyles.modeToggleText, { color: slotSheetMode === 'single' ? '#fff' : colors.muted }]}>Single Set</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[slotModalStyles.modeToggleBtn, slotSheetMode === 'multiple' && { backgroundColor: colors.primary }]}
+                    onPress={() => setSlotMode('multiple')}
+                  >
+                    <Text style={[slotModalStyles.modeToggleText, { color: slotSheetMode === 'multiple' ? '#fff' : colors.muted }]}>Multiple Sets</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {/* ═══ SINGLE SET BODY ═══ */}
+            {(editingSlot || slotSheetMode === 'single') && (
+            <>
             {/* ── Venue pills (always shown when creating) ── */}
             {!editingSlot && (
               <View style={slotModalStyles.fieldBlock}>
@@ -2540,6 +2347,199 @@ if (newBookingId) {
                 </Pressable>
               )}
             </View>
+            </>
+            )}
+
+            {/* ═══ MULTIPLE SETS BODY (bulk) ═══ */}
+            {!editingSlot && slotSheetMode === 'multiple' && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: 16, paddingBottom: Math.max(insets.bottom, 24) + keyboardHeight }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+                scrollEventThrottle={16}
+              >
+                {/* Venues */}
+                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>VENUES</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={[slotModalStyles.pillRow, { marginBottom: 16 }]}>
+                  {venues.map((v) => {
+                    const sel = bulkVenueIds.includes(v.id);
+                    return (
+                      <Pressable
+                        key={v.id}
+                        onPress={() => setBulkVenueIds((prev) => sel ? prev.filter((id) => id !== v.id) : [...prev, v.id])}
+                        style={[slotModalStyles.venuePill, {
+                          backgroundColor: sel ? colors.primary : 'transparent',
+                          borderColor: sel ? colors.primary : colors.border,
+                        }]}
+                      >
+                        <Text style={[slotModalStyles.venuePillText, { color: sel ? '#fff' : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Days of week */}
+                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>DAYS OF WEEK</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                  {DAYS_SHORT.map((day, idx) => {
+                    const sel = bulkDays.includes(idx);
+                    return (
+                      <Pressable
+                        key={day}
+                        onPress={() => setBulkDays((prev) => sel ? prev.filter((d) => d !== idx) : [...prev, idx])}
+                        style={[slotModalStyles.venuePill, {
+                          backgroundColor: sel ? colors.primary : 'transparent',
+                          borderColor: sel ? colors.primary : colors.border,
+                          minWidth: 60,
+                          justifyContent: 'center',
+                        }]}
+                      >
+                        <Text style={[slotModalStyles.venuePillText, { color: sel ? '#fff' : colors.foreground }]}>{day}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* Slot templates */}
+                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>SLOT TEMPLATES</Text>
+
+                {bulkTemplates.map((tpl, tplIdx) => (
+                  <View key={tpl.id} style={{ marginBottom: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14 }}>
+                    {/* Template header */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>SLOT {tplIdx + 1}</Text>
+                      {bulkTemplates.length > 1 && (
+                        <Pressable onPress={() => setBulkTemplates((prev) => prev.filter((t) => t.id !== tpl.id))} style={{ padding: 4 }}>
+                          <MaterialIcons name="remove-circle-outline" size={18} color={colors.error} />
+                        </Pressable>
+                      )}
+                    </View>
+
+                    {/* Preset chips */}
+                    <View style={[slotModalStyles.presetRow, { marginBottom: 8 }]}>
+                      {SLOT_PRESETS.map((preset) => (
+                        <Pressable
+                          key={preset.name}
+                          onPress={() => setBulkTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, name: preset.name, startTime: preset.start, endTime: preset.end } : t))}
+                          style={({ pressed }) => [slotModalStyles.presetChip, {
+                            backgroundColor: tpl.name === preset.name ? colors.primary + '18' : colors.surface,
+                            borderColor: tpl.name === preset.name ? colors.primary : colors.border,
+                            opacity: pressed ? 0.7 : 1,
+                          }]}
+                        >
+                          <Text style={[slotModalStyles.presetChipText, {
+                            color: tpl.name === preset.name ? colors.primary : colors.foreground,
+                            fontWeight: tpl.name === preset.name ? '700' : '500',
+                          }]}>{preset.name}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    {/* Time row */}
+                    <View style={slotModalStyles.timeRow}>
+                      <View style={{ flex: 1, zIndex: bulkStartOpen === tpl.id ? 10 : 1 }}>
+                        <Text style={[slotModalStyles.fieldLabel, { color: colors.muted }]}>START</Text>
+                        <Pressable
+                          style={[slotModalStyles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          onPress={() => { setBulkStartOpen(bulkStartOpen === tpl.id ? null : tpl.id); setBulkEndOpen(null); }}
+                        >
+                          <Text style={[slotModalStyles.timeDropdownText, { color: colors.foreground }]}>{tpl.startTime}</Text>
+                          <MaterialIcons name={bulkStartOpen === tpl.id ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
+                        </Pressable>
+                        {bulkStartOpen === tpl.id && (
+                          <View style={[slotModalStyles.timeDropdownAbsolute, slotModalStyles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                            <ScrollView onLayout={(e) => { const idx = TIME_OPTIONS.indexOf(tpl.startTime); if (idx > 0) { const ref = e.target as unknown as ScrollView; setTimeout(() => (ref as any).scrollTo?.({ y: Math.max(0, idx * 36 - 36), animated: false }), 50); } }} style={slotModalStyles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                              {TIME_OPTIONS.map((t) => (
+                                <Pressable
+                                  key={t}
+                                  style={[slotModalStyles.timeOption, tpl.startTime === t && { backgroundColor: colors.primary + '15' }]}
+                                  onPress={() => { setBulkTemplates((prev) => prev.map((tp) => tp.id === tpl.id ? { ...tp, startTime: t } : tp)); setBulkStartOpen(null); }}
+                                >
+                                  <Text style={[slotModalStyles.timeOptionText, { color: tpl.startTime === t ? colors.primary : colors.foreground, fontWeight: tpl.startTime === t ? '700' : '400' }]}>{t}</Text>
+                                  {tpl.startTime === t && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={slotModalStyles.timeSep}>
+                        <Text style={{ color: colors.muted, fontSize: 16 }}>→</Text>
+                      </View>
+
+                      <View style={{ flex: 1, zIndex: bulkEndOpen === tpl.id ? 10 : 1 }}>
+                        <Text style={[slotModalStyles.fieldLabel, { color: colors.muted }]}>END</Text>
+                        <Pressable
+                          style={[slotModalStyles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          onPress={() => { setBulkEndOpen(bulkEndOpen === tpl.id ? null : tpl.id); setBulkStartOpen(null); }}
+                        >
+                          <Text style={[slotModalStyles.timeDropdownText, { color: colors.foreground }]}>{tpl.endTime}</Text>
+                          <MaterialIcons name={bulkEndOpen === tpl.id ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
+                        </Pressable>
+                        {bulkEndOpen === tpl.id && (
+                          <View style={[slotModalStyles.timeDropdownAbsolute, slotModalStyles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                            <ScrollView onLayout={(e) => { const idx = TIME_OPTIONS.indexOf(tpl.endTime); if (idx > 0) { const ref = e.target as unknown as ScrollView; setTimeout(() => (ref as any).scrollTo?.({ y: Math.max(0, idx * 36 - 36), animated: false }), 50); } }} style={slotModalStyles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                              {TIME_OPTIONS.map((t) => (
+                                <Pressable
+                                  key={t}
+                                  style={[slotModalStyles.timeOption, tpl.endTime === t && { backgroundColor: colors.primary + '15' }]}
+                                  onPress={() => { setBulkTemplates((prev) => prev.map((tp) => tp.id === tpl.id ? { ...tp, endTime: t } : tp)); setBulkEndOpen(null); }}
+                                >
+                                  <Text style={[slotModalStyles.timeOptionText, { color: tpl.endTime === t ? colors.primary : colors.foreground, fontWeight: tpl.endTime === t ? '700' : '400' }]}>{t}</Text>
+                                  {tpl.endTime === t && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                                </Pressable>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ))}
+
+                {/* Add another template — minimal */}
+                <Pressable
+                  onPress={() => setBulkTemplates((prev) => [...prev, { id: String(Date.now()), name: '', startTime: '21:00', endTime: '01:00' }])}
+                  style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, opacity: pressed ? 0.5 : 1 }]}
+                >
+                  <MaterialIcons name="add" size={16} color={colors.muted} />
+                  <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '500' }}>Add Another Set</Text>
+                </Pressable>
+
+                {/* Create Sets button — below add template */}
+                <Pressable
+                  onPress={handleBulkCreate}
+                  style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8, marginBottom: 8, opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Create Sets</Text>
+                </Pressable>
+
+                {/* ── Delete All Open Slots ── */}
+                <View style={{ marginTop: 24, marginBottom: 8, paddingHorizontal: 4 }}>
+                  <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 20 }} />
+                  <Pressable
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      paddingVertical: 14,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: colors.error,
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                    onPress={handleDeleteOpenSlots}
+                  >
+                    <MaterialIcons name="delete-sweep" size={20} color={colors.error} />
+                    <Text style={{ color: colors.error, fontSize: 14, fontWeight: '600' }}>{bulkIsWeekMode ? 'Delete All Empty Slots For This Week' : 'Delete All Empty Slots For This Month'}</Text>
+                  </Pressable>
+                </View>
+              </ScrollView>
+            )}
 
           </Pressable>
           </RNAnimated.View>
@@ -2756,6 +2756,28 @@ const slotModalStyles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
+  },
+  // Single / Multiple segmented toggle (mirrors the calendar Month/Week/Day view toggle)
+  modeToggleWrap: {
+    paddingTop: 2,
+    paddingBottom: 12,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 3,
+  },
+  modeToggleBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  modeToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   // Header: title + close button
   header: {
