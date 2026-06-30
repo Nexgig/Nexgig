@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, Modal, ScrollView } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -115,6 +115,40 @@ export default function InvoiceGigsScreen() {
       price: '',
     }))
   );
+
+  // Re-sync the row state when the source lists change. The useState initializers
+  // above only run on mount, so if bookings/slots are still loading on the first
+  // render (confirmedGigsSource === []), the Upcoming section would stay empty
+  // forever and confirmed gigs could never be invoiced. This effect reconciles
+  // each source list into its row state: it preserves the user's existing
+  // selection + typed price for rows that persist, adds rows for newly-arrived
+  // bookings, and drops rows whose booking is gone (e.g. just got invoiced).
+  const confirmedKey = useMemo(() => confirmedGigsSource.map((b) => b.id).join(','), [confirmedGigsSource]);
+  const completedKey = useMemo(() => completedGigsSource.map((b) => b.id).join(','), [completedGigsSource]);
+  useEffect(() => {
+    setUpcomingGigRows((prev) => {
+      const byId = new Map(prev.map((r) => [r.booking.id, r]));
+      return confirmedGigsSource.map((b) => {
+        const existing = byId.get(b.id);
+        return existing
+          ? { ...existing, booking: b, slot: slots.find((s) => s.id === b.slotId) }
+          : { booking: b, slot: slots.find((s) => s.id === b.slotId), selected: true, price: '' };
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmedKey]);
+  useEffect(() => {
+    setCompletedGigRows((prev) => {
+      const byId = new Map(prev.map((r) => [r.booking.id, r]));
+      return completedGigsSource.map((b) => {
+        const existing = byId.get(b.id);
+        return existing
+          ? { ...existing, booking: b, slot: slots.find((s) => s.id === b.slotId) }
+          : { booking: b, slot: slots.find((s) => s.id === b.slotId), selected: true, price: '' };
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedKey]);
 
   const toggleGig = useCallback((bookingId: string) => {
     setUpcomingGigRows((prev) =>

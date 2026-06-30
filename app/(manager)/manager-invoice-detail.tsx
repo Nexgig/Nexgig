@@ -8,6 +8,7 @@ import { fonts } from '@/lib/fonts';
 import { useInvoiceStore } from '@/lib/store';
 import * as Haptics from 'expo-haptics';
 import type { InvoiceGig } from '@/lib/types';
+import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 
 function formatTime(t: string): string {
   if (!t) return '';
@@ -51,10 +52,11 @@ function generateInvoiceHTML(data: {
   <head>
     <meta charset="utf-8">
     <style>
+      @font-face { font-family: 'ClashDisplay'; src: url(data:font/otf;base64,${CLASH_DISPLAY_BOLD_BASE64}) format('opentype'); font-weight: 700; font-style: normal; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 40px; color: #1a1a1a; background: #fff; }
       .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
-      .brand-name { font-size: 28px; font-weight: 800; color: #1a1a1a; }
+      .brand-name { font-family: 'ClashDisplay', -apple-system, Helvetica, sans-serif; font-size: 28px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.5px; }
       .brand-slogan { font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
       .inv-meta { text-align: right; }
       .inv-label { font-size: 10px; font-weight: 700; color: #666; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
