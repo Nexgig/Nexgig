@@ -111,7 +111,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
   return (
     <ThemeContext.Provider value={value}>
-      <View style={[{ flex: 1 }, themeVariables]}>{children}</View>
+      {/* key={colorScheme} forces a one-time remount of the whole tree when the
+          resolved scheme flips. This is required because screen backgrounds and
+          text use NativeWind classes (bg-background, text-foreground, ...) which
+          resolve from the CSS vars below; NativeWind doesn't reliably re-flow
+          already-mounted className colors on a live scheme switch, so without
+          the remount a theme change only appeared after an app restart. */}
+      <View key={colorScheme} style={[{ flex: 1 }, themeVariables]}>{children}</View>
     </ThemeContext.Provider>
   );
 }
