@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
+import { fonts } from '@/lib/fonts';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore, venuePhotoUri } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -138,6 +139,41 @@ export default function DJHomeScreen() {
       .slice(0, 6);
   }, [bookings, slots, allVenues, nowDT]);
 
+  // Combined "Bookings" list: confirmed + pending + completed, ALL dates.
+  // Mirrors the manager dashboard. Resolves slot/venue with snapshot fallback,
+  // handles artist-created private events, tags each with a status + dot color,
+  // and sorts active (pending/confirmed) first by soonest, completed most-recent.
+  const dashboardBookings = useMemo(() => {
+    const mapped = bookings
+      .filter((b) =>
+        b.status === 'requested' || b.status === 'past_confirmation' ||
+        b.status === 'confirmed' || b.status === 'completed' || b.isCompleted)
+      .map((b) => {
+        const slot = slots.find((s) => s.id === b.slotId);
+        const venue = allVenues.find((v) => v.id === b.venueId);
+        const resolvedSlot = slot ?? (b.slotDate ? {
+          id: b.slotId, venueId: b.venueId, date: b.slotDate,
+          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
+        } : undefined);
+        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+        const isDone = b.status === 'completed' || b.isCompleted;
+        const isPending = b.status === 'requested' || b.status === 'past_confirmation';
+        const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
+        const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+        return { ...b, slot: resolvedSlot, venue: resolvedVenue, statusKey, dotColor, isDone };
+      });
+    return mapped.sort((a, b) => {
+      if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+      const da = a.slot?.date ?? a.slotDate ?? '';
+      const db = b.slot?.date ?? b.slotDate ?? '';
+      if (!a.isDone) return da < db ? -1 : da > db ? 1 : 0;
+      return da > db ? -1 : da < db ? 1 : 0;
+    });
+  }, [bookings, slots, allVenues]);
+
+  const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
+
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
   const venueCount = useMemo(() => {
@@ -204,20 +240,20 @@ export default function DJHomeScreen() {
           <SummaryCard label="COMPLETED" value={completedBookings.length} color="#2563EB" colors={colors} onPress={() => router.push('/(artist)/completed-gigs' as Href)} />
         </View>
 
-        {/* Upcoming Gigs */}
+        {/* Bookings */}
         <View style={styles.section}>
           <SectionHeader
-            title="Upcoming"
+            title="Bookings"
             actionLabel="See all"
-            onAction={() => router.push('/(artist)/confirmed-gigs' as Href)}
+            onAction={() => router.push('/(artist)/all-bookings' as Href)}
           />
-          {upcomingBookings.length === 0 ? (
+          {dashboardBookingsPreview.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No upcoming gigs</Text>
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            upcomingBookings.map((booking) => {
+            dashboardBookingsPreview.map((booking) => {
               const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
               return (
               <Pressable
@@ -242,6 +278,8 @@ export default function DJHomeScreen() {
                       : booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
+                {/* Status dot — Clash Display period, like the manager dashboard */}
+                <Text allowFontScaling={false} style={[styles.statusDot, { color: booking.dotColor }]}>.</Text>
               </Pressable>
               );
             })
@@ -304,6 +342,7 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
+  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
   // Completed Gigs section — mirrors manager dashboard styles
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },

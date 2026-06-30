@@ -247,6 +247,7 @@ export default function DJLayout() {
       <Stack.Screen name="settings" options={{ gestureEnabled: false }} />
       <Stack.Screen name="edit-profile" options={{ gestureEnabled: false }} />
       <Stack.Screen name="confirmed-gigs" />
+      <Stack.Screen name="all-bookings" />
       <Stack.Screen name="completed-gigs" />
       <Stack.Screen name="pending-requests" />
       <Stack.Screen name="my-venues" />
