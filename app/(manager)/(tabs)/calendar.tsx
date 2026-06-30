@@ -223,7 +223,9 @@ export default function CalendarScreen() {
   const slotModalTranslateY = useRef(new RNAnimated.Value(0)).current;
   const slotPanResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) => slotSheetModeRef.current === 'single' && g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderTerminationRequest: () => true,
       onPanResponderMove: (_, g) => { if (g.dy > 0) slotModalTranslateY.setValue(g.dy); },
       onPanResponderRelease: (_, g) => {
         if (g.dy > 80) {
@@ -761,6 +763,7 @@ export default function CalendarScreen() {
     setSlotForm({ name: slot.name, startTime: slot.startTime, endTime: slot.endTime });
     setStartTimeOpen(false);
     setEndTimeOpen(false);
+    setSlotMode('single');
     setShowSlotModal(true);
     setActiveSlotMenu(null);
   };
@@ -890,7 +893,6 @@ export default function CalendarScreen() {
           onPress: () => {
             openSlots.forEach((s) => deleteSlot(s.id));
             setShowSlotModal(false);
-            setSlotMode('single');
           },
         },
       ]
@@ -979,7 +981,7 @@ export default function CalendarScreen() {
           text: 'Create',
           onPress: async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { bulkAddSlots(newSlots); setShowSlotModal(false); setSlotMode('single'); return; }
+            if (!user) { bulkAddSlots(newSlots); setShowSlotModal(false); return; }
             const supabaseSlots = newSlots.map((s) => ({
               venue_id: s.venueId,
               manager_id: user.id,
@@ -1005,7 +1007,6 @@ export default function CalendarScreen() {
               bulkAddSlots(newSlots);
             }
             setShowSlotModal(false);
-            setSlotMode('single');
           },
         },
       ]
@@ -2132,7 +2133,7 @@ if (newBookingId) {
             style={{ transform: [{ translateY: slotModalTranslateY }], width: '100%' }}
             {...slotPanResponder.panHandlers}
           >
-          <Pressable style={[slotModalStyles.sheet, { backgroundColor: colors.background, height: slotModalHeight }]} onPress={() => Keyboard.dismiss()}>
+          <View style={[slotModalStyles.sheet, { backgroundColor: colors.background, height: slotModalHeight }]}>
 
             {/* ── Drag handle ── */}
             <View style={slotModalStyles.handleRow}>
@@ -2151,7 +2152,7 @@ if (newBookingId) {
               </View>
               <Pressable
                 style={[slotModalStyles.closeBtn, { backgroundColor: colors.surface }]}
-                onPress={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); setSlotMode('single'); }}
+                onPress={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); }}
                 hitSlop={8}
               >
                 <MaterialIcons name="close" size={16} color={colors.muted} />
@@ -2180,7 +2181,7 @@ if (newBookingId) {
 
             {/* ═══ SINGLE SET BODY ═══ */}
             {(editingSlot || slotSheetMode === 'single') && (
-            <>
+            <Pressable onPress={() => Keyboard.dismiss()}>
             {/* ── Venue pills (always shown when creating) ── */}
             {!editingSlot && (
               <View style={slotModalStyles.fieldBlock}>
@@ -2347,7 +2348,7 @@ if (newBookingId) {
                 </Pressable>
               )}
             </View>
-            </>
+            </Pressable>
             )}
 
             {/* ═══ MULTIPLE SETS BODY (bulk) ═══ */}
@@ -2541,7 +2542,7 @@ if (newBookingId) {
               </ScrollView>
             )}
 
-          </Pressable>
+          </View>
           </RNAnimated.View>
         </Pressable>
       </Modal>
