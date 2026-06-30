@@ -37,12 +37,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyScheme(scheme);
   }, [applyScheme]);
 
-  // Load persisted appearance preference on mount
+  // Load persisted appearance preference on mount.
+  // IMPORTANT: set the React state too (not just applyScheme), otherwise the
+  // colorScheme that useColors() reads can disagree with what's actually applied.
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY_APPEARANCE).then((saved) => {
-      if (saved === 'light') applyScheme('light');
-      else if (saved === 'dark') applyScheme('dark');
-      else applyScheme(systemScheme); // 'system' or null
+      const scheme: ColorScheme = saved === 'light' ? 'light' : saved === 'dark' ? 'dark' : systemScheme;
+      setColorSchemeState(scheme);
+      applyScheme(scheme);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -32,6 +33,8 @@ export default function SettingsScreen() {
   const router = useRouter();
   const colors = useColors();
   const { setColorScheme } = useThemeContext();
+  // Live device scheme, so choosing "System" can resolve to the current OS theme immediately.
+  const deviceScheme = useDeviceColorScheme() ?? 'light';
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [monthStartDay, setMonthStartDay] = useState(1);
@@ -101,11 +104,10 @@ export default function SettingsScreen() {
   const saveAppearance = useCallback(async (mode: AppearanceMode) => {
     setAppearance(mode);
     await AsyncStorage.setItem(STORAGE_KEY_APPEARANCE, mode);
-    // Apply immediately: 'system' falls back to device scheme via ThemeProvider
-    if (mode === 'light') setColorScheme('light');
-    else if (mode === 'dark') setColorScheme('dark');
-    // For 'system', ThemeProvider will pick it up on next render via its own useEffect
-  }, [setColorScheme]);
+    // Apply immediately. 'system' resolves to the current device scheme right now
+    // (the provider keeps following the device for future OS theme changes).
+    setColorScheme(mode === 'system' ? deviceScheme : mode);
+  }, [setColorScheme, deviceScheme]);
 
   const saveEmailMarketing = useCallback(async (val: boolean) => {
     setEmailMarketing(val);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -35,6 +36,8 @@ export default function DJSettingsScreen() {
   const router = useRouter();
   const colors = useColors();
   const { setColorScheme } = useThemeContext();
+  // Live device scheme, so choosing "System" can resolve to the current OS theme immediately.
+  const deviceScheme = useDeviceColorScheme() ?? 'light';
   const currentUserId = useAuthStore((s) => s.currentUser?.id);
 
   // ─── State ─────────────────────────────────────────────────────────────────
@@ -86,9 +89,10 @@ export default function DJSettingsScreen() {
   const saveAppearance = useCallback(async (mode: AppearanceMode) => {
     setAppearance(mode);
     await AsyncStorage.setItem(DJ_STORAGE_KEY_APPEARANCE, mode);
-    if (mode === 'light') setColorScheme('light');
-    else if (mode === 'dark') setColorScheme('dark');
-  }, [setColorScheme]);
+    // Apply immediately. 'system' resolves to the current device scheme right now
+    // (the provider keeps following the device for future OS theme changes).
+    setColorScheme(mode === 'system' ? deviceScheme : mode);
+  }, [setColorScheme, deviceScheme]);
 
   const saveNotifBookingRequests = useCallback(async (val: boolean) => {
     setNotifBookingRequests(val);
