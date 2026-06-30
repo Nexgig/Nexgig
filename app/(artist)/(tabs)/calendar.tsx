@@ -1288,9 +1288,10 @@ export default function DJAvailabilityScreen() {
                   >
                     <View style={[
                       styles.dayCircle,
-                      isSelected && { backgroundColor: colors.foreground },
+                      isSelected && { transform: [{ scale: 1.18 }] },
                     ]}>
-                      <Text style={[styles.dayNumber, { color: isSelected ? colors.background : isToday ? STATUS_COLORS.cancelled : colors.foreground }]}>{dayNum}</Text>
+                      <Text style={[styles.dayNumber, { color: isToday ? STATUS_COLORS.cancelled : colors.foreground, fontWeight: isSelected ? '800' : '600' }]}>{dayNum}</Text>
+                      {isSelected && <View style={[styles.daySelectedUnderline, { backgroundColor: colors.primary }]} />}
                     </View>
                     {dots.length > 0 && (
                       <View style={styles.dotRow}>
@@ -1808,6 +1809,7 @@ const styles = StyleSheet.create({
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 14, fontWeight: '600' },
+  daySelectedUnderline: { position: 'absolute', bottom: 3, width: 16, height: 2, borderRadius: 1 },
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
   dot: { width: 4, height: 4, borderRadius: 0 },
 
