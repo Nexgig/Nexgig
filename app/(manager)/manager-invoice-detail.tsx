@@ -116,10 +116,6 @@ function generateInvoiceHTML(data: {
       <span class="total-label">TOTAL</span>
       <span class="total-value">AED ${Math.round(data.totalAmount).toLocaleString()}</span>
     </div>
-    <div class="footer">
-      <span class="footer-text">Generated via Nexgig · nexgigapp.com</span>
-      <span class="sent-badge">SENT</span>
-    </div>
   </body>
   </html>
   `;
@@ -301,14 +297,6 @@ export default function ManagerInvoiceDetailScreen() {
           <View style={[styles.totalRow, { borderColor: colors.primary }]}>
             <Text style={[styles.totalLabel, { color: colors.foreground }]}>TOTAL</Text>
             <Text style={[styles.totalValue, { color: colors.primary }]}>AED {Math.round(invoice.totalAmount).toLocaleString()}</Text>
-          </View>
-
-          {/* Footer */}
-          <View style={[styles.invoiceFooter, { borderTopColor: colors.border }]}>
-            <Text style={[styles.footerText, { color: colors.muted }]}>Generated via Nexgig · nexgigapp.com</Text>
-            <View style={styles.sentBadge}>
-              <Text style={styles.sentBadgeText}>SENT</Text>
-            </View>
           </View>
         </View>
       </ScrollView>
