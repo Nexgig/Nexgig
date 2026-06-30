@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 120 },
   invoiceCard: { borderRadius: 16, borderWidth: 1, padding: 20, gap: 0 },
   invoiceHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
-  invoiceTitle: { fontSize: 26, fontWeight: '800' },
+  invoiceTitle: { fontSize: 26, fontWeight: '800', fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   brandSlogan: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginTop: 3 },
   invMetaLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginBottom: 3 },
   invoiceNum: { fontSize: 14, fontWeight: '700', marginBottom: 2 },

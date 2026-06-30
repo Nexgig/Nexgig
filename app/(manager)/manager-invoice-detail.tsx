@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   invoiceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  invoiceTitle: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+  invoiceTitle: { fontSize: 24, fontWeight: '800', fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   brandSlogan: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, marginTop: 3 },
   invMetaLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, marginBottom: 3 },
   invoiceNum: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
