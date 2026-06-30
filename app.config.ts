@@ -154,7 +154,10 @@ const config: ExpoConfig = {
   ],
   experiments: {
     typedRoutes: true,
-    reactCompiler: true,
+    // reactCompiler disabled: its build-time auto-memoization was preventing the
+    // theme provider's state change from re-rendering consumers on a live switch
+    // (System/Light/Dark only applied after an app restart).
+    reactCompiler: false,
   },
   extra: {
     eas: {
