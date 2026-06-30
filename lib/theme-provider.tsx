@@ -67,13 +67,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setAppearance(scheme);
   }, [setAppearance]);
 
-  // Follow live OS theme changes while in 'system' mode.
+  // Follow live OS theme changes while in 'system' mode. Use the event payload's
+  // colorScheme directly — getColorScheme() can momentarily lag behind the event.
   useEffect(() => {
-    const sub = Appearance.addChangeListener(() => {
-      if (appearance === 'system') applyMode('system');
+    const sub = Appearance.addChangeListener(({ colorScheme: next }) => {
+      if (appearance === 'system') {
+        const resolved = (next ?? 'light') as ColorScheme;
+        setColorSchemeState(resolved);
+        applyScheme(resolved);
+      }
     });
     return () => sub.remove();
-  }, [appearance, applyMode]);
+  }, [appearance]);
 
   // Load persisted appearance MODE on mount, then resolve + apply it.
   useEffect(() => {
