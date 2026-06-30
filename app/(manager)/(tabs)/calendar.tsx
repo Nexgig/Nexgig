@@ -2137,7 +2137,11 @@ if (newBookingId) {
             style={{ transform: [{ translateY: slotModalTranslateY }], width: '100%' }}
             {...slotPanResponder.panHandlers}
           >
-          <View style={[slotModalStyles.sheet, { backgroundColor: colors.background, height: slotModalHeight }]}>
+          <View
+            style={[slotModalStyles.sheet, { backgroundColor: colors.background, height: slotModalHeight }]}
+            onStartShouldSetResponder={() => true}
+            onResponderRelease={() => {}}
+          >
 
             {/* ── Drag handle ── */}
             <View style={slotModalStyles.handleRow}>
