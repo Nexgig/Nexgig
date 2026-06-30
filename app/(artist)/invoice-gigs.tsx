@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, Slot } from '@/lib/types';
 
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: 'center' },
   bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5 },
   totalLabel: { fontSize: 12 },
-  totalValue: { fontSize: 20, fontWeight: '800' },
+  totalValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
   continueBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 14 },
   continueBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },

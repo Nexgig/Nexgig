@@ -412,7 +412,7 @@ const invStyles = StyleSheet.create({
   venueName: { fontSize: 15, fontWeight: '700' },
   sentDateText: { fontSize: 12 },
   cardRight: { alignItems: 'flex-end', gap: 6 },
-  amountText: { fontSize: 15, fontWeight: '800' },
+  amountText: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
   deleteAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 72, marginLeft: 8 },
   deleteActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },

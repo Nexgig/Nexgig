@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, useLineupStore, mapVenueRow } from '@/lib/store';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { supabase } from '@/lib/supabase';
 import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
   tdPrice: { flex: 1, fontSize: 13, fontWeight: '700', textAlign: 'right' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTopWidth: 2 },
   totalLabel: { fontSize: 14, fontWeight: '700' },
-  totalValue: { fontSize: 20, fontWeight: '800' },
+  totalValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
   invoiceFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 0.5 },
   footerText: { fontSize: 11 },
   sentBadge: { backgroundColor: '#dcfce7', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },

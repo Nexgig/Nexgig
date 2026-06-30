@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { useInvoiceStore } from '@/lib/store';
 import * as Haptics from 'expo-haptics';
 import type { InvoiceGig } from '@/lib/types';
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
   },
   totalLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
-  totalValue: { fontSize: 20, fontWeight: '800' },
+  totalValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
   invoiceFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Invoice } from '@/lib/types';
 
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   sentVenue: { fontSize: 15, fontWeight: '700' },
   sentDate: { fontSize: 12 },
   sentCardRight: { alignItems: 'flex-end' },
-  sentAmount: { fontSize: 15, fontWeight: '800' },
+  sentAmount: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
