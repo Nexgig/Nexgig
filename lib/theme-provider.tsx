@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Appearance, View, useColorScheme as useSystemColorScheme } from "react-native";
+import { View, useColorScheme as useSystemColorScheme } from "react-native";
 import { colorScheme as nativewindColorScheme, vars } from "nativewind";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -7,20 +7,32 @@ import { SchemeColors, type ColorScheme } from "@/constants/theme";
 
 const STORAGE_KEY_APPEARANCE = 'nexgig:appearance';
 
+export type AppearanceMode = 'system' | 'light' | 'dark';
+
 type ThemeContextValue = {
   colorScheme: ColorScheme;
+  appearance: AppearanceMode;
+  setAppearance: (mode: AppearanceMode) => void;
+  /** @deprecated use setAppearance instead; kept for backward compatibility */
   setColorScheme: (scheme: ColorScheme) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // The OS theme. NOTE: we deliberately do NOT call Appearance.setColorScheme()
+  // on native, because doing so overrides what useSystemColorScheme() reports —
+  // which would make 'system' mode read a stale value and stop following the OS.
   const systemScheme = useSystemColorScheme() ?? "light";
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(systemScheme);
+  // Source of truth = the user's chosen MODE ('system' | 'light' | 'dark').
+  const [appearance, setAppearanceState] = useState<AppearanceMode>('system');
+  // The effective scheme is derived: 'system' follows the live OS theme.
+  const colorScheme: ColorScheme = appearance === 'system' ? systemScheme : appearance;
 
+  // Apply the resolved scheme to NativeWind + the web DOM. We intentionally skip
+  // native Appearance.setColorScheme so the OS theme stays readable for 'system'.
   const applyScheme = useCallback((scheme: ColorScheme) => {
     nativewindColorScheme.set(scheme);
-    Appearance.setColorScheme?.(scheme);
     if (typeof document !== "undefined") {
       const root = document.documentElement;
       root.dataset.theme = scheme;
@@ -32,32 +44,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setColorScheme = useCallback((scheme: ColorScheme) => {
-    setColorSchemeState(scheme);
-    applyScheme(scheme);
-  }, [applyScheme]);
-
-  // Load persisted appearance preference on mount.
-  // IMPORTANT: set the React state too (not just applyScheme), otherwise the
-  // colorScheme that useColors() reads can disagree with what's actually applied.
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY_APPEARANCE).then((saved) => {
-      const scheme: ColorScheme = saved === 'light' ? 'light' : saved === 'dark' ? 'dark' : systemScheme;
-      setColorSchemeState(scheme);
-      applyScheme(scheme);
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const setAppearance = useCallback((mode: AppearanceMode) => {
+    setAppearanceState(mode);
+    AsyncStorage.setItem(STORAGE_KEY_APPEARANCE, mode);
   }, []);
 
-  // When system scheme changes, re-apply if user is on 'system' mode
+  // Backward-compat shim: an explicit scheme is just a light/dark mode choice.
+  const setColorScheme = useCallback((scheme: ColorScheme) => {
+    setAppearance(scheme);
+  }, [setAppearance]);
+
+  // Load persisted appearance MODE on mount.
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY_APPEARANCE).then((saved) => {
-      if (!saved || saved === 'system') {
-        setColorSchemeState(systemScheme);
-        applyScheme(systemScheme);
+      if (saved === 'light' || saved === 'dark' || saved === 'system') {
+        setAppearanceState(saved);
       }
     });
-  }, [systemScheme, applyScheme]);
+  }, []);
+
+  // Keep NativeWind / DOM in sync whenever the resolved scheme changes
+  // (covers mode changes AND live OS theme changes while in 'system').
+  useEffect(() => {
+    applyScheme(colorScheme);
+  }, [colorScheme, applyScheme]);
 
   const themeVariables = useMemo(
     () =>
@@ -78,9 +88,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       colorScheme,
+      appearance,
+      setAppearance,
       setColorScheme,
     }),
-    [colorScheme, setColorScheme],
+    [colorScheme, appearance, setAppearance, setColorScheme],
   );
   return (
     <ThemeContext.Provider value={value}>

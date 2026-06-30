@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -35,14 +34,13 @@ const LANGUAGE_LABELS: Record<LanguageOption, string> = {
 export default function DJSettingsScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { setColorScheme } = useThemeContext();
-  // Live device scheme, so choosing "System" can resolve to the current OS theme immediately.
-  const deviceScheme = useDeviceColorScheme() ?? 'light';
+  // Theme mode lives in the ThemeProvider (single source of truth). 'system' there
+  // follows the live OS theme, so switching to System applies the device theme now.
+  const { appearance, setAppearance } = useThemeContext();
   const currentUserId = useAuthStore((s) => s.currentUser?.id);
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [defaultCalendarView, setDefaultCalendarView] = useState<CalendarViewMode>('month');
-  const [appearance, setAppearance] = useState<AppearanceMode>('system');
   const [notifBookingRequests, setNotifBookingRequests] = useState(true);
   const [notifBookingUpdates, setNotifBookingUpdates] = useState(true);
   const [notifLineupVenues, setNotifLineupVenues] = useState(true);
@@ -56,9 +54,8 @@ export default function DJSettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [dcv, app, nbr, nbu, nlv, epu, lang] = await Promise.all([
+        const [dcv, nbr, nbu, nlv, epu, lang] = await Promise.all([
           AsyncStorage.getItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
-          AsyncStorage.getItem(DJ_STORAGE_KEY_APPEARANCE),
           AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS),
           AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES),
           AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES),
@@ -66,7 +63,6 @@ export default function DJSettingsScreen() {
           AsyncStorage.getItem(DJ_STORAGE_KEY_LANGUAGE),
         ]);
         if (dcv !== null) setDefaultCalendarView(dcv === 'week' ? 'week' : dcv === 'today' ? 'today' : 'month');
-        if (app !== null) setAppearance(app as AppearanceMode);
         if (nbr !== null) setNotifBookingRequests(nbr === 'true');
         if (nbu !== null) setNotifBookingUpdates(nbu === 'true');
         if (nlv !== null) setNotifLineupVenues(nlv === 'true');
@@ -85,14 +81,6 @@ export default function DJSettingsScreen() {
     setDefaultCalendarView(view);
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, view);
   }, []);
-
-  const saveAppearance = useCallback(async (mode: AppearanceMode) => {
-    setAppearance(mode);
-    await AsyncStorage.setItem(DJ_STORAGE_KEY_APPEARANCE, mode);
-    // Apply immediately. 'system' resolves to the current device scheme right now
-    // (the provider keeps following the device for future OS theme changes).
-    setColorScheme(mode === 'system' ? deviceScheme : mode);
-  }, [setColorScheme, deviceScheme]);
 
   const saveNotifBookingRequests = useCallback(async (val: boolean) => {
     setNotifBookingRequests(val);
@@ -162,7 +150,7 @@ export default function DJSettingsScreen() {
             await setReminderOffsets(defaults);
             if (currentUserId) rescheduleArtistReminders(currentUserId);
             setLanguage('en');
-            setColorScheme('light');
+            setAppearance('system');
           },
         },
       ]
@@ -250,7 +238,7 @@ export default function DJSettingsScreen() {
                   { borderColor: colors.border },
                   appearance === m.value && { backgroundColor: colors.primary, borderColor: colors.primary },
                 ]}
-                onPress={() => saveAppearance(m.value)}
+                onPress={() => setAppearance(m.value)}
               >
                 <MaterialIcons
                   name={m.icon as any}

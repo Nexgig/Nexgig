@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -32,15 +31,14 @@ export const LINEUP_STATUS_DEFAULT: LineupStatusFilter[] = ['draft', 'requested'
 export default function SettingsScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { setColorScheme } = useThemeContext();
-  // Live device scheme, so choosing "System" can resolve to the current OS theme immediately.
-  const deviceScheme = useDeviceColorScheme() ?? 'light';
+  // Theme mode lives in the ThemeProvider (single source of truth). 'system' there
+  // follows the live OS theme, so switching to System applies the device theme now.
+  const { appearance, setAppearance } = useThemeContext();
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showLineupBalance, setShowLineupBalance] = useState(true);
   const [defaultCalendarView, setDefaultCalendarView] = useState<CalendarViewMode>('month');
-  const [appearance, setAppearance] = useState<AppearanceMode>('system');
   const [emailMarketing, setEmailMarketing] = useState(true);
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   const [notifArtistResponses, setNotifArtistResponses] = useState(true);
@@ -52,11 +50,10 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [msd, slb, dcv, app, em, ls, nar, nna] = await Promise.all([
+        const [msd, slb, dcv, em, ls, nar, nna] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_MONTH_START_DAY),
           AsyncStorage.getItem(STORAGE_KEY_SHOW_LINEUP_BALANCE),
           AsyncStorage.getItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
-          AsyncStorage.getItem(STORAGE_KEY_APPEARANCE),
           AsyncStorage.getItem(STORAGE_KEY_EMAIL_MARKETING),
           AsyncStorage.getItem(STORAGE_KEY_LINEUP_STATUSES),
           AsyncStorage.getItem(STORAGE_KEY_NOTIF_ARTIST_RESPONSES),
@@ -69,7 +66,6 @@ export default function SettingsScreen() {
           const mapped = (dcv === 'week') ? 'week' : 'month';
           setDefaultCalendarView(mapped as CalendarViewMode);
         }
-        if (app !== null) setAppearance(app as AppearanceMode);
         if (em !== null) setEmailMarketing(em === 'true');
         if (ls !== null) {
           try {
@@ -100,14 +96,6 @@ export default function SettingsScreen() {
     setDefaultCalendarView(view);
     await AsyncStorage.setItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW, view);
   }, []);
-
-  const saveAppearance = useCallback(async (mode: AppearanceMode) => {
-    setAppearance(mode);
-    await AsyncStorage.setItem(STORAGE_KEY_APPEARANCE, mode);
-    // Apply immediately. 'system' resolves to the current device scheme right now
-    // (the provider keeps following the device for future OS theme changes).
-    setColorScheme(mode === 'system' ? deviceScheme : mode);
-  }, [setColorScheme, deviceScheme]);
 
   const saveEmailMarketing = useCallback(async (val: boolean) => {
     setEmailMarketing(val);
@@ -246,7 +234,7 @@ export default function SettingsScreen() {
                   { borderColor: colors.border },
                   appearance === m.value && { backgroundColor: colors.primary, borderColor: colors.primary },
                 ]}
-                onPress={() => saveAppearance(m.value)}
+                onPress={() => setAppearance(m.value)}
               >
                 <MaterialIcons
                   name={m.icon as any}
