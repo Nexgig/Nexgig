@@ -1863,7 +1863,7 @@ if (newBookingId) {
                     >
                       <View style={[
                         styles.dayCircle,
-                        isSelected && { transform: [{ scale: 1.18 }] },
+                        isSelected && { backgroundColor: colors.primary + '26' },
                       ]}>
                         <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.error : colors.foreground, fontWeight: isSelected ? '800' : '600' }]}>{day}</Text>
                       </View>
