@@ -118,44 +118,31 @@ export default function RosterScreen() {
 
   const handleAddToVenue = (venueId: string) => {
     const venueName = venues.find((v) => v.id === venueId)?.name ?? 'venue';
-    const djName = getArtistUser(assignDJId)?.fullName ?? 'Artist';
-    Alert.alert(
-      'Add to Venue',
-      `Add ${djName} to ${venueName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Add',
-          onPress: () => {
-            const grEntry = myGlobalLineup.find((r) => r.artistId === assignDJId);
-            const newAssignment: VenueAssignment = {
-              id: `va-${Date.now()}`,
-              globalLineupId: grEntry?.id ?? '',
-              venueId,
-              artistId: assignDJId,
-              assignedAt: new Date().toISOString(),
-              status: 'active',
-            };
-            assignToVenue(newAssignment);
-            supabase.from('venue_assignments').upsert(
-              { manager_id: currentUser!.id, artist_id: assignDJId, venue_id: venueId, status: 'active' },
-              { onConflict: 'venue_id,artist_id' }
-            ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
-            addNotification({
-              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              userId: assignDJId,
-              type: 'venue_assigned',
-              title: 'Assigned to Venue',
-              body: `${venueName}`,
-              isRead: false,
-              relatedId: venueId,
-              relatedType: 'venue',
-              createdAt: new Date().toISOString(),
-            });
-          },
-        },
-      ]
-    );
+    const grEntry = myGlobalLineup.find((r) => r.artistId === assignDJId);
+    const newAssignment: VenueAssignment = {
+      id: `va-${Date.now()}`,
+      globalLineupId: grEntry?.id ?? '',
+      venueId,
+      artistId: assignDJId,
+      assignedAt: new Date().toISOString(),
+      status: 'active',
+    };
+    assignToVenue(newAssignment);
+    supabase.from('venue_assignments').upsert(
+      { manager_id: currentUser!.id, artist_id: assignDJId, venue_id: venueId, status: 'active' },
+      { onConflict: 'venue_id,artist_id' }
+    ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: assignDJId,
+      type: 'venue_assigned',
+      title: 'Assigned to Venue',
+      body: `${venueName}`,
+      isRead: false,
+      relatedId: venueId,
+      relatedType: 'venue',
+      createdAt: new Date().toISOString(),
+    });
   };
 
   const handleRemoveFromVenue = (venueId: string) => {

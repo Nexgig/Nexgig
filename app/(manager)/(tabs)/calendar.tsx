@@ -894,8 +894,11 @@ export default function CalendarScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            openSlots.forEach((s) => deleteSlot(s.id));
+          onPress: async () => {
+            const ids = openSlots.map((s) => s.id);
+            const { error } = await supabase.from('slots').delete().in('id', ids);
+            if (error) { Alert.alert('Error deleting slots', error.message); return; }
+            ids.forEach((id) => deleteSlot(id));
             setShowSlotModal(false);
           },
         },

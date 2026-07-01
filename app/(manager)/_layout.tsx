@@ -361,7 +361,7 @@ if (!lineupError && lineupData) {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="venue-detail" />
       <Stack.Screen name="booking-detail" />
-      <Stack.Screen name="assign-artist" />
+      <Stack.Screen name="assign-artist" options={{ presentation: 'modal' }} />
       <Stack.Screen name="create-venue" options={{ gestureEnabled: false }} />
       <Stack.Screen name="artist-profile-view" />
       <Stack.Screen name="artist-bookings" />
