@@ -137,6 +137,10 @@ export default function RosterScreen() {
               status: 'active',
             };
             assignToVenue(newAssignment);
+            supabase.from('venue_assignments').upsert(
+              { manager_id: currentUser!.id, artist_id: assignDJId, venue_id: venueId, status: 'active' },
+              { onConflict: 'venue_id,artist_id' }
+            ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
             addNotification({
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               userId: assignDJId,

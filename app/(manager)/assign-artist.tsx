@@ -173,6 +173,10 @@ export default function AssignDJScreen() {
               status: 'active',
             };
             assignToVenue(newAssignment);
+            supabase.from('venue_assignments').upsert(
+              { manager_id: currentUser.id, artist_id: artistId, venue_id: venueIdParam, status: 'active' },
+              { onConflict: 'venue_id,artist_id' }
+            ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
             addNotification({
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               userId: artistId,
@@ -364,6 +368,22 @@ export default function AssignDJScreen() {
     .filter((d) => d.hasConflict)
     .sort((a, b) => (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase()));
 
+  // Roster (global-lineup) artists NOT on this venue's lineup yet. The manager can
+  // add them to the venue right here; once added they move up into Available /
+  // Has Conflict and get assigned normally (draft, or past-confirmation request).
+  const venueLineupIds = new Set(venueAssignmentsForSlot.map((a) => a.artistId));
+  const notInLineup = myGlobalLineup
+    .filter((entry) => !venueLineupIds.has(entry.artistId))
+    .map((entry) => ({ entry, user: getArtistUser(entry.artistId), profile: getArtistProfile(entry.artistId) }))
+    .filter((item) => {
+      if (!item.user) return false;
+      if (!slotSearch.trim()) return true;
+      const q = slotSearch.toLowerCase();
+      return (item.user.fullName ?? '').toLowerCase().includes(q) ||
+        (item.profile?.primaryGenre ?? '').toLowerCase().includes(q);
+    })
+    .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
+
   // For past slots: tapping a DJ sends a past-gig confirmation request to the artist
   const handleTapDJPast = (artistId: string) => {
     if (!currentUser) return;
@@ -446,6 +466,52 @@ export default function AssignDJScreen() {
     } else {
       setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
     }
+  };
+
+  // Add a roster artist to THIS venue's lineup from the slot screen. No draft is
+  // created — once added they surface in Available / Has Conflict where a normal
+  // tap assigns them (draft for upcoming, completed-gig request for past slots).
+  const handleAddToVenueFromSlot = (artistId: string) => {
+    if (!currentUser) return;
+    const djUser = getArtistUser(artistId);
+    const venueName = venue?.name ?? 'this venue';
+    Alert.alert(
+      'Add to Lineup',
+      `Add ${djUser?.fullName ?? 'this artist'} to ${venueName}? They'll move up to the list above so you can assign them.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add',
+          onPress: () => {
+            const grEntry = myGlobalLineup.find((r) => r.artistId === artistId);
+            const newAssignment: VenueAssignment = {
+              id: `va-${Date.now()}`,
+              globalLineupId: grEntry?.id ?? '',
+              venueId: slot!.venueId,
+              artistId,
+              assignedAt: new Date().toISOString(),
+              status: 'active',
+            };
+            assignToVenue(newAssignment);
+            supabase.from('venue_assignments').upsert(
+              { manager_id: currentUser.id, artist_id: artistId, venue_id: slot!.venueId, status: 'active' },
+              { onConflict: 'venue_id,artist_id' }
+            ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
+            addNotification({
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: artistId,
+              type: 'venue_assigned',
+              title: 'Assigned to Venue',
+              body: `${venueName}`,
+              isRead: false,
+              relatedId: slot!.venueId,
+              relatedType: 'venue',
+              createdAt: new Date().toISOString(),
+            });
+          },
+        },
+      ]
+    );
   };
 
   const renderDJ = (item: typeof djsWithConflicts[0]) => {
@@ -616,10 +682,46 @@ export default function AssignDJScreen() {
               </View>
             )}
 
-            {djsWithConflicts.length === 0 && (
+            {/* Not in Lineup — roster artists not yet on this venue */}
+            {notInLineup.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialIcons name="group-add" size={16} color={colors.muted} />
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Not in Lineup ({notInLineup.length})</Text>
+                </View>
+                {notInLineup.map((item) => (
+                  <View
+                    key={item.entry.artistId}
+                    style={[styles.djRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    {item.user!.profilePhotoUrl ? (
+                      <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                        <MaterialIcons name="person" size={22} color={colors.muted} />
+                      </View>
+                    )}
+                    <View style={styles.djInfo}>
+                      <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
+                      <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+                    </View>
+                    <Pressable
+                      style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+                      onPress={() => handleAddToVenueFromSlot(item.entry.artistId)}
+                      hitSlop={6}
+                    >
+                      <MaterialIcons name="add" size={15} color={colors.primary} />
+                      <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {djsWithConflicts.length === 0 && notInLineup.length === 0 && (
               <View style={styles.emptyState}>
                 <MaterialIcons name="group" size={40} color={colors.muted} />
-                <Text style={[styles.emptyText, { color: colors.muted }]}>No artists assigned to this venue</Text>
+                <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in your lineup yet</Text>
               </View>
             )}
           </View>
@@ -651,6 +753,8 @@ const styles = StyleSheet.create({
   djName: { fontSize: 15, fontWeight: '700' },
   draftBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   draftBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  addPillText: { fontSize: 13, fontWeight: '700' },
   djGenre: { fontSize: 13, marginBottom: 3 },
   conflictBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
   conflictText: { fontSize: 12, flex: 1, lineHeight: 16 },
