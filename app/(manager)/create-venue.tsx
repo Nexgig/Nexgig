@@ -531,7 +531,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
         </Animated.View>
       </ScrollView>
       {/* Fixed Continue button — always visible above keyboard */}
-      <View style={[styles.fixedBtnContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.fixedBtnContainer, { backgroundColor: colors.background, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 10 : 16 }]}>
         <Pressable style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]} onPress={handleNext} disabled={isLoading || isAnimating}>
           <Text style={styles.nextBtnText}>{isLoading ? 'Creating...' : step < TOTAL_STEPS ? 'Continue' : 'Create Venue'}</Text>
         </Pressable>
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
   textarea: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 90, textAlignVertical: 'top' },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
+  chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { fontSize: 13, fontWeight: '500' },
   colorSwatch: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   fixedBtnContainer: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth },
