@@ -2125,26 +2125,11 @@ if (newBookingId) {
       {/* ═══════════════════ ADD / EDIT SLOT SHEET ═══════════════════ */}
       <Modal
         visible={showSlotModal}
-        transparent
         animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); slotModalTranslateY.setValue(0); }}
+        presentationStyle="pageSheet"
+        onRequestClose={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); }}
       >
-        {/* Full-screen dim overlay */}
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
-          onPress={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); slotModalTranslateY.setValue(0); }}
-        >
-          {/* Full-height sheet with swipe-down dismiss */}
-          <RNAnimated.View
-            style={{ transform: [{ translateY: slotModalTranslateY }], width: '100%' }}
-            {...slotPanResponder.panHandlers}
-          >
-          <View
-            style={[slotModalStyles.sheet, { backgroundColor: colors.background, height: slotModalHeight }]}
-            onStartShouldSetResponder={() => true}
-            onResponderRelease={() => {}}
-          >
+          <View style={[slotModalStyles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
 
             {/* ── Drag handle ── */}
             <View style={slotModalStyles.handleRow}>
@@ -2554,8 +2539,6 @@ if (newBookingId) {
             )}
 
           </View>
-          </RNAnimated.View>
-        </Pressable>
       </Modal>
     </ScreenContainer>
   );
@@ -2751,8 +2734,8 @@ const slotModalStyles = StyleSheet.create({
   },
   // The white/dark card
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     paddingHorizontal: 13,
     paddingTop: 0,
     paddingBottom: 0,
