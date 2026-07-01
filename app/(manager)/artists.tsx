@@ -215,38 +215,32 @@ export default function RosterScreen() {
   const renderArtist = ({ item }: { item: typeof djListGlobal[0] }) => {
     if (!item.user) return null;
     const completedGigs = getCompletedGigs(item.user.id);
+    const metaParts = [
+      item.profile?.primaryGenre ?? 'Artist',
+      `${completedGigs} gig${completedGigs !== 1 ? 's' : ''}`,
+    ];
+    if (item.assignedVenues.length > 0) {
+      metaParts.push(`${item.assignedVenues.length} venue${item.assignedVenues.length > 1 ? 's' : ''}`);
+    }
+    const metaLine = metaParts.join('  ·  ');
 
     return (
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* Top row: avatar + info */}
         <View style={styles.cardTop}>
-          <AvatarImage uri={item.user.profilePhotoUrl} name={item.user.fullName} size={52} />
+          <AvatarImage uri={item.user.profilePhotoUrl} name={item.user.fullName} size={48} />
           <View style={styles.cardInfo}>
-            <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>
-              {item.user.fullName}
-            </Text>
-            <Text style={[styles.cardGenre, { color: colors.muted }]} numberOfLines={1}>
-              {item.profile?.primaryGenre ?? 'Artist'}
-            </Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statChip}>
-                <MaterialIcons name="check-circle" size={11} color={colors.success} />
-                <Text style={[styles.statText, { color: colors.muted }]}>
-                  {completedGigs} gig{completedGigs !== 1 ? 's' : ''}
-                </Text>
-              </View>
-              {item.assignedVenues.length > 0 && (
-                <>
-                  <View style={[styles.statDot, { backgroundColor: colors.border }]} />
-                  <View style={styles.statChip}>
-                    <MaterialIcons name="location-on" size={11} color={colors.primary} />
-                    <Text style={[styles.statText, { color: colors.primary }]}>
-                      {item.assignedVenues.length} venue{item.assignedVenues.length > 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                </>
+            <View style={styles.nameRow}>
+              <Text style={[styles.cardName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                {item.user.fullName}
+              </Text>
+              {item.profile?.hasCompletedBooking && (
+                <MaterialIcons name="verified" size={15} color={colors.primary} />
               )}
             </View>
+            <Text style={[styles.cardMeta, { color: colors.muted }]} numberOfLines={1}>
+              {metaLine}
+            </Text>
           </View>
           <Pressable
             hitSlop={8}
@@ -519,12 +513,9 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
   disconnectBtn: { padding: 6, alignSelf: 'flex-start' },
   cardInfo: { flex: 1, gap: 2 },
-  cardName: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
-  cardGenre: { fontSize: 13 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
-  statChip: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  statText: { fontSize: 12, fontWeight: '500' },
-  statDot: { width: 3, height: 3, borderRadius: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  cardName: { fontSize: 15, fontWeight: '600', letterSpacing: -0.2 },
+  cardMeta: { fontSize: 13, marginTop: 1 },
 
   // ─── Inline action buttons ─────────────────────────────────────────────────
   actionRow: {

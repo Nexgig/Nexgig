@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useVenueStore, venuePhotoUri } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
@@ -35,13 +34,20 @@ export default function ManagerMyVenuesScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>My Venues</Text>
-        <View style={{ width: 36 }} />
+        {/* Add venue — matches the calendar header "+" */}
+        <Pressable
+          style={({ pressed }) => [styles.addBtn, { opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => router.push('/(manager)/create-venue' as Href)}
+          hitSlop={8}
+        >
+          <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
+        </Pressable>
       </View>
 
       <FlatList
         data={venues}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 90 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
@@ -51,30 +57,30 @@ export default function ManagerMyVenuesScreen() {
           </View>
         }
         renderItem={({ item: venue }: { item: Venue }) => {
-          const venueTypeLabel = venue.venueType
-            ? venue.venueType.charAt(0).toUpperCase() + venue.venueType.slice(1).replace(/_/g, ' ')
-            : 'Venue';
+          const city = cityFromAddress(venue.googleMapsLocation?.address);
+          const subtitle = venue.capacity
+            ? `${city ? city + ' · ' : ''}Cap ${venue.capacity}`
+            : city;
+          const notVerified = venue.verificationStatus !== 'verified';
+          const rejected = venue.verificationStatus === 'rejected';
           return (
             <Pressable
-              style={({ pressed }) => [
-                styles.card,
-                { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
-              ]}
+              style={({ pressed }) => [styles.rowCard, { opacity: pressed ? 0.6 : 1 }]}
               onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
             >
               <View style={styles.cardLeft}>
                 {venuePhotoUri(venue) ? (
                   <Image
                     source={{ uri: venuePhotoUri(venue) }}
-                    style={[styles.iconWrap, { borderColor: colors.border }]}
+                    style={[styles.thumb, { borderColor: colors.border }]}
                     resizeMode="cover"
                   />
                 ) : (
-                  <View style={[styles.iconWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
                     <MaterialIcons name="place" size={22} color={colors.muted} />
                   </View>
                 )}
-                <View style={styles.info}>
+                <View style={styles.cardInfo}>
                   <View style={styles.nameRow}>
                     <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                       {venue.name}
@@ -83,25 +89,19 @@ export default function ManagerMyVenuesScreen() {
                       <MaterialIcons name="verified" size={15} color={colors.primary} />
                     )}
                   </View>
-                  <Text style={[styles.venueType, { color: colors.muted }]} numberOfLines={1}>
-                    {cityFromAddress(venue.googleMapsLocation?.address)}
-                  </Text>
-                  {venue.capacity ? (
-                    <Text style={[styles.capacity, { color: colors.muted }]}>
-                      Capacity: {venue.capacity}
+                  {subtitle ? (
+                    <Text style={[styles.venueSub, { color: colors.muted }]} numberOfLines={1}>
+                      {subtitle}
                     </Text>
                   ) : null}
-                  {venue.verificationStatus === 'rejected' ? (
-                    <View style={[styles.verifyPill, { backgroundColor: colors.error + '15' }]}>
-                      <MaterialIcons name="cancel" size={11} color={colors.error} />
-                      <Text style={[styles.verifyPillText, { color: colors.error }]}>Not approved</Text>
+                  {notVerified && (
+                    <View style={[styles.verifyPill, { backgroundColor: (rejected ? colors.error : colors.warning) + '15' }]}>
+                      <MaterialIcons name={rejected ? 'cancel' : 'schedule'} size={11} color={rejected ? colors.error : colors.warning} />
+                      <Text style={[styles.verifyPillText, { color: rejected ? colors.error : colors.warning }]}>
+                        {rejected ? 'Not approved' : 'Pending verification'}
+                      </Text>
                     </View>
-                  ) : venue.verificationStatus !== 'verified' ? (
-                    <View style={[styles.verifyPill, { backgroundColor: colors.warning + '15' }]}>
-                      <MaterialIcons name="schedule" size={11} color={colors.warning} />
-                      <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
-                    </View>
-                  ) : null}
+                  )}
                 </View>
               </View>
               <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
@@ -109,20 +109,6 @@ export default function ManagerMyVenuesScreen() {
           );
         }}
       />
-      {/* FAB */}
-      <Pressable
-        style={[styles.fabWrapper, { bottom: Math.max(insets.bottom, 8) + 56 + 24 }]}
-        onPress={() => router.push('/(manager)/create-venue' as Href)}
-      >
-        <LinearGradient
-          colors={['#E8775A', '#C94E30']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.fab}
-        >
-          <MaterialIcons name="add" size={24} color="rgba(255,255,255,0.95)" />
-        </LinearGradient>
-      </Pressable>
     </ScreenContainer>
   );
 }
@@ -133,30 +119,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5, gap: 10,
   },
   backBtn: { width: 32, alignItems: 'flex-start' },
+  addBtn: { padding: 4 },
   title: { fontSize: 20, fontWeight: '700', flex: 1 },
-  list: { padding: 20, gap: 10, flexGrow: 1 },
-  card: {
+  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  rowCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 14, borderWidth: 1, padding: 14,
+    paddingVertical: 8,
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  iconWrap: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
-  },
-  info: { flex: 1 },
-  venueName: { fontSize: 15, fontWeight: '700' },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
-  venueType: { fontSize: 13, marginBottom: 2 },
-  capacity: { fontSize: 12 },
+  thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
+  cardInfo: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 1 },
+  venueName: { fontSize: 14, fontWeight: '600' },
+  venueSub: { fontSize: 13 },
   verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
   verifyPillText: { fontSize: 10, fontWeight: '700' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
-  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
-  fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
-  discoverBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7 },
-  discoverBtnText: { fontSize: 13, fontWeight: '700' },
 });
