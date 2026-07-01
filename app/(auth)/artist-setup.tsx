@@ -11,6 +11,7 @@ import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
 import { PhoneInput } from '@/components/phone-input';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
@@ -29,7 +30,7 @@ const INSTRUMENTS: InstrumentType[] = [
   'Violin', 'Flute', 'Vocalist', 'Piano / Keys', 'Oud', 'Darbuka', 'Bongos',
 ];
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
 
@@ -37,6 +38,7 @@ export default function DJSetupScreen() {
   const router = useRouter();
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
   const updateArtistProfile = useLineupStore((s) => s.updateArtistProfile);
   const scrollRef = useRef<ScrollView>(null);
@@ -123,6 +125,7 @@ export default function DJSetupScreen() {
         if (!form.email.trim()) { Alert.alert('Required', 'Please enter your email address.'); return; }
         if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
       }
+      if (form.instruments.length === 0) { Alert.alert('Required', 'Please select at least one — CDJ / Turntables if you DJ, or your instrument(s).'); return; }
       setUsernameError('');
       setEmailError('');
     }
@@ -270,7 +273,7 @@ export default function DJSetupScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 40 + keyboardHeight }]} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         <Animated.View style={animatedStyle}>
           <View style={styles.header}>
             <Pressable onPress={handleBack} style={styles.backBtn}>
@@ -284,8 +287,7 @@ export default function DJSetupScreen() {
             <Text style={[styles.title, { color: colors.foreground }]}>
               {displayStep === 1 && 'Your Identity'}
               {displayStep === 2 && 'Your Sound'}
-              {displayStep === 3 && 'Instruments'}
-              {displayStep === 4 && 'Media Links'}
+              {displayStep === 3 && 'Media Links'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
           </View>
@@ -341,11 +343,15 @@ export default function DJSetupScreen() {
                 onChange={(v) => update('phone', v)}
               />
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Bio (max 500 chars)</Text>
-                <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="Tell venues about your style..." placeholderTextColor={colors.muted}
-                  value={form.bio} onChangeText={(v) => update('bio', v)} multiline numberOfLines={4} maxLength={500} />
-                <Text style={[styles.charCount, { color: colors.muted }]}>{form.bio.length}/500</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>What do you play? *</Text>
+                <Text style={[styles.fieldHint, { color: colors.muted }]}>Pick CDJ / Turntables if you DJ, or your instrument(s)</Text>
+                <View style={styles.chipGrid}>
+                  {INSTRUMENTS.map((i) => (
+                    <Pressable key={i} style={[styles.chip, { borderColor: form.instruments.includes(i) ? colors.primary : colors.border, backgroundColor: form.instruments.includes(i) ? colors.primary : colors.surface }]} onPress={() => toggleInstrument(i)}>
+                      <Text style={[styles.chipText, { color: form.instruments.includes(i) ? '#fff' : colors.foreground }]}>{i}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Based In</Text>
@@ -384,35 +390,10 @@ export default function DJSetupScreen() {
             </View>
           )}
 
-          {/* Step 3: Instruments */}
+          {/* Step 3: Media Links */}
           {displayStep === 3 && (
             <View style={styles.form}>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Instruments</Text>
-                <View style={styles.chipGrid}>
-                  {INSTRUMENTS.map((i) => (
-                    <Pressable key={i} style={[styles.chip, { borderColor: form.instruments.includes(i) ? colors.primary : colors.border, backgroundColor: form.instruments.includes(i) ? colors.primary : colors.surface }]} onPress={() => toggleInstrument(i)}>
-                      <Text style={[styles.chipText, { color: form.instruments.includes(i) ? '#fff' : colors.foreground }]}>{i}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Step 4: Media Links */}
-          {displayStep === 4 && (
-            <View style={styles.form}>
               <Text style={[styles.infoText, { color: colors.muted, marginBottom: 8 }]}>At least one link is required.</Text>
-              {(['soundcloud', 'spotify', 'mixcloud'] as const).map((platform) => (
-                <View key={platform} style={styles.fieldGroup}>
-                  <Text style={[styles.label, { color: colors.foreground }]}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
-                  <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder={`https://${platform}.com/yourprofile`} placeholderTextColor={colors.muted}
-                    value={form[platform]} onChangeText={(v) => update(platform, v)}
-                    autoCapitalize="none" keyboardType="url" returnKeyType="done" />
-                </View>
-              ))}
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Instagram</Text>
                 <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -429,18 +410,30 @@ export default function DJSetupScreen() {
                   />
                 </View>
               </View>
+              {(['soundcloud', 'spotify', 'mixcloud'] as const).map((platform) => (
+                <View key={platform} style={styles.fieldGroup}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
+                  <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                    placeholder={`https://${platform}.com/yourprofile`} placeholderTextColor={colors.muted}
+                    value={form[platform]} onChangeText={(v) => update(platform, v)}
+                    autoCapitalize="none" keyboardType="url" returnKeyType="done" />
+                </View>
+              ))}
             </View>
           )}
 
-          <Pressable
-            style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]}
-            onPress={handleNext}
-            disabled={isLoading || isAnimating}
-          >
-            <Text style={styles.nextBtnText}>{isLoading ? 'Creating profile...' : step < TOTAL_STEPS ? 'Continue' : 'Complete Profile'}</Text>
-          </Pressable>
         </Animated.View>
       </ScrollView>
+      {/* Pinned footer — Continue is always visible and lifts above the keyboard */}
+      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 10 : (insets.bottom || 16) }]}>
+        <Pressable
+          style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]}
+          onPress={handleNext}
+          disabled={isLoading || isAnimating}
+        >
+          <Text style={styles.nextBtnText}>{isLoading ? 'Creating profile...' : step < TOTAL_STEPS ? 'Continue' : 'Complete Profile'}</Text>
+        </Pressable>
+      </View>
     </ScreenContainer>
   );
 }
@@ -468,6 +461,7 @@ const styles = StyleSheet.create({
   fieldHint: { fontSize: 12, marginTop: -4 },
   errorText: { fontSize: 12, marginTop: 2 },
   nextBtn: { backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  footer: { paddingHorizontal: 24, paddingTop: 12, borderTopWidth: 0.5 },
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   instagramRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },

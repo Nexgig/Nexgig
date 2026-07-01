@@ -8,7 +8,7 @@ import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailab
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
-import { isPastStart } from '@/lib/utils';
+import { isPastStart, performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
@@ -279,7 +279,7 @@ export default function AssignDJScreen() {
               )}
               <View style={styles.djInfo}>
                 <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                <Text style={[styles.djGenre, { color: colors.muted }]}>{item.profile?.primaryGenre ?? 'Artist'}</Text>
+                <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
               </View>
               <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
             </Pressable>
@@ -511,7 +511,7 @@ export default function AssignDJScreen() {
               </View>
             )}
           </View>
-          <Text style={[styles.djGenre, { color: colors.muted }]}>{item.profile?.primaryGenre ?? 'Artist'}</Text>
+          <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
           {item.hasConflict && item.conflicts[0] && (
             <View style={styles.conflictBanner}>
               <MaterialIcons name="warning" size={12} color={colors.error} />

@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useNotificationStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
+import { performerLabel } from '@/lib/utils';
 import type { VenueAssignment } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
@@ -216,7 +217,7 @@ export default function RosterScreen() {
     if (!item.user) return null;
     const completedGigs = getCompletedGigs(item.user.id);
     const metaParts = [
-      item.profile?.primaryGenre ?? 'Artist',
+      performerLabel(item.profile?.instruments),
       `${completedGigs} gig${completedGigs !== 1 ? 's' : ''}`,
     ];
     if (item.assignedVenues.length > 0) {

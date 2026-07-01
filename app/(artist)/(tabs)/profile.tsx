@@ -9,6 +9,7 @@ import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, us
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
+import { performerLabel } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -232,7 +233,7 @@ export default function ArtistProfileScreen() {
                   <MaterialIcons name="verified" size={18} color={colors.primary} />
                 ) : null}
               </View>
-              <Text style={[styles.genre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
+              <Text style={[styles.genre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
             </View>
           </View>
           {/* Bottom row: based in on the left (consistent across all profile views) */}

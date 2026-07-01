@@ -7,6 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { cityFromAddress } from '@/lib/places';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -32,6 +33,7 @@ type ArtistItem = {
   based_in: string;
   profile_photo_url: string;
   secondary_genres: string[];
+  instruments?: string[];
   has_completed_booking?: boolean;
 };
 
@@ -445,7 +447,7 @@ export default function ArtistNetworkScreen() {
                       )}
                     </View>
                     <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {artist.primary_genre ?? 'Artist'}
+                      {performerLabel(artist.instruments)}
                     </Text>
                   </View>
                 </View>

@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useLineupStore, useBookingStore, useVenueStore, useSlotStore, useArtistDirectoryStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { performerLabel } from '@/lib/utils';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
 import { ReportModal } from '@/components/report-modal';
@@ -160,7 +161,7 @@ export default function ArtistProfileViewScreen() {
                   <MaterialIcons name="verified" size={18} color={colors.primary} />
                 ) : null}
               </View>
-              <Text style={[styles.djGenre, { color: colors.muted }]}>{profile?.primaryGenre ?? 'Artist'}</Text>
+              <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
             </View>
           </View>
           {/* Bottom row: based in on the left (consistent across all profile views) */}

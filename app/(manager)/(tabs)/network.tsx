@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
 import { useColors } from '@/hooks/use-colors';
+import { performerLabel } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { supabase } from '@/lib/supabase';
@@ -447,7 +448,7 @@ export default function NetworkScreen() {
                         )}
                       </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {pendingApp ? `Wants to join ${pendingApp.venue?.name ?? 'a venue'}` : (profile?.primaryGenre ?? 'Artist')}
+                        {pendingApp ? `Wants to join ${pendingApp.venue?.name ?? 'a venue'}` : performerLabel(profile?.instruments)}
                       </Text>
                     </View>
                   </View>

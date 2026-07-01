@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { InstrumentType } from "@/lib/types";
 
 /**
  * Combines class names using clsx and tailwind-merge.
@@ -64,4 +65,16 @@ export function isUpcoming(date: string, startTime?: string): boolean {
  */
 export function isPastStart(date: string, startTime?: string): boolean {
   return slotDateTimeStr(date, startTime) < nowLocalDateTimeStr();
+}
+
+/**
+ * The label shown under an artist's name on every card / profile.
+ * An artist picks their setup at signup (multi-select). If 'CDJ / Turntables'
+ * is among their instruments they're a DJ; any other instrument makes them a
+ * Musician. Empty only happens for legacy accounts created before the choice
+ * was mandatory — falls back to 'Artist'.
+ */
+export function performerLabel(instruments?: (InstrumentType | string)[] | null): string {
+  if (!instruments || instruments.length === 0) return 'Artist';
+  return instruments.includes('CDJ / Turntables') ? 'DJ' : 'Musician';
 }
