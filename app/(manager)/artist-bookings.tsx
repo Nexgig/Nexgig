@@ -4,8 +4,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore } from '@/lib/store';
+import { AvatarImage } from '@/components/ui/avatar-image';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { todayLocalStr } from '@/lib/utils';
 
@@ -19,6 +21,7 @@ export default function ArtistBookingsScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const allSlots = useSlotStore((s) => s.slots);
   const allVenues = useVenueStore((s) => s.venues);
+  const allInvoices = useInvoiceStore((s) => s.invoices);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
 
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
@@ -30,6 +33,14 @@ export default function ArtistBookingsScreen() {
     () => allBookings.filter((b) => b.artistId === artistId && b.managerId === currentUser?.id),
     [allBookings, artistId, currentUser?.id]
   );
+
+  // Booking ids that appear on a live (non-cancelled) invoice — drives the
+  // "Invoiced" chip, same derivation as the dashboard.
+  const invoicedBookingIds = useMemo(() => new Set(
+    allInvoices
+      .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
+      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+  ), [allInvoices, currentUser?.id]);
 
   // Local date (not UTC) so a gig dated today doesn't drop out of Upcoming
   // in the early hours (UTC+4 would still read yesterday from toISOString).
@@ -81,12 +92,6 @@ export default function ArtistBookingsScreen() {
     activeTab === 'pending' ? pendingBookings :
     activeTab === 'upcoming' ? upcomingBookings :
     completedBookings;
-
-  const getStatusColor = (tab: Tab) => {
-    if (tab === 'pending') return colors.warning;
-    if (tab === 'upcoming') return colors.success;
-    return colors.primary;
-  };
 
   const getStatusIcon = (tab: Tab): 'schedule' | 'check-circle' | 'event-available' => {
     if (tab === 'pending') return 'schedule';
@@ -144,28 +149,36 @@ export default function ArtistBookingsScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const statusColor = getStatusColor(activeTab);
-          const statusIcon = getStatusIcon(activeTab);
+          const isDone = item.status === 'completed' || item.isCompleted;
+          const isPending = item.status === 'requested' || item.status === 'past_confirmation';
+          const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+          const isInvoiced = invoicedBookingIds.has(item.id);
           return (
             <Pressable
-              style={({ pressed }) => [styles.bookingCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}
             >
-              <View style={[styles.statusDot, { backgroundColor: statusColor + '20' }]}>
-                <MaterialIcons name={statusIcon} size={18} color={statusColor} />
-              </View>
-              <View style={styles.bookingInfo}>
-                <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
-                  {item.venue?.name ?? item.venueName ?? 'Unknown Venue'}
-                </Text>
-                <Text style={[styles.bookingDate, { color: colors.muted }]} numberOfLines={1}>
+              <AvatarImage uri={artist?.profilePhotoUrl} size={48} variant="artist" />
+              <View style={styles.gigInfo}>
+                <View style={styles.titleRow}>
+                  <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                    {item.venue?.name ?? item.venueName ?? 'Unknown Venue'}
+                  </Text>
+                  {isInvoiced && (
+                    <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                      <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
                   {item.slot?.date ? formatDate(item.slot.date) : 'Date unknown'}
                   {item.slot?.startTime && item.slot?.endTime
                     ? ` · ${formatTime(item.slot.startTime)}–${formatTime(item.slot.endTime)}`
                     : ''}
                 </Text>
               </View>
-              <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+              {/* Status dot — Clash Display period, like the Nexgig "." */}
+              <Text allowFontScaling={false} style={[styles.statusDot, { color: dotColor }]}>.</Text>
             </Pressable>
           );
         }}
@@ -193,15 +206,17 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: 14, fontWeight: '600' },
   tabBadge: { borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   tabBadgeText: { fontSize: 11, fontWeight: '700' },
-  list: { padding: 16, gap: 10 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 15, fontWeight: '500' },
-  bookingCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderRadius: 14, borderWidth: 1, padding: 14,
-  },
-  statusDot: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  bookingInfo: { flex: 1 },
-  venueName: { fontSize: 15, fontWeight: '700', marginBottom: 3 },
-  bookingDate: { fontSize: 13 },
+
+  // Booking card — identical to the manager dashboard "Bookings" card
+  bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
+  gigInfo: { flex: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
+  bookingSub: { fontSize: 13 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
+  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
 });
