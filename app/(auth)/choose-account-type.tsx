@@ -27,6 +27,13 @@ export default function ChooseAccountTypeScreen() {
   return (
     <ScreenContainer>
       <View style={styles.container}>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/welcome' as Href))}
+          style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1 }]}
+          hitSlop={8}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+        </Pressable>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>One last step</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
@@ -69,7 +76,8 @@ export default function ChooseAccountTypeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 60, justifyContent: 'flex-start' },
+  container: { flex: 1, paddingHorizontal: 24, paddingTop: 24, justifyContent: 'flex-start' },
+  backBtn: { alignSelf: 'flex-start', padding: 4, marginBottom: 16 },
   header: { marginBottom: 40 },
   title: { fontSize: 28, fontWeight: '800', marginBottom: 8 },
   subtitle: { fontSize: 15, lineHeight: 22 },

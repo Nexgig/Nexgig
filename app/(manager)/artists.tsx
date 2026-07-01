@@ -215,15 +215,7 @@ export default function RosterScreen() {
   // ── Render ───────────────────────────────────────────────────────────────────
   const renderArtist = ({ item }: { item: typeof djListGlobal[0] }) => {
     if (!item.user) return null;
-    const completedGigs = getCompletedGigs(item.user.id);
-    const metaParts = [
-      performerLabel(item.profile?.instruments),
-      `${completedGigs} gig${completedGigs !== 1 ? 's' : ''}`,
-    ];
-    if (item.assignedVenues.length > 0) {
-      metaParts.push(`${item.assignedVenues.length} venue${item.assignedVenues.length > 1 ? 's' : ''}`);
-    }
-    const metaLine = metaParts.join('  ·  ');
+    const metaLine = performerLabel(item.profile?.instruments);
 
     return (
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>

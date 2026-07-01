@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -55,7 +55,6 @@ export default function DJSetupScreen() {
   const [form, setForm] = useState({
     fullName: oauthName ?? '',
     fullLegalName: '',
-    username: '',
     email: oauthEmail ?? '',
     password: '',
     phone: '',
@@ -67,11 +66,8 @@ export default function DJSetupScreen() {
     instruments: [] as InstrumentType[],
     soundcloud: '', mixcloud: '', instagram: '', spotify: '',
   });
-  const [usernameError, setUsernameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const usernameValid = useMemo(() => /^[a-z0-9_]+$/.test(form.username) || form.username === '', [form.username]);
 
   const translateX = useSharedValue(0);
 
@@ -119,14 +115,11 @@ export default function DJSetupScreen() {
     if (step === 1) {
       if (!form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
       if (!form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
-      if (!form.username.trim()) { Alert.alert('Required', 'Please choose a username.'); return; }
-      if (!usernameValid) { Alert.alert('Invalid Username', 'Lowercase letters, numbers, and underscores only.'); return; }
       if (!isOAuth) {
         if (!form.email.trim()) { Alert.alert('Required', 'Please enter your email address.'); return; }
         if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
       }
       if (form.instruments.length === 0) { Alert.alert('Required', 'Please select at least one — CDJ / Turntables if you DJ, or your instrument(s).'); return; }
-      setUsernameError('');
       setEmailError('');
     }
 
@@ -198,25 +191,46 @@ export default function DJSetupScreen() {
       return;
     }
 
-    // ✅ Step 3 — insert into artists table
-    const { error: artistInsertError } = await supabase.from('artists').upsert({
-  id: user.id,
-  email: profileEmail,
-  full_name: form.fullName.trim(),
-  full_legal_name: form.fullLegalName.trim(),
-  username: form.username.trim().toLowerCase(),
-  phone: form.phone.trim(),
-  bio: form.bio || null,
-  based_in: form.basedIn || null,
-  nationality: form.nationality || null,
-  primary_genre: form.primaryGenre || null,
-  secondary_genres: form.secondaryGenres,
-  instruments: form.instruments,
-  instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
-  soundcloud_url: form.soundcloud || null,
-  mixcloud_url: form.mixcloud || null,
-  spotify_url: form.spotify || null,
-}, { onConflict: 'id' });
+    // Auto-generate a unique username from the artist name (no manual entry).
+    // Base = name lowercased with non-alphanumerics collapsed to underscores;
+    // if taken, append 2, 3, 4… until free (DB unique constraint is the backstop).
+    const baseUsername = form.fullName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'artist';
+    let username = baseUsername;
+    for (let n = 2; n <= 60; n++) {
+      const { data: taken } = await supabase.from('artists').select('id').eq('username', username).maybeSingle();
+      if (!taken) break;
+      username = `${baseUsername}${n}`;
+    }
+
+    // ✅ Step 3 — insert into artists table (retry username on a unique clash / race)
+    const artistRow = {
+      id: user.id,
+      email: profileEmail,
+      full_name: form.fullName.trim(),
+      full_legal_name: form.fullLegalName.trim(),
+      phone: form.phone.trim(),
+      bio: form.bio || null,
+      based_in: form.basedIn || null,
+      nationality: form.nationality || null,
+      primary_genre: form.primaryGenre || null,
+      secondary_genres: form.secondaryGenres,
+      instruments: form.instruments,
+      instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
+      soundcloud_url: form.soundcloud || null,
+      mixcloud_url: form.mixcloud || null,
+      spotify_url: form.spotify || null,
+    };
+    let artistInsertError: any = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const { error } = await supabase.from('artists').upsert({ ...artistRow, username }, { onConflict: 'id' });
+      if (!error) { artistInsertError = null; break; }
+      artistInsertError = error;
+      if (error.code === '23505' && /username/i.test(error.message ?? '')) {
+        username = `${baseUsername}${Math.floor(Math.random() * 9000) + 1000}`;
+        continue;
+      }
+      break;
+    }
 
     setIsLoading(false);
 
@@ -233,7 +247,7 @@ export default function DJSetupScreen() {
       accountType: 'artist' as const,
       fullName: form.fullName.trim(),
       fullLegalName: form.fullLegalName.trim(),
-      username: form.username.trim().toLowerCase(),
+      username,
       bio: form.bio,
       location: undefined,
       isPhoneVerified: false,
@@ -308,14 +322,6 @@ export default function DJSetupScreen() {
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                   placeholder="Kai Nakamura" placeholderTextColor={colors.muted}
                   value={form.fullLegalName} onChangeText={(v) => update('fullLegalName', v)} returnKeyType="next" />
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Username *</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: usernameError ? '#EF4444' : colors.border, color: colors.foreground }]}
-                  placeholder="kai_nakamura" placeholderTextColor={colors.muted}
-                  value={form.username} onChangeText={(v) => { update('username', v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(''); }}
-                  autoCapitalize="none" autoCorrect={false} returnKeyType="next" />
-                {usernameError ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{usernameError}</Text> : null}
               </View>
               {!isOAuth && (
               <View style={styles.fieldGroup}>
