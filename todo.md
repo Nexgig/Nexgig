@@ -10,6 +10,13 @@
 
 **MEDIUM / feature work**
 
+_(UI FIXES (NOT STARTED, logged July 1 2026):_
+_  • MY VENUES PAGE — fix the page appearance (visual polish pass). Overlaps the DESIGN "My Venues — minimal" item below; treat together._
+_  • MY ARTISTS PAGE — fix the page appearance AND fix the lineup display INSIDE "My Artists" (the per-artist lineup view). Overlaps the DESIGN "My Artists — minimal" item below._
+_  • ASSIGN ARTIST PAGE — make it possible to add an artist to a VENUE's lineup from INSIDE the assign-artist page (i.e. surface the venue-lineup add action there). NOTE: `app/(manager)/assign-artist.tsx` already has a VENUE LINEUP MODE (when opened with a `venueId` param it lists global-lineup artists + handleAddToVenueLineup) — verify whether this is a NEW entry point/flow request (add-to-lineup from the slot-assignment mode, or a clearer button) vs. the existing mode; confirm exact intent with Tuts before implementing._
+_  • INVOICE PREVIEW — two fixes on `app/(artist)/invoice-preview.tsx`: (1) the preview content sits too far down / too low on the screen — fix the layout so it's positioned properly (check the ScrollView `contentContainerStyle` paddingTop / header spacing). (2) the "Nexgig." wordmark in the on-screen preview card is NOT rendering in Clash Display Bold — it uses `fonts.displayBold` on `invoiceTitle` but isn't showing as Clash; verify the font actually applies (the PDF/HTML already embeds CLASH_DISPLAY_BOLD_BASE64 via @font-face, but the React Native preview card relies on the loaded `ClashDisplay-Bold` family — check the family name in `lib/fonts.ts` matches and that the weight maps correctly). Make the on-screen "Nexgig." match the Clash Bold wordmark used elsewhere._
+_)_
+
 _(DESIGN — "Finish Design" pass (NOT STARTED, requested June 27 2026; follows the June 27 orange `#E2674A` theme recolor which is DONE). Screen-by-screen polish toward a more minimal look — propose approach per screen before coding:_
 _  • Artist Profile — minimal; invoices section minimal; profile photo = round upload._
 _  • Manager Profile — round photo upload, minimal._
@@ -24,6 +31,7 @@ _  • Dashboard — the "X" mark → change to "Nexgig" (logo / "gig" wordmark 
 _  • "Add Block" control → style it like the "Add Set" pill (consistent pill look)._
 _  • Tab headers — fix the Calendar / My Profile / tab headers on BOTH artist and manager sides (consistency pass)._
 _  • Finish design IMAGES — finalize the app's image assets (logo / brand / avatar / illustration art) so they match the new minimal direction._
+_  • LOGO ASSETS + WELCOME SCREEN — fix/finalize the logo image assets and redo the Welcome screen appearance (visual polish pass on the first-run/Welcome page). Slogan stays "Book. Play. Discover." (unchanged — keep as-is)._
 _  • CLEAN asset images — audit `assets/images/`, remove unused/orphaned image files (and any retired icons from the old blue theme), keep the asset folder lean. Verify nothing still imports a removed asset before deleting._
 _  • UNIFIED TIME FORMAT — time is shown inconsistently (e.g. dashboard shows "8 PM" but the calendar shows "20:00" for the same slot). Make it consistent app-wide AND add a Settings toggle (12h AM/PM vs 24h) the user picks; every time display reads from that preference. Implementation: a single shared `formatTime` helper (note `lib/conflict-detection.ts` already exports a formatTime — likely the place, or a new one) that takes the user's 12h/24h setting; store the choice in settings (AsyncStorage, same pattern as other settings toggles) + expose via a hook/store so all screens re-render on change. Audit every time render (dashboard, calendar, booking-detail, assign-artist, invoices, pending-requests, profiles) so none format time inline — all go through the shared helper. Default 12h AM/PM (matches dashboard today)._
 _  • PENDING REQUESTS time cut off — on the artist pending-requests cards the slot timing isn't fully visible (user can't see the full start–end time). Fix the layout so the full time range shows (likely a flex/numberOfLines/width constraint on the date-time row in `app/(artist)/pending-requests.tsx`). Folds in naturally with the unified-time-format work._
