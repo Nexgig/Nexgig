@@ -572,7 +572,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -702,6 +702,8 @@ export default function AssignDJScreen() {
             )}
           </View>
         }
+        ListFooterComponent={<View style={{ flexGrow: 1, minHeight: 300, backgroundColor: colors.background }} />}
+        ListFooterComponentStyle={{ flexGrow: 1 }}
         keyExtractor={(_, i) => String(i)}
         showsVerticalScrollIndicator={false}
       />
