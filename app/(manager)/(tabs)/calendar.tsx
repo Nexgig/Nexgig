@@ -2125,7 +2125,7 @@ if (newBookingId) {
       {/* ═══════════════════ ADD / EDIT SLOT SHEET ═══════════════════ */}
       <Modal
         visible={showSlotModal}
-        animationType="none"
+        animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); }}
       >
