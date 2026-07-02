@@ -7,7 +7,6 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -41,9 +40,7 @@ export default function RosterScreen() {
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   // ── Invite modal ────────────────────────────────────────────────────────────
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [isInviting, setIsInviting] = useState(false);
+
 
   // ── Assign Venue sheet ──────────────────────────────────────────────────────
   const [showAssignSheet, setShowAssignSheet] = useState(false);
@@ -174,15 +171,7 @@ export default function RosterScreen() {
     );
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim()) { Alert.alert('Required', 'Please enter an email address.'); return; }
-    setIsInviting(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setIsInviting(false);
-    Alert.alert('Invite Sent', `An invitation has been sent to ${inviteEmail}.`);
-    setInviteEmail('');
-    setShowInviteModal(false);
-  };
+
 
   // ── Derived for assign sheet ─────────────────────────────────────────────────
   const assignDJName = getArtistUser(assignDJId)?.fullName ?? 'Artist';
@@ -307,7 +296,7 @@ export default function RosterScreen() {
         data={djListGlobal}
         keyExtractor={(item) => item.entry.id}
         renderItem={renderArtist}
-        contentContainerStyle={[styles.list, { paddingBottom: Math.max(insets.bottom, 8) + 24 + 50 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: Math.max(insets.bottom, 8) + 24 }]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyState
@@ -419,59 +408,6 @@ export default function RosterScreen() {
       </Modal>
 
       {/* ── Add Artist Modal ──────────────────────────────────────────────────── */}
-      <Modal visible={showInviteModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Add Artist to Roster</Text>
-            <Text style={[styles.sheetSub, { color: colors.muted, marginBottom: 22 }]}>
-              Enter the artist's email address. They'll be added once they accept.
-            </Text>
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>EMAIL ADDRESS</Text>
-              <TextInput
-                style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                placeholder="artist@example.com"
-                placeholderTextColor={colors.muted}
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                returnKeyType="done"
-              />
-            </View>
-            <View style={styles.sheetActions}>
-              <Pressable
-                style={[styles.cancelBtn, { borderColor: colors.border }]}
-                onPress={() => { setShowInviteModal(false); setInviteEmail(''); }}
-              >
-                <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.confirmBtn, { opacity: isInviting ? 0.7 : 1 }]}
-                onPress={handleInvite}
-                disabled={isInviting}
-              >
-                <Text style={styles.confirmBtnText}>{isInviting ? 'Sending…' : 'Send Invite'}</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      {/* FAB */}
-      <Pressable
-        style={[styles.fabWrapper, { bottom: Math.max(insets.bottom, 8) + 24 }]}
-        onPress={() => router.push('/(manager)/(tabs)/network?tab=artists' as Href)}
-      >
-        <LinearGradient
-          colors={['#E8775A', '#C94E30']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.fab}
-        >
-          <MaterialIcons name="person-add" size={22} color="rgba(255,255,255,0.95)" />
-        </LinearGradient>
-      </Pressable>
     </ScreenContainer>
   );
 }
@@ -484,8 +420,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, flex: 1 },
   backBtn: { width: 32, alignItems: 'flex-start' },
-  fabWrapper: { position: 'absolute', right: 24, width: 50, height: 50, borderRadius: 25, shadowColor: '#C94E30', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 10 },
-  fab: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   discoverBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   discoverBtnText: { fontSize: 13, fontWeight: '700' },
 
