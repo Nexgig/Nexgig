@@ -160,7 +160,7 @@ export default function AddSlotScreen() {
                 <MaterialIcons name={startTimeOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
               </Pressable>
               {startTimeOpen && (
-                <View style={[styles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <ScrollView ref={startTimeScrollRef} onLayout={() => scrollToTimeOption(startTimeScrollRef, slotForm.startTime)} style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
                     {TIME_OPTIONS.map((t) => {
                       const isSelected = slotForm.startTime === t;
@@ -193,7 +193,7 @@ export default function AddSlotScreen() {
                 <MaterialIcons name={endTimeOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
               </Pressable>
               {endTimeOpen && (
-                <View style={[styles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <ScrollView ref={endTimeScrollRef} onLayout={() => scrollToTimeOption(endTimeScrollRef, slotForm.endTime)} style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
                     {TIME_OPTIONS.map((t) => {
                       const isSelected = slotForm.endTime === t;
