@@ -138,58 +138,62 @@ export function PhoneInput({ value, onChange, label = 'Phone Number', optional =
         />
       </View>
 
-      {/* Country picker modal */}
-      <Modal visible={showPicker} animationType="slide" transparent onRequestClose={() => setShowPicker(false)}>
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Select Country Code</Text>
-            {/* Search */}
-            <View style={[styles.searchRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <MaterialIcons name="search" size={18} color={colors.muted} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.foreground }]}
-                placeholder="Search country..."
-                placeholderTextColor={colors.muted}
-                value={search}
-                onChangeText={setSearch}
-                autoCapitalize="none"
-              />
-              {search.length > 0 && (
-                <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                  <MaterialIcons name="close" size={16} color={colors.muted} />
-                </Pressable>
-              )}
-            </View>
-            <FlatList
-              data={filtered}
-              keyExtractor={(item) => `${item.name}-${item.code}`}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
-                const isSelected = item.name === selectedCountry.name;
-                return (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.countryRow,
-                      { borderBottomColor: colors.border, backgroundColor: isSelected ? colors.primary + '10' : pressed ? colors.surface : 'transparent' }
-                    ]}
-                    onPress={() => handleSelectCountry(item)}
-                  >
-                    <Text style={styles.countryFlag}>{item.flag}</Text>
-                    <Text style={[styles.countryName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
-                    <Text style={[styles.countryCode, { color: isSelected ? colors.primary : colors.muted }]}>{item.code}</Text>
-                    {isSelected && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                  </Pressable>
-                );
-              }}
-            />
-            <Pressable
-              style={[styles.cancelBtn, { borderColor: colors.border }]}
-              onPress={() => { setShowPicker(false); setSearch(''); }}
-            >
-              <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
+      {/* Country code picker modal — native page sheet */}
+      <Modal
+        visible={showPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => { setShowPicker(false); setSearch(''); }}
+      >
+        <View style={[styles.modal, { backgroundColor: colors.background }]}>
+          {/* Header */}
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Country Code</Text>
+            <Pressable onPress={() => { setShowPicker(false); setSearch(''); }} style={styles.closeBtn}>
+              <MaterialIcons name="close" size={24} color={colors.foreground} />
             </Pressable>
           </View>
+          {/* Search */}
+          <View style={[styles.searchRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <MaterialIcons name="search" size={18} color={colors.muted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.foreground }]}
+              placeholder="Search country..."
+              placeholderTextColor={colors.muted}
+              value={search}
+              onChangeText={setSearch}
+              autoCapitalize="none"
+              autoFocus
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch('')} hitSlop={8}>
+                <MaterialIcons name="close" size={16} color={colors.muted} />
+              </Pressable>
+            )}
+          </View>
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => `${item.name}-${item.code}`}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const isSelected = item.name === selectedCountry.name;
+              return (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.countryRow,
+                    { borderBottomColor: colors.border, backgroundColor: isSelected ? colors.primary + '10' : pressed ? colors.surface : 'transparent' }
+                  ]}
+                  onPress={() => handleSelectCountry(item)}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <Text style={[styles.countryName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
+                  <Text style={[styles.countryCode, { color: isSelected ? colors.primary : colors.muted }]}>{item.code}</Text>
+                  {isSelected && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                </Pressable>
+              );
+            }}
+          />
         </View>
       </Modal>
     </View>
@@ -205,12 +209,16 @@ const styles = StyleSheet.create({
   code: { fontSize: 14, fontWeight: '700' },
   numberInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 15 },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modal: { flex: 1 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  modalTitle: { fontSize: 17, fontWeight: '700' },
+  closeBtn: { padding: 4 },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 16, paddingHorizontal: 20, maxHeight: '85%' },
   sheetHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   sheetTitle: { fontSize: 18, fontWeight: '800', marginBottom: 14 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginHorizontal: 16, marginTop: 12, marginBottom: 12 },
   searchInput: { flex: 1, fontSize: 14 },
-  countryRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 0.5 },
+  countryRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 20, borderBottomWidth: 0.5 },
   countryFlag: { fontSize: 22 },
   countryName: { flex: 1, fontSize: 15 },
   countryCode: { fontSize: 14, fontWeight: '600' },
