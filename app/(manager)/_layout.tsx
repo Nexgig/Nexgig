@@ -375,7 +375,7 @@ if (!lineupError && lineupData) {
         name="add-slot"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.7],
+          sheetAllowedDetents: [0.78],
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,

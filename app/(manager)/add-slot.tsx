@@ -216,6 +216,7 @@ export default function AddSlotScreen() {
           </Pressable>
         </View>
       </Pressable>
+      <View style={{ flexGrow: 1, minHeight: 200, backgroundColor: colors.background }} />
     </View>
   );
 }
