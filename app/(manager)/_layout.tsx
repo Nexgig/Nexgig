@@ -371,6 +371,16 @@ if (!lineupError && lineupData) {
           sheetCornerRadius: 20,
         }}
       />
+      <Stack.Screen
+        name="add-slot"
+        options={{
+          presentation: 'formSheet',
+          sheetAllowedDetents: [0.7],
+          sheetExpandsWhenScrolledToEdge: false,
+          sheetGrabberVisible: true,
+          sheetCornerRadius: 20,
+        }}
+      />
       <Stack.Screen name="create-venue" options={{ gestureEnabled: false }} />
       <Stack.Screen name="artist-profile-view" />
       <Stack.Screen name="artist-bookings" />

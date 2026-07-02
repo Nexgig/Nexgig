@@ -757,7 +757,7 @@ export default function CalendarScreen() {
     setBulkStartOpen(null);
     setBulkEndOpen(null);
     setSlotMode('single');
-    setShowSlotModal(true);
+    router.push(('/(manager)/add-slot?date=' + date + (preselect ? '&venueId=' + preselect : '')) as Href);
   };
 
   const openEditSlot = (slot: Slot) => {
