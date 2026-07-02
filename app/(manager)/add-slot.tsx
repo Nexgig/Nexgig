@@ -106,7 +106,7 @@ export default function AddSlotScreen() {
 
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: Math.max(insets.bottom, 16) + 24 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -220,6 +220,7 @@ export default function AddSlotScreen() {
             <Text style={[styles.ctaBtnText, { color: colors.foreground }]}>Create</Text>
           </Pressable>
         </View>
+        <View style={{ flexGrow: 1, minHeight: 300, backgroundColor: colors.background }} />
       </ScrollView>
     </View>
   );
