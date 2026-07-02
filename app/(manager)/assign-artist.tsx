@@ -625,6 +625,8 @@ export default function AssignDJScreen() {
       </View>
 
       <FlatList
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{ flexGrow: 1 }}
         removeClippedSubviews={true}
         windowSize={5}
         maxToRenderPerBatch={10}

@@ -365,7 +365,7 @@ if (!lineupError && lineupData) {
         name="assign-artist"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.7],
+          sheetAllowedDetents: [0.78],
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
