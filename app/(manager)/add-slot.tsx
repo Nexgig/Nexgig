@@ -1,14 +1,15 @@
-import { useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '@/lib/rn';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useVenueStore, useSlotStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { isPastStart } from '@/lib/utils';
-import type { Slot } from '@/lib/types';
+import { isPastStart, performerLabel } from '@/lib/utils';
+import { formatDate } from '@/lib/conflict-detection';
+import type { Slot, Booking } from '@/lib/types';
 
 const SLOT_PRESETS = [
   { name: 'Day', start: '13:00', end: '17:00' },
@@ -29,19 +30,80 @@ export default function AddSlotScreen() {
   const insets = useSafeAreaInsets();
   const { date, venueId } = useLocalSearchParams<{ date?: string; venueId?: string }>();
 
+  const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
   const addSlot = useSlotStore((s) => s.addSlot);
+  const updateSlot = useSlotStore((s) => s.updateSlot);
+  const deleteSlot = useSlotStore((s) => s.deleteSlot);
+  const venueAssignments = useLineupStore((s) => s.venueAssignments);
+  const getArtistUser = useLineupStore((s) => s.getArtistUser);
+  const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
+  const allDrafts = useDraftStore((s) => s.drafts);
+  const setDraft = useDraftStore((s) => s.setDraft);
+  const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const addBooking = useBookingStore((s) => s.addBooking);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
-  const venues = allVenues.filter((v) => !v.isHidden);
+  const venues = allVenues.filter((v) => !v.isHidden && v.managerId === currentUser?.id);
   const targetDate = date ?? new Date().toISOString().slice(0, 10);
 
   const [createSlotVenueId, setCreateSlotVenueId] = useState<string>(venueId ?? venues[0]?.id ?? '');
   const [slotForm, setSlotForm] = useState({ name: '', startTime: '20:00', endTime: '00:00' });
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
+  const [createdSlotId, setCreatedSlotId] = useState<string | null>(null);
 
+  const assignedRef = useRef(false);
   const startTimeScrollRef = useRef<ScrollView>(null);
   const endTimeScrollRef = useRef<ScrollView>(null);
+
+  const isPast = isPastStart(targetDate, slotForm.startTime);
+
+  // Create the slot in the background as soon as the sheet opens.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!currentUser || !createSlotVenueId) return;
+      const { data, error } = await supabase.from('slots').insert({
+        venue_id: createSlotVenueId,
+        manager_id: currentUser.id,
+        name: slotForm.name,
+        date: targetDate,
+        start_time: slotForm.startTime,
+        end_time: slotForm.endTime,
+        status: 'open',
+      }).select().single();
+      if (cancelled || error || !data) { if (error) console.warn('bg slot create:', error.message); return; }
+      addSlot({
+        id: data.id, venueId: createSlotVenueId, name: slotForm.name, date: targetDate,
+        startTime: slotForm.startTime, endTime: slotForm.endTime, createdAt: new Date().toISOString(),
+      } as Slot);
+      setCreatedSlotId(data.id);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the background slot in sync when venue/time/name change.
+  useEffect(() => {
+    if (!createdSlotId) return;
+    updateSlot(createdSlotId, { venueId: createSlotVenueId, name: slotForm.name, startTime: slotForm.startTime, endTime: slotForm.endTime });
+    supabase.from('slots').update({
+      venue_id: createSlotVenueId, name: slotForm.name, start_time: slotForm.startTime, end_time: slotForm.endTime,
+    }).eq('id', createdSlotId).then(({ error }) => { if (error) console.warn('bg slot update:', error.message); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createSlotVenueId, slotForm.name, slotForm.startTime, slotForm.endTime, createdSlotId]);
+
+  // On close without assigning anyone, delete the empty background slot.
+  useEffect(() => {
+    return () => {
+      if (!assignedRef.current && createdSlotId) {
+        deleteSlot(createdSlotId);
+        supabase.from('slots').delete().eq('id', createdSlotId).then(() => {});
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createdSlotId]);
 
   const scrollToTimeOption = (ref: React.RefObject<ScrollView | null>, time: string) => {
     const idx = TIME_OPTIONS.indexOf(time);
@@ -54,41 +116,49 @@ export default function AddSlotScreen() {
     weekday: 'long', month: 'long', day: 'numeric',
   });
 
-  const handleSaveSlot = async (assignNow = false) => {
-    const targetVenueId = createSlotVenueId;
-    if (!targetVenueId) { Alert.alert('Required', 'Please select a venue.'); return; }
+  const lineupArtists = venueAssignments
+    .filter((a) => a.venueId === createSlotVenueId && a.status === 'active')
+    .map((a) => ({ artistId: a.artistId, user: getArtistUser(a.artistId), profile: getArtistProfile(a.artistId) }))
+    .filter((x) => !!x.user)
+    .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { Alert.alert('Error', 'Not authenticated.'); return; }
+  const draftedIds = new Set(allDrafts.filter((d) => d.slotId === createdSlotId).map((d) => d.artistId));
 
-    const { data: slotData, error } = await supabase.from('slots').insert({
-      venue_id: targetVenueId,
-      manager_id: user.id,
-      name: slotForm.name,
-      date: targetDate,
-      start_time: slotForm.startTime,
-      end_time: slotForm.endTime,
-      status: 'open',
-    }).select().single();
-
-    if (error) { Alert.alert('Error creating slot', error.message); return; }
-
-    const newSlot: Slot = {
-      id: slotData.id,
-      venueId: targetVenueId,
-      name: slotForm.name,
-      date: targetDate,
-      startTime: slotForm.startTime,
-      endTime: slotForm.endTime,
-      createdAt: new Date().toISOString(),
+  const sendPastGigRequest = (artistId: string) => {
+    if (!currentUser || !createdSlotId) return;
+    const venueName = venues.find((v) => v.id === createSlotVenueId)?.name;
+    const now = new Date().toISOString();
+    const bookingId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    const booking: Booking = {
+      id: bookingId, slotId: createdSlotId, venueId: createSlotVenueId, artistId, managerId: currentUser.id,
+      status: 'requested', isCompleted: false, createdAt: now, updatedAt: now,
+      slotDate: targetDate, slotName: slotForm.name, slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime, venueName,
     };
-    addSlot(newSlot);
+    addBooking(booking);
+    supabase.from('bookings').insert({
+      id: bookingId, slot_id: createdSlotId, venue_id: createSlotVenueId, artist_id: artistId, manager_id: currentUser.id,
+      status: 'requested', is_completed: false, slot_date: targetDate, slot_name: slotForm.name,
+      slot_start_time: slotForm.startTime, slot_end_time: slotForm.endTime, venue_name: venueName ?? null,
+    }).then(({ error }) => { if (error) console.warn('past booking insert:', error.message); });
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
+      type: 'past_confirmation_request', title: 'Confirm Past Gig', body: `${venueName ?? 'a venue'} — ${formatDate(targetDate)}`,
+      isRead: false, relatedId: booking.id, relatedType: 'booking', createdAt: new Date().toISOString(),
+    });
+  };
 
-    if (assignNow || isPastStart(targetDate, slotForm.startTime)) {
-      router.replace(`/(manager)/assign-artist?slotId=${slotData.id}` as Href);
+  const handleTapArtist = (artistId: string) => {
+    if (!currentUser || !createdSlotId) return;
+    if (isPast) {
+      sendPastGigRequest(artistId);
     } else {
-      router.back();
+      setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
     }
+    assignedRef.current = true;
+    Keyboard.dismiss();
+    router.back();
   };
 
   return (
@@ -129,7 +199,7 @@ export default function AddSlotScreen() {
         </View>
 
         <View style={styles.fieldBlock}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>SET TIME</Text>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>TIME PRESETS</Text>
           <View style={styles.presetRow}>
             {SLOT_PRESETS.map((preset) => (
               <Pressable
@@ -211,16 +281,42 @@ export default function AddSlotScreen() {
           </View>
         </View>
 
-        <View style={[styles.ctaRow, { paddingBottom: Math.max(insets.bottom, 16), flexDirection: 'column', gap: 10 }]}>
-          <Pressable style={({ pressed }) => [styles.ctaBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleSaveSlot(true)}>
-            <MaterialIcons name="add" size={18} color="#fff" />
-            <Text style={styles.ctaBtnText}>Assign Artist Now</Text>
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.ctaBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleSaveSlot(false)}>
-            <Text style={[styles.ctaBtnText, { color: colors.foreground }]}>Create</Text>
-          </Pressable>
+        <View style={styles.listHeaderRow}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isPast ? 'SEND COMPLETED GIG TO' : 'ASSIGN ARTIST'}</Text>
         </View>
-        <View style={{ flexGrow: 1, minHeight: 300, backgroundColor: colors.background }} />
+
+        {lineupArtists.length === 0 ? (
+          <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+        ) : (
+          lineupArtists.map((item) => {
+            const drafted = !isPast && draftedIds.has(item.artistId);
+            return (
+              <Pressable
+                key={item.artistId}
+                style={({ pressed }) => [styles.artistRow, {
+                  backgroundColor: drafted ? colors.primary + '15' : colors.surface,
+                  borderColor: drafted ? colors.primary : colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                }]}
+                onPress={() => handleTapArtist(item.artistId)}
+              >
+                {item.user!.profilePhotoUrl ? (
+                  <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                    <MaterialIcons name="person" size={20} color={colors.muted} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
+                  <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+                </View>
+                <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
+              </Pressable>
+            );
+          })
+        )}
+        <View style={{ flexGrow: 1, minHeight: 200, backgroundColor: colors.background }} />
       </ScrollView>
     </View>
   );
@@ -248,7 +344,10 @@ const styles = StyleSheet.create({
   timeDropdownScroll: { maxHeight: 160 },
   timeOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
   timeOptionText: { fontSize: 14 },
-  ctaRow: { paddingTop: 10 },
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 14, paddingVertical: 14, minHeight: 48 },
-  ctaBtnText: { color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  listHeaderRow: { marginTop: 8, marginBottom: 6 },
+  artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 8 },
+  artistPhoto: { width: 42, height: 42, borderRadius: 21, borderWidth: 1 },
+  artistName: { fontSize: 15, fontWeight: '700' },
+  artistSub: { fontSize: 12, marginTop: 1 },
+  emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
 });
