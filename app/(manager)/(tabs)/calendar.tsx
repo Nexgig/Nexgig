@@ -1198,12 +1198,6 @@ export default function CalendarScreen() {
               <Text style={[styles.slotTime, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
             </View>
           </Pressable>
-          {isPastStart(slot.date, slot.startTime) && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, marginRight: 6 }}>
-              <MaterialIcons name="history" size={12} color={colors.warning} />
-              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.warning }}>Past gig</Text>
-            </View>
-          )}
           {renderSlotActionButton(slot)}
         </View>
 
@@ -1375,12 +1369,6 @@ export default function CalendarScreen() {
               <Text style={[styles.slotTime, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
             </View>
           </Pressable>
-          {isPastStart(slot.date, slot.startTime) && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, marginRight: 6 }}>
-              <MaterialIcons name="history" size={12} color={colors.warning} />
-              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.warning }}>Past gig</Text>
-            </View>
-          )}
           {renderSlotActionButton(slot)}
         </View>
 

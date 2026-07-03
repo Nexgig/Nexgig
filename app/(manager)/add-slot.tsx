@@ -305,6 +305,12 @@ export default function AddSlotScreen() {
             </View>
           )}
         </View>
+        {isPast && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
+            <MaterialIcons name="history" size={11} color={colors.warning} />
+            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.warning }}>Past gig</Text>
+          </View>
+        )}
         <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
       </Pressable>
     );
