@@ -1344,6 +1344,43 @@ export default function CalendarScreen() {
                 <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                 <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
                 <StatusBadge status="draft" />
+                <Pressable
+                  hitSlop={8}
+                  style={[styles.sendDraftBtn]}
+                  onPress={() => {
+                    if (!currentUser) return;
+                    const djUserForSend = getArtistUser(draft.artistId);
+                    Alert.alert(
+                      'Send Gig Request',
+                      `Send a gig request to ${djUserForSend?.fullName ?? 'this artist'}?`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Send',
+                          onPress: () => {
+                            const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
+                            if (newBookingId) {
+                              saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
+                            }
+                            addNotification({
+                              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                              userId: draft.artistId,
+                              type: 'booking_request',
+                              title: 'New Booking Request',
+                              body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
+                              isRead: false,
+                              relatedId: newBookingId,
+                              relatedType: 'booking',
+                              createdAt: new Date().toISOString(),
+                            });
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <MaterialIcons name="send" size={13} color={colors.primary} />
+                </Pressable>
 
                 <Pressable
                   hitSlop={8}
@@ -1515,6 +1552,43 @@ export default function CalendarScreen() {
                 <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                 <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
                 <StatusBadge status="draft" />
+                <Pressable
+                  hitSlop={8}
+                  style={[styles.sendDraftBtn]}
+                  onPress={() => {
+                    if (!currentUser) return;
+                    const djUserForSend = getArtistUser(draft.artistId);
+                    Alert.alert(
+                      'Send Gig Request',
+                      `Send a gig request to ${djUserForSend?.fullName ?? 'this artist'}?`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Send',
+                          onPress: () => {
+                            const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
+                            if (newBookingId) {
+                              saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
+                            }
+                            addNotification({
+                              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                              userId: draft.artistId,
+                              type: 'booking_request',
+                              title: 'New Booking Request',
+                              body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
+                              isRead: false,
+                              relatedId: newBookingId,
+                              relatedType: 'booking',
+                              createdAt: new Date().toISOString(),
+                            });
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <MaterialIcons name="send" size={13} color={colors.primary} />
+                </Pressable>
                 <Pressable
                   style={styles.removeDJBtn}
                   onPress={() => removeDraftByDJ(slot.id, draft.artistId)}
