@@ -490,10 +490,16 @@ export default function AssignDJScreen() {
 
   const renderDJ = (item: typeof djsWithConflicts[0]) => {
     const isAssigned = assignedDJIds.has(item.user.id);
+    // Real booking on this slot for this DJ (any non-cancelled/declined status).
+    const bookingForDJ = slotBookings.find((b) => b.artistId === item.user.id);
     // For past slots: show pending if past_confirmation request sent, completed if confirmed
     const isPastPending = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && (b.status === 'requested' || b.status === 'past_confirmation'));
     const isCompleted = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && b.isCompleted);
-    const isDrafted = !isPastSlot && isAssigned;
+    // Upcoming slots: reflect a real booking's status instead of "Drafted".
+    const isConfirmed = !isPastSlot && bookingForDJ?.status === 'confirmed';
+    const isPending = !isPastSlot && (bookingForDJ?.status === 'requested' || bookingForDJ?.status === 'past_confirmation');
+    // "Drafted" only when it's an actual draft (no real booking on this slot).
+    const isDrafted = !isPastSlot && isAssigned && !bookingForDJ;
 
     return (
       <Pressable
@@ -503,14 +509,18 @@ export default function AssignDJScreen() {
           {
             backgroundColor: isCompleted
               ? colors.success + '15'
-              : isPastPending
+              : isConfirmed
+              ? colors.success + '15'
+              : isPastPending || isPending
               ? colors.warning + '15'
               : isDrafted
               ? colors.primary + '15'
               : colors.surface,
             borderColor: isCompleted
               ? colors.success
-              : isPastPending
+              : isConfirmed
+              ? colors.success
+              : isPastPending || isPending
               ? colors.warning
               : isDrafted
               ? colors.primary
@@ -544,6 +554,18 @@ export default function AssignDJScreen() {
                 <Text style={styles.draftBadgeText}>Pending</Text>
               </View>
             )}
+            {isConfirmed && (
+              <View style={[styles.draftBadge, { backgroundColor: colors.success }]}>
+                <MaterialIcons name="check-circle" size={10} color="#fff" />
+                <Text style={styles.draftBadgeText}>Confirmed</Text>
+              </View>
+            )}
+            {isPending && (
+              <View style={[styles.draftBadge, { backgroundColor: colors.warning }]}>
+                <MaterialIcons name="schedule" size={10} color="#fff" />
+                <Text style={styles.draftBadgeText}>Pending</Text>
+              </View>
+            )}
             {isDrafted && (
               <View style={[styles.draftBadge, { backgroundColor: colors.primary }]}>
                 <MaterialIcons name="edit" size={10} color="#fff" />
@@ -561,7 +583,9 @@ export default function AssignDJScreen() {
         </View>
         {isCompleted
           ? <MaterialIcons name="check-circle" size={20} color={colors.success} />
-          : isPastPending
+          : isConfirmed
+          ? <MaterialIcons name="check-circle" size={20} color={colors.success} />
+          : isPastPending || isPending
           ? <MaterialIcons name="schedule" size={20} color={colors.warning} />
           : isDrafted
           ? <MaterialIcons name="check-circle" size={20} color={colors.primary} />
