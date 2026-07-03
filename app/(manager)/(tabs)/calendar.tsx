@@ -760,6 +760,32 @@ export default function CalendarScreen() {
     router.push(('/(manager)/add-slot?date=' + date + (preselect ? '&venueId=' + preselect : '')) as Href);
   };
 
+  // Open the (existing) Add Set modal directly in multiple/bulk mode.
+  // Repurposed from the old calendar 'create venue' button.
+  const openMultipleSlots = () => {
+    const preselect = venueFilter !== 'all' ? venueFilter : (venues[0]?.id ?? '');
+    const weekMode = calendarMode === 'week';
+    setBulkIsWeekMode(weekMode);
+    setBulkVenueIds(venues.length === 1 ? [venues[0].id] : (preselect ? [preselect] : []));
+    if (weekMode) {
+      const days: number[] = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        const jsDay = d.getDay();
+        days.push(jsDay === 0 ? 6 : jsDay - 1);
+      }
+      setBulkDays(days);
+    } else {
+      setBulkDays([]);
+    }
+    setBulkTemplates([{ id: '1', name: '', startTime: '20:00', endTime: '00:00' }]);
+    setBulkStartOpen(null);
+    setBulkEndOpen(null);
+    setSlotMode('multiple');
+    setShowSlotModal(true);
+  };
+
   const openEditSlot = (slot: Slot) => {
     setEditingSlot(slot);
     setCreateSlotDate(slot.date);
