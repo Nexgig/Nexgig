@@ -875,6 +875,92 @@ export default function CalendarScreen() {
     );
   };
 
+  // Delete a slot with no confirmation (used by the empty-slot Delete button on the card).
+  const deleteSlotNow = async (slot: Slot) => {
+    const { error } = await supabase.from('slots').delete().eq('id', slot.id);
+    if (error) { Alert.alert('Error deleting slot', error.message); return; }
+    deleteSlot(slot.id);
+  };
+
+  // Send all drafts on a slot (one confirmation, then send each). Used by the Send button on the card.
+  const sendSlotDrafts = (slot: Slot) => {
+    if (!currentUser) return;
+    const bookingsForSlot = getBookingsBySlot(slot.id);
+    const drafts = getDraftsBySlot(slot.id).filter((d) => !bookingsForSlot.find((b) => b.artistId === d.artistId));
+    if (drafts.length === 0) return;
+    const venue = getVenueById(slot.venueId);
+    const names = drafts.map((d) => getArtistUser(d.artistId)?.fullName ?? 'artist').join(', ');
+    Alert.alert(
+      'Send Gig Request',
+      drafts.length === 1 ? `Send a gig request to ${names}?` : `Send gig requests to ${names}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: () => {
+            drafts.forEach((draft) => {
+              const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
+              if (newBookingId) {
+                saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
+              }
+              addNotification({
+                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                userId: draft.artistId,
+                type: 'booking_request',
+                title: 'New Booking Request',
+                body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
+                isRead: false,
+                relatedId: newBookingId,
+                relatedType: 'booking',
+                createdAt: new Date().toISOString(),
+              });
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  // State-dependent action button on each slot card:
+  //   has a sent/confirmed booking -> '+' (add another artist)
+  //   has draft(s) only            -> 'send' (send all drafts)
+  //   empty                        -> 'delete' (no confirm)
+  const renderSlotActionButton = (slot: Slot) => {
+    const bookingsForSlot = getBookingsBySlot(slot.id);
+    const draftsForSlot = getDraftsBySlot(slot.id).filter((d) => !bookingsForSlot.find((b) => b.artistId === d.artistId));
+    if (bookingsForSlot.length > 0) {
+      return (
+        <Pressable
+          style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.primary + '15', opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
+          hitSlop={8}
+        >
+          <MaterialIcons name="add" size={18} color={colors.primary} />
+        </Pressable>
+      );
+    }
+    if (draftsForSlot.length > 0) {
+      return (
+        <Pressable
+          style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.primary + '15', opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => sendSlotDrafts(slot)}
+          hitSlop={8}
+        >
+          <MaterialIcons name="send" size={18} color={colors.primary} />
+        </Pressable>
+      );
+    }
+    return (
+      <Pressable
+        style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.error + '15', opacity: pressed ? 0.6 : 1 }]}
+        onPress={() => deleteSlotNow(slot)}
+        hitSlop={8}
+      >
+        <MaterialIcons name="delete-outline" size={18} color={colors.error} />
+      </Pressable>
+    );
+  };
+
   const handleDeleteOpenSlots = useCallback(() => {
     let periodLabel: string;
     let openSlots: typeof allManagerSlots;
@@ -1112,13 +1198,7 @@ export default function CalendarScreen() {
               <Text style={[styles.slotTime, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
             </View>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.primary + '15', opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
-            hitSlop={8}
-          >
-            <MaterialIcons name="add" size={18} color={colors.primary} />
-          </Pressable>
+          {renderSlotActionButton(slot)}
         </View>
 
           {/* Booking rows */}
@@ -1237,42 +1317,7 @@ export default function CalendarScreen() {
                 <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                 <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
                 <StatusBadge status="draft" />
-                <Pressable
-                  hitSlop={8}
-                  style={[styles.sendDraftBtn]}
-                  onPress={() => {
-                    if (!currentUser) return;
-                    Alert.alert(
-                      'Send Gig Request',
-                      `Send a gig request to ${djUser.fullName}?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Send',
-                          onPress: () => {
-                            const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
-                            if (newBookingId) {
-  saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
-}
-                            addNotification({
-                              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                              userId: draft.artistId,
-                              type: 'booking_request',
-                              title: 'New Booking Request',
-                              body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
-                              isRead: false,
-                              relatedId: newBookingId,
-                              relatedType: 'booking',
-                              createdAt: new Date().toISOString(),
-                            });
-                          },
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <MaterialIcons name="send" size={13} color={colors.primary} />
-                </Pressable>
+
                 <Pressable
                   hitSlop={8}
                   style={[styles.removeDJBtn]}
@@ -1289,17 +1334,7 @@ export default function CalendarScreen() {
 
     return (
       <View key={slot.id} style={styles.slotCardRow}>
-        {slotIsDeletable(slot) ? (
-          <Swipeable
-            renderRightActions={() => renderSwipeDeleteAction(slot)}
-            overshootRight={false}
-            containerStyle={{ flex: 1 }}
-          >
-            {cardContent}
-          </Swipeable>
-        ) : (
-          cardContent
-        )}
+        {cardContent}
       </View>
     );
   };
@@ -1334,13 +1369,7 @@ export default function CalendarScreen() {
               <Text style={[styles.slotTime, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
             </View>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.primary + '15', opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
-            hitSlop={8}
-          >
-            <MaterialIcons name="add" size={18} color={colors.primary} />
-          </Pressable>
+          {renderSlotActionButton(slot)}
         </View>
 
           {/* Booking rows */}
@@ -1460,42 +1489,6 @@ export default function CalendarScreen() {
                 <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
                 <StatusBadge status="draft" />
                 <Pressable
-                  hitSlop={8}
-                  style={[styles.sendDraftBtn]}
-                  onPress={() => {
-                    if (!currentUser) return;
-                    Alert.alert(
-                      'Send Gig Request',
-                      `Send a gig request to ${djUser.fullName}?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Send',
-                          onPress: () => {
-                            const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
-if (newBookingId) {
-  saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
-}
-                            addNotification({
-                              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                              userId: draft.artistId,
-                              type: 'booking_request',
-                              title: 'New Booking Request',
-                              body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
-                              isRead: false,
-                              relatedId: newBookingId,
-                              relatedType: 'booking',
-                              createdAt: new Date().toISOString(),
-                            });
-                          },
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <MaterialIcons name="send" size={13} color={colors.primary} />
-                </Pressable>
-                <Pressable
                   style={styles.removeDJBtn}
                   onPress={() => removeDraftByDJ(slot.id, draft.artistId)}
                   hitSlop={8}
@@ -1511,17 +1504,7 @@ if (newBookingId) {
 
     return (
       <View key={slot.id} style={styles.slotCardRow}>
-        {slotIsDeletable(slot) ? (
-          <Swipeable
-            renderRightActions={() => renderSwipeDeleteAction(slot)}
-            overshootRight={false}
-            containerStyle={{ flex: 1 }}
-          >
-            {slotCardContent}
-          </Swipeable>
-        ) : (
-          slotCardContent
-        )}
+        {slotCardContent}
       </View>
     );
   };
