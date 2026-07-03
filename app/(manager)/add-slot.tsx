@@ -3,13 +3,13 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard, Image }
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore } from '@/lib/store';
+import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { isPastStart, performerLabel } from '@/lib/utils';
-import { formatDate } from '@/lib/conflict-detection';
-import type { Slot, Booking } from '@/lib/types';
+import { formatDate, detectConflicts, timesOverlap } from '@/lib/conflict-detection';
+import type { Slot, Booking, ConflictInfo, VenueAssignment } from '@/lib/types';
 
 const SLOT_PRESETS = [
   { name: 'Day', start: '13:00', end: '17:00' },
@@ -32,16 +32,21 @@ export default function AddSlotScreen() {
 
   const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
+  const getVenueById = useVenueStore((s) => s.getVenueById);
   const addSlot = useSlotStore((s) => s.addSlot);
   const updateSlot = useSlotStore((s) => s.updateSlot);
   const deleteSlot = useSlotStore((s) => s.deleteSlot);
+  const getSlotById = useSlotStore((s) => s.getSlotById);
+  const globalLineup = useLineupStore((s) => s.globalLineup);
   const venueAssignments = useLineupStore((s) => s.venueAssignments);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
+  const assignToVenue = useLineupStore((s) => s.assignToVenue);
   const allDrafts = useDraftStore((s) => s.drafts);
   const setDraft = useDraftStore((s) => s.setDraft);
-  const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const allBookings = useBookingStore((s) => s.bookings);
   const addBooking = useBookingStore((s) => s.addBooking);
+  const blocks = useAvailabilityStore((s) => s.blocks);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   const venues = allVenues.filter((v) => !v.isHidden && v.managerId === currentUser?.id);
@@ -105,6 +110,45 @@ export default function AddSlotScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createdSlotId]);
 
+  // Cross-manager conflicts: other managers' confirmed bookings (via SECURITY DEFINER RPC,
+  // returns busy time-ranges only) + world-readable availability blocks, for this venue's
+  // lineup artists on this date. Recomputes when venue/date/time change. Skipped for past.
+  const [crossConflicts, setCrossConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
+  useEffect(() => {
+    if (!currentUser || isPast || !createSlotVenueId) { setCrossConflicts(new Map()); return; }
+    const artistIds = venueAssignments
+      .filter((a) => a.venueId === createSlotVenueId && a.status === 'active')
+      .map((a) => a.artistId);
+    if (artistIds.length === 0) { setCrossConflicts(new Map()); return; }
+    let cancelled = false;
+    Promise.all([
+      supabase.rpc('get_artist_busy_times', { p_artist_ids: artistIds, p_date: targetDate }),
+      supabase.from('availability_blocks')
+        .select('id, artist_id, start_time, end_time, is_full_day, block_type, event_name')
+        .in('artist_id', artistIds).eq('date', targetDate),
+    ]).then(([busyRes, blocksRes]) => {
+      if (cancelled) return;
+      const map = new Map<string, ConflictInfo[]>();
+      const add = (artistId: string, c: ConflictInfo) => { map.set(artistId, [...(map.get(artistId) ?? []), c]); };
+      (busyRes.data ?? []).forEach((b: any) => {
+        if (!b.start_time || !b.end_time) return;
+        if (timesOverlap(b.start_time, b.end_time, slotForm.startTime, slotForm.endTime, targetDate, targetDate)) {
+          add(b.artist_id, { type: 'booking', description: `Booked elsewhere ${b.start_time}–${b.end_time}`, startTime: b.start_time, endTime: b.end_time });
+        }
+      });
+      (blocksRes.data ?? []).forEach((bl: any) => {
+        const bStart = bl.is_full_day ? '00:00' : bl.start_time;
+        const bEnd = bl.is_full_day ? '23:59' : bl.end_time;
+        if (timesOverlap(bStart, bEnd, slotForm.startTime, slotForm.endTime, targetDate, targetDate)) {
+          add(bl.artist_id, { type: 'availability_block', description: `Unavailable ${bStart}–${bEnd}`, startTime: bStart, endTime: bEnd });
+        }
+      });
+      setCrossConflicts(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createSlotVenueId, targetDate, slotForm.startTime, slotForm.endTime, currentUser?.id, isPast, venueAssignments]);
+
   const scrollToTimeOption = (ref: React.RefObject<ScrollView | null>, time: string) => {
     const idx = TIME_OPTIONS.indexOf(time);
     if (idx >= 0 && ref.current) {
@@ -116,13 +160,55 @@ export default function AddSlotScreen() {
     weekday: 'long', month: 'long', day: 'numeric',
   });
 
-  const lineupArtists = venueAssignments
+  // Working slot snapshot used for local conflict detection.
+  const workingSlot: Slot = {
+    id: createdSlotId ?? 'pending', venueId: createSlotVenueId, name: slotForm.name,
+    date: targetDate, startTime: slotForm.startTime, endTime: slotForm.endTime, createdAt: new Date().toISOString(),
+  };
+
+  const confirmedBookings = allBookings.filter((b) => b.status === 'confirmed' || b.status === 'requested');
+  const draftSlotsByDJ = (artistId: string) => allDrafts
+    .filter((d) => d.artistId === artistId)
+    .map((d) => {
+      const s = getSlotById(d.slotId);
+      if (!s) return null;
+      return { slotId: s.id, date: s.date, startTime: s.startTime, endTime: s.endTime, venueName: getVenueById(s.venueId)?.name ?? 'Unknown Venue', slotName: s.name };
+    })
+    .filter(Boolean) as Array<{ slotId: string; date: string; startTime: string; endTime: string; venueName: string; slotName: string }>;
+
+  const draftedIds = new Set(allDrafts.filter((d) => d.slotId === createdSlotId).map((d) => d.artistId));
+
+  // Venue lineup artists with conflict info
+  const lineupWithConflicts = venueAssignments
+    .filter((a) => a.venueId === createSlotVenueId && a.status === 'active')
+    .map((a) => {
+      const user = getArtistUser(a.artistId);
+      const profile = getArtistProfile(a.artistId);
+      if (!user) return null;
+      const local = detectConflicts(a.artistId, workingSlot, confirmedBookings, blocks, (vid) => getVenueById(vid)?.name ?? 'Unknown Venue', getSlotById, draftSlotsByDJ(a.artistId), allBookings);
+      const external = crossConflicts.get(a.artistId) ?? [];
+      const conflicts = [...local, ...external];
+      return { artistId: a.artistId, user, profile, hasConflict: conflicts.length > 0, conflicts };
+    })
+    .filter(Boolean) as Array<{ artistId: string; user: NonNullable<ReturnType<typeof getArtistUser>>; profile: ReturnType<typeof getArtistProfile>; hasConflict: boolean; conflicts: ConflictInfo[] }>;
+
+  const available = lineupWithConflicts.filter((d) => !d.hasConflict).sort((a, b) => (a.user.fullName ?? '').localeCompare(b.user.fullName ?? ''));
+  const withConflict = lineupWithConflicts.filter((d) => d.hasConflict).sort((a, b) => (a.user.fullName ?? '').localeCompare(b.user.fullName ?? ''));
+
+  const myGlobalLineup = globalLineup.filter((r) => r.managerId === currentUser?.id && r.status === 'active');
+  const venueLineupIds = new Set(venueAssignments.filter((a) => a.venueId === createSlotVenueId && a.status === 'active').map((a) => a.artistId));
+  const notInLineup = myGlobalLineup
+    .filter((entry) => !venueLineupIds.has(entry.artistId))
+    .map((entry) => ({ artistId: entry.artistId, user: getArtistUser(entry.artistId), profile: getArtistProfile(entry.artistId) }))
+    .filter((x) => !!x.user)
+    .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
+
+  // Past mode: flat lineup list (send completed-gig requests), no conflicts.
+  const pastLineup = venueAssignments
     .filter((a) => a.venueId === createSlotVenueId && a.status === 'active')
     .map((a) => ({ artistId: a.artistId, user: getArtistUser(a.artistId), profile: getArtistProfile(a.artistId) }))
     .filter((x) => !!x.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
-
-  const draftedIds = new Set(allDrafts.filter((d) => d.slotId === createdSlotId).map((d) => d.artistId));
 
   const sendPastGigRequest = (artistId: string) => {
     if (!currentUser || !createdSlotId) return;
@@ -158,15 +244,7 @@ export default function AddSlotScreen() {
         `This date is in the past. Send ${name} a completed-gig request to confirm they played this gig?`,
         [
           { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Send Request',
-            onPress: () => {
-              sendPastGigRequest(artistId);
-              assignedRef.current = true;
-              Keyboard.dismiss();
-              router.back();
-            },
-          },
+          { text: 'Send Request', onPress: () => { sendPastGigRequest(artistId); assignedRef.current = true; Keyboard.dismiss(); router.back(); } },
         ]
       );
       return;
@@ -175,6 +253,61 @@ export default function AddSlotScreen() {
     assignedRef.current = true;
     Keyboard.dismiss();
     router.back();
+  };
+
+  // Add a roster artist to this venue's lineup (stays open; they move into the assignable list).
+  const handleAddToVenue = (artistId: string) => {
+    if (!currentUser || !createSlotVenueId) return;
+    const venueName = venues.find((v) => v.id === createSlotVenueId)?.name ?? 'this venue';
+    const grEntry = myGlobalLineup.find((r) => r.artistId === artistId);
+    const newAssignment: VenueAssignment = {
+      id: `va-${Date.now()}`, globalLineupId: grEntry?.id ?? '', venueId: createSlotVenueId, artistId,
+      assignedAt: new Date().toISOString(), status: 'active',
+    };
+    assignToVenue(newAssignment);
+    supabase.from('venue_assignments').upsert(
+      { manager_id: currentUser.id, artist_id: artistId, venue_id: createSlotVenueId, status: 'active' },
+      { onConflict: 'venue_id,artist_id' }
+    ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
+      type: 'venue_assigned', title: 'Assigned to Venue', body: `${venueName}`,
+      isRead: false, relatedId: createSlotVenueId, relatedType: 'venue', createdAt: new Date().toISOString(),
+    });
+  };
+
+  const renderAssignRow = (item: { artistId: string; user: any; profile: any; hasConflict?: boolean; conflicts?: ConflictInfo[] }) => {
+    const drafted = !isPast && draftedIds.has(item.artistId);
+    return (
+      <Pressable
+        key={item.artistId}
+        style={({ pressed }) => [styles.artistRow, {
+          backgroundColor: drafted ? colors.primary + '15' : colors.surface,
+          borderColor: drafted ? colors.primary : (item.hasConflict ? colors.error + '40' : colors.border),
+          opacity: pressed ? 0.85 : 1,
+        }]}
+        onPress={() => handleTapArtist(item.artistId)}
+      >
+        {item.user.profilePhotoUrl ? (
+          <Image source={{ uri: item.user.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
+        ) : (
+          <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+            <MaterialIcons name="person" size={20} color={colors.muted} />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user.fullName}</Text>
+          <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+          {item.hasConflict && item.conflicts && item.conflicts[0] && (
+            <View style={styles.conflictBanner}>
+              <MaterialIcons name="warning" size={12} color={colors.error} />
+              <Text style={[styles.conflictText, { color: colors.error }]} numberOfLines={2}>{item.conflicts[0].description}</Text>
+            </View>
+          )}
+        </View>
+        <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
+      </Pressable>
+    );
   };
 
   return (
@@ -297,40 +430,75 @@ export default function AddSlotScreen() {
           </View>
         </View>
 
-        <View style={styles.listHeaderRow}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isPast ? 'SEND COMPLETED GIG TO' : 'ASSIGN ARTIST'}</Text>
-        </View>
-
-        {lineupArtists.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+        {isPast ? (
+          <>
+            <View style={styles.listHeaderRow}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>SEND COMPLETED GIG TO</Text>
+            </View>
+            {pastLineup.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+            ) : (
+              pastLineup.map((item) => renderAssignRow(item))
+            )}
+          </>
         ) : (
-          lineupArtists.map((item) => {
-            const drafted = !isPast && draftedIds.has(item.artistId);
-            return (
-              <Pressable
-                key={item.artistId}
-                style={({ pressed }) => [styles.artistRow, {
-                  backgroundColor: drafted ? colors.primary + '15' : colors.surface,
-                  borderColor: drafted ? colors.primary : colors.border,
-                  opacity: pressed ? 0.85 : 1,
-                }]}
-                onPress={() => handleTapArtist(item.artistId)}
-              >
-                {item.user!.profilePhotoUrl ? (
-                  <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                    <MaterialIcons name="person" size={20} color={colors.muted} />
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                  <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+          <>
+            {available.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialIcons name="check-circle" size={15} color={colors.success} />
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Available ({available.length})</Text>
                 </View>
-                <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
-              </Pressable>
-            );
-          })
+                {available.map((item) => renderAssignRow(item))}
+              </View>
+            )}
+
+            {withConflict.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialIcons name="warning" size={15} color={colors.warning} />
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Has Conflict ({withConflict.length})</Text>
+                </View>
+                {withConflict.map((item) => renderAssignRow(item))}
+              </View>
+            )}
+
+            {notInLineup.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <MaterialIcons name="group-add" size={15} color={colors.muted} />
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Not in Lineup ({notInLineup.length})</Text>
+                </View>
+                {notInLineup.map((item) => (
+                  <View key={item.artistId} style={[styles.artistRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    {item.user!.profilePhotoUrl ? (
+                      <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
+                        <MaterialIcons name="person" size={20} color={colors.muted} />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
+                      <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+                    </View>
+                    <Pressable
+                      style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+                      onPress={() => handleAddToVenue(item.artistId)}
+                      hitSlop={6}
+                    >
+                      <MaterialIcons name="add" size={15} color={colors.primary} />
+                      <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {available.length === 0 && withConflict.length === 0 && notInLineup.length === 0 && (
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+            )}
+          </>
         )}
         <View style={{ flexGrow: 1, minHeight: 200, backgroundColor: colors.background }} />
       </ScrollView>
@@ -361,9 +529,16 @@ const styles = StyleSheet.create({
   timeOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
   timeOptionText: { fontSize: 14 },
   listHeaderRow: { marginTop: 8, marginBottom: 6 },
+  section: { marginTop: 8, marginBottom: 6 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  sectionTitle: { fontSize: 13, fontWeight: '700' },
   artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 8 },
   artistPhoto: { width: 42, height: 42, borderRadius: 21, borderWidth: 1 },
   artistName: { fontSize: 15, fontWeight: '700' },
   artistSub: { fontSize: 12, marginTop: 1 },
+  conflictBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 3 },
+  conflictText: { fontSize: 12, flex: 1, lineHeight: 16 },
+  addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
 });
