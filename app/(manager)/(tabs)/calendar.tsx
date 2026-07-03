@@ -154,6 +154,33 @@ export default function CalendarScreen() {
     }
     setCalendarRefreshing(false);
   }, [currentUser]);
+
+  // Auto-cleanup: delete the manager's PAST slots that have no real booking
+  // (i.e. empty or draft-only). Reads authoritative Supabase data — NOT the local
+  // store — so it can never wrongly delete history slots before bookings have loaded.
+  // A slot is KEPT if it has any booking with status requested / past_confirmation /
+  // confirmed / completed.
+  const sweepPastEmptySlots = useCallback(async () => {
+    if (!currentUser) return;
+    const { data: slotRows } = await supabase.from('slots').select('id, date, start_time').eq('manager_id', currentUser.id);
+    if (!slotRows) return;
+    const pastIds = slotRows.filter((s: any) => isPastStart(s.date, s.start_time)).map((s: any) => s.id);
+    if (pastIds.length === 0) return;
+    const { data: bks } = await supabase.from('bookings').select('slot_id, status').in('slot_id', pastIds);
+    const keep = new Set(['requested', 'past_confirmation', 'confirmed', 'completed']);
+    const keepSlotIds = new Set((bks ?? []).filter((b: any) => keep.has(b.status)).map((b: any) => b.slot_id));
+    const toDelete = pastIds.filter((id: string) => !keepSlotIds.has(id));
+    if (toDelete.length === 0) return;
+    const { error } = await supabase.from('slots').delete().in('id', toDelete);
+    if (error) { console.warn('sweep past slots:', error.message); return; }
+    toDelete.forEach((id: string) => deleteSlot(id));
+  }, [currentUser, deleteSlot]);
+
+  useFocusEffect(
+    useCallback(() => {
+      sweepPastEmptySlots();
+    }, [sweepPastEmptySlots])
+  );
   const managerVenueIds = useMemo(() => venues.map((v) => v.id), [venues]);
   // Hidden ("deleted") venues for this manager. Their completed gigs must stay on the
   // calendar, so we still render their slots — but ONLY ones that already have a booking
