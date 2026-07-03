@@ -510,7 +510,9 @@ interface DraftAssignmentState {
   clearAllDrafts: (managerId: string) => void;
 }
 
-export const useDraftStore = create<DraftAssignmentState>((set, get) => ({
+export const useDraftStore = create<DraftAssignmentState>()(
+  persist(
+    (set, get) => ({
   drafts: [],
   setDraft: (slotId, venueId, artistId, managerId) => set((state) => {
     // If this DJ is already drafted for this slot, do nothing (no duplicates)
@@ -613,7 +615,13 @@ export const useDraftStore = create<DraftAssignmentState>((set, get) => ({
   clearAllDrafts: (managerId) => set((state) => ({
     drafts: state.drafts.filter((d) => d.managerId !== managerId),
   })),
-}));
+}),
+    {
+      name: 'nexgig:drafts',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 
 // ─── Notification Store ─────────────────────────────────────────────────────────
 
@@ -1030,7 +1038,9 @@ export function resetAllStores() {
   useLineupStore.getState().clearGlobalLineup();
   useLineupStore.getState().clearArtistUsers();
   useLineupStore.setState({ venueAssignments: [], lineups: [] });
-  useDraftStore.setState({ drafts: [] });
+  // NOTE: drafts are intentionally NOT cleared here. They persist per-device and
+  // are scoped by managerId everywhere they're read, so a different manager signing
+  // in never sees them, and the original manager gets them back on return.
   useAvailabilityStore.setState({ blocks: [] });
   useInvoiceStore.setState({ invoices: [] });
   useNotificationStore.getState().clearNotifications();
