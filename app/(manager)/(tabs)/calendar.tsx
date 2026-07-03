@@ -1764,7 +1764,7 @@ if (newBookingId) {
                 </Pressable>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, width: 64, justifyContent: 'flex-end' }}>
                   <Pressable
-                    onPress={() => router.push('/(manager)/create-venue' as Href)}
+                    onPress={openMultipleSlots}
                     style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                   >
                     <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
@@ -1824,7 +1824,7 @@ if (newBookingId) {
                 <Text style={[styles.monthTitle, { color: colors.foreground, flex: 1, textAlign: 'center' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
                   <Pressable
-                    onPress={() => router.push('/(manager)/create-venue' as Href)}
+                    onPress={openMultipleSlots}
                     style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                   >
                     <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
