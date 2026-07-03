@@ -29,6 +29,7 @@
 - Manager Assign Venue (from My Artists) → native sheet; wiring may be dead from the earlier rollback, needs verifying. Do second.
 
 **Session 5 · Design pass**
+- maket the calendar numbers and days name bigger
 - Artist Profile / Manager Profile (round photo upload, minimal)
 - Venue page (menu-like), Booking page (agreement-like)
 - Add "My Venues" entry on artist side
