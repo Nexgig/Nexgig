@@ -152,10 +152,26 @@ export default function AddSlotScreen() {
   const handleTapArtist = (artistId: string) => {
     if (!currentUser || !createdSlotId) return;
     if (isPast) {
-      sendPastGigRequest(artistId);
-    } else {
-      setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
+      const name = getArtistUser(artistId)?.fullName ?? 'this artist';
+      Alert.alert(
+        'Past Date',
+        `This date is in the past. Send ${name} a completed-gig request to confirm they played this gig?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Send Request',
+            onPress: () => {
+              sendPastGigRequest(artistId);
+              assignedRef.current = true;
+              Keyboard.dismiss();
+              router.back();
+            },
+          },
+        ]
+      );
+      return;
     }
+    setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
     assignedRef.current = true;
     Keyboard.dismiss();
     router.back();
