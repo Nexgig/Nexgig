@@ -164,44 +164,42 @@ export default function SignInScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#000000" />
         </Pressable>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <View style={styles.centerBlock}>
-            {/* Logo + (slogan slot -> email) */}
-            <View style={styles.logoSection}>
-              <Image
-                source={require('@/assets/images/nexgig-logo.png')}
-                style={styles.logo}
-                resizeMode="contain"
+          {/* Logo + (slogan slot -> email) */}
+          <View style={styles.logoSection}>
+            <Image
+              source={require('@/assets/images/nexgig-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.tagline} numberOfLines={1}>{email || 'Book. Play. Discover.'}</Text>
+          </View>
+
+          {/* (email input slot -> password input) + (Continue -> Sign In) */}
+          <View style={styles.actionsSection}>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                placeholderTextColor="#8E8E93"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                returnKeyType="done"
+                onSubmitEditing={handleSignIn}
+                autoFocus
               />
-              <Text style={styles.tagline} numberOfLines={1}>{email || 'Book. Play. Discover.'}</Text>
-            </View>
-
-            {/* (email input slot -> password input) + (Continue -> Sign In) */}
-            <View style={styles.actionsSection}>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#8E8E93"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSignIn}
-                  autoFocus
-                />
-                <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn} hitSlop={8}>
-                  <MaterialIcons name={showPassword ? 'visibility-off' : 'visibility'} size={20} color="#8E8E93" />
-                </Pressable>
-              </View>
-
-              <Pressable
-                style={({ pressed }) => [styles.primaryBtn, (pressed || isLoading) && { opacity: 0.85 }]}
-                onPress={handleSignIn}
-                disabled={isLoading}
-              >
-                <Text style={styles.primaryBtnText}>{isLoading ? 'Signing in…' : 'Sign In'}</Text>
+              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn} hitSlop={8}>
+                <MaterialIcons name={showPassword ? 'visibility-off' : 'visibility'} size={20} color="#8E8E93" />
               </Pressable>
             </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.primaryBtn, (pressed || isLoading) && { opacity: 0.85 }]}
+              onPress={handleSignIn}
+              disabled={isLoading}
+            >
+              <Text style={styles.primaryBtnText}>{isLoading ? 'Signing in…' : 'Sign In'}</Text>
+            </Pressable>
           </View>
         </ScrollView>
       </ScreenContainer>
@@ -210,9 +208,8 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: 32, paddingBottom: 90 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 90, gap: 28 },
   backBtn: { position: 'absolute', top: 8, left: 20, zIndex: 10, padding: 4 },
-  centerBlock: { flexGrow: 1, justifyContent: 'center', gap: 28 },
   logoSection: { alignItems: 'center', gap: 12 },
   logo: { width: 235, height: 72 },
   tagline: { fontSize: 14, color: '#8E8E93', fontWeight: '600', textAlign: 'center' },
