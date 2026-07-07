@@ -80,6 +80,7 @@ export default function WelcomeScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              textContentType="username"
               autoCorrect={false}
               returnKeyType="go"
               onSubmitEditing={handleContinue}

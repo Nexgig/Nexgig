@@ -186,6 +186,8 @@ export default function SignInScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
                 returnKeyType="done"
                 onSubmitEditing={handleSignIn}
                 autoFocus
