@@ -3,23 +3,18 @@ import { View, Text, TextInput, Pressable, StyleSheet, Alert, ScrollView, Image 
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
-import { OAuthButtons } from '@/components/oauth-buttons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAuthStore, useLineupStore } from '@/lib/store';
-import { useColors } from '@/hooks/use-colors';
-import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { signIn as supabaseSignIn } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
 export default function SignInScreen() {
   const router = useRouter();
-  const colors = useColors();
-  const keyboardHeight = useKeyboardHeight();
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
 
-  // Email may be pre-filled when arriving from the welcome screen's email step.
+  // Email is passed from the welcome screen's email step (read-only here).
   const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
-  const [email, setEmail] = useState(emailParam ?? '');
+  const [email] = useState(emailParam ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -163,103 +158,76 @@ export default function SignInScreen() {
   };
 
   return (
-    <ScreenContainer edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + keyboardHeight }]} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F6F2EC' }]}>
+      <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+            <MaterialIcons name="arrow-back" size={24} color="#000000" />
           </Pressable>
-          <View style={styles.brandSection}>
-            <Image
-              source={require('@/assets/images/nexgig-icon.png')}
-              style={styles.brandIcon}
-              resizeMode="contain"
-            />
-            <Text style={[styles.brandName, { color: colors.foreground }]}>Nexgig</Text>
-            <Text style={[styles.brandSlogan, { color: colors.muted }]}>Book. Play. Discover.</Text>
-          </View>
-        </View>
 
-        <View style={styles.form}>
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="Enter your email"
-              placeholderTextColor={colors.muted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              returnKeyType="next"
-            />
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
-            <View style={[styles.passwordContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.passwordInput, { color: colors.foreground }]}
-                placeholder="Enter your password"
-                placeholderTextColor={colors.muted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                returnKeyType="done"
-                onSubmitEditing={handleSignIn}
+          <View style={styles.centerBlock}>
+            {/* Logo */}
+            <View style={styles.logoSection}>
+              <Image
+                source={require('@/assets/images/nexgig-logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
               />
-              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                <MaterialIcons
-                  name={showPassword ? 'visibility-off' : 'visibility'}
-                  size={20}
-                  color={colors.muted}
+              <Text style={styles.tagline}>Book. Play. Discover.</Text>
+            </View>
+
+            {/* Password entry */}
+            <View style={styles.actionsSection}>
+              {!!email && (
+                <Text style={styles.emailLabel} numberOfLines={1}>{email}</Text>
+              )}
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#8E8E93"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSignIn}
+                  autoFocus
                 />
+                <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn} hitSlop={8}>
+                  <MaterialIcons name={showPassword ? 'visibility-off' : 'visibility'} size={20} color="#8E8E93" />
+                </Pressable>
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [styles.primaryBtn, (pressed || isLoading) && { opacity: 0.85 }]}
+                onPress={handleSignIn}
+                disabled={isLoading}
+              >
+                <Text style={styles.primaryBtnText}>{isLoading ? 'Signing in…' : 'Sign In'}</Text>
               </Pressable>
             </View>
           </View>
-
-          <Pressable
-            style={({ pressed }) => [styles.signInBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]}
-            onPress={handleSignIn}
-            disabled={isLoading}
-          >
-            <Text style={styles.signInBtnText}>
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </Text>
-          </Pressable>
-
-          <OAuthButtons />
-        </View>
-      </ScrollView>
-    </ScreenContainer>
+        </ScrollView>
+      </ScreenContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16 },
-  header: { marginBottom: 32 },
-  backBtn: { marginBottom: 20, alignSelf: 'flex-start', padding: 4 },
-  brandSection: { alignItems: 'center', gap: 6, marginTop: 8 },
-  brandIcon: { width: 64, height: 64, borderRadius: 16 },
-  brandName: { fontSize: 28, fontWeight: '800' },
-  brandSlogan: { fontSize: 15, lineHeight: 22 },
-  form: { gap: 20, marginBottom: 32 },
-  fieldGroup: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '600' },
-  input: {
-    borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, lineHeight: 20,
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 16, paddingBottom: 90 },
+  backBtn: { alignSelf: 'flex-start', padding: 4 },
+  centerBlock: { flexGrow: 1, justifyContent: 'center', gap: 28 },
+  logoSection: { alignItems: 'center', gap: 12 },
+  logo: { width: 235, height: 72 },
+  tagline: { fontSize: 13, color: '#8E8E93', fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
+  actionsSection: { gap: 14, alignItems: 'center' },
+  emailLabel: { fontSize: 14, color: '#8E8E93', fontWeight: '600', alignSelf: 'center' },
   passwordContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderRadius: 12, paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', width: '100%',
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C6C6C8', borderRadius: 14, paddingHorizontal: 16,
   },
-  passwordInput: { flex: 1, paddingVertical: 14, fontSize: 15 },
+  passwordInput: { flex: 1, paddingVertical: 16, fontSize: 15, color: '#000000' },
   eyeBtn: { padding: 4 },
-  signInBtn: {
-    backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16,
-    alignItems: 'center', marginTop: 8,
-  },
-  signInBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  primaryBtn: { backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16, width: '100%', alignItems: 'center' },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

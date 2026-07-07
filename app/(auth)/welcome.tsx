@@ -53,7 +53,7 @@ export default function WelcomeScreen() {
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F6F2EC' }]}>
       <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: 32 }]}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingBottom: 90,
     gap: 28,
   },
   logoSection: {
