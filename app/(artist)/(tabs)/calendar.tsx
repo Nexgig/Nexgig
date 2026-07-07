@@ -820,13 +820,13 @@ export default function DJAvailabilityScreen() {
             Blocked
           </Text>
       </View>
-      <TouchableOpacity
-        style={[styles.slotMenuBtn, { opacity: 1 }]}
+      <Pressable
+        style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.error + '15', marginRight: 12, opacity: pressed ? 0.6 : 1 }]}
         onPress={() => handleDeleteBlock(b.id)}
-        activeOpacity={0.5}
+        hitSlop={8}
       >
-        <MaterialIcons name="close" size={20} color={colors.error} />
-      </TouchableOpacity>
+        <MaterialIcons name="delete-outline" size={18} color={colors.error} />
+      </Pressable>
     </View>
   );
 
