@@ -13,10 +13,15 @@
 **Session 1 · Production build readiness**
 - Dependency alignment before production build
 - Deferred lint hygiene
-- App Store / TestFlight submission
+
+**Session 1b · App Store submission** — build 9 (with the 'gig.' icon) is ALREADY uploaded to App Store Connect; version status is "Prepare for Submission". Remaining before hitting Submit:
+- Create a DEMO / REVIEW account for Apple: a MANAGER login with sample data (a venue or two, a few artists in the lineup, a couple of gigs) so the reviewer doesn't hit an empty app. NEEDS Tuts in the app (Claude can't create accounts) — then give Claude the creds for the review notes.
+- Fill App Store Connect metadata: screenshots (6.7" iPhone required), description / subtitle / keywords / promo text (ALL DRAFTED this session — ready to paste), App Privacy questionnaire, age rating, App Review notes (with demo creds + note that both managers AND artists use the same app).
+- Then Submit for Review.
+- (Optional, decide BEFORE final submit: revisit the app icon — 'gig.' vs 'N.' vs bigger-coral-dot. ANY icon change = new build + resubmit, so choose before submitting for review, not after.)
 
 **Session 2 · Store assets / first impression**
-- Finalize image/logo assets + redo Welcome screen (slogan stays "Book. Play. Discover.") and app icon
+- Finalize image/logo assets + redo Welcome screen (slogan stays "Book. Play. Discover.")  [app icon 'gig.' DONE — in build 9]
 - Clean unused asset images (logo icon etc)
 
 **Session 3 · Android parity**
@@ -57,6 +62,9 @@
 ---
 
 ## ⟢ DONE  (never shown when asked what's left; newest first)
+- (Jul 7 2026) App icon: created 'gig.' icon (Clash Display Bold, coral vignette) + Android adaptive foreground/monochrome + splash; wired in app.config.ts; shipped in build 9. (Icon may still be revisited — 'gig.' vs 'N.' — before the final review submit.)
+- (Jul 7 2026) Marketing site: built landing (index.html) + support (support.html) — dark nightlife theme, Clash Display + General Sans, coral — live on the new `nexgig.github.io` GitHub Pages repo. Custom domain www.nexgigapp.com pointed at GitHub Pages via Squarespace DNS (deleted Squarespace Defaults block, added 4 A records + www CNAME; email MX/TXT left intact); DNS propagating.
+- (Jul 7 2026) App Store copy drafted (description, subtitle, keywords, promo text) — ready to paste into App Store Connect.
 - (Jul 3 2026) Drafts persist across sign-out/in, per-device (useDraftStore wrapped in persist)
 - (Jul 3 2026) Add Set redesign: single + multiple native sheets; state-dependent slot action button (Delete/Send/+); per-artist send restored; past-gig confirm + badge; conflict + not-in-lineup parity in Add Set; assign-artist shows Pending/Confirmed (not "Drafted"); past empty/draft-only slots auto-cleanup on calendar focus
 
