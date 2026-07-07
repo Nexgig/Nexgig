@@ -50,7 +50,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#E2674A' }]}>
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F6F2EC' }]}>
       <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
         <ScrollView
           contentContainerStyle={[styles.scroll, { paddingBottom: 32 + keyboardHeight }]}
@@ -72,7 +72,7 @@ export default function WelcomeScreen() {
             <TextInput
               style={styles.emailInput}
               placeholder="Enter your email"
-              placeholderTextColor="rgba(255,255,255,0.7)"
+              placeholderTextColor="#8E8E93"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -92,7 +92,7 @@ export default function WelcomeScreen() {
               <Text style={styles.primaryBtnText}>{busy ? 'Please wait…' : 'Continue'}</Text>
             </Pressable>
 
-            <OAuthButtons variant="onDark" />
+            <OAuthButtons />
           </View>
         </ScrollView>
       </ScreenContainer>
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '700',
   },
   actionsSection: {
@@ -127,24 +127,24 @@ const styles = StyleSheet.create({
   },
   emailInput: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: '#C6C6C8',
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 16,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#000000',
   },
   primaryBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E2674A',
     borderRadius: 14,
     paddingVertical: 16,
     width: '100%',
     alignItems: 'center',
   },
   primaryBtnText: {
-    color: '#E2674A',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
