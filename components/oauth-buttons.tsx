@@ -154,35 +154,37 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         <View style={[styles.line, { backgroundColor: onDark ? 'rgba(255,255,255,0.3)' : '#E5E7EB' }]} />
       </View>
 
-      {Platform.OS === 'ios' && (
+      <View style={styles.oauthRow}>
+        {Platform.OS === 'ios' && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.oauthBtn,
+              { opacity: pressed || busy === 'apple' ? 0.85 : 1 },
+            ]}
+            onPress={handleApple}
+            disabled={!!busy}
+          >
+            <AntDesign name="apple" size={18} color="#FFFFFF" />
+            <Text style={styles.oauthText}>
+              {busy === 'apple' ? '…' : 'Apple'}
+            </Text>
+          </Pressable>
+        )}
+
         <Pressable
           style={({ pressed }) => [
             styles.oauthBtn,
-            { opacity: pressed || busy === 'apple' ? 0.85 : 1 },
+            { opacity: pressed || busy === 'google' ? 0.85 : 1 },
           ]}
-          onPress={handleApple}
+          onPress={handleGoogle}
           disabled={!!busy}
         >
-          <AntDesign name="apple" size={18} color="#FFFFFF" />
+          <AntDesign name="google" size={18} color="#FFFFFF" />
           <Text style={styles.oauthText}>
-            {busy === 'apple' ? 'Signing in...' : 'Continue with Apple'}
+            {busy === 'google' ? '…' : 'Google'}
           </Text>
         </Pressable>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [
-          styles.oauthBtn,
-          { opacity: pressed || busy === 'google' ? 0.85 : 1 },
-        ]}
-        onPress={handleGoogle}
-        disabled={!!busy}
-      >
-        <AntDesign name="google" size={18} color="#FFFFFF" />
-        <Text style={styles.oauthText}>
-          {busy === 'google' ? 'Signing in...' : 'Continue with Google'}
-        </Text>
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -192,10 +194,11 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
   line: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontWeight: '500' },
-  appleBtn: { width: '100%', height: 52 },
+  oauthRow: { flexDirection: 'row', gap: 12, width: '100%' },
   oauthBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: '#000000', borderRadius: 14, paddingVertical: 15, width: '100%',
+    flex: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#000000', borderRadius: 14, paddingVertical: 15,
   },
-  oauthText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  oauthText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });

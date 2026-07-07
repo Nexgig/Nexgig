@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.tagline}>Login or Sign Up</Text>
+            <Text style={styles.tagline}>Book. Play. Discover.</Text>
           </View>
 
           {/* Email entry */}
@@ -117,9 +117,11 @@ const styles = StyleSheet.create({
     height: 72,
   },
   tagline: {
-    fontSize: 20,
-    color: '#000000',
+    fontSize: 13,
+    color: '#8E8E93',
     fontWeight: '700',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   actionsSection: {
     gap: 14,
