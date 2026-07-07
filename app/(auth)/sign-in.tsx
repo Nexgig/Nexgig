@@ -212,7 +212,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: 32, paddingBottom: 40, gap: 28 },
   backBtn: { position: 'absolute', top: 8, left: 20, zIndex: 10, padding: 4 },
-  logoSection: { alignItems: 'center', gap: 12 },
+  logoSection: { alignItems: 'center', gap: 2 },
   logo: { width: 235, height: 72 },
   tagline: { fontSize: 14, color: '#8E8E93', fontWeight: '600', textAlign: 'center' },
   actionsSection: { gap: 14, alignItems: 'center' },

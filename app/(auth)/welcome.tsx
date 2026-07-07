@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    gap: 12,
+    gap: 2,
   },
   logo: {
     width: 235,
