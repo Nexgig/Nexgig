@@ -103,7 +103,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 32,
     paddingTop: 64,
     gap: 28,
