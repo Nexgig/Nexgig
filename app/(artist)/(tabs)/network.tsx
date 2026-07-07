@@ -469,7 +469,7 @@ export default function ArtistNetworkScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
+  header: { paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   title: { fontSize: 22, fontWeight: '800' },
   subtitle: { fontSize: 12, marginTop: 2 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
