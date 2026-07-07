@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useThemeContext } from '@/lib/theme-provider';
 import { useAuthStore, useLineupStore } from '@/lib/store';
+import { useTimeFormatStore, type TimeFormat } from '@/lib/conflict-detection';
 import { DeleteAccountModal } from '@/components/delete-account-modal';
 import { REMINDER_PRESETS, getReminderOffsets, setReminderOffsets, rescheduleArtistReminders } from '@/lib/reminders';
 import * as Notifications from 'expo-notifications'; // TEMP: reminder debug button
@@ -37,6 +38,8 @@ export default function DJSettingsScreen() {
   // Theme mode lives in the ThemeProvider (single source of truth). 'system' there
   // follows the live OS theme, so switching to System applies the device theme now.
   const { appearance, setAppearance } = useThemeContext();
+  const timeFormat = useTimeFormatStore((s) => s.format);
+  const setTimeFormat = useTimeFormatStore((s) => s.setFormat);
   const currentUserId = useAuthStore((s) => s.currentUser?.id);
 
   // ─── State ─────────────────────────────────────────────────────────────────
@@ -140,6 +143,7 @@ export default function DJSettingsScreen() {
             ]);
             setDefaultCalendarView('month');
             setAppearance('system');
+            setTimeFormat('24h');
             setNotifBookingRequests(true);
             setNotifBookingUpdates(true);
             setNotifLineupVenues(true);
@@ -281,6 +285,45 @@ export default function DJSettingsScreen() {
                   styles.segmentText,
                   { color: defaultCalendarView === v.value ? '#fff' : colors.foreground },
                 ]}>{v.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Time Format ───────────────────────────────────────────────────── */}
+        <Text style={[styles.sectionLabel, { color: colors.muted }]}>TIME FORMAT</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <MaterialIcons name="schedule" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Clock Format</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>How times show across the app</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.segmentRow}>
+            {([
+              { label: '24-hour', value: '24h' as TimeFormat, hint: '21:00' },
+              { label: '12-hour', value: '12h' as TimeFormat, hint: '9:00 PM' },
+            ]).map((opt) => (
+              <Pressable
+                key={opt.value}
+                style={[
+                  styles.segmentBtn,
+                  { borderColor: colors.border },
+                  timeFormat === opt.value && { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
+                onPress={() => setTimeFormat(opt.value)}
+              >
+                <Text style={[
+                  styles.segmentText,
+                  { color: timeFormat === opt.value ? '#fff' : colors.foreground },
+                ]}>{opt.label}</Text>
+                <Text style={[
+                  styles.segmentText,
+                  { color: timeFormat === opt.value ? '#fff' : colors.muted, fontWeight: '500', fontSize: 11, marginTop: 2 },
+                ]}>{opt.hint}</Text>
               </Pressable>
             ))}
           </View>

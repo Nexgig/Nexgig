@@ -12,12 +12,13 @@ import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupSt
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
-import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 
 export default function ManagerDashboard() {
   const router = useRouter();
   const colors = useColors();
+  const { formatTime: fmtTime } = useFormatTime();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
   const allBookings = useBookingStore((s) => s.bookings);
@@ -371,7 +372,7 @@ export default function ManagerDashboard() {
                     )}
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
-                    {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
+                    {booking.slot ? `${formatDate(booking.slot.date)} · ${fmtTime(booking.slot.startTime)}–${fmtTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
                 {/* Status dot — Clash Display period, like the Nexgig "." */}

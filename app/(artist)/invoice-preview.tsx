@@ -7,7 +7,7 @@ import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, use
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
-import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { formatDate, formatTime, useFormatTime } from '@/lib/conflict-detection';
 import { todayLocalStr } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
@@ -16,6 +16,7 @@ import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 export default function InvoicePreviewScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { formatTime: fmtTime } = useFormatTime();
   const { venueId, gigsJson, total, invoiceId, readOnly, managerId: paramManagerId, venueName: paramVenueName } = useLocalSearchParams<{
     venueId?: string;
     gigsJson?: string;
@@ -316,7 +317,7 @@ export default function InvoicePreviewScreen() {
                 <Text style={[styles.tdDate, { color: colors.foreground }]}>{formatFullDate(g.date)}</Text>
                 <Text style={[styles.tdVenue, { color: colors.muted }]}>{venueName}</Text>
               </View>
-              <Text style={[styles.tdTime, { color: colors.foreground }]}>{formatTime(g.startTime)}–{formatTime(g.endTime)}</Text>
+              <Text style={[styles.tdTime, { color: colors.foreground }]}>{fmtTime(g.startTime)}–{fmtTime(g.endTime)}</Text>
               <Text style={[styles.tdPrice, { color: colors.foreground }]}>{Math.round(g.price).toLocaleString()}</Text>
             </View>
           ))}

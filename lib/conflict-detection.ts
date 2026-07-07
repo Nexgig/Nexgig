@@ -1,4 +1,45 @@
 import type { Booking, AvailabilityBlock, Slot, ConflictInfo, ArtistWithConflict, User, Lineup, ArtistProfile } from './types';
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ─── Time format preference (12h / 24h) ──────────────────────────────────────
+// Times are ALWAYS stored as 24h "HH:MM" strings; this only controls DISPLAY.
+// Default is 24h (matches stored values + UAE norm). Toggle lives in Settings.
+export type TimeFormat = '12h' | '24h';
+
+interface TimeFormatState {
+  format: TimeFormat;
+  setFormat: (f: TimeFormat) => void;
+}
+
+export const useTimeFormatStore = create<TimeFormatState>()(
+  persist(
+    (set) => ({
+      format: '24h',
+      setFormat: (f) => set({ format: f }),
+    }),
+    {
+      name: 'nexgig:time-format',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+// Pure formatter given an explicit format.
+export function formatTimeValue(timeStr: string, fmt: TimeFormat): string {
+  if (!timeStr) return '';
+  const [hRaw, mRaw] = timeStr.split(':');
+  const h = Number(hRaw);
+  const m = Number(mRaw);
+  if (Number.isNaN(h) || Number.isNaN(m)) return timeStr;
+  if (fmt === '24h') {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+}
 
 /**
  * Check if two time ranges overlap.
@@ -159,13 +200,31 @@ export function formatDate(dateStr: string): string {
 }
 
 /**
- * Format a time string (HH:MM) to 12-hour format.
+ * Format a time string (HH:MM) using the user's current format preference.
+ * Non-reactive (reads store state at call time) — safe for any caller. Components
+ * that must re-render live when the toggle flips should use useFormatTime() instead.
  */
 export function formatTime(timeStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hour = h % 12 || 12;
-  return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+  return formatTimeValue(timeStr, useTimeFormatStore.getState().format);
+}
+
+/** Format a start–end range as a single string in the current format. */
+export function formatTimeRange(start: string, end: string): string {
+  const fmt = useTimeFormatStore.getState().format;
+  return `${formatTimeValue(start, fmt)} – ${formatTimeValue(end, fmt)}`;
+}
+
+/**
+ * Reactive hook: returns formatters bound to the live format preference, so any
+ * component using it re-renders immediately when the Settings toggle changes.
+ */
+export function useFormatTime() {
+  const fmt = useTimeFormatStore((s) => s.format);
+  return {
+    format: fmt,
+    formatTime: (t: string) => formatTimeValue(t, fmt),
+    formatTimeRange: (s: string, e: string) => `${formatTimeValue(s, fmt)} – ${formatTimeValue(e, fmt)}`,
+  };
 }
 
 /**

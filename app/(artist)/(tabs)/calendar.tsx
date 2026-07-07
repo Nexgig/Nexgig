@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(artist)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
-import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 
@@ -96,6 +96,7 @@ export default function DJAvailabilityScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { formatTime: fmtTime } = useFormatTime();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allBlocks = useAvailabilityStore((s) => s.blocks);
   const blocks = useMemo(
@@ -808,13 +809,13 @@ export default function DJAvailabilityScreen() {
           </View>
           {(b.resolvedStart || b.resolvedSlotName) && !b.isArtistCreated && (
             <Text style={[styles.slotCardSub, { color: colors.muted }]}>
-              {b.resolvedStart && b.resolvedEnd ? `${b.resolvedStart} – ${b.resolvedEnd}` : ''}
+              {b.resolvedStart && b.resolvedEnd ? `${fmtTime(b.resolvedStart)} – ${fmtTime(b.resolvedEnd)}` : ''}
               {b.resolvedSlotName ? (b.resolvedStart ? ` · ${b.resolvedSlotName}` : b.resolvedSlotName) : ''}
             </Text>
           )}
           {b.isArtistCreated && b.slotStartTime && b.slotEndTime && (
             <Text style={[styles.slotCardSub, { color: colors.muted }]}>
-              {b.slotStartTime === '00:00' && b.slotEndTime === '23:59' ? 'Full Day' : `${b.slotStartTime} – ${b.slotEndTime}`}
+              {b.slotStartTime === '00:00' && b.slotEndTime === '23:59' ? 'Full Day' : `${fmtTime(b.slotStartTime)} – ${fmtTime(b.slotEndTime)}`}
             </Text>
           )}
           <Text style={[styles.slotCardStatus, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
@@ -836,7 +837,7 @@ export default function DJAvailabilityScreen() {
           </Text>
         </View>
         <Text style={[styles.slotCardSub, { color: colors.muted }]}>
-          {b.fullDay ? 'Full Day' : `${b.startTime} – ${b.endTime}`}
+          {b.fullDay ? 'Full Day' : `${fmtTime(b.startTime)} – ${fmtTime(b.endTime)}`}
         </Text>
         <Text style={[styles.slotCardStatus, { color: STATUS_COLORS.cancelled }]}>
             Blocked
@@ -1354,7 +1355,7 @@ export default function DJAvailabilityScreen() {
                         {gig.resolvedVenueName}
                       </Text>
                       <Text style={{ fontSize: 13, color: colors.muted }}>
-                        {formatDate(gig.resolvedDate!)} · {formatTime(gig.resolvedStart ?? '20:00')}–{formatTime(gig.resolvedEnd ?? '23:00')}
+                        {formatDate(gig.resolvedDate!)} · {fmtTime(gig.resolvedStart ?? '20:00')}–{fmtTime(gig.resolvedEnd ?? '23:00')}
                       </Text>
                       {gig.resolvedSlotName ? (
                         <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={1}>{gig.resolvedSlotName}</Text>

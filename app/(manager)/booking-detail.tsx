@@ -8,7 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useCalendarJumpStore, useReviewStore, useLineupStore } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { useColors } from '@/hooks/use-colors';
-import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import type { } from '@/lib/types';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -16,6 +16,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 export default function DJBookingDetailScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { formatTime: fmtTime } = useFormatTime();
   const { id } = useLocalSearchParams<{ id: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
   const getReviewByBooking = useReviewStore((s) => s.getReviewByBooking);
@@ -205,7 +206,7 @@ export default function DJBookingDetailScreen() {
               </View>
               <View style={styles.cardInfo}>
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>{formatDate(slot.date)}</Text>
-                <Text style={[styles.cardSub, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
+                <Text style={[styles.cardSub, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
               </View>
             </View>
           ) : (booking.slotDate || booking.slotStartTime) ? (
@@ -218,7 +219,7 @@ export default function DJBookingDetailScreen() {
                   <Text style={[styles.cardTitle, { color: colors.foreground }]}>{formatDate(booking.slotDate)}</Text>
                 ) : null}
                 {booking.slotStartTime && booking.slotEndTime ? (
-                  <Text style={[styles.cardSub, { color: colors.muted }]}>{formatTime(booking.slotStartTime)} – {formatTime(booking.slotEndTime)}</Text>
+                  <Text style={[styles.cardSub, { color: colors.muted }]}>{fmtTime(booking.slotStartTime)} – {fmtTime(booking.slotEndTime)}</Text>
                 ) : null}
               </View>
             </View>

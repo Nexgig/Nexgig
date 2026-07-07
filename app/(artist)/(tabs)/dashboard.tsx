@@ -10,12 +10,13 @@ import { fonts } from '@/lib/fonts';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore, venuePhotoUri } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
-import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 
 export default function DJHomeScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { formatTime: fmtTime } = useFormatTime();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allBookings = useBookingStore((s) => s.bookings);
   const slots = useSlotStore((s) => s.slots);
@@ -278,8 +279,8 @@ export default function DJHomeScreen() {
                   </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
                     {booking.isArtistCreated && booking.slotDate
-                      ? `${formatDate(booking.slotDate)}${booking.slotStartTime ? ` · ${formatTime(booking.slotStartTime)}–${formatTime(booking.slotEndTime ?? '')}` : ''}`
-                      : booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
+                      ? `${formatDate(booking.slotDate)}${booking.slotStartTime ? ` · ${fmtTime(booking.slotStartTime)}–${fmtTime(booking.slotEndTime ?? '')}` : ''}`
+                      : booking.slot ? `${formatDate(booking.slot.date)} · ${fmtTime(booking.slot.startTime)}–${fmtTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
                 {/* Status dot — Clash Display period, like the manager dashboard */}

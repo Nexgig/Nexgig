@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
-import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import type { Booking, Slot } from '@/lib/types';
 
 interface GigRow {
@@ -38,6 +38,7 @@ function getDayDateTitle(dateStr: string): string {
 export default function InvoiceGigsScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { formatTime: fmtTime } = useFormatTime();
   const { venueId } = useLocalSearchParams<{ venueId: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allBookings = useBookingStore((s) => s.bookings);
@@ -225,7 +226,7 @@ export default function InvoiceGigsScreen() {
     const dateStr = item.booking.slotDate || item.slot?.date || '';
     const dayDateTitle = dateStr ? getDayDateTitle(dateStr) : (item.slot?.name ?? 'Set');
     const timeStr = item.slot
-      ? `${formatTime(item.slot.startTime)} – ${formatTime(item.slot.endTime)}`
+      ? `${fmtTime(item.slot.startTime)} – ${fmtTime(item.slot.endTime)}`
       : '';
     return (
       <View key={item.booking.id} style={[styles.gigRow, { backgroundColor: colors.surface, borderColor: item.selected ? colors.primary : colors.border }]}>

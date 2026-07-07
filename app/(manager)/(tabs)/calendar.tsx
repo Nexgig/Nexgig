@@ -13,7 +13,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
-import { formatTime, formatDate } from '@/lib/conflict-detection';
+import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -74,6 +74,7 @@ export default function CalendarScreen() {
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
   const insets = useSafeAreaInsets();
+  const { formatTime: fmtTime } = useFormatTime();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
   const venues = useMemo(
@@ -1222,7 +1223,7 @@ export default function CalendarScreen() {
             <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
             <View style={styles.slotInfo}>
               <Text style={[styles.slotName, { color: colors.foreground }]} numberOfLines={1}>{venue?.name ?? slot.name}</Text>
-              <Text style={[styles.slotTime, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
+              <Text style={[styles.slotTime, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
             </View>
           </Pressable>
           {renderSlotActionButton(slot)}
@@ -1430,7 +1431,7 @@ export default function CalendarScreen() {
             <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
             <View style={styles.slotInfo}>
               <Text style={[styles.slotName, { color: colors.foreground }]}>{venue?.name ?? slot.name}</Text>
-              <Text style={[styles.slotTime, { color: colors.muted }]}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</Text>
+              <Text style={[styles.slotTime, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
             </View>
           </Pressable>
           {renderSlotActionButton(slot)}
@@ -2150,7 +2151,7 @@ export default function CalendarScreen() {
                               {item.djUser?.fullName ?? 'Unknown Artist'}
                             </Text>
                             <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }} numberOfLines={1}>
-                              {item.venue?.name ?? item.slot.name} · {formatTime(item.slot.startTime)}–{formatTime(item.slot.endTime)}
+                              {item.venue?.name ?? item.slot.name} · {fmtTime(item.slot.startTime)}–{fmtTime(item.slot.endTime)}
                             </Text>
                           </View>
                         </Pressable>
