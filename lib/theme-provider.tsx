@@ -123,7 +123,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           resolve from the CSS vars below; NativeWind doesn't reliably re-flow
           already-mounted className colors on a live scheme switch, so without
           the remount a theme change only appeared after an app restart. */}
-      <View key={colorScheme} style={[{ flex: 1 }, themeVariables]}>{children}</View>
+      <View key={colorScheme} style={[{ flex: 1, backgroundColor: SchemeColors[colorScheme].background }, themeVariables]}>{children}</View>
     </ThemeContext.Provider>
   );
 }
