@@ -160,11 +160,10 @@ export default function SignInScreen() {
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F6F2EC' }]}>
       <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+          <MaterialIcons name="arrow-back" size={24} color="#000000" />
+        </Pressable>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-            <MaterialIcons name="arrow-back" size={24} color="#000000" />
-          </Pressable>
-
           <View style={styles.centerBlock}>
             {/* Logo + (slogan slot -> email) */}
             <View style={styles.logoSection}>
@@ -211,8 +210,8 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 16, paddingBottom: 90 },
-  backBtn: { alignSelf: 'flex-start', padding: 4 },
+  scroll: { flexGrow: 1, paddingHorizontal: 32, paddingBottom: 90 },
+  backBtn: { position: 'absolute', top: 8, left: 20, zIndex: 10, padding: 4 },
   centerBlock: { flexGrow: 1, justifyContent: 'center', gap: 28 },
   logoSection: { alignItems: 'center', gap: 12 },
   logo: { width: 235, height: 72 },
