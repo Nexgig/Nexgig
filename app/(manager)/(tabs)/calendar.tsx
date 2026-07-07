@@ -1689,25 +1689,22 @@ export default function CalendarScreen() {
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <View style={{ flex: 1 }} />
             <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            {totalPeriodDraftCount > 0 && (
             <Pressable
-              style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+              style={({ pressed }) => [styles.headerSendBtn, { opacity: pressed ? 0.6 : 1 }]}
               onPress={() => {
                 setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
                 setShowSendSheet(true);
               }}
+              hitSlop={8}
             >
-              <MaterialIcons name="send" size={16} color="#fff" />
-              <Text style={styles.headerSendBtnText}>Send</Text>
-              <View style={styles.headerSendBadge}>
-                <Text style={styles.headerSendBadgeText}>{totalPeriodDraftCount}</Text>
-              </View>
+              <MaterialIcons name="send" size={26} color={colors.primary} />
+              {totalPeriodDraftCount > 0 && (
+                <View style={styles.headerSendBadge}>
+                  <Text style={styles.headerSendBadgeText}>{totalPeriodDraftCount}</Text>
+                </View>
+              )}
             </Pressable>
-            )}
-            </View>
           </View>
 
           {/* Mode Toggle — ordered so the default view is always first */}
@@ -2464,7 +2461,7 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   title: { fontSize: 22, fontWeight: '800' },
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },
@@ -2596,9 +2593,9 @@ const styles = StyleSheet.create({
   sendSheetCancel: { marginHorizontal: 20, marginTop: 12, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   sendSheetCancelText: { fontSize: 15, fontWeight: '600' },
   // Header Send button
-  headerSendBtn: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, position: 'relative' as const },
+  headerSendBtn: { padding: 2, position: 'relative' as const },
   headerSendBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' as const },
-  headerSendBadge: { minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#FF6B35', alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' },
+  headerSendBadge: { position: 'absolute' as const, top: -4, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#FF6B35', alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' },
   headerSendBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' as const },
   // Send FAB (kept for style reference, no longer rendered)
   sendFabContainer: { position: 'absolute', bottom: 24, right: 20, alignItems: 'center', justifyContent: 'center' },
