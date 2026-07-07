@@ -295,6 +295,16 @@ export default function DJLayout() {
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="booking-detail" />
+      <Stack.Screen
+        name="add-block"
+        options={{
+          presentation: 'formSheet',
+          sheetAllowedDetents: [0.78],
+          sheetExpandsWhenScrolledToEdge: false,
+          sheetGrabberVisible: true,
+          sheetCornerRadius: 20,
+        }}
+      />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="settings" options={{ gestureEnabled: false }} />
       <Stack.Screen name="edit-profile" options={{ gestureEnabled: false }} />

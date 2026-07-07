@@ -94,12 +94,7 @@ function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; s
 
 export default function DJAvailabilityScreen() {
   const colors = useColors();
-  const keyboardHeight = useKeyboardHeight();
   const insets = useSafeAreaInsets();
-  // Header height: status bar + paddingTop(16) + fontSize(24) + paddingBottom(12) + border(1)
-  const HEADER_HEIGHT = insets.top + 53;
-  const SCREEN_HEIGHT = Dimensions.get('window').height;
-  const modalSheetHeight = SCREEN_HEIGHT - HEADER_HEIGHT;
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allBlocks = useAvailabilityStore((s) => s.blocks);
@@ -214,45 +209,6 @@ export default function DJAvailabilityScreen() {
   // Day view state — starts on today, can navigate between days
   const [viewedDayStr, setViewedDayStr] = useState(todayStr);
 
-  // Modal state
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({
-    blockType: 'block' as 'private_event' | 'block',
-    eventName: '',
-    location: '',
-    startTime: '21:00',
-    endTime: '01:00',
-    fullDay: false,
-    modalDate: '',
-  });
-
-  // Time dropdown open state
-  const [startOpen, setStartOpen] = useState(false);
-  const [endOpen, setEndOpen] = useState(false);
-  const startScrollRef = useRef<ScrollView>(null);
-  const endScrollRef = useRef<ScrollView>(null);
-
-  // Swipe-down-to-dismiss for the Add/Block modal
-  const modalTranslateY = useRef(new Animated.Value(0)).current;
-  const modalPanResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
-      onPanResponderMove: (_, gs) => {
-        if (gs.dy > 0) modalTranslateY.setValue(gs.dy);
-      },
-      onPanResponderRelease: (_, gs) => {
-        if (gs.dy > 80) {
-          Animated.timing(modalTranslateY, { toValue: 600, duration: 200, useNativeDriver: true }).start(() => {
-            setShowAddModal(false);
-            modalTranslateY.setValue(0);
-          });
-        } else {
-          Animated.spring(modalTranslateY, { toValue: 0, useNativeDriver: true }).start();
-        }
-      },
-    })
-  ).current;
-
   // Three-dot menu state: { type: 'booking'|'block', id: string } | null
   const [menuItem, setMenuItem] = useState<{ type: 'booking' | 'block'; id: string } | null>(null);
 
@@ -299,28 +255,6 @@ export default function DJAvailabilityScreen() {
       }
     });
   }, [EXPORTED_GIGS_KEY]);
-
-  // Auto-scroll time dropdowns to selected time when opened
-  useEffect(() => {
-    if (startOpen) {
-      const idx = TIME_OPTIONS.indexOf(addForm.startTime);
-      if (idx >= 0) {
-        // Center the selected item: subtract ~2 visible rows worth of height
-        const offset = Math.max(0, idx * 29 - 58);
-        setTimeout(() => startScrollRef.current?.scrollTo({ y: offset, animated: false }), 50);
-      }
-    }
-  }, [startOpen]);
-
-  useEffect(() => {
-    if (endOpen) {
-      const idx = TIME_OPTIONS.indexOf(addForm.endTime);
-      if (idx >= 0) {
-        const offset = Math.max(0, idx * 29 - 58);
-        setTimeout(() => endScrollRef.current?.scrollTo({ y: offset, animated: false }), 50);
-      }
-    }
-  }, [endOpen]);
 
   const markGigExported = async (id: string) => {
     const updated = new Set(exportedGigIds).add(id);
@@ -466,10 +400,6 @@ export default function DJAvailabilityScreen() {
     });
   };
 
-  // Edit mode: track which booking/block is being edited
-  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
-  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
-
   // Blocked dates set
   const blockedDates = useMemo(() => new Set(blocks.map((b) => b.date)), [blocks]);
 
@@ -552,148 +482,14 @@ export default function DJAvailabilityScreen() {
   const handleDayPress = (date: string) => setSelectedDate(date === selectedDate ? '' : date);
 
   const openAddModal = (date: string) => {
-    setEditingBookingId(null);
-    setEditingBlockId(null);
-    setAddForm((f) => ({ ...f, modalDate: date, eventName: '', location: '', startTime: '21:00', endTime: '01:00', fullDay: false }));
-    setStartOpen(false);
-    setEndOpen(false);
-    setShowAddModal(true);
+    router.push(('/(artist)/add-block?date=' + encodeURIComponent(date)) as Href);
   };
 
-  // Simple UUID generator for Supabase rows
+  // Simple UUID generator for Supabase rows (kept for any future inline use)
   const genUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
-
-  const handleSave = async () => {
-    const targetDate = addForm.modalDate || selectedDate;
-    if (addForm.blockType === 'private_event') {
-      if (!addForm.eventName.trim()) {
-        Alert.alert('Required', 'Please enter an event name.');
-        return;
-      }
-      if (!addForm.fullDay && (!addForm.startTime || !addForm.endTime)) {
-        Alert.alert('Required', 'Please select start and end time.');
-        return;
-      }
-      if (editingBookingId) {
-        // Update existing private event
-        updateBookingStatus(editingBookingId, 'confirmed', {
-          slotDate: targetDate,
-          slotStartTime: addForm.fullDay ? '00:00' : addForm.startTime,
-          slotEndTime: addForm.fullDay ? '23:59' : addForm.endTime,
-          slotName: addForm.eventName.trim(),
-          venueName: addForm.eventName.trim(),
-        });
-      } else {
-        // Create new private event booking
-        const isPast = isPastStart(targetDate, addForm.fullDay ? '00:00' : addForm.startTime);
-        const newId = genUUID();
-        const newBooking: Booking = {
-          id: newId,
-          slotId: 'private-slot-' + Date.now(),
-          venueId: '',
-          artistId: currentUser?.id ?? '',
-          managerId: '',
-          status: 'confirmed',
-          isCompleted: isPast,
-          isArtistCreated: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          confirmedAt: new Date().toISOString(),
-          slotDate: targetDate,
-          slotStartTime: addForm.fullDay ? '00:00' : addForm.startTime,
-          slotEndTime: addForm.fullDay ? '23:59' : addForm.endTime,
-          slotName: addForm.eventName.trim(),
-          venueName: addForm.eventName.trim(),
-          privateEventLocation: addForm.location.trim() || undefined,
-        };
-        addBooking(newBooking);
-        // Save to availability_blocks so managers can detect this as a conflict
-        if (currentUser?.id) {
-          supabase.from('availability_blocks').insert({
-            id: newId,
-            artist_id: currentUser.id,
-            date: targetDate,
-            start_time: addForm.fullDay ? '00:00' : addForm.startTime,
-            end_time: addForm.fullDay ? '23:59' : addForm.endTime,
-            is_full_day: addForm.fullDay,
-            block_type: 'private_event',
-            event_name: addForm.eventName.trim(),
-            location: addForm.location.trim() || null,
-          }).then(({ error }) => { if (error) console.warn('availability_blocks insert error:', error.message); });
-        }
-      }
-    } else {
-      // Block type
-      if (!addForm.fullDay && (!addForm.startTime || !addForm.endTime)) {
-        Alert.alert('Required', 'Please select start and end time.');
-        return;
-      }
-      if (editingBlockId) {
-        // Update: delete old Supabase row, insert new one
-        deleteBlock(editingBlockId);
-        if (currentUser?.id) {
-          supabase.from('availability_blocks').delete().eq('id', editingBlockId)
-            .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
-        }
-        const newId = genUUID();
-        const updatedBlock: AvailabilityBlock = {
-          id: newId,
-          artistId: currentUser?.id ?? '',
-          date: targetDate,
-          startTime: addForm.fullDay ? '00:00' : addForm.startTime,
-          endTime: addForm.fullDay ? '23:59' : addForm.endTime,
-          fullDay: addForm.fullDay,
-          label: 'Unavailable',
-          blockType: 'block',
-          createdAt: new Date().toISOString(),
-        };
-        addBlock(updatedBlock);
-        if (currentUser?.id) {
-          supabase.from('availability_blocks').insert({
-            id: newId,
-            artist_id: currentUser.id,
-            date: targetDate,
-            start_time: updatedBlock.startTime,
-            end_time: updatedBlock.endTime,
-            is_full_day: updatedBlock.fullDay,
-            block_type: 'block',
-          }).then(({ error }) => { if (error) console.warn('block insert error:', error.message); });
-        }
-      } else {
-        const newId = genUUID();
-        const newBlock: AvailabilityBlock = {
-          id: newId,
-          artistId: currentUser?.id ?? '',
-          date: targetDate,
-          startTime: addForm.fullDay ? '00:00' : addForm.startTime,
-          endTime: addForm.fullDay ? '23:59' : addForm.endTime,
-          fullDay: addForm.fullDay,
-          label: 'Unavailable',
-          blockType: 'block',
-          createdAt: new Date().toISOString(),
-        };
-        addBlock(newBlock);
-        if (currentUser?.id) {
-          supabase.from('availability_blocks').insert({
-            id: newId,
-            artist_id: currentUser.id,
-            date: targetDate,
-            start_time: newBlock.startTime,
-            end_time: newBlock.endTime,
-            is_full_day: newBlock.fullDay,
-            block_type: 'block',
-          }).then(({ error }) => { if (error) console.warn('block insert error:', error.message); });
-        }
-      }
-    }
-    setEditingBookingId(null);
-    setEditingBlockId(null);
-    setShowAddModal(false);
-    setAddForm((f) => ({ ...f, eventName: '', location: '', startTime: '21:00', endTime: '01:00', fullDay: false, modalDate: '' }));
-  };
 
   const handleDeleteBlock = (id: string) => {
     Alert.alert('Remove Block', 'Remove this unavailability block?', [
@@ -755,31 +551,28 @@ export default function DJAvailabilityScreen() {
   };
 
   const openEditModal = (b: typeof myBookings[0]) => {
-    setAddForm({
-      blockType: 'private_event',
-      eventName: b.slotName ?? '',
-      location: b.privateEventLocation ?? '',
-      startTime: b.slotStartTime ?? '21:00',
-      endTime: b.slotEndTime ?? '01:00',
-      fullDay: b.slotStartTime === '00:00' && b.slotEndTime === '23:59',
-      modalDate: b.resolvedDate ?? selectedDate,
-    });
-    setEditingBookingId(b.id);
-    setShowAddModal(true);
+    const isFull = b.slotStartTime === '00:00' && b.slotEndTime === '23:59';
+    const q = new URLSearchParams();
+    q.set('date', b.resolvedDate ?? selectedDate);
+    q.set('editBookingId', b.id);
+    q.set('kind', 'private_event');
+    q.set('ev', b.slotName ?? '');
+    if (b.privateEventLocation) q.set('loc', b.privateEventLocation);
+    q.set('st', b.slotStartTime ?? '21:00');
+    q.set('et', b.slotEndTime ?? '01:00');
+    q.set('fd', isFull ? '1' : '0');
+    router.push(('/(artist)/add-block?' + q.toString()) as Href);
   };
 
   const openEditBlockModal = (bl: AvailabilityBlock) => {
-    setAddForm({
-      blockType: 'block',
-      eventName: '',
-      location: '',
-      startTime: bl.startTime,
-      endTime: bl.endTime,
-      fullDay: bl.fullDay ?? false,
-      modalDate: bl.date,
-    });
-    setEditingBlockId(bl.id);
-    setShowAddModal(true);
+    const q = new URLSearchParams();
+    q.set('date', bl.date);
+    q.set('editBlockId', bl.id);
+    q.set('kind', 'block');
+    q.set('st', bl.startTime);
+    q.set('et', bl.endTime);
+    q.set('fd', bl.fullDay ? '1' : '0');
+    router.push(('/(artist)/add-block?' + q.toString()) as Href);
   };
 
   // ─── Render a booking card (same design as manager slot card) ───
@@ -1357,193 +1150,6 @@ export default function DJAvailabilityScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
-
-      {/* ─── Add / Block Modal ─── */}
-      <Modal
-        visible={showAddModal}
-        transparent
-        animationType="slide"
-        onShow={() => modalTranslateY.setValue(0)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowAddModal(false)} />
-          <Animated.View style={{ transform: [{ translateY: modalTranslateY }], width: '100%' }}>
-            <ScrollView
-              style={[styles.modalSheet, { backgroundColor: colors.background, maxHeight: modalSheetHeight, minHeight: modalSheetHeight }]}
-              contentContainerStyle={{ paddingBottom: 40 }}
-              keyboardShouldPersistTaps="handled"
-              scrollEventThrottle={16}
-            >
-            <View {...modalPanResponder.panHandlers} style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-
-            {/* Header */}
-            <View style={styles.modalHeaderRow}>
-              <View style={[styles.modalIconCircle, { backgroundColor: colors.primary + '20' }]}>
-                <MaterialIcons name="add-circle-outline" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.modalHeaderText}>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add / Block</Text>
-                <Text style={[styles.modalDate, { color: colors.muted }]}>{formatDateLabel(addForm.modalDate || selectedDate)}</Text>
-              </View>
-            </View>
-
-            {/* Type Toggle */}
-            <View style={[styles.typeToggleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {(['block', 'private_event'] as const).map((type) => (
-                <Pressable
-                  key={type}
-                  style={[styles.typeToggleBtn, addForm.blockType === type && { backgroundColor: colors.primary }]}
-                  onPress={() => setAddForm((f) => ({ ...f, blockType: type }))}
-                >
-                  <Text style={[styles.typeToggleBtnText, { color: addForm.blockType === type ? '#fff' : colors.muted }]}>
-                    {type === 'block' ? 'Block' : 'Private Event'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {/* Private Event fields */}
-            {addForm.blockType === 'private_event' && (
-              <>
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>Event Name *</Text>
-                  <View style={[styles.textInputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <TextInput
-                      style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Wedding, Corporate Party"
-                      placeholderTextColor={colors.muted}
-                      value={addForm.eventName}
-                      onChangeText={(v) => setAddForm((f) => ({ ...f, eventName: v }))}
-                      returnKeyType="next"
-                    />
-                  </View>
-                </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>Location (optional)</Text>
-                  <View style={[styles.textInputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <TextInput
-                      style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Dubai Marina"
-                      placeholderTextColor={colors.muted}
-                      value={addForm.location}
-                      onChangeText={(v) => setAddForm((f) => ({ ...f, location: v }))}
-                      returnKeyType="done"
-                    />
-                  </View>
-                </View>
-              </>
-            )}
-
-            {/* Time pickers + Full Day on same row */}
-            <View style={[styles.timeRow, { marginBottom: 16, alignItems: 'flex-start' }]}>
-              {/* Start Time */}
-              {!addForm.fullDay && (
-                <View style={{ width: '28%', zIndex: startOpen ? 10 : 1 }}>
-                  <Text style={[styles.timeFieldLabel, { color: colors.muted }]}>START</Text>
-                  <Pressable
-                    style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => { setStartOpen((v) => !v); setEndOpen(false); }}
-                  >
-                    <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{addForm.startTime}</Text>
-                    <MaterialIcons name={startOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
-                  </Pressable>
-                  {startOpen && (
-                    <View style={[styles.timeDropdownAbsolute, styles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                      <ScrollView
-                        ref={startScrollRef}
-                        contentContainerStyle={{ paddingBottom: keyboardHeight }}
-                        style={styles.timeDropdownScroll}
-                        nestedScrollEnabled
-                        showsVerticalScrollIndicator={false}
-                      >
-                        {TIME_OPTIONS.map((t) => (
-                          <Pressable
-                            key={t}
-                            style={[styles.timeOption, addForm.startTime === t && { backgroundColor: colors.primary + '15' }]}
-                            onPress={() => { setAddForm((f) => ({ ...f, startTime: t })); setStartOpen(false); }}
-                          >
-                            <Text style={[styles.timeOptionText, { color: addForm.startTime === t ? colors.primary : colors.foreground, fontWeight: addForm.startTime === t ? '700' : '400' }]}>{t}</Text>
-                            {addForm.startTime === t && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {!addForm.fullDay && (
-                <View style={styles.timeSep}>
-                  <Text style={{ color: colors.muted, fontSize: 16 }}>→</Text>
-                </View>
-              )}
-
-              {/* End Time */}
-              {!addForm.fullDay && (
-                <View style={{ width: '28%', zIndex: endOpen ? 10 : 1 }}>
-                  <Text style={[styles.timeFieldLabel, { color: colors.muted }]}>END</Text>
-                  <Pressable
-                    style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => { setEndOpen((v) => !v); setStartOpen(false); }}
-                  >
-                    <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{addForm.endTime}</Text>
-                    <MaterialIcons name={endOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
-                  </Pressable>
-                  {endOpen && (
-                    <View style={[styles.timeDropdownAbsolute, styles.timeDropdownList, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                      <ScrollView
-                        ref={endScrollRef}
-                        style={styles.timeDropdownScroll}
-                        nestedScrollEnabled
-                        showsVerticalScrollIndicator={false}
-                      >
-                        {TIME_OPTIONS.map((t) => (
-                          <Pressable
-                            key={t}
-                            style={[styles.timeOption, addForm.endTime === t && { backgroundColor: colors.primary + '15' }]}
-                            onPress={() => { setAddForm((f) => ({ ...f, endTime: t })); setEndOpen(false); }}
-                          >
-                            <Text style={[styles.timeOptionText, { color: addForm.endTime === t ? colors.primary : colors.foreground, fontWeight: addForm.endTime === t ? '700' : '400' }]}>{t}</Text>
-                            {addForm.endTime === t && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Full Day toggle */}
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <Text style={[styles.timeFieldLabel, { color: colors.muted, marginBottom: 6 }]}>FULL DAY</Text>
-                <View style={{ height: 42, justifyContent: 'center' }}>
-                  <Pressable
-                    style={[styles.toggle, addForm.fullDay ? { backgroundColor: colors.primary } : { backgroundColor: colors.border }]}
-                    onPress={() => setAddForm((f) => ({ ...f, fullDay: !f.fullDay }))}
-                  >
-                    <View style={[styles.toggleThumb, addForm.fullDay ? styles.toggleThumbOn : styles.toggleThumbOff]} />
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            {/* Actions */}
-            <View style={styles.modalActions}>
-              <Pressable
-                style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => setShowAddModal(false)}
-              >
-                <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
-              </Pressable>
-              <Pressable style={({ pressed }) => [styles.confirmBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 }]} onPress={handleSave}>
-                <MaterialIcons name="check" size={16} color="#fff" />
-                <Text style={styles.confirmBtnText}>Save</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
 
       {/* ─── Three-dot Action Sheet ─── */}
       <Modal visible={menuItem !== null} transparent animationType="fade" onRequestClose={() => setMenuItem(null)}>
