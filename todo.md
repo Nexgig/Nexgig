@@ -11,18 +11,20 @@
 ### PHASE 1 — Ship to the stores (do first)
 
 **Session 1 · Production build readiness**
-- Dependency alignment before production build
-- Deferred lint hygiene
+- ~~Dependency alignment~~ — DONE (Jul 7): checked via expo-doctor; only 2 nav packages are harmlessly AHEAD of Expo SDK 54's minimums (7.8.12 vs 7.4.0, 7.1.25 vs 7.1.8), same major version, build 9 runs fine — left as-is on purpose (don't downgrade; caret ranges make `expo install --fix` a no-op anyway). If the doctor warning ever needs silencing, add these two to `expo.install.exclude` in package.json.
+- Deferred lint hygiene — DEPRIORITIZED: cosmetic only (unused imports/vars, unescaped apostrophes, hook-dep warnings). `pnpm check` (tsc) already passes, which is what matters for a working build. Not a submission blocker; do as a later cleanup.
 
 **Session 1b · App Store submission** — build 9 (with the 'gig.' icon) is ALREADY uploaded to App Store Connect; version status is "Prepare for Submission". Remaining before hitting Submit:
 - Create a DEMO / REVIEW account for Apple: a MANAGER login with sample data (a venue or two, a few artists in the lineup, a couple of gigs) so the reviewer doesn't hit an empty app. NEEDS Tuts in the app (Claude can't create accounts) — then give Claude the creds for the review notes.
 - Fill App Store Connect metadata: screenshots (6.7" iPhone required), description / subtitle / keywords / promo text (ALL DRAFTED this session — ready to paste), App Privacy questionnaire, age rating, App Review notes (with demo creds + note that both managers AND artists use the same app).
 - Then Submit for Review.
-- (Optional, decide BEFORE final submit: revisit the app icon — 'gig.' vs 'N.' vs bigger-coral-dot. ANY icon change = new build + resubmit, so choose before submitting for review, not after.)
+- Icon decision: went with 'gig.' (BLACK text on coral) — building as build 10. NOTE: build 10 (not build 9) is now the one to attach + Submit. If black looks too muted on device, revert to white → another build before submitting.
 
-**Session 2 · Store assets / first impression**
-- Finalize image/logo assets + redo Welcome screen (slogan stays "Book. Play. Discover.")  [app icon 'gig.' DONE — in build 9]
-- Clean unused asset images (logo icon etc)
+**Session 2 · Store assets / first impression**  [mostly DONE Jul 7]
+- ~~Clean unused asset images~~ — DONE (Jul 7): removed react-logo*, partial-react-logo, old nexgig-icon-blue/icon/home-logo/icon-coral-bg, android-icon-background. assets/images now holds only app-icon/splash/android-fg/mono + in-app nexgig-logo/nexgig-icon/manager-avatar + favicon.
+- ~~Auth screen redesign~~ — DONE (Jul 7): FULL redesign of Welcome + Sign-in, shipped via OTA. Cream (#F6F2EC) background; "Nexgig." logo (black text, CORAL dot); "BOOK. PLAY. DISCOVER." slogan tucked under logo; coral CTA; clean white inputs; Apple/Google made COMPACT side-by-side (shared oauth-buttons.tsx, everywhere). Sign-in now MIRRORS Welcome: press Continue → slogan slot becomes the email, email input becomes password input, Continue becomes Sign In, Apple/Google removed. New-user flow (choose-account-type → wizard) left untouched. Responsive: proportional top offset (height*0.16) so it mirrors + adapts across all iPhone/Android sizes; tight logo↔slogan spacing (gap 2). App display name kept "Nexgig" (no trailing dot — avoid Apple naming hassle + rebuild).
+- App icon + splash → BLACK "gig." on coral (was white) — built as build 10 (native change). VERIFY on device once build lands; decide keep-black vs revert-to-white (black-on-coral is lower contrast).
+- STILL OPEN: manager-avatar.png is still the old default placeholder. Whole-app responsive pass (only auth screens done so far) — fold into Session 5 design pass.
 
 **Session 3 · Android parity**
 - Android FCM push + gig reminders
