@@ -34,8 +34,8 @@
 ### PHASE 2 — Launch-quality polish
 
 **Session 4 · Native sheet conversions**
-- Artist Add Block → convert to native sheet like Add Set (+ style the control like the Add Set pill). Do first.
-- Manager Assign Venue (from My Artists) → native sheet; wiring may be dead from the earlier rollback, needs verifying. Do second.
+- ~~Artist Add Block → native sheet like Add Set~~ — DONE (Jul 7, OTA): new `app/(artist)/add-block.tsx` native formSheet (mirrors Add Set: date-title header + round close, detent 0.78, grabber). Handles BOTH create AND edit (block + private event) via URL params; old transparent `<Modal>` + PanResponder + handleSave removed from calendar.tsx (navigates to the sheet instead). NEW: **Date Range** mode — block many consecutive days full-day for travel (Single Day / Date Range toggle; inline date dropdowns, no new native dep). Fixed sheet grey-gap at bottom (trailing filler minHeight 600 to always fill the detent). Block card X → `delete-outline` (matches manager empty-slot delete). Delete behavior: **blocks delete directly (no confirm)**; **private events keep the confirm popup** (icon now delete-outline, not X). Also this session: moved the invoice icon off the dashboard FAB onto the **calendar header** (right of the title, same circular style as the profile Settings / dashboard Notifications icons, carries the overdue red badge); left-aligned the Network tab title to match the other tabs.
+- Manager Assign Venue (from My Artists) → native sheet; wiring may be dead from the earlier rollback, needs verifying. Do second. STILL OPEN.
 
 **Session 5 · Design pass**
 - maket the calendar numbers and days name bigger
