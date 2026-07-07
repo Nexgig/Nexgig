@@ -499,7 +499,7 @@ export default function AddBlockScreen() {
           </Pressable>
         </View>
 
-        <View style={{ flexGrow: 1, minHeight: 200, backgroundColor: colors.background }} />
+        <View style={{ flexGrow: 1, minHeight: 600, backgroundColor: colors.background }} />
       </ScrollView>
     </View>
   );
