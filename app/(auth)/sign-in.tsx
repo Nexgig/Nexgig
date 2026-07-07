@@ -200,6 +200,11 @@ export default function SignInScreen() {
             >
               <Text style={styles.primaryBtnText}>{isLoading ? 'Signing in…' : 'Sign In'}</Text>
             </Pressable>
+
+            {/* Spacer: reserves the vertical space the removed Apple/Google
+                buttons occupied on the welcome screen, so this centered block
+                is the same height and the logo/input/button mirror welcome. */}
+            <View style={styles.oauthSpacer} />
           </View>
         </ScrollView>
       </ScreenContainer>
@@ -214,6 +219,7 @@ const styles = StyleSheet.create({
   logo: { width: 235, height: 72 },
   tagline: { fontSize: 14, color: '#8E8E93', fontWeight: '600', textAlign: 'center' },
   actionsSection: { gap: 14, alignItems: 'center' },
+  oauthSpacer: { height: 84 },
   emailLabel: { fontSize: 14, color: '#8E8E93', fontWeight: '600', alignSelf: 'center' },
   passwordContainer: {
     flexDirection: 'row', alignItems: 'center', width: '100%',
