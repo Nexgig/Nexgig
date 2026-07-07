@@ -1044,7 +1044,10 @@ export function resetAllStores() {
   useAvailabilityStore.setState({ blocks: [] });
   useInvoiceStore.setState({ invoices: [] });
   useNotificationStore.getState().clearNotifications();
-  useInvoiceReminderStore.setState({ reminders: [] });
+  // NOTE: invoice reminders are intentionally NOT cleared here (like drafts). They
+  // persist per-device and every entry is scoped by artistId, so another user signing
+  // in never sees them, and the original user keeps their chosen reminder day across
+  // sign-out/sign-in. (Reminders are device-local; not synced to Supabase.)
   useCalendarJumpStore.setState({ pendingDate: null });
 }
 
