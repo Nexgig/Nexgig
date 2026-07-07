@@ -166,21 +166,18 @@ export default function SignInScreen() {
           </Pressable>
 
           <View style={styles.centerBlock}>
-            {/* Logo */}
+            {/* Logo + (slogan slot -> email) */}
             <View style={styles.logoSection}>
               <Image
                 source={require('@/assets/images/nexgig-logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
-              <Text style={styles.tagline}>Book. Play. Discover.</Text>
+              <Text style={styles.tagline} numberOfLines={1}>{email || 'Book. Play. Discover.'}</Text>
             </View>
 
-            {/* Password entry */}
+            {/* (email input slot -> password input) + (Continue -> Sign In) */}
             <View style={styles.actionsSection}>
-              {!!email && (
-                <Text style={styles.emailLabel} numberOfLines={1}>{email}</Text>
-              )}
               <View style={styles.passwordContainer}>
                 <TextInput
                   style={styles.passwordInput}
@@ -219,7 +216,7 @@ const styles = StyleSheet.create({
   centerBlock: { flexGrow: 1, justifyContent: 'center', gap: 28 },
   logoSection: { alignItems: 'center', gap: 12 },
   logo: { width: 235, height: 72 },
-  tagline: { fontSize: 13, color: '#8E8E93', fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
+  tagline: { fontSize: 14, color: '#8E8E93', fontWeight: '600', textAlign: 'center' },
   actionsSection: { gap: 14, alignItems: 'center' },
   emailLabel: { fontSize: 14, color: '#8E8E93', fontWeight: '600', alignSelf: 'center' },
   passwordContainer: {
