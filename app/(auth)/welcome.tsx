@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Image, ScrollView, Alert } from '@/lib/rn';
+import { useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -10,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 export default function WelcomeScreen() {
   const router = useRouter();
   const keyboardHeight = useKeyboardHeight();
+  const { height } = useWindowDimensions();
 
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -53,7 +55,7 @@ export default function WelcomeScreen() {
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F6F2EC' }]}>
       <ScreenContainer containerClassName="bg-transparent" safeAreaClassName="bg-transparent">
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, { paddingTop: height * 0.16 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -103,9 +105,8 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: 32,
-    paddingBottom: 90,
+    paddingBottom: 40,
     gap: 28,
   },
   logoSection: {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ScrollView, Image } from '@/lib/rn';
+import { useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -10,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { height } = useWindowDimensions();
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
 
   // Email is passed from the welcome screen's email step (read-only here).
@@ -163,7 +165,7 @@ export default function SignInScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <MaterialIcons name="arrow-back" size={24} color="#000000" />
         </Pressable>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: height * 0.16 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {/* Logo + (slogan slot -> email) */}
           <View style={styles.logoSection}>
             <Image
@@ -200,11 +202,6 @@ export default function SignInScreen() {
             >
               <Text style={styles.primaryBtnText}>{isLoading ? 'Signing in…' : 'Sign In'}</Text>
             </Pressable>
-
-            {/* Spacer: reserves the vertical space the removed Apple/Google
-                buttons occupied on the welcome screen, so this centered block
-                is the same height and the logo/input/button mirror welcome. */}
-            <View style={styles.oauthSpacer} />
           </View>
         </ScrollView>
       </ScreenContainer>
@@ -213,13 +210,12 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 90, gap: 28 },
+  scroll: { flexGrow: 1, paddingHorizontal: 32, paddingBottom: 40, gap: 28 },
   backBtn: { position: 'absolute', top: 8, left: 20, zIndex: 10, padding: 4 },
   logoSection: { alignItems: 'center', gap: 12 },
   logo: { width: 235, height: 72 },
   tagline: { fontSize: 14, color: '#8E8E93', fontWeight: '600', textAlign: 'center' },
   actionsSection: { gap: 14, alignItems: 'center' },
-  oauthSpacer: { height: 84 },
   emailLabel: { fontSize: 14, color: '#8E8E93', fontWeight: '600', alignSelf: 'center' },
   passwordContainer: {
     flexDirection: 'row', alignItems: 'center', width: '100%',
