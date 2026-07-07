@@ -8,6 +8,7 @@ import "react-native-reanimated";
 import { Platform, LogBox } from '@/lib/rn';
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
+import { SchemeColors } from "@/constants/theme";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -50,6 +51,23 @@ export const unstable_settings = {
 function ThemedStatusBar() {
   const { colorScheme } = useThemeContext();
   return <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />;
+}
+
+// Renders the root navigator with a themed scene background (so no default-white
+// navigator scene flashes in dark mode during the launch transition) and a soft
+// fade — instead of a slide-from-right — when entering the manager/artist groups
+// on cold start or sign-in.
+function ThemedAppStack() {
+  const { colorScheme } = useThemeContext();
+  const bg = SchemeColors[colorScheme].background;
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
+      <Stack.Screen name="(manager)" options={{ animation: "fade" }} />
+      <Stack.Screen name="(artist)" options={{ animation: "fade" }} />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -213,12 +231,7 @@ export default function RootLayout() {
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
-          <Stack.Screen name="(manager)" />
-          <Stack.Screen name="(artist)" />
-        </Stack>
+        <ThemedAppStack />
         <ThemedStatusBar />
       </QueryClientProvider>
     </GestureHandlerRootView>
