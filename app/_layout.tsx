@@ -39,7 +39,7 @@ SplashScreen.setOptions({ fade: true, duration: 300 });
 
 // Minimum time (ms) to keep the splash/logo on screen, even if fonts + data are
 // ready sooner — so the logo registers for a beat instead of flashing past.
-const MIN_SPLASH_MS = 900;
+const MIN_SPLASH_MS = 500;
 const APP_START = Date.now();
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };

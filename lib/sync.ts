@@ -11,17 +11,28 @@ import type { Venue, Slot, Booking, AppNotification } from './types';
 export async function syncUserData(userId: string, accountType: 'manager' | 'artist') {
   try {
     if (accountType === 'manager') {
-      await Promise.all([
-        syncVenues(userId),
-        syncManagerBookings(userId),
-        syncManagerSlots(userId),
-        syncNotifications(userId),
+      // Fetch everything in parallel, then apply ALL stores together in one
+      // synchronous block. React batches the setStates into a single re-render,
+      // so the UI goes straight from cached data to fully-fresh data with no
+      // in-between frame where (e.g.) bookings are fresh but venues aren't yet —
+      // which previously showed "Unknown Venue" for a fraction of a second.
+      const [venues, bookings, slots, notifications] = await Promise.all([
+        fetchVenues(userId),
+        fetchManagerBookings(userId),
+        fetchManagerSlots(userId),
+        fetchNotifications(userId),
       ]);
+      if (venues) useVenueStore.setState({ venues });
+      if (slots) useSlotStore.setState({ slots });
+      if (bookings) useBookingStore.setState({ bookings });
+      if (notifications) useNotificationStore.setState({ notifications });
     } else {
-      await Promise.all([
-        syncArtistBookings(userId),
-        syncNotifications(userId),
+      const [bookings, notifications] = await Promise.all([
+        fetchArtistBookings(userId),
+        fetchNotifications(userId),
       ]);
+      if (bookings) useBookingStore.setState({ bookings });
+      if (notifications) useNotificationStore.setState({ notifications });
     }
   } catch (error) {
     console.warn('Sync error:', error);
@@ -30,14 +41,14 @@ export async function syncUserData(userId: string, accountType: 'manager' | 'art
 
 // ─── Sync venues ─────────────────────────────────────────────────────────────
 
-async function syncVenues(managerId: string) {
+async function fetchVenues(managerId: string): Promise<Venue[] | null> {
   const { data, error } = await supabase
     .from('venues')
     .select('*')
     .eq('manager_id', managerId)
     .order('created_at', { ascending: false });
 
-  if (error || !data) return;
+  if (error || !data) return null;
 
   const venues: Venue[] = data.map((v) => ({
     id: v.id,
@@ -66,19 +77,19 @@ async function syncVenues(managerId: string) {
     updatedAt: v.updated_at,
   }));
 
-  useVenueStore.setState({ venues });
+  return venues;
 }
 
 // ─── Sync slots ──────────────────────────────────────────────────────────────
 
-async function syncManagerSlots(managerId: string) {
+async function fetchManagerSlots(managerId: string): Promise<Slot[] | null> {
   const { data, error } = await supabase
     .from('slots')
     .select('*')
     .eq('manager_id', managerId)
     .order('date', { ascending: true });
 
-  if (error || !data) return;
+  if (error || !data) return null;
 
   const slots: Slot[] = data.map((s) => ({
     id: s.id,
@@ -93,42 +104,42 @@ async function syncManagerSlots(managerId: string) {
     updatedAt: s.updated_at,
   }));
 
-  useSlotStore.setState({ slots });
+  return slots;
 }
 
 // ─── Sync bookings for manager ───────────────────────────────────────────────
 
-async function syncManagerBookings(managerId: string) {
+async function fetchManagerBookings(managerId: string): Promise<Booking[] | null> {
   const { data, error } = await supabase
     .from('bookings')
     .select('*')
     .eq('manager_id', managerId)
     .order('created_at', { ascending: false });
 
-  if (error || !data) return;
+  if (error || !data) return null;
 
   const bookings: Booking[] = data.map(mapBooking);
-  useBookingStore.setState({ bookings });
+  return bookings;
 }
 
 // ─── Sync bookings for artist ────────────────────────────────────────────────
 
-async function syncArtistBookings(artistId: string) {
+async function fetchArtistBookings(artistId: string): Promise<Booking[] | null> {
   const { data, error } = await supabase
     .from('bookings')
     .select('*')
     .eq('artist_id', artistId)
     .order('created_at', { ascending: false });
 
-  if (error || !data) return;
+  if (error || !data) return null;
 
   const bookings: Booking[] = data.map(mapBooking);
-  useBookingStore.setState({ bookings });
+  return bookings;
 }
 
 // ─── Sync notifications ──────────────────────────────────────────────────────
 
-async function syncNotifications(userId: string) {
+async function fetchNotifications(userId: string): Promise<AppNotification[] | null> {
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
@@ -136,7 +147,7 @@ async function syncNotifications(userId: string) {
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error || !data) return;
+  if (error || !data) return null;
 
   const notifications: AppNotification[] = data.map((n) => ({
     id: n.id,
@@ -150,7 +161,7 @@ async function syncNotifications(userId: string) {
     createdAt: n.created_at,
   }));
 
-  useNotificationStore.setState({ notifications });
+  return notifications;
 }
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
