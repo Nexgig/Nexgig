@@ -32,6 +32,9 @@ LogBox.ignoreLogs([/SafeAreaView has been deprecated/]);
 // Keep the native splash on screen until our custom fonts have loaded so text
 // doesn't flash in the system font first.
 SplashScreen.preventAutoHideAsync().catch(() => {});
+// Cross-fade the splash out (instead of a hard cut) so there's no bare-white
+// frame between the native splash tearing down and the first screen painting.
+SplashScreen.setOptions({ fade: true, duration: 300 });
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -65,8 +68,10 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // Hide the splash once fonts are ready (or failed — don't trap the user).
-  useEffect(() => {
+  // Hide the splash only once the first screen has actually laid out (see
+  // onLayoutRootView below), not the moment fonts load — otherwise the splash
+  // lifts before any UI has painted and a bare-white window shows for a frame.
+  const onLayoutRootView = useCallback(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => {});
     }
@@ -206,7 +211,7 @@ export default function RootLayout() {
   }
 
   const content = (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <QueryClientProvider client={queryClient}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
