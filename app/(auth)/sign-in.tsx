@@ -176,7 +176,7 @@ export default function SignInScreen() {
               resizeMode="contain"
             />
             <Text style={[styles.brandName, { color: colors.foreground }]}>Nexgig</Text>
-            <Text style={[styles.brandSlogan, { color: colors.muted }]}>Every booking, verified.</Text>
+            <Text style={[styles.brandSlogan, { color: colors.muted }]}>Book. Play. Discover.</Text>
           </View>
         </View>
 

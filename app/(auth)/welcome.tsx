@@ -113,9 +113,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logo: {
-    width: 150,
-    height: 150,
-    borderRadius: 20,
+    width: 210,
+    height: 120,
   },
   tagline: {
     fontSize: 20,

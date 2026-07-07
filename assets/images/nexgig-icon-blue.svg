@@ -1,9 +1,0 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <!-- Brand blue background, full bleed (no transparency, no rounded corners — iOS adds those) -->
-  <rect width="1024" height="1024" fill="#2563EB"/>
-  <!-- White X: two rounded crossing bars -->
-  <g stroke="#FFFFFF" stroke-width="150" stroke-linecap="round" fill="none">
-    <line x1="360" y1="300" x2="664" y2="724"/>
-    <line x1="664" y1="300" x2="360" y2="724"/>
-  </g>
-</svg>
