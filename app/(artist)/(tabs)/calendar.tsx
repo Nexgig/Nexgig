@@ -5,7 +5,7 @@ import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
+import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -114,6 +114,31 @@ export default function DJAvailabilityScreen() {
   const allNotifications = useNotificationStore((s) => s.notifications);
   const markNotifAsRead = useNotificationStore((s) => s.markAsRead);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const getReminder = useInvoiceReminderStore((s) => s.getReminder);
+
+  // Overdue-invoice indicator (mirrors the artist dashboard FAB badge logic):
+  // red dot when a venue with completed gigs has passed its invoice reminder day
+  // this month without an invoice having been sent.
+  const hasOverdueInvoice = useMemo(() => {
+    if (!currentUser) return false;
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const completedBookings = allBookings.filter(
+      (b) => b.artistId === currentUser.id && b.isCompleted && b.status === 'completed'
+    );
+    const venueIds = [...new Set(completedBookings.map((b) => b.venueId))];
+    return venueIds.some((vid) => {
+      const reminder = getReminder(vid, currentUser.id);
+      const sentThisMonth = allInvoices.some((inv) => {
+        const d = new Date(inv.sentAt);
+        return inv.venueId === vid && inv.artistId === currentUser.id && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+      return !sentThisMonth && currentDay > reminder;
+    });
+  }, [allBookings, allInvoices, currentUser, getReminder]);
 
   // Helper: send a notification to the manager
   const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled', b: { id: string; managerId: string; resolvedVenueName?: string; resolvedDate?: string }) => {
@@ -492,14 +517,9 @@ export default function DJAvailabilityScreen() {
   });
 
   const handleDeleteBlock = (id: string) => {
-    Alert.alert('Remove Block', 'Remove this unavailability block?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => {
-        deleteBlock(id);
-        supabase.from('availability_blocks').delete().eq('id', id)
-          .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
-      }},
-    ]);
+    deleteBlock(id);
+    supabase.from('availability_blocks').delete().eq('id', id)
+      .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
   };
 
   const handleDeletePrivateEvent = (bookingId: string, name: string) => {
@@ -615,6 +635,8 @@ export default function DJAvailabilityScreen() {
                       text: 'Remove', style: 'destructive',
                       onPress: () => {
                         deleteBooking(b.id);
+                        supabase.from('availability_blocks').delete().eq('id', b.id)
+                          .then(({ error }) => { if (error) console.warn('availability_blocks delete error:', error.message); });
                         markRelatedNotificationsRead(b.id);
                       }
                     },
@@ -622,7 +644,7 @@ export default function DJAvailabilityScreen() {
                 );
               }}
             >
-              <MaterialIcons name="close" size={20} color={colors.error} />
+              <MaterialIcons name="delete-outline" size={20} color={colors.error} />
             </Pressable>
           </View>
         );
@@ -849,6 +871,17 @@ export default function DJAvailabilityScreen() {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
+          <View style={styles.headerRight}>
+            <Pressable
+              style={({ pressed }) => [styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => router.push('/(artist)/invoices' as Href)}
+            >
+              <MaterialIcons name="receipt-long" size={22} color={colors.foreground} />
+              {hasOverdueInvoice && (
+                <View style={[styles.badge, { borderColor: colors.surface }]} />
+              )}
+            </Pressable>
+          </View>
         </View>
 
         {/* View Mode Toggle — 3 buttons matching manager style */}
@@ -1369,8 +1402,11 @@ export default function DJAvailabilityScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100 },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 0.5 },
   title: { fontSize: 24, fontWeight: '800' },
+  headerRight: { flexDirection: 'row', gap: 8 },
+  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  badge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#F6F2EC' },
 
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },

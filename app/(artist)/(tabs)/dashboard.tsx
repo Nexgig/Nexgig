@@ -7,7 +7,7 @@ import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useInvoiceReminderStore, useBookingFilterStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore, venuePhotoUri } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -25,7 +25,6 @@ export default function DJHomeScreen() {
   const unreadCount = useNotificationStore((s) => s.getUnreadCount(currentUser?.id ?? ''));
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const allInvoices = useInvoiceStore((s) => s.invoices);
-  const getReminder = useInvoiceReminderStore((s) => s.getReminder);
 
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
@@ -54,28 +53,6 @@ export default function DJHomeScreen() {
     }
     setRefreshing(false);
   }, [currentUser?.id]);
-
-  // Check if any venue has overdue invoice reminder
-  const hasOverdueInvoice = useMemo(() => {
-    if (!currentUser) return false;
-    const today = new Date();
-    const currentDay = today.getDate();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    const completedBookings = allBookings.filter(
-      (b) => b.artistId === currentUser.id && b.isCompleted && b.status === 'completed'
-    );
-    const venueIds = [...new Set(completedBookings.map((b) => b.venueId))];
-    return venueIds.some((vid) => {
-      const reminder = getReminder(vid, currentUser.id);
-      const sentThisMonth = allInvoices.some((inv) => {
-        const d = new Date(inv.sentAt);
-        return inv.venueId === vid && inv.artistId === currentUser.id && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      });
-      // Red badge only when PAST the reminder day (overdue), not on the day itself
-      return !sentThisMonth && currentDay > reminder;
-    });
-  }, [allBookings, allInvoices, currentUser, getReminder]);
 
   const bookings = useMemo(
     () => allBookings.filter((b) => b.artistId === currentUser?.id),
@@ -314,16 +291,6 @@ export default function DJHomeScreen() {
         </View>
 
       </ScrollView>
-      {/* Invoice FAB */}
-      <Pressable
-        style={({ pressed }) => [styles.invoiceFab, { opacity: pressed ? 0.85 : 1 }]}
-        onPress={() => router.push('/(artist)/invoices' as Href)}
-      >
-        <MaterialIcons name="receipt-long" size={24} color="#fff" />
-        {hasOverdueInvoice && (
-          <View style={styles.fabBadge} />
-        )}
-      </Pressable>
 
       {/* Bookings status filter popup */}
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
@@ -429,6 +396,4 @@ const styles = StyleSheet.create({
   venueChipRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 2 },
   venueChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6 },
   venueChipText: { fontSize: 13, fontWeight: '600' },
-  invoiceFab: { position: 'absolute', bottom: 24, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#E2674A', alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
-  fabBadge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#E2674A' },
 });
