@@ -64,7 +64,9 @@ interface VenueState {
   clearVenues: () => void;
 }
 
-export const useVenueStore = create<VenueState>((set, get) => ({
+export const useVenueStore = create<VenueState>()(
+  persist(
+    (set, get) => ({
   venues: [],
   addVenue: (venue) => set((state) => ({ venues: [...state.venues, { ...venue, verificationStatus: venue.verificationStatus ?? 'pending' }] })),
   clearVenues: () => set({ venues: [] }),
@@ -88,7 +90,14 @@ export const useVenueStore = create<VenueState>((set, get) => ({
   }),
   getVenueById: (id) => get().venues.find((v) => v.id === id),
   getVenueName: (id) => get().venues.find((v) => v.id === id)?.name ?? 'Unknown Venue',
-}));
+}),
+    {
+      name: 'nexgig:venues',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ venues: state.venues }),
+    }
+  )
+);
 
 // ─── Lineup Store (now includes global lineup + venue assignments) ───────────
 
@@ -284,7 +293,9 @@ interface SlotState {
   clearSlots: () => void;
 }
 
-export const useSlotStore = create<SlotState>((set, get) => ({
+export const useSlotStore = create<SlotState>()(
+  persist(
+    (set, get) => ({
   slots: [],
   addSlot: (slot) => set((state) => ({ slots: [...state.slots, slot] })),
   clearSlots: () => set({ slots: [] }),
@@ -369,7 +380,14 @@ export const useSlotStore = create<SlotState>((set, get) => ({
     return get().slots.filter((s) => venueIds.includes(s.venueId) && s.date.startsWith(prefix));
   },
   getSlotById: (id) => get().slots.find((s) => s.id === id),
-}));
+}),
+    {
+      name: 'nexgig:slots',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ slots: state.slots }),
+    }
+  )
+);
 
 // ─── Booking Store ────────────────────────────────────────────────────────────
 
@@ -389,7 +407,9 @@ interface BookingState {
   clearBookings: () => void;
 }
 
-export const useBookingStore = create<BookingState>((set, get) => ({
+export const useBookingStore = create<BookingState>()(
+  persist(
+    (set, get) => ({
   bookings: [],
   addBooking: (booking) => set((state) => ({ bookings: [...state.bookings, booking] })),
   updateBookingStatus: (id, status, extra = {}) => {
@@ -447,7 +467,14 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     bookings: state.bookings.filter((b) => b.id !== id),
   })),
   clearBookings: () => set((state) => ({ bookings: [] })),
-}))
+}),
+    {
+      name: 'nexgig:bookings',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ bookings: state.bookings }),
+    }
+  )
+)
 
 // ─── Availability Store ───────────────────────────────────────────────────────
 

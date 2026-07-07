@@ -37,6 +37,11 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 // frame between the native splash tearing down and the first screen painting.
 SplashScreen.setOptions({ fade: true, duration: 300 });
 
+// Minimum time (ms) to keep the splash/logo on screen, even if fonts + data are
+// ready sooner — so the logo registers for a beat instead of flashing past.
+const MIN_SPLASH_MS = 900;
+const APP_START = Date.now();
+
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
@@ -86,13 +91,14 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // Hide the splash only once the first screen has actually laid out (see
-  // onLayoutRootView below), not the moment fonts load — otherwise the splash
-  // lifts before any UI has painted and a bare-white window shows for a frame.
+  // Hide the splash once the first screen has laid out AND at least MIN_SPLASH_MS
+  // has elapsed — so the logo shows for a pleasant beat instead of flashing past,
+  // and the persisted stores have hydrated (cached data painted) before it lifts.
   const onLayoutRootView = useCallback(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
+    if (!fontsLoaded && !fontError) return;
+    const elapsed = Date.now() - APP_START;
+    const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+    setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, wait);
   }, [fontsLoaded, fontError]);
 
   // Clear stale/invalid session on app launch
