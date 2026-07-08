@@ -62,6 +62,7 @@ export default function ArtistProfileViewScreen() {
           setFetchedUser({
             id: p.id, email: p.email ?? '', phone: '', accountType: 'artist' as const,
             fullName: p.full_name, profilePhotoUrl: p.profile_photo_url,
+            avatarId: p.avatar_id ?? undefined,
             bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience ?? undefined,
             isPhoneVerified: false, isEmailVerified: false,
             createdAt: p.created_at, updatedAt: p.updated_at,
@@ -151,7 +152,7 @@ export default function ArtistProfileViewScreen() {
         <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Top row: photo + name/flag */}
           <View style={styles.heroTopRow}>
-            <AvatarImage uri={dj.profilePhotoUrl} name={dj.fullName} size={80} />
+            <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
             <View style={styles.heroNameBlock}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>

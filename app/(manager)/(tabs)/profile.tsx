@@ -136,7 +136,7 @@ export default function ManagerProfileScreen() {
           >
             <MaterialIcons name="edit" size={18} color={colors.muted} />
           </Pressable>
-          <AvatarImage uri={currentUser?.profilePhotoUrl} name={currentUser?.fullName} size={80} variant="manager" />
+          <AvatarImage uri={currentUser?.profilePhotoUrl} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} variant="manager" />
           <View style={styles.profileInfo}>
             <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName}</Text>
             <Text style={[styles.role, { color: colors.foreground }]}>Venue Manager</Text>
