@@ -7,7 +7,6 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -235,16 +234,6 @@ function InvoicesSection({ colors, currentUserId, router }: {
     [sortedInvoices]
   );
 
-  const handleDeleteInvoice = useCallback((id: string, artistName: string) => {
-    Alert.alert('Delete Invoice', `Delete invoice from ${artistName}? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => {
-        deleteInvoice(id);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }},
-    ]);
-  }, [deleteInvoice]);
-
   const enterSelect = useCallback(() => { setExpanded(true); setSelectMode(true); setSelectedIds(new Set()); }, []);
   const exitSelect = useCallback(() => { setSelectMode(false); setSelectedIds(new Set()); }, []);
   const toggleSelect = useCallback((id: string) => {
@@ -294,6 +283,23 @@ function InvoicesSection({ colors, currentUserId, router }: {
     exitSelect();
   }, [sortedInvoices, selectedIds, downloadInvoices, exitSelect]);
 
+  const handleDeleteSelected = useCallback(() => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    Alert.alert(
+      `Delete ${count} invoice${count !== 1 ? 's' : ''}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+          selectedIds.forEach((id) => deleteInvoice(id));
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          exitSelect();
+        }},
+      ]
+    );
+  }, [selectedIds, deleteInvoice, exitSelect]);
+
   if (sortedInvoices.length === 0) return null;
 
   const allSelected = selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0;
@@ -318,14 +324,21 @@ function InvoicesSection({ colors, currentUserId, router }: {
             <>
               <Pressable
                 disabled={selectedIds.size === 0 || downloadingAll}
-                style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: selectedIds.size === 0 ? colors.border : colors.primary, opacity: (selectedIds.size === 0 || downloadingAll) ? 0.4 : (pressed ? 0.6 : 1) }]}
+                style={({ pressed }) => [invStyles.iconPillBtn, { borderColor: selectedIds.size === 0 ? colors.border : colors.primary, opacity: (selectedIds.size === 0 || downloadingAll) ? 0.4 : (pressed ? 0.6 : 1) }]}
                 onPress={(e) => { e.stopPropagation?.(); handleDownloadSelected(); }}
                 hitSlop={8}
               >
                 {downloadingAll
                   ? <ActivityIndicator size="small" color={colors.primary} />
-                  : <><MaterialIcons name="download" size={14} color={selectedIds.size === 0 ? colors.muted : colors.primary} /><Text style={[invStyles.downloadAllText, { color: selectedIds.size === 0 ? colors.muted : colors.primary }]}>{selectedIds.size > 0 ? `Download (${selectedIds.size})` : 'Download'}</Text></>
-                }
+                  : <MaterialIcons name="download" size={18} color={selectedIds.size === 0 ? colors.muted : colors.primary} />}
+              </Pressable>
+              <Pressable
+                disabled={selectedIds.size === 0}
+                style={({ pressed }) => [invStyles.iconPillBtn, { borderColor: selectedIds.size === 0 ? colors.border : colors.error, opacity: selectedIds.size === 0 ? 0.4 : (pressed ? 0.6 : 1) }]}
+                onPress={(e) => { e.stopPropagation?.(); handleDeleteSelected(); }}
+                hitSlop={8}
+              >
+                <MaterialIcons name="delete-outline" size={18} color={selectedIds.size === 0 ? colors.muted : colors.error} />
               </Pressable>
               <Pressable onPress={(e) => { e.stopPropagation?.(); exitSelect(); }} hitSlop={8}>
                 <Text style={[invStyles.selectActionText, { color: colors.primary }]}>Cancel</Text>
@@ -399,28 +412,16 @@ function InvoicesSection({ colors, currentUserId, router }: {
             }
 
             return (
-              <Swipeable
+              <Pressable
                 key={inv.id}
-                renderRightActions={() => (
-                  <Pressable
-                    style={({ pressed }) => [invStyles.deleteAction, { opacity: pressed ? 0.8 : 1 }]}
-                    onPress={() => handleDeleteInvoice(inv.id, inv.artistLegalName)}
-                  >
-                    <MaterialIcons name="delete" size={20} color="#fff" />
-                    <Text style={invStyles.deleteActionText}>Delete</Text>
-                  </Pressable>
-                )}
+                style={cardStyle}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: inv.id } });
+                }}
               >
-                <Pressable
-                  style={cardStyle}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: inv.id } });
-                  }}
-                >
-                  {cardBody}
-                </Pressable>
-              </Swipeable>
+                {cardBody}
+              </Pressable>
             );
           })}
         </View>
@@ -480,6 +481,7 @@ const invStyles = StyleSheet.create({
   downloadAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   downloadAllText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   selectActionText: { fontSize: 14, fontWeight: '600' },
+  iconPillBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, alignItems: 'center', justifyContent: 'center' },
   selectAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 0.5 },
   selectAllText: { fontSize: 14, fontWeight: '600' },
   selectCountText: { fontSize: 12 },
@@ -495,8 +497,6 @@ const invStyles = StyleSheet.create({
   cardRight: { alignItems: 'flex-end', gap: 6 },
   amountText: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
-  deleteAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 72, marginLeft: 8 },
-  deleteActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
 });
 
 const styles = StyleSheet.create({
