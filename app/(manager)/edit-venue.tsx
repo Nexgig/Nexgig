@@ -1,7 +1,6 @@
 import { useMemo, useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore } from '@/lib/store';
@@ -9,7 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import type { VenueType, EnergyType, GenreType, AudienceType, SubVibe } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { supabase } from '@/lib/supabase';
-import { uploadImageAsync } from '@/lib/upload';
+import { uploadImageAsync, pickImage } from '@/lib/upload';
 import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSuggestion } from '@/lib/places';
 
 // ── Option arrays — kept in sync with create-venue.tsx ───────────────────────
@@ -220,29 +219,15 @@ export default function EditVenueScreen() {
       {
         text: 'Choose from Library',
         onPress: async () => {
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 0.5,
-          });
-          if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+          const uri = await pickImage({ source: 'library', aspect: [16, 9] });
+          if (uri) setPhotoUri(uri);
         },
       },
       {
         text: 'Take Photo',
         onPress: async () => {
-          const { status } = await ImagePicker.requestCameraPermissionsAsync();
-          if (status !== 'granted') {
-            Alert.alert('Permission Needed', 'Camera permission is required to take a photo.');
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 0.5,
-          });
-          if (!result.canceled && result.assets[0]) setPhotoUri(result.assets[0].uri);
+          const uri = await pickImage({ source: 'camera', aspect: [16, 9] });
+          if (uri) setPhotoUri(uri);
         },
       },
       ...(photoUri

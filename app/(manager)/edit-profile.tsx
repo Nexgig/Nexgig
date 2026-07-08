@@ -1,13 +1,12 @@
 import { useState, useMemo } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform } from '@/lib/rn';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { uploadImageAsync } from '@/lib/upload';
+import { uploadImageAsync, pickImage } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { CountryPicker } from '@/components/country-picker';
@@ -80,33 +79,15 @@ export default function EditProfileScreen() {
       {
         text: 'Choose from Library',
         onPress: async () => {
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.5,
-          });
-          if (!result.canceled && result.assets[0]) {
-            setPhotoUri(result.assets[0].uri);
-          }
+          const uri = await pickImage({ source: 'library' });
+          if (uri) setPhotoUri(uri);
         },
       },
       {
         text: 'Take Photo',
         onPress: async () => {
-          const { status } = await ImagePicker.requestCameraPermissionsAsync();
-          if (status !== 'granted') {
-            Alert.alert('Permission Needed', 'Camera permission is required to take a photo.');
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.5,
-          });
-          if (!result.canceled && result.assets[0]) {
-            setPhotoUri(result.assets[0].uri);
-          }
+          const uri = await pickImage({ source: 'camera' });
+          if (uri) setPhotoUri(uri);
         },
       },
       ...(photoUri ? [{

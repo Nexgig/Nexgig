@@ -8,7 +8,46 @@
 // Images are already compressed at the picker (quality 0.5).
 
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native';
 import { supabase } from './supabase';
+
+export type PickSource = 'library' | 'camera';
+
+/**
+ * Single entry point for picking an image with a square crop. Handles camera
+ * permission, launches the library or camera with editing enabled, and returns
+ * the picked local uri (or null if cancelled / permission denied). Pair with
+ * uploadImageAsync() to store it. Used by every photo/avatar upload flow so the
+ * picker config (crop, aspect, quality) lives in one place.
+ */
+export async function pickImage(opts?: {
+  source?: PickSource;
+  aspect?: [number, number];
+  quality?: number;
+}): Promise<string | null> {
+  const source = opts?.source ?? 'library';
+  const aspect = opts?.aspect ?? [1, 1];
+  const quality = opts?.quality ?? 0.5;
+
+  if (source === 'camera') {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Camera Access Needed', 'Enable camera access in Settings to take a photo.');
+      return null;
+    }
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect, quality });
+    return !result.canceled && result.assets[0] ? result.assets[0].uri : null;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect,
+    quality,
+  });
+  return !result.canceled && result.assets[0] ? result.assets[0].uri : null;
+}
 
 // Minimal base64 → bytes decoder (avoids adding a base64-arraybuffer dependency).
 const B64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
