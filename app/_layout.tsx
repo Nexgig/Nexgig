@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, LogBox } from '@/lib/rn';
-import { Alert } from 'react-native';
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
 import { SchemeColors } from "@/constants/theme";
@@ -36,15 +35,12 @@ LogBox.ignoreLogs([/SafeAreaView has been deprecated/]);
 SplashScreen.preventAutoHideAsync().catch(() => {});
 // Cross-fade the splash out (instead of a hard cut) so there's no bare-white
 // frame between the native splash tearing down and the first screen painting.
-SplashScreen.setOptions({ fade: true, duration: 300 });
+SplashScreen.setOptions({ fade: true, duration: 150 });
 
 // Minimum time (ms) to keep the splash/logo on screen, even if fonts + data are
 // ready sooner — so the logo registers for a beat instead of flashing past.
-const MIN_SPLASH_MS = 500;
+const MIN_SPLASH_MS = 250;
 const APP_START = Date.now();
-// TEMP boot profiling: collect timings and show them in an Alert on first paint.
-const BOOT_TIMINGS: string[] = ['0ms — app start'];
-let BOOT_DONE = false;
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -95,29 +91,14 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // TEMP boot timing: record when fonts finish loading.
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      BOOT_TIMINGS.push(`${Date.now() - APP_START}ms — fonts ready${fontError ? ' (error)' : ''}`);
-    }
-  }, [fontsLoaded, fontError]);
-
   // Hide the splash once the first screen has laid out AND at least MIN_SPLASH_MS
   // has elapsed — so the logo shows for a pleasant beat instead of flashing past,
   // and the persisted stores have hydrated (cached data painted) before it lifts.
   const onLayoutRootView = useCallback(() => {
     if (!fontsLoaded && !fontError) return;
-    if (BOOT_DONE) return;
-    BOOT_DONE = true;
     const elapsed = Date.now() - APP_START;
     const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
-    BOOT_TIMINGS.push(`${elapsed}ms — first layout (hold ${wait}ms more + 300ms fade)`);
-    setTimeout(() => {
-      BOOT_TIMINGS.push(`${Date.now() - APP_START}ms — splash hide fired`);
-      SplashScreen.hideAsync().catch(() => {});
-      // TEMP: surface the boot timeline on-screen (production-safe, no console needed).
-      setTimeout(() => Alert.alert('Boot timing', BOOT_TIMINGS.join('\n')), 400);
-    }, wait);
+    setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, wait);
   }, [fontsLoaded, fontError]);
 
   // Clear stale/invalid session on app launch
