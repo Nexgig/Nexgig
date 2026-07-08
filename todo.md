@@ -8,6 +8,16 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
+<!-- EXECUTION ORDER (set Jul 8 2026, per Tuts): do the polish/features FIRST, submit to App Store LAST.
+     1. Session 2 leftover — manager-avatar.png replace
+     2. Session 3 — Android FCM push + gig reminders (separate Android track; needs a build)
+     3. Session 4 — Manager Assign Venue → native sheet (verify wiring)
+     4. Session 5 — Design pass (calendar sizing, profile photo, venue/booking look, invoice preview)
+     5. Session 7 — Dashboard fixes (hidden-venue photo snapshot col; multi-artist slot grouping)
+     6. Transactional email (moved up from Phase 4, per Tuts) — wire SES/Resend to app events
+     7. Session 1b — App Store submission (demo account + metadata + Submit) — DO LAST
+     Note: Session 6 (time format) already DONE. Session 8 stays post-launch. Tap Payments + Google Calendar stay post-launch. -->
+
 ### PHASE 1 — Ship to the stores (do first)
 
 **Session 1 · Production build readiness**
@@ -41,6 +51,7 @@
 **Session 5 · Design pass**
 - maket the calendar numbers and days name bigger
 - Artist Profile / Manager Profile (round photo upload, minimal)
+- **Artist Profile page + Manager Profile page — general polish pass** (added Jul 8): both profile screens need a visual cleanup/refinement (layout, spacing, hierarchy, overall feel) beyond just the round-photo-upload item above.
 - Venue page (menu-like), Booking page (agreement-like)
 - Invoice preview — content sits too low; "Nexgig." wordmark not rendering in Clash Bold
 
