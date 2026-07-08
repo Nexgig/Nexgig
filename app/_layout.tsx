@@ -65,26 +65,12 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // Wait for the persisted auth store to hydrate before hiding the splash and
-  // before the dispatcher decides where to route. Otherwise a signed-in user is
-  // briefly treated as signed-out (currentUser null until AsyncStorage loads),
-  // flashing the cream Welcome screen before their dashboard appears.
-  const [authHydrated, setAuthHydrated] = useState(() => useAuthStore.persist.hasHydrated());
+  // Hide the splash once fonts are ready (or failed — don't trap the user).
   useEffect(() => {
-    if (authHydrated) return;
-    const unsub = useAuthStore.persist.onFinishHydration(() => setAuthHydrated(true));
-    if (useAuthStore.persist.hasHydrated()) setAuthHydrated(true);
-    return unsub;
-  }, [authHydrated]);
-
-  // Hide the splash once fonts are ready AND auth has hydrated (or fonts failed —
-  // don't trap the user). This keeps the coral splash up the extra few ms until
-  // the app knows who's signed in, so it lifts straight onto the correct screen.
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && authHydrated) {
+    if (fontsLoaded || fontError) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontError, authHydrated]);
+  }, [fontsLoaded, fontError]);
 
   // Clear stale/invalid session on app launch
   useEffect(() => {
