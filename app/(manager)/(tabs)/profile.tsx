@@ -156,14 +156,14 @@ export default function ManagerProfileScreen() {
               style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}
               onPress={() => router.push((venues.length === 0 ? '/(manager)/create-venue' : '/(manager)/my-venues') as Href)}
             >
-              <Text style={[styles.statNumber, { color: colors.primary }]}>{venues.length === 0 ? '+' : venues.length}</Text>
+              <Text style={[styles.statNumber, { color: venues.length === 0 ? colors.primary : colors.foreground }]}>{venues.length === 0 ? '+' : venues.length}</Text>
               <Text style={[styles.statLabel, { color: colors.muted }]}>Venues</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}
               onPress={() => router.push((djCount === 0 ? '/(manager)/(tabs)/network?tab=artists' : '/(manager)/artists') as Href)}
             >
-              <Text style={[styles.statNumber, { color: colors.primary }]}>{djCount === 0 ? '+' : djCount}</Text>
+              <Text style={[styles.statNumber, { color: djCount === 0 ? colors.primary : colors.foreground }]}>{djCount === 0 ? '+' : djCount}</Text>
               <Text style={[styles.statLabel, { color: colors.muted }]}>Artists</Text>
             </Pressable>
           </View>
@@ -291,20 +291,20 @@ function InvoicesSection({ colors, currentUserId, router }: {
           <MaterialIcons name="receipt-long" size={20} color={colors.foreground} />
           <Text style={[invStyles.collapseTitle, { color: colors.foreground }]}>Invoices</Text>
           {totalUnread > 0 && (
-            <View style={[invStyles.unreadBadge, { backgroundColor: '#F97316' }]}>
+            <View style={[invStyles.unreadBadge, { backgroundColor: colors.error }]}>
               <Text style={invStyles.unreadBadgeText}>{totalUnread}</Text>
             </View>
           )}
         </View>
         <View style={invStyles.collapseHeaderRight}>
           <Pressable
-            style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
+            style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
             onPress={(e) => { e.stopPropagation?.(); handleDownloadAll(); }}
             hitSlop={8}
           >
             {downloadingAll
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <><MaterialIcons name="download" size={14} color="#fff" /><Text style={invStyles.downloadAllText}>All</Text></>
+              ? <ActivityIndicator size="small" color={colors.muted} />
+              : <><MaterialIcons name="download" size={14} color={colors.muted} /><Text style={[invStyles.downloadAllText, { color: colors.muted }]}>All</Text></>
             }
           </Pressable>
           <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
