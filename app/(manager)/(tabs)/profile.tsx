@@ -220,6 +220,8 @@ function InvoicesSection({ colors, currentUserId, router }: {
   const deleteInvoice = useInvoiceStore((s) => s.deleteInvoice);
   const [expanded, setExpanded] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const sortedInvoices = useMemo(
     () => invoices
@@ -243,8 +245,14 @@ function InvoicesSection({ colors, currentUserId, router }: {
     ]);
   }, [deleteInvoice]);
 
-  const handleDownloadAll = useCallback(async () => {
-    if (sortedInvoices.length === 0) return;
+  const enterSelect = useCallback(() => { setExpanded(true); setSelectMode(true); setSelectedIds(new Set()); }, []);
+  const exitSelect = useCallback(() => { setSelectMode(false); setSelectedIds(new Set()); }, []);
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }, []);
+
+  const downloadInvoices = useCallback(async (list: Invoice[]) => {
+    if (list.length === 0) return;
     setDownloadingAll(true);
     try {
       const Print = await import('expo-print');
@@ -253,7 +261,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      for (const inv of sortedInvoices) {
+      for (const inv of list) {
         const html = generateManagerInvoiceHTML(inv);
         const { uri } = await Print.printToFileAsync({ html });
         const sentDate = new Date(inv.sentAt);
@@ -277,15 +285,24 @@ function InvoicesSection({ colors, currentUserId, router }: {
     } finally {
       setDownloadingAll(false);
     }
-  }, [sortedInvoices]);
+  }, []);
+
+  const handleDownloadSelected = useCallback(async () => {
+    const chosen = sortedInvoices.filter((i) => selectedIds.has(i.id));
+    if (chosen.length === 0) return;
+    await downloadInvoices(chosen);
+    exitSelect();
+  }, [sortedInvoices, selectedIds, downloadInvoices, exitSelect]);
 
   if (sortedInvoices.length === 0) return null;
+
+  const allSelected = selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0;
 
   return (
     <View style={[invStyles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <Pressable
         style={({ pressed }) => [invStyles.collapseHeader, { borderBottomColor: expanded ? colors.border : 'transparent', opacity: pressed ? 0.85 : 1 }]}
-        onPress={() => { setExpanded((v) => !v); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        onPress={() => { if (selectMode) return; setExpanded((v) => !v); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
       >
         <View style={invStyles.collapseHeaderLeft}>
           <MaterialIcons name="receipt-long" size={20} color={colors.foreground} />
@@ -297,25 +314,90 @@ function InvoicesSection({ colors, currentUserId, router }: {
           )}
         </View>
         <View style={invStyles.collapseHeaderRight}>
-          <Pressable
-            style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
-            onPress={(e) => { e.stopPropagation?.(); handleDownloadAll(); }}
-            hitSlop={8}
-          >
-            {downloadingAll
-              ? <ActivityIndicator size="small" color={colors.muted} />
-              : <><MaterialIcons name="download" size={14} color={colors.muted} /><Text style={[invStyles.downloadAllText, { color: colors.muted }]}>All</Text></>
-            }
-          </Pressable>
-          <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
+          {selectMode ? (
+            <>
+              <Pressable
+                disabled={selectedIds.size === 0 || downloadingAll}
+                style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: selectedIds.size === 0 ? colors.border : colors.primary, opacity: (selectedIds.size === 0 || downloadingAll) ? 0.4 : (pressed ? 0.6 : 1) }]}
+                onPress={(e) => { e.stopPropagation?.(); handleDownloadSelected(); }}
+                hitSlop={8}
+              >
+                {downloadingAll
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <><MaterialIcons name="download" size={14} color={selectedIds.size === 0 ? colors.muted : colors.primary} /><Text style={[invStyles.downloadAllText, { color: selectedIds.size === 0 ? colors.muted : colors.primary }]}>{selectedIds.size > 0 ? `Download (${selectedIds.size})` : 'Download'}</Text></>
+                }
+              </Pressable>
+              <Pressable onPress={(e) => { e.stopPropagation?.(); exitSelect(); }} hitSlop={8}>
+                <Text style={[invStyles.selectActionText, { color: colors.primary }]}>Cancel</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable
+                style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                onPress={(e) => { e.stopPropagation?.(); enterSelect(); }}
+                hitSlop={8}
+              >
+                <MaterialIcons name="checklist" size={14} color={colors.muted} /><Text style={[invStyles.downloadAllText, { color: colors.muted }]}>Select</Text>
+              </Pressable>
+              <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
+            </>
+          )}
         </View>
       </Pressable>
       {expanded && (
         <View style={invStyles.content}>
+          {selectMode && (
+            <Pressable
+              onPress={() => setSelectedIds(allSelected ? new Set() : new Set(sortedInvoices.map((i) => i.id)))}
+              style={({ pressed }) => [invStyles.selectAllRow, { borderBottomColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Text style={[invStyles.selectAllText, { color: colors.primary }]}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+              <Text style={[invStyles.selectCountText, { color: colors.muted }]}>{selectedIds.size} selected</Text>
+            </Pressable>
+          )}
           {sortedInvoices.map((inv, idx) => {
             const isLast = idx === sortedInvoices.length - 1;
             const isUnread = !inv.isReadByManager;
+            const selected = selectedIds.has(inv.id);
             const sentDate = new Date(inv.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            const cardBody = (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {selectMode && (
+                  <MaterialIcons name={selected ? 'check-circle' : 'radio-button-unchecked'} size={22} color={selected ? colors.primary : colors.muted} style={{ marginRight: 12 }} />
+                )}
+                <View style={[invStyles.cardTop, { flex: 1 }]}>
+                  <View style={invStyles.cardLeft}>
+                    <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.primary }]} numberOfLines={1}>{inv.artistLegalName}</Text>
+                    <Text style={[invStyles.venueName, { color: colors.foreground, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
+                    <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
+                      {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
+                    </Text>
+                    {inv.status === 'cancelled' && (
+                      <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
+                        <Text style={[invStyles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={invStyles.cardRight}>
+                    <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.primary, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
+                    {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: '#F97316' }]} />}
+                  </View>
+                </View>
+              </View>
+            );
+
+            const cardStyle = ({ pressed }: { pressed: boolean }) => [invStyles.invoiceCard, { backgroundColor: colors.surface, borderColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : 0.5, opacity: pressed ? 0.85 : 1 }];
+
+            if (selectMode) {
+              return (
+                <Pressable key={inv.id} style={cardStyle} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleSelect(inv.id); }}>
+                  {cardBody}
+                </Pressable>
+              );
+            }
+
             return (
               <Swipeable
                 key={inv.id}
@@ -330,30 +412,13 @@ function InvoicesSection({ colors, currentUserId, router }: {
                 )}
               >
                 <Pressable
-                  style={({ pressed }) => [invStyles.invoiceCard, { backgroundColor: colors.surface, borderColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : 0.5, opacity: pressed ? 0.85 : 1 }]}
+                  style={cardStyle}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: inv.id } });
                   }}
                 >
-                  <View style={invStyles.cardTop}>
-                    <View style={invStyles.cardLeft}>
-                      <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.primary }]} numberOfLines={1}>{inv.artistLegalName}</Text>
-                      <Text style={[invStyles.venueName, { color: colors.foreground, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
-                      <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
-                        {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
-                      </Text>
-                      {inv.status === 'cancelled' && (
-                        <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
-                          <Text style={[invStyles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={invStyles.cardRight}>
-                      <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.primary, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
-                      {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: '#F97316' }]} />}
-                    </View>
-                  </View>
+                  {cardBody}
                 </Pressable>
               </Swipeable>
             );
@@ -414,6 +479,10 @@ const invStyles = StyleSheet.create({
   unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   downloadAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   downloadAllText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  selectActionText: { fontSize: 14, fontWeight: '600' },
+  selectAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 0.5 },
+  selectAllText: { fontSize: 14, fontWeight: '600' },
+  selectCountText: { fontSize: 12 },
   content: {},
   invoiceCard: { paddingHorizontal: 16, paddingVertical: 14 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
