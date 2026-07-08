@@ -65,12 +65,26 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // Hide the splash once fonts are ready (or failed — don't trap the user).
+  // Wait for the persisted auth store to hydrate before hiding the splash, so the
+  // dispatcher can route straight to the correct screen (dashboard vs. welcome)
+  // and the splash lifts directly onto it — no intermediate tab screen, no slide.
+  const [authHydrated, setAuthHydrated] = useState(() => useAuthStore.persist.hasHydrated());
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().catch(() => {});
+    if (authHydrated) return;
+    const unsub = useAuthStore.persist.onFinishHydration(() => setAuthHydrated(true));
+    if (useAuthStore.persist.hasHydrated()) setAuthHydrated(true);
+    return unsub;
+  }, [authHydrated]);
+
+  // Hide the splash once fonts are ready AND auth has hydrated (or fonts failed —
+  // don't trap the user). Defer one tick so the dispatcher's Redirect has landed
+  // on the destination before the splash lifts — so nothing intermediate shows.
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && authHydrated) {
+      const t = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, 0);
+      return () => clearTimeout(t);
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, authHydrated]);
 
   // Clear stale/invalid session on app launch
   useEffect(() => {
@@ -208,9 +222,9 @@ export default function RootLayout() {
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
+          <Stack.Screen name="(auth)" />
           <Stack.Screen name="(manager)" />
           <Stack.Screen name="(artist)" />
         </Stack>
