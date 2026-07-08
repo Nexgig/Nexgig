@@ -20,23 +20,19 @@ export default function ManagerLayout() {
         .eq('is_hidden', false);
 
       if (!venuesError && venuesData) {
-        const store = useVenueStore.getState();
-        store.clearVenues();
-        venuesData.forEach((v) => {
-          // Use the shared mapper so photo_urls AND admin_photo_url are mapped
-          // (the old manual map hardcoded photoUrls:[] and omitted adminPhotoUrl,
-          // so admin-curated photos never showed on manager screens). Billing
-          // isn't part of mapVenueRow, so layer it on top.
-          const venue: Venue = {
-            ...mapVenueRow(v),
-            billing: v.billing_company_name ? {
-              companyName: v.billing_company_name,
-              companyAddress: v.billing_company_address,
-              trnNumber: v.billing_trn_number,
-            } : undefined,
-          };
-          store.addVenue(venue);
-        });
+        // Build the full array and swap it in atomically (one setState) instead of
+        // clearVenues()+addVenue() in a loop — clearing first left venues briefly
+        // EMPTY while bookings were on screen, so their venue lookup missed and the
+        // card flashed "Unknown Venue" before refilling.
+        const venues: Venue[] = venuesData.map((v) => ({
+          ...mapVenueRow(v),
+          billing: v.billing_company_name ? {
+            companyName: v.billing_company_name,
+            companyAddress: v.billing_company_address,
+            trnNumber: v.billing_trn_number,
+          } : undefined,
+        }));
+        useVenueStore.setState({ venues });
       }
 
       // ✅ Fetch slots from Supabase
@@ -46,20 +42,16 @@ export default function ManagerLayout() {
         .eq('manager_id', user.id);
 
       if (!slotsError && slotsData) {
-        const slotStore = useSlotStore.getState();
-        slotStore.clearSlots();
-        slotsData.forEach((s) => {
-          const slot: Slot = {
-            id: s.id,
-            venueId: s.venue_id,
-            name: s.name,
-            date: s.date,
-            startTime: s.start_time,
-            endTime: s.end_time,
-            createdAt: s.created_at,
-          };
-          slotStore.addSlot(slot);
-        });
+        const slots: Slot[] = slotsData.map((s) => ({
+          id: s.id,
+          venueId: s.venue_id,
+          name: s.name,
+          date: s.date,
+          startTime: s.start_time,
+          endTime: s.end_time,
+          createdAt: s.created_at,
+        }));
+        useSlotStore.setState({ slots });
       }
 
       // ✅ Fetch bookings from Supabase
@@ -69,34 +61,30 @@ export default function ManagerLayout() {
         .eq('manager_id', user.id);
 
       if (!bookingsError && bookingsData) {
-        const bookingStore = useBookingStore.getState();
-        bookingStore.clearBookings();
-        bookingsData.forEach((b) => {
-          const booking: Booking = {
-            id: b.id,
-            slotId: b.slot_id,
-            venueId: b.venue_id,
-            artistId: b.artist_id,
-            managerId: b.manager_id,
-            status: b.status,
-            isCompleted: b.is_completed ?? false,
-            confirmedAt: b.confirmed_at ?? undefined,
-            cancelledAt: b.cancelled_at ?? undefined,
-            cancellationReason: b.cancellation_reason ?? undefined,
-            cancellationAcknowledged: b.cancellation_acknowledged ?? false,
-            cancelledAsRequest: b.cancelled_as_request ?? false,
-            hiddenFromCalendar: b.hidden_from_calendar ?? false,
-            hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
-            slotDate: b.slot_date ?? undefined,
-            slotName: b.slot_name ?? undefined,
-            slotStartTime: b.slot_start_time ?? undefined,
-            slotEndTime: b.slot_end_time ?? undefined,
-            venueName: b.venue_name ?? undefined,
-            createdAt: b.created_at,
-            updatedAt: b.updated_at,
-          };
-          bookingStore.addBooking(booking);
-        });
+        const bookings: Booking[] = bookingsData.map((b) => ({
+          id: b.id,
+          slotId: b.slot_id,
+          venueId: b.venue_id,
+          artistId: b.artist_id,
+          managerId: b.manager_id,
+          status: b.status,
+          isCompleted: b.is_completed ?? false,
+          confirmedAt: b.confirmed_at ?? undefined,
+          cancelledAt: b.cancelled_at ?? undefined,
+          cancellationReason: b.cancellation_reason ?? undefined,
+          cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+          cancelledAsRequest: b.cancelled_as_request ?? false,
+          hiddenFromCalendar: b.hidden_from_calendar ?? false,
+          hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
+          slotDate: b.slot_date ?? undefined,
+          slotName: b.slot_name ?? undefined,
+          slotStartTime: b.slot_start_time ?? undefined,
+          slotEndTime: b.slot_end_time ?? undefined,
+          venueName: b.venue_name ?? undefined,
+          createdAt: b.created_at,
+          updatedAt: b.updated_at,
+        }));
+        useBookingStore.setState({ bookings });
       }
 
       // ✅ Fetch global lineup from Supabase
@@ -105,10 +93,6 @@ export default function ManagerLayout() {
         .select('artist_id, created_at')
         .eq('manager_id', user.id)
         .eq('status', 'active');
-
-      const lineupStore = useLineupStore.getState();
-lineupStore.clearGlobalLineup();
-lineupStore.clearArtistUsers();
 
 if (!lineupError && lineupData) {
   const artistIds = lineupData.map((l) => l.artist_id);
@@ -119,30 +103,31 @@ if (!lineupError && lineupData) {
             .in('id', artistIds);
 
           if (artistsData) {
-            artistsData.forEach((a) => {
-              lineupStore.addArtistUser({
-                id: a.id,
-                email: a.email ?? '',
-                phone: '',
-                accountType: 'artist' as const,
-                fullName: a.full_name,
-                username: undefined,
-                profilePhotoUrl: a.profile_photo_url ?? undefined,
-                location: a.based_in ?? undefined,
-                isPhoneVerified: false,
-                isEmailVerified: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-
-              lineupStore.addToGlobalLineup({
-                id: `${user.id}-${a.id}`,
-                managerId: user.id,
-                artistId: a.id,
-                status: 'active' as const,
-                addedAt: new Date().toISOString(),
-              });
-            });
+            // Build both arrays and swap them in atomically (one setState) instead
+            // of clearing the stores then re-adding after this async fetch — the
+            // empty window made manager booking cards flash an unknown artist name.
+            const artistUsers = artistsData.map((a) => ({
+              id: a.id,
+              email: a.email ?? '',
+              phone: '',
+              accountType: 'artist' as const,
+              fullName: a.full_name,
+              username: undefined,
+              profilePhotoUrl: a.profile_photo_url ?? undefined,
+              location: a.based_in ?? undefined,
+              isPhoneVerified: false,
+              isEmailVerified: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }));
+            const globalLineup = artistsData.map((a) => ({
+              id: `${user.id}-${a.id}`,
+              managerId: user.id,
+              artistId: a.id,
+              status: 'active' as const,
+              addedAt: new Date().toISOString(),
+            }));
+            useLineupStore.setState({ artistUsers, globalLineup });
             // Seed the shared artist directory with FULL lineup-artist data so their
             // profile screens open complete on the first frame (no fetch-on-open pop).
             useArtistDirectoryStore.getState().setArtists(artistsData.map((a) => ({
