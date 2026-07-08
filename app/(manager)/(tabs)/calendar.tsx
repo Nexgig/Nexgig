@@ -2515,11 +2515,11 @@ const styles = StyleSheet.create({
 
   // Calendar grid
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
-  dayLabel: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600', paddingVertical: 4 },
+  dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 0 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  dayNumber: { fontSize: 14, fontWeight: '600' },
+  dayNumber: { fontSize: 18, fontWeight: '600' },
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
   dot: { width: 4, height: 4, borderRadius: 0 },
   // Slots section
