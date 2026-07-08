@@ -41,6 +41,7 @@ SplashScreen.setOptions({ fade: true, duration: 300 });
 // ready sooner — so the logo registers for a beat instead of flashing past.
 const MIN_SPLASH_MS = 500;
 const APP_START = Date.now();
+console.log(`[BOOT] 0ms — module load / APP_START`);
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -91,6 +92,13 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
+  // TEMP boot timing: log when fonts finish loading.
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      console.log(`[BOOT] ${Date.now() - APP_START}ms — fonts ready${fontError ? ' (error)' : ''}`);
+    }
+  }, [fontsLoaded, fontError]);
+
   // Hide the splash once the first screen has laid out AND at least MIN_SPLASH_MS
   // has elapsed — so the logo shows for a pleasant beat instead of flashing past,
   // and the persisted stores have hydrated (cached data painted) before it lifts.
@@ -98,7 +106,11 @@ export default function RootLayout() {
     if (!fontsLoaded && !fontError) return;
     const elapsed = Date.now() - APP_START;
     const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
-    setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, wait);
+    console.log(`[BOOT] ${elapsed}ms — first layout; holding splash ${wait}ms more (fade 300ms after)`);
+    setTimeout(() => {
+      console.log(`[BOOT] ${Date.now() - APP_START}ms — splash hideAsync() fired`);
+      SplashScreen.hideAsync().catch(() => {});
+    }, wait);
   }, [fontsLoaded, fontError]);
 
   // Clear stale/invalid session on app launch
