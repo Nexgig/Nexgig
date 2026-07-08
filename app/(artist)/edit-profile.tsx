@@ -4,9 +4,10 @@ import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { uploadImageAsync, pickImage } from '@/lib/upload';
+import { uploadImageAsync, pickImage, type PickSource } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
@@ -121,6 +122,9 @@ export default function DJEditProfileScreen() {
   const [emailForm, setEmailForm] = useState({ newEmail: '', confirmEmail: '' });
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneForm, setPhoneForm] = useState({ newPhone: '' });
+  // Round-preview confirm step: freshly-cropped uri awaiting user approval.
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [pendingSource, setPendingSource] = useState<PickSource>('library');
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -142,14 +146,14 @@ export default function DJEditProfileScreen() {
         text: 'Choose from Library',
         onPress: async () => {
           const uri = await pickImage({ source: 'library' });
-          if (uri) setPhotoUri(uri);
+          if (uri) { setPendingSource('library'); setPendingPhoto(uri); }
         },
       },
       {
         text: 'Take Photo',
         onPress: async () => {
           const uri = await pickImage({ source: 'camera' });
-          if (uri) setPhotoUri(uri);
+          if (uri) { setPendingSource('camera'); setPendingPhoto(uri); }
         },
       },
       ...(photoUri ? [{
@@ -582,6 +586,16 @@ export default function DJEditProfileScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      <AvatarPreviewModal
+        uri={pendingPhoto}
+        onConfirm={() => { if (pendingPhoto) setPhotoUri(pendingPhoto); setPendingPhoto(null); }}
+        onRetry={async () => {
+          const uri = await pickImage({ source: pendingSource });
+          setPendingPhoto(uri ?? null);
+        }}
+        onCancel={() => setPendingPhoto(null)}
+      />
     </ScreenContainer>
   );
 }
