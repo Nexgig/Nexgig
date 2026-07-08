@@ -19,6 +19,27 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+// One-time "theme hydrated" signal. The persisted appearance is read from
+// AsyncStorage asynchronously on mount; until that resolves, the app may render
+// with the wrong (default light) scheme for a frame. The root layout waits on
+// this before hiding the splash, so the first visible frame is already in the
+// correct theme — no light flash in dark mode.
+let _themeHydrated = false;
+const _themeReadyCbs = new Set<() => void>();
+export function isThemeHydrated(): boolean {
+  return _themeHydrated;
+}
+export function whenThemeReady(cb: () => void): void {
+  if (_themeHydrated) { cb(); return; }
+  _themeReadyCbs.add(cb);
+}
+function markThemeHydrated(): void {
+  if (_themeHydrated) return;
+  _themeHydrated = true;
+  _themeReadyCbs.forEach((c) => c());
+  _themeReadyCbs.clear();
+}
+
 // Resolve the OS theme at call time (no React hook caching in between).
 function readSystemScheme(): ColorScheme {
   return (Appearance.getColorScheme() ?? "light") as ColorScheme;
@@ -87,6 +108,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
       setAppearanceState(mode);
       applyMode(mode);
+    }).catch(() => {
+      // Ignore read errors — keep the default 'system'/resolved scheme.
+    }).finally(() => {
+      // Signal the splash gate that the theme is settled (correct scheme applied).
+      markThemeHydrated();
     });
   }, [applyMode]);
 

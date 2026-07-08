@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, LogBox } from '@/lib/rn';
 import "@/lib/_core/nativewind-pressable";
-import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
+import { ThemeProvider, useThemeContext, isThemeHydrated, whenThemeReady } from "@/lib/theme-provider";
 import { SchemeColors } from "@/constants/theme";
 import {
   SafeAreaFrameContext,
@@ -91,15 +91,24 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // Hide the splash once the first screen has laid out AND at least MIN_SPLASH_MS
-  // has elapsed — so the logo shows for a pleasant beat instead of flashing past,
-  // and the persisted stores have hydrated (cached data painted) before it lifts.
-  const onLayoutRootView = useCallback(() => {
-    if (!fontsLoaded && !fontError) return;
-    const elapsed = Date.now() - APP_START;
-    const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
-    setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, wait);
-  }, [fontsLoaded, fontError]);
+  // Wait for the persisted theme to hydrate before hiding the splash, so the
+  // first visible frame is already in the correct scheme (no light flash in dark
+  // mode). Starts true if the theme settled before this component mounted.
+  const [themeReady, setThemeReady] = useState(isThemeHydrated());
+  useEffect(() => {
+    whenThemeReady(() => setThemeReady(true));
+  }, []);
+
+  // Hide the splash once fonts are ready AND the theme has hydrated, respecting
+  // the MIN_SPLASH_MS floor so the logo shows for a brief, deliberate beat.
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && themeReady) {
+      const elapsed = Date.now() - APP_START;
+      const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+      const t = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, wait);
+      return () => clearTimeout(t);
+    }
+  }, [fontsLoaded, fontError, themeReady]);
 
   // Clear stale/invalid session on app launch
   useEffect(() => {
@@ -235,7 +244,7 @@ export default function RootLayout() {
   }
 
   const content = (
-    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <ThemedAppStack />
         <ThemedStatusBar />
