@@ -18,7 +18,7 @@
 - Create a DEMO / REVIEW account for Apple: a MANAGER login with sample data (a venue or two, a few artists in the lineup, a couple of gigs) so the reviewer doesn't hit an empty app. NEEDS Tuts in the app (Claude can't create accounts) — then give Claude the creds for the review notes.
 - Fill App Store Connect metadata: screenshots (6.7" iPhone required), description / subtitle / keywords / promo text (ALL DRAFTED this session — ready to paste), App Privacy questionnaire, age rating, App Review notes (with demo creds + note that both managers AND artists use the same app).
 - Then Submit for Review.
-- Icon decision: FINAL = SEND-ARROW icon (black MaterialIcons 'send', optical-centered, on coral) — replaced the black 'gig.' — building/submitting to TestFlight now. This is the newest build; it (not build 9/10) is the one to attach + Submit. Icon set (app-icon/splash/android-fg/mono) + favicon + nexgig-icon all regenerated to send-arrow & committed. VERIFY on device once it lands; LOCK it before final review submit (already iterated white-gig → black-gig → send-arrow).
+- Icon decision: FINAL = SEND-ARROW icon (black MaterialIcons 'send', optical-centered, on coral). VERIFIED on device + locked.
 
 **Session 2 · Store assets / first impression**  [mostly DONE Jul 7]
 - ~~Clean unused asset images~~ — DONE (Jul 7): removed react-logo*, partial-react-logo, old nexgig-icon-blue/icon/home-logo/icon-coral-bg, android-icon-background. assets/images now holds only app-icon/splash/android-fg/mono + in-app nexgig-logo/nexgig-icon/manager-avatar + favicon.
@@ -42,8 +42,6 @@
 - maket the calendar numbers and days name bigger
 - Artist Profile / Manager Profile (round photo upload, minimal)
 - Venue page (menu-like), Booking page (agreement-like)
-- Add "My Venues" entry on artist side
-- Tab headers consistency (both sides)
 - Invoice preview — content sits too low; "Nexgig." wordmark not rendering in Clash Bold
 
 **Session 6 · Unified time format**
