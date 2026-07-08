@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, LogBox } from '@/lib/rn';
+import { Alert } from 'react-native';
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
 import { SchemeColors } from "@/constants/theme";
@@ -41,7 +42,9 @@ SplashScreen.setOptions({ fade: true, duration: 300 });
 // ready sooner — so the logo registers for a beat instead of flashing past.
 const MIN_SPLASH_MS = 500;
 const APP_START = Date.now();
-console.log(`[BOOT] 0ms — module load / APP_START`);
+// TEMP boot profiling: collect timings and show them in an Alert on first paint.
+const BOOT_TIMINGS: string[] = ['0ms — app start'];
+let BOOT_DONE = false;
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -92,10 +95,10 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // TEMP boot timing: log when fonts finish loading.
+  // TEMP boot timing: record when fonts finish loading.
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      console.log(`[BOOT] ${Date.now() - APP_START}ms — fonts ready${fontError ? ' (error)' : ''}`);
+      BOOT_TIMINGS.push(`${Date.now() - APP_START}ms — fonts ready${fontError ? ' (error)' : ''}`);
     }
   }, [fontsLoaded, fontError]);
 
@@ -104,12 +107,16 @@ export default function RootLayout() {
   // and the persisted stores have hydrated (cached data painted) before it lifts.
   const onLayoutRootView = useCallback(() => {
     if (!fontsLoaded && !fontError) return;
+    if (BOOT_DONE) return;
+    BOOT_DONE = true;
     const elapsed = Date.now() - APP_START;
     const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
-    console.log(`[BOOT] ${elapsed}ms — first layout; holding splash ${wait}ms more (fade 300ms after)`);
+    BOOT_TIMINGS.push(`${elapsed}ms — first layout (hold ${wait}ms more + 300ms fade)`);
     setTimeout(() => {
-      console.log(`[BOOT] ${Date.now() - APP_START}ms — splash hideAsync() fired`);
+      BOOT_TIMINGS.push(`${Date.now() - APP_START}ms — splash hide fired`);
       SplashScreen.hideAsync().catch(() => {});
+      // TEMP: surface the boot timeline on-screen (production-safe, no console needed).
+      setTimeout(() => Alert.alert('Boot timing', BOOT_TIMINGS.join('\n')), 400);
     }, wait);
   }, [fontsLoaded, fontError]);
 
