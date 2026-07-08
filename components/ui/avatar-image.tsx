@@ -1,61 +1,34 @@
-import { Image, View } from '@/lib/rn';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useColors } from '@/hooks/use-colors';
-import { cn } from '@/lib/utils';
-
-// Illustrated fallback avatar for managers with no uploaded photo.
-const MANAGER_AVATAR = require('@/assets/images/manager-avatar.png');
+import { Image } from '@/lib/rn';
+import { resolveAvatarSource } from '@/lib/avatars';
 
 interface AvatarImageProps {
+  /** Uploaded photo URL, if any (highest priority). */
   uri?: string;
+  /** Chosen bundled avatar id (e.g. 'avatar-7'), if any (second priority). */
+  avatarId?: string;
+  /** Seed for the deterministic default avatar — pass the user/venue id so the
+   *  default is stable per person. Falls back to `name` if no id given. */
+  seed?: string;
   name?: string;
   size?: number;
   className?: string;
-  /** 'manager' shows the illustrated manager avatar when there's no photo;
-   *  anything else (default) shows the generic person icon. */
+  /** Legacy prop, no longer used (kept so existing call sites don't break). */
   variant?: 'manager' | 'artist';
 }
 
-export function AvatarImage({ uri, size = 40, className, variant }: AvatarImageProps) {
-  const colors = useColors();
+/**
+ * Renders a round avatar. Priority: uploaded photo → chosen avatar → a
+ * deterministic default avatar from the bundled set (so it's NEVER empty).
+ */
+export function AvatarImage({ uri, avatarId, seed, name, size = 40, className }: AvatarImageProps) {
+  const resolved = resolveAvatarSource({ photoUri: uri, avatarId, seed: seed ?? name });
+  const source = resolved.type === 'photo' ? { uri: resolved.uri } : resolved.source;
 
-  if (uri) {
-    return (
-      <Image
-        source={{ uri }}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-        className={className}
-      />
-    );
-  }
-
-  // No photo, manager → illustrated manager avatar.
-  if (variant === 'manager') {
-    return (
-      <Image
-        source={MANAGER_AVATAR}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-        className={className}
-      />
-    );
-  }
-
-  // No photo → fall back to the shared person icon (consistent everywhere)
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      className={cn('items-center justify-center', className)}
-    >
-      <MaterialIcons name="person" size={size * 0.55} color={colors.muted} />
-    </View>
+    <Image
+      source={source}
+      style={{ width: size, height: size, borderRadius: size / 2 }}
+      className={className}
+    />
   );
 }

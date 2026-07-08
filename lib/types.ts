@@ -15,6 +15,7 @@ export interface User {
   fullLegalName?: string; // Real legal name, stored privately, for future invoicing
   username?: string; // Unique identifier, lowercase/numbers/underscores only, stored privately
   profilePhotoUrl?: string;
+  avatarId?: string; // Key of a chosen bundled avatar (e.g. 'avatar-7') when no uploaded photo. See lib/avatars.ts.
   bio?: string;
   location?: string;
   yearsOfExperience?: number;
