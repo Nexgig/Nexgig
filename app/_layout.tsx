@@ -7,8 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, LogBox } from '@/lib/rn';
 import "@/lib/_core/nativewind-pressable";
-import { ThemeProvider, useThemeContext, isThemeHydrated, whenThemeReady } from "@/lib/theme-provider";
-import { SchemeColors } from "@/constants/theme";
+import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -33,16 +32,6 @@ LogBox.ignoreLogs([/SafeAreaView has been deprecated/]);
 // Keep the native splash on screen until our custom fonts have loaded so text
 // doesn't flash in the system font first.
 SplashScreen.preventAutoHideAsync().catch(() => {});
-// Hide the splash instantly (no cross-fade). The fade composited the splash's
-// light backing over the already-painted app for ~150ms, which in dark mode
-// looked like the whole screen briefly washing white before snapping to normal.
-// A hard cut reveals the already-dark app cleanly.
-SplashScreen.setOptions({ fade: false });
-
-// Minimum time (ms) to keep the splash/logo on screen, even if fonts + data are
-// ready sooner — so the logo registers for a beat instead of flashing past.
-const MIN_SPLASH_MS = 250;
-const APP_START = Date.now();
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -58,23 +47,6 @@ export const unstable_settings = {
 function ThemedStatusBar() {
   const { colorScheme } = useThemeContext();
   return <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />;
-}
-
-// Renders the root navigator with a themed scene background (so no default-white
-// navigator scene flashes in dark mode during the launch transition) and a soft
-// fade — instead of a slide-from-right — when entering the manager/artist groups
-// on cold start or sign-in.
-function ThemedAppStack() {
-  const { colorScheme } = useThemeContext();
-  const bg = SchemeColors[colorScheme].background;
-  return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
-      <Stack.Screen name="(manager)" options={{ animation: "fade" }} />
-      <Stack.Screen name="(artist)" options={{ animation: "fade" }} />
-    </Stack>
-  );
 }
 
 export default function RootLayout() {
@@ -93,24 +65,12 @@ export default function RootLayout() {
     initManusRuntime();
   }, []);
 
-  // Wait for the persisted theme to hydrate before hiding the splash, so the
-  // first visible frame is already in the correct scheme (no light flash in dark
-  // mode). Starts true if the theme settled before this component mounted.
-  const [themeReady, setThemeReady] = useState(isThemeHydrated());
+  // Hide the splash once fonts are ready (or failed — don't trap the user).
   useEffect(() => {
-    whenThemeReady(() => setThemeReady(true));
-  }, []);
-
-  // Hide the splash once fonts are ready AND the theme has hydrated, respecting
-  // the MIN_SPLASH_MS floor so the logo shows for a brief, deliberate beat.
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && themeReady) {
-      const elapsed = Date.now() - APP_START;
-      const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
-      const t = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, wait);
-      return () => clearTimeout(t);
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontError, themeReady]);
+  }, [fontsLoaded, fontError]);
 
   // Clear stale/invalid session on app launch
   useEffect(() => {
@@ -248,7 +208,12 @@ export default function RootLayout() {
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <ThemedAppStack />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" options={{ presentation: "fullScreenModal" }} />
+          <Stack.Screen name="(manager)" />
+          <Stack.Screen name="(artist)" />
+        </Stack>
         <ThemedStatusBar />
       </QueryClientProvider>
     </GestureHandlerRootView>
