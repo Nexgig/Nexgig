@@ -5,6 +5,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
+import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { useAuthStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { uploadImageAsync, pickImage, type PickSource } from '@/lib/upload';
@@ -28,6 +29,8 @@ export default function EditProfileScreen() {
   });
 
   const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
+  const [avatarId, setAvatarId] = useState<string | null>(currentUser?.avatarId ?? null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Track originals for unsaved-change detection. These are STATE (not refs) so that
@@ -39,6 +42,7 @@ export default function EditProfileScreen() {
     companyName: currentUser?.companyName ?? '',
   });
   const [originalPhoto, setOriginalPhoto] = useState(photoUri);
+  const [originalAvatar, setOriginalAvatar] = useState(avatarId);
 
   const hasChanges = useMemo(() => {
     const f = originalForm;
@@ -47,9 +51,10 @@ export default function EditProfileScreen() {
       form.phone !== f.phone ||
       form.basedIn !== f.basedIn ||
       form.companyName !== f.companyName ||
-      photoUri !== originalPhoto
+      photoUri !== originalPhoto ||
+      avatarId !== originalAvatar
     );
-  }, [form, photoUri, originalForm, originalPhoto]);
+  }, [form, photoUri, avatarId, originalForm, originalPhoto, originalAvatar]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -93,6 +98,10 @@ export default function EditProfileScreen() {
           const uri = await pickImage({ source: 'camera' });
           if (uri) { setPendingSource('camera'); setPendingPhoto(uri); }
         },
+      },
+      {
+        text: 'Choose an Avatar',
+        onPress: () => setShowAvatarPicker(true),
       },
       ...(photoUri ? [{
         text: 'Remove Photo',
@@ -210,6 +219,7 @@ export default function EditProfileScreen() {
       location: form.basedIn || undefined,
       companyName: form.companyName.trim() || undefined,
       profilePhotoUrl: photoUrl,
+      avatarId: avatarId ?? undefined,
     });
 
     // Persist every editable manager field to Supabase. The managers row is the source
@@ -229,6 +239,7 @@ export default function EditProfileScreen() {
           based_in: form.basedIn || null,
           company_name: form.companyName.trim() || null,
           profile_photo_url: photoUrl ?? null,
+          avatar_id: avatarId ?? null,
         })
         .eq('id', currentUser.id)
         .select();
@@ -252,6 +263,7 @@ export default function EditProfileScreen() {
     // the back-guard won't fire), and reflect the uploaded photo URL.
     setOriginalForm({ ...form });
     setOriginalPhoto(photoUrl ?? null);
+    setOriginalAvatar(avatarId);
     setPhotoUri(photoUrl ?? null);
     setSaving(false);
   };
@@ -277,7 +289,7 @@ export default function EditProfileScreen() {
         {/* Avatar with edit overlay */}
         <View style={styles.avatarSection}>
           <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
-            <AvatarImage uri={photoUri ?? undefined} name={currentUser?.fullName} size={90} variant="manager" />
+            <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} variant="manager" />
             <View style={styles.cameraOverlay}>
               <MaterialIcons name="camera-alt" size={18} color="#fff" />
             </View>
@@ -481,6 +493,13 @@ export default function EditProfileScreen() {
           setPendingPhoto(uri ?? null);
         }}
         onCancel={() => setPendingPhoto(null)}
+      />
+
+      <AvatarPicker
+        visible={showAvatarPicker}
+        selectedId={avatarId}
+        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>
   );

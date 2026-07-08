@@ -5,6 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
+import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
@@ -137,7 +138,7 @@ export default function ArtistNetworkScreen() {
       useArtistDirectoryStore.getState().setArtists(data.map((a: any) => ({
         user: {
           id: a.id, email: '', phone: '', accountType: 'artist' as const,
-          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, bio: a.bio ?? undefined,
+          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, avatarId: a.avatar_id ?? undefined, bio: a.bio ?? undefined,
           location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
           isPhoneVerified: false, isEmailVerified: false,
           createdAt: a.created_at, updatedAt: a.updated_at,
@@ -432,13 +433,7 @@ export default function ArtistNetworkScreen() {
                 onPress={() => router.push((`/(artist)/artist-profile-view?artistId=` + artist.id) as Href)}
               >
                 <View style={styles.cardLeft}>
-                  {artist.profile_photo_url ? (
-                    <Image source={{ uri: artist.profile_photo_url }} style={styles.thumb} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                      <MaterialIcons name="person" size={22} color={colors.muted} />
-                    </View>
-                  )}
+                  <AvatarImage uri={artist.profile_photo_url || undefined} avatarId={(artist as any).avatar_id ?? undefined} seed={artist.id} name={artist.full_name} size={48} />
                   <View style={styles.cardInfo}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{artist.full_name}</Text>

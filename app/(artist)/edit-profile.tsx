@@ -5,6 +5,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
+import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { uploadImageAsync, pickImage, type PickSource } from '@/lib/upload';
@@ -58,6 +59,8 @@ export default function DJEditProfileScreen() {
     (djProfile?.instruments as InstrumentType[]) ?? []
   );
   const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
+  const [avatarId, setAvatarId] = useState<string | null>(currentUser?.avatarId ?? null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   // Bumped after each successful save so the unsaved-changes memo recomputes
   // against the freshly-reset baseline (mutating the refs alone won't do that).
   const [baselineVersion, setBaselineVersion] = useState(0);
@@ -80,6 +83,7 @@ export default function DJEditProfileScreen() {
   const originalSecondary = useRef(secondaryGenres);
   const originalInstruments = useRef(instruments);
   const originalPhoto = useRef(photoUri);
+  const originalAvatar = useRef(avatarId);
 
   const hasChanges = useMemo(() => {
     const f = originalForm.current;
@@ -97,9 +101,10 @@ export default function DJEditProfileScreen() {
       primaryGenre !== originalGenre.current ||
       JSON.stringify(secondaryGenres) !== JSON.stringify(originalSecondary.current) ||
       JSON.stringify(instruments) !== JSON.stringify(originalInstruments.current) ||
-      photoUri !== originalPhoto.current
+      photoUri !== originalPhoto.current ||
+      avatarId !== originalAvatar.current
     );
-  }, [form, primaryGenre, secondaryGenres, instruments, photoUri, baselineVersion]);
+  }, [form, primaryGenre, secondaryGenres, instruments, photoUri, avatarId, baselineVersion]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -155,6 +160,10 @@ export default function DJEditProfileScreen() {
           const uri = await pickImage({ source: 'camera' });
           if (uri) { setPendingSource('camera'); setPendingPhoto(uri); }
         },
+      },
+      {
+        text: 'Choose an Avatar',
+        onPress: () => setShowAvatarPicker(true),
       },
       ...(photoUri ? [{
         text: 'Remove Photo',
@@ -243,6 +252,7 @@ export default function DJEditProfileScreen() {
       phone: form.phone.trim(),
       bio: form.bio.trim() || undefined,
       profilePhotoUrl: photoUrl,
+      avatarId: avatarId ?? undefined,
     });
 
     if (currentUser) {
@@ -283,6 +293,7 @@ export default function DJEditProfileScreen() {
           mixcloud_url: form.mixcloudUrl.trim() || null,
           spotify_url: form.spotifyUrl.trim() || null,
           profile_photo_url: photoUrl ?? null,
+          avatar_id: avatarId ?? null,
         })
         .eq('id', currentUser.id)
         .select();
@@ -308,6 +319,7 @@ export default function DJEditProfileScreen() {
     originalSecondary.current = secondaryGenres;
     originalInstruments.current = instruments;
     originalPhoto.current = photoUrl ?? null;
+    originalAvatar.current = avatarId;
     setPhotoUri(photoUrl ?? null);
     setBaselineVersion((v) => v + 1);
     setSaving(false);
@@ -335,7 +347,7 @@ export default function DJEditProfileScreen() {
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
-            <AvatarImage uri={photoUri ?? undefined} name={currentUser?.fullName} size={90} />
+            <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} />
             <View style={styles.cameraOverlay}>
               <MaterialIcons name="camera-alt" size={18} color="#fff" />
             </View>
@@ -595,6 +607,13 @@ export default function DJEditProfileScreen() {
           setPendingPhoto(uri ?? null);
         }}
         onCancel={() => setPendingPhoto(null)}
+      />
+
+      <AvatarPicker
+        visible={showAvatarPicker}
+        selectedId={avatarId}
+        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>
   );

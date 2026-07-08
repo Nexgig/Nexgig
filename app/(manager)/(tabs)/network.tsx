@@ -122,7 +122,7 @@ export default function NetworkScreen() {
     if (data) {
       setSbArtists(data.map((a: any) => ({
         id: a.id, email: '', phone: '', accountType: 'artist' as const,
-        fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, bio: a.bio ?? undefined,
+        fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, avatarId: a.avatar_id ?? undefined, bio: a.bio ?? undefined,
         location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
         isPhoneVerified: false, isEmailVerified: false,
         createdAt: a.created_at, updatedAt: a.updated_at,
@@ -142,7 +142,7 @@ export default function NetworkScreen() {
       useArtistDirectoryStore.getState().setArtists(data.map((a: any) => ({
         user: {
           id: a.id, email: '', phone: '', accountType: 'artist' as const,
-          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, bio: a.bio ?? undefined,
+          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, avatarId: a.avatar_id ?? undefined, bio: a.bio ?? undefined,
           location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
           isPhoneVerified: false, isEmailVerified: false,
           createdAt: a.created_at, updatedAt: a.updated_at,
@@ -433,13 +433,7 @@ export default function NetworkScreen() {
                   onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
                 >
                   <View style={styles.cardLeft}>
-                    {user.profilePhotoUrl ? (
-                      <Image source={{ uri: user.profilePhotoUrl }} style={styles.thumb} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                        <MaterialIcons name="person" size={22} color={colors.muted} />
-                      </View>
-                    )}
+                    <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId ?? undefined} seed={user.id} name={user.fullName} size={48} />
                     <View style={styles.cardInfo}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>

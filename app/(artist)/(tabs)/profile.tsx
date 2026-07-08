@@ -87,6 +87,7 @@ export default function ArtistProfileScreen() {
         location: data.based_in ?? undefined,
         yearsOfExperience: data.years_of_experience ?? undefined,
         profilePhotoUrl: data.profile_photo_url ?? undefined,
+        avatarId: data.avatar_id ?? undefined,
       });
     })();
     return () => { cancelled = true; };
@@ -215,15 +216,7 @@ export default function ArtistProfileScreen() {
           </Pressable>
           {/* Top row: photo + name/flag */}
           <View style={styles.profileTopRow}>
-            {currentUser?.profilePhotoUrl ? (
-              <View style={[styles.profilePhoto, { overflow: 'hidden' }]}>
-                <Image source={{ uri: currentUser.profilePhotoUrl }} style={{ width: 80, height: 80 }} resizeMode="cover" />
-              </View>
-            ) : (
-              <View style={[styles.profilePhoto, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                <MaterialIcons name="person" size={36} color={colors.muted} />
-              </View>
-            )}
+            <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
             <View style={styles.profileNameBlock}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>

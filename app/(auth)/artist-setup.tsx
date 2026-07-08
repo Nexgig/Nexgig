@@ -15,6 +15,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
+import { AvatarImage } from '@/components/ui/avatar-image';
+import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
+import { pickImage, uploadImageAsync, type PickSource } from '@/lib/upload';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
 
@@ -30,7 +34,7 @@ const INSTRUMENTS: InstrumentType[] = [
   'Violin', 'Flute', 'Vocalist', 'Piano / Keys', 'Oud', 'Darbuka', 'Bongos',
 ];
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
 
@@ -68,6 +72,20 @@ export default function DJSetupScreen() {
   });
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Profile photo / avatar (optional, chosen on the Profile Photo step).
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [pendingSource, setPendingSource] = useState<PickSource>('library');
+
+  const handlePickPhoto = () => {
+    Alert.alert('Profile Photo', 'Choose an option', [
+      { text: 'Choose from Library', onPress: async () => { const uri = await pickImage({ source: 'library' }); if (uri) { setPendingSource('library'); setPendingPhoto(uri); } } },
+      { text: 'Take Photo', onPress: async () => { const uri = await pickImage({ source: 'camera' }); if (uri) { setPendingSource('camera'); setPendingPhoto(uri); } } },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const translateX = useSharedValue(0);
 
@@ -202,6 +220,18 @@ export default function DJSetupScreen() {
       username = `${baseUsername}${n}`;
     }
 
+    // Upload the chosen profile photo (if any) now that we have the user id.
+    let photoUrl: string | null = null;
+    if (photoUri) {
+      try {
+        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${user.id}`);
+      } catch (e: any) {
+        setIsLoading(false);
+        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
+        return;
+      }
+    }
+
     // ✅ Step 3 — insert into artists table (retry username on a unique clash / race)
     const artistRow = {
       id: user.id,
@@ -215,6 +245,8 @@ export default function DJSetupScreen() {
       primary_genre: form.primaryGenre || null,
       secondary_genres: form.secondaryGenres,
       instruments: form.instruments,
+      profile_photo_url: photoUrl,
+      avatar_id: avatarId ?? null,
       instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
       soundcloud_url: form.soundcloud || null,
       mixcloud_url: form.mixcloud || null,
@@ -250,6 +282,8 @@ export default function DJSetupScreen() {
       username,
       bio: form.bio,
       location: undefined,
+      profilePhotoUrl: photoUrl ?? undefined,
+      avatarId: avatarId ?? undefined,
       isPhoneVerified: false,
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
@@ -301,7 +335,8 @@ export default function DJSetupScreen() {
             <Text style={[styles.title, { color: colors.foreground }]}>
               {displayStep === 1 && 'Your Identity'}
               {displayStep === 2 && 'Your Sound'}
-              {displayStep === 3 && 'Media Links'}
+              {displayStep === 3 && 'Profile Photo'}
+              {displayStep === 4 && 'Media Links'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
           </View>
@@ -396,8 +431,26 @@ export default function DJSetupScreen() {
             </View>
           )}
 
-          {/* Step 3: Media Links */}
+          {/* Step 3: Profile Photo (optional) */}
           {displayStep === 3 && (
+            <View style={styles.form}>
+              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — upload a photo or pick an avatar. You can change this anytime.</Text>
+              <View style={styles.photoStep}>
+                <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} />
+                <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.photoPrimaryBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
+                  <MaterialIcons name="photo-camera" size={18} color="#fff" />
+                  <Text style={styles.photoPrimaryBtnText}>Upload Photo</Text>
+                </Pressable>
+                <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
+                  <MaterialIcons name="face" size={18} color={colors.foreground} />
+                  <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {/* Step 4: Media Links */}
+          {displayStep === 4 && (
             <View style={styles.form}>
               <Text style={[styles.infoText, { color: colors.muted, marginBottom: 8 }]}>At least one link is required.</Text>
               <View style={styles.fieldGroup}>
@@ -440,6 +493,20 @@ export default function DJSetupScreen() {
           <Text style={styles.nextBtnText}>{isLoading ? 'Creating profile...' : step < TOTAL_STEPS ? 'Continue' : 'Complete Profile'}</Text>
         </Pressable>
       </View>
+
+      <AvatarPreviewModal
+        uri={pendingPhoto}
+        onConfirm={() => { if (pendingPhoto) { setPhotoUri(pendingPhoto); setAvatarId(null); } setPendingPhoto(null); }}
+        onRetry={async () => { const uri = await pickImage({ source: pendingSource }); setPendingPhoto(uri ?? null); }}
+        onCancel={() => setPendingPhoto(null)}
+      />
+
+      <AvatarPicker
+        visible={showAvatarPicker}
+        selectedId={avatarId}
+        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onClose={() => setShowAvatarPicker(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -472,4 +539,9 @@ const styles = StyleSheet.create({
   instagramRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },
   instagramInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 15 },
+  photoStep: { alignItems: 'center', gap: 16, paddingTop: 12 },
+  photoPrimaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12 },
+  photoPrimaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  photoSecondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
+  photoSecondaryBtnText: { fontSize: 15, fontWeight: '600' },
 });

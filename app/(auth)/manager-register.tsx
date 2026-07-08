@@ -14,8 +14,12 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
+import { AvatarImage } from '@/components/ui/avatar-image';
+import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
+import { pickImage, uploadImageAsync, type PickSource } from '@/lib/upload';
 
-const TOTAL_STEPS = 2;
+const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
 
@@ -45,6 +49,12 @@ export default function ManagerRegisterScreen() {
     companyName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  // Profile photo / avatar (optional, chosen on the Profile Photo step).
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
+  const [pendingSource, setPendingSource] = useState<PickSource>('library');
 
   const translateX = useSharedValue(0);
 
@@ -69,6 +79,14 @@ export default function ManagerRegisterScreen() {
   }, [screenWidth, translateX]);
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handlePickPhoto = () => {
+    Alert.alert('Profile Photo', 'Choose an option', [
+      { text: 'Choose from Library', onPress: async () => { const uri = await pickImage({ source: 'library' }); if (uri) { setPendingSource('library'); setPendingPhoto(uri); } } },
+      { text: 'Take Photo', onPress: async () => { const uri = await pickImage({ source: 'camera' }); if (uri) { setPendingSource('camera'); setPendingPhoto(uri); } } },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const handleNext = async () => {
     if (isAnimating) return;
@@ -124,7 +142,13 @@ export default function ManagerRegisterScreen() {
       return;
     }
 
-    // ✅ Step 2 — insert manager profile into Supabase
+    // ✅ Step 2 — Profile Photo (optional): just advance to the profile details.
+    if (step === 2) {
+      animateToStep(3, 'forward');
+      return;
+    }
+
+    // ✅ Step 3 — insert manager profile into Supabase
     setIsLoading(true);
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -152,6 +176,18 @@ export default function ManagerRegisterScreen() {
       return;
     }
 
+    // Upload the chosen profile photo (if any) now that we have the user id.
+    let photoUrl: string | null = null;
+    if (photoUri) {
+      try {
+        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${user.id}`);
+      } catch (e: any) {
+        setIsLoading(false);
+        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
+        return;
+      }
+    }
+
     // Insert into managers table
     const { error: insertError } = await supabase.from('managers').upsert({
       id: user.id,
@@ -160,6 +196,8 @@ export default function ManagerRegisterScreen() {
       full_name: form.fullName.trim(),
       based_in: form.basedIn || null,
       company_name: form.companyName.trim() || null,
+      profile_photo_url: photoUrl,
+      avatar_id: avatarId ?? null,
     }, { onConflict: 'id' });
 
     setIsLoading(false);
@@ -177,6 +215,8 @@ export default function ManagerRegisterScreen() {
       fullName: form.fullName.trim(),
       location: undefined,
       companyName: form.companyName.trim() || undefined,
+      profilePhotoUrl: photoUrl ?? undefined,
+      avatarId: avatarId ?? undefined,
       isPhoneVerified: false,
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
@@ -228,11 +268,13 @@ export default function ManagerRegisterScreen() {
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>
               {displayStep === 1 && 'Create Account'}
-              {displayStep === 2 && 'Your Profile'}
+              {displayStep === 2 && 'Profile Photo'}
+              {displayStep === 3 && 'Your Profile'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]}>
-              {displayStep === 1 && 'Step 1 of 2 — Basic information'}
-              {displayStep === 2 && 'Step 2 of 2 — Tell us about yourself'}
+              {displayStep === 1 && 'Step 1 of 3 — Basic information'}
+              {displayStep === 2 && 'Step 2 of 3 — Add a photo or avatar'}
+              {displayStep === 3 && 'Step 3 of 3 — Tell us about yourself'}
             </Text>
           </View>
 
@@ -292,8 +334,26 @@ export default function ManagerRegisterScreen() {
             </View>
           )}
 
-          {/* Step 2: Profile Details */}
+          {/* Step 2: Profile Photo (optional) */}
           {displayStep === 2 && (
+            <View style={styles.form}>
+              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — upload a photo or pick an avatar. You can change this anytime.</Text>
+              <View style={styles.photoStep}>
+                <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} variant="manager" />
+                <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.photoPrimaryBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
+                  <MaterialIcons name="photo-camera" size={18} color="#fff" />
+                  <Text style={styles.photoPrimaryBtnText}>Upload Photo</Text>
+                </Pressable>
+                <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
+                  <MaterialIcons name="face" size={18} color={colors.foreground} />
+                  <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {/* Step 3: Profile Details */}
+          {displayStep === 3 && (
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Based In</Text>
@@ -323,6 +383,20 @@ export default function ManagerRegisterScreen() {
 
         </Animated.View>
       </ScrollView>
+
+      <AvatarPreviewModal
+        uri={pendingPhoto}
+        onConfirm={() => { if (pendingPhoto) { setPhotoUri(pendingPhoto); setAvatarId(null); } setPendingPhoto(null); }}
+        onRetry={async () => { const uri = await pickImage({ source: pendingSource }); setPendingPhoto(uri ?? null); }}
+        onCancel={() => setPendingPhoto(null)}
+      />
+
+      <AvatarPicker
+        visible={showAvatarPicker}
+        selectedId={avatarId}
+        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onClose={() => setShowAvatarPicker(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -366,4 +440,10 @@ const styles = StyleSheet.create({
   eyeBtn: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' },
   nextBtn: { backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  infoText: { fontSize: 13, lineHeight: 18 },
+  photoStep: { alignItems: 'center', gap: 16, paddingTop: 12 },
+  photoPrimaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12 },
+  photoPrimaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  photoSecondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
+  photoSecondaryBtnText: { fontSize: 15, fontWeight: '600' },
 });

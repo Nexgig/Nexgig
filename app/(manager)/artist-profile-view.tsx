@@ -134,6 +134,7 @@ export default function ArtistProfileViewScreen() {
           setFetchedUser({
             id: p.id, email: p.email ?? '', phone: p.phone ?? '', accountType: 'artist',
             fullName: p.full_name, profilePhotoUrl: p.profile_photo_url,
+            avatarId: p.avatar_id ?? undefined,
             bio: p.bio, location: p.based_in, yearsOfExperience: p.years_of_experience ?? undefined,
             isPhoneVerified: false, isEmailVerified: false,
             createdAt: p.created_at, updatedAt: p.updated_at,
@@ -350,12 +351,8 @@ export default function ArtistProfileViewScreen() {
           <View style={styles.heroTopRow}>
             {loading ? (
               <Skeleton width={80} height={80} radius={16} color={colors.border} />
-            ) : dj.profilePhotoUrl ? (
-              <Image source={{ uri: dj.profilePhotoUrl }} style={styles.heroPhoto} resizeMode="cover" />
             ) : (
-              <View style={[styles.heroPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                <MaterialIcons name="person" size={36} color={colors.muted} />
-              </View>
+              <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
             )}
             <View style={styles.heroNameBlock}>
               {loading ? (
@@ -591,13 +588,7 @@ export default function ArtistProfileViewScreen() {
           <View style={[styles.sheet, { backgroundColor: colors.background }]}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             <View style={styles.sheetArtistRow}>
-              {dj.profilePhotoUrl ? (
-                <Image source={{ uri: dj.profilePhotoUrl }} style={styles.sheetPhoto} resizeMode="cover" />
-              ) : (
-                <View style={[styles.sheetPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                  <MaterialIcons name="person" size={18} color={colors.muted} />
-                </View>
-              )}
+              <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sheetTitle, { color: colors.foreground }]} numberOfLines={1}>{dj.fullName}</Text>
                 <Text style={[styles.sheetSub, { color: colors.muted }]} numberOfLines={1}>{profile?.primaryGenre ?? 'Artist'}</Text>

@@ -261,15 +261,9 @@ export default function AssignDJScreen() {
               ]}
               onPress={() => handleAddToVenueLineup(item.entry.artistId)}
             >
-              {item.user!.profilePhotoUrl ? (
-                <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
-              ) : (
-                <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                  <MaterialIcons name="person" size={22} color={colors.muted} />
-                </View>
-              )}
+              <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
               <View style={styles.djInfo}>
-                <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
+              <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
                 <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
               </View>
               <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
@@ -532,13 +526,7 @@ export default function AssignDJScreen() {
         ]}
         onPress={() => handleTapDJ(item.user.id)}
       >
-        {item.user.profilePhotoUrl ? (
-          <Image source={{ uri: item.user.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
-        ) : (
-          <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-            <MaterialIcons name="person" size={22} color={colors.muted} />
-          </View>
-        )}
+        <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={item.user.avatarId} seed={item.user.id} name={item.user.fullName} size={48} />
         <View style={styles.djInfo}>
           <View style={styles.djNameRow}>
             <Text style={[styles.djName, { color: colors.foreground }]}>{item.user.fullName}</Text>
@@ -694,13 +682,7 @@ export default function AssignDJScreen() {
                     key={item.entry.artistId}
                     style={[styles.djRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
-                    {item.user!.profilePhotoUrl ? (
-                      <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                        <MaterialIcons name="person" size={22} color={colors.muted} />
-                      </View>
-                    )}
+                    <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
                     <View style={styles.djInfo}>
                       <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
                       <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>

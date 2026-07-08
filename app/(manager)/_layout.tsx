@@ -99,7 +99,7 @@ if (!lineupError && lineupData) {
         if (artistIds.length > 0) {
           const { data: artistsData } = await supabase
             .from('artists')
-            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, instagram_url, soundcloud_url, mixcloud_url, spotify_url, bio, min_rate, years_of_experience, gender, nationality, is_history_hidden, has_completed_booking, created_at, updated_at')
+            .select('id, full_name, email, primary_genre, secondary_genres, instruments, based_in, profile_photo_url, avatar_id, instagram_url, soundcloud_url, mixcloud_url, spotify_url, bio, min_rate, years_of_experience, gender, nationality, is_history_hidden, has_completed_booking, created_at, updated_at')
             .in('id', artistIds);
 
           if (artistsData) {
@@ -114,6 +114,7 @@ if (!lineupError && lineupData) {
               fullName: a.full_name,
               username: undefined,
               profilePhotoUrl: a.profile_photo_url ?? undefined,
+              avatarId: a.avatar_id ?? undefined,
               location: a.based_in ?? undefined,
               isPhoneVerified: false,
               isEmailVerified: true,
@@ -134,6 +135,7 @@ if (!lineupError && lineupData) {
               user: {
                 id: a.id, email: a.email ?? '', phone: '', accountType: 'artist' as const,
                 fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined,
+                avatarId: a.avatar_id ?? undefined,
                 bio: a.bio ?? undefined, location: a.based_in ?? undefined,
                 yearsOfExperience: a.years_of_experience ?? undefined,
                 isPhoneVerified: false, isEmailVerified: true,
