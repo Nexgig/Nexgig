@@ -77,12 +77,16 @@ export default function RootLayout() {
   }, [authHydrated]);
 
   // Hide the splash once fonts are ready AND auth has hydrated (or fonts failed —
-  // don't trap the user). Defer one tick so the dispatcher's Redirect has landed
-  // on the destination before the splash lifts — so nothing intermediate shows.
+  // don't trap the user). Wait two frames so the dispatcher's Redirect lands AND
+  // the destination screen completes its first layout pass behind the splash —
+  // otherwise its content visibly settles (small jump) the moment the splash lifts.
   useEffect(() => {
     if ((fontsLoaded || fontError) && authHydrated) {
-      const t = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, 0);
-      return () => clearTimeout(t);
+      let raf2 = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => { SplashScreen.hideAsync().catch(() => {}); });
+      });
+      return () => { cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
     }
   }, [fontsLoaded, fontError, authHydrated]);
 
