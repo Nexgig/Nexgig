@@ -33,9 +33,11 @@ LogBox.ignoreLogs([/SafeAreaView has been deprecated/]);
 // Keep the native splash on screen until our custom fonts have loaded so text
 // doesn't flash in the system font first.
 SplashScreen.preventAutoHideAsync().catch(() => {});
-// Cross-fade the splash out (instead of a hard cut) so there's no bare-white
-// frame between the native splash tearing down and the first screen painting.
-SplashScreen.setOptions({ fade: true, duration: 150 });
+// Hide the splash instantly (no cross-fade). The fade composited the splash's
+// light backing over the already-painted app for ~150ms, which in dark mode
+// looked like the whole screen briefly washing white before snapping to normal.
+// A hard cut reveals the already-dark app cleanly.
+SplashScreen.setOptions({ fade: false });
 
 // Minimum time (ms) to keep the splash/logo on screen, even if fonts + data are
 // ready sooner — so the logo registers for a beat instead of flashing past.
