@@ -14,6 +14,8 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
+import { performerLabel } from '@/lib/utils';
+import { fonts } from '@/lib/fonts';
 
 export default function VenueDetailScreen() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function VenueDetailScreen() {
   // Subscribe to raw array for immediate reactivity on add/remove
   const allVenueAssignments = useLineupStore((s) => s.venueAssignments);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
+  const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'slots' | 'lineup'>('overview');
   const [showReport, setShowReport] = useState(false);
@@ -382,10 +385,13 @@ Linking.openURL(url);
               slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot) => {
                 const booking = getBookingBySlot(slot.id);
                 const dj = booking ? getArtistUser(booking.artistId) : undefined;
+                const isDone = booking && (booking.status === 'completed' || booking.isCompleted);
+                const isPending = booking && (booking.status === 'requested' || booking.status === 'past_confirmation');
+                const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
                 return (
                   <Pressable
                     key={slot.id}
-                    style={({ pressed }) => [styles.slotCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+                    style={({ pressed }) => [styles.slotRow, { opacity: pressed ? 0.6 : 1 }]}
                     onPress={() => {
                       if (booking) {
                         router.push(('/(manager)/booking-detail?id=' + booking.id) as Href);
@@ -394,15 +400,21 @@ Linking.openURL(url);
                       }
                     }}
                   >
+                    {dj ? (
+                      <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={48} variant="artist" />
+                    ) : (
+                      <View style={[styles.slotPlaceholder, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <MaterialIcons name="event" size={22} color={colors.muted} />
+                      </View>
+                    )}
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.slotName, { color: colors.foreground }]}>{slot.name}</Text>
-                      <Text style={[styles.slotTime, { color: colors.muted }]}>
-                        {formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
+                      <Text style={[styles.slotRowTitle, { color: colors.foreground }]} numberOfLines={1}>{slot.name}</Text>
+                      <Text style={[styles.slotRowSub, { color: colors.muted }]} numberOfLines={1}>
+                        {formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}{dj ? ` · ${dj.fullName}` : ''}
                       </Text>
-                      {dj && <Text style={[styles.slotDJ, { color: colors.primary }]}>{dj.fullName}</Text>}
                     </View>
                     {booking ? (
-                      <StatusBadge status={booking.status} />
+                      <Text allowFontScaling={false} style={[styles.slotStatusDot, { color: dotColor }]}>.</Text>
                     ) : (
                       <Text style={[styles.unassigned, { color: colors.warning }]}>Unassigned</Text>
                     )}
@@ -439,19 +451,25 @@ Linking.openURL(url);
                 .map((a) => {
                 const dj = getArtistUser(a.artistId);
                 if (!dj) return null;
+                const profile = getArtistProfile(a.artistId);
                 return (
                   <View
                     key={a.id}
-                    style={[styles.djCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    style={styles.lineupRow}
                   >
                     <Pressable
-                      style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.85 : 1 }]}
+                      style={({ pressed }) => [styles.lineupRowLeft, { opacity: pressed ? 0.6 : 1 }]}
                       onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + a.artistId) as Href)}
                     >
-                      <AvatarImage uri={dj.profilePhotoUrl} name={dj.fullName} size={44} />
+                      <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={48} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.djName, { color: colors.foreground }]}>{dj.fullName}</Text>
-                        <Text style={[styles.djLocation, { color: colors.muted }]}>{dj.location ?? 'Unknown'}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{dj.fullName}</Text>
+                          {profile?.hasCompletedBooking && (
+                            <MaterialIcons name="verified" size={15} color={colors.primary} />
+                          )}
+                        </View>
+                        <Text style={[styles.djLocation, { color: colors.muted }]} numberOfLines={1}>{performerLabel(profile?.instruments)}</Text>
                       </View>
                     </Pressable>
                     <Pressable
@@ -546,9 +564,16 @@ const styles = StyleSheet.create({
   slotTime: { fontSize: 12 },
   slotDJ: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   unassigned: { fontSize: 12, fontWeight: '600' },
+  slotRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  slotRowTitle: { fontSize: 15, fontWeight: '700' },
+  slotRowSub: { fontSize: 13, marginTop: 1 },
+  slotStatusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
+  slotPlaceholder: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   djCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
   djName: { fontSize: 15, fontWeight: '700' },
   djLocation: { fontSize: 13 },
+  lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  lineupRowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   linkRowText: { fontSize: 14, fontWeight: '500', flex: 1 },
 });

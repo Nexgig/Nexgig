@@ -198,10 +198,12 @@ export default function RosterScreen() {
     const metaLine = performerLabel(item.profile?.instruments);
 
     return (
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {/* Top row: avatar + info */}
-        <View style={styles.cardTop}>
-          <AvatarImage uri={item.user.profilePhotoUrl} name={item.user.fullName} size={48} />
+      <Pressable
+        style={({ pressed }) => [styles.rowCard, { opacity: pressed ? 0.6 : 1 }]}
+        onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + item.user!.id) as Href)}
+      >
+        <View style={styles.cardLeft}>
+          <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId ?? undefined} seed={item.user.id} name={item.user.fullName} size={48} />
           <View style={styles.cardInfo}>
             <View style={styles.nameRow}>
               <Text style={[styles.cardName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -215,58 +217,16 @@ export default function RosterScreen() {
               {metaLine}
             </Text>
           </View>
-          <Pressable
-            hitSlop={8}
-            style={({ pressed }) => [styles.disconnectBtn, { opacity: pressed ? 0.55 : 1 }]}
-            onPress={() => handleDisconnect(item.user!.id, item.user!.fullName)}
-          >
-            <MaterialIcons name="link-off" size={20} color={colors.error} />
-          </Pressable>
         </View>
-
-        {/* Inline action buttons */}
-        <View style={[styles.actionRow, { borderTopColor: colors.border }]}>
-          {/* View Profile */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionBtn,
-              { borderColor: colors.border, backgroundColor: pressed ? colors.background : 'transparent' },
-            ]}
-            onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + item.user!.id) as Href)}
-          >
-            <MaterialIcons name="person" size={15} color={colors.primary} />
-            <Text style={[styles.actionBtnText, { color: colors.primary }]}>Profile</Text>
-          </Pressable>
-
-          <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
-
-          {/* Assign Venue */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionBtn,
-              { borderColor: colors.border, backgroundColor: pressed ? colors.background : 'transparent' },
-            ]}
-            onPress={() => openAssignSheet(item.user!.id)}
-          >
-            <MaterialIcons name="add-business" size={15} color={colors.primary} />
-            <Text style={[styles.actionBtnText, { color: colors.primary }]}>Assign Venue</Text>
-          </Pressable>
-
-          <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
-
-          {/* Bookings */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionBtn,
-              { borderColor: colors.border, backgroundColor: pressed ? colors.background : 'transparent' },
-            ]}
-            onPress={() => router.push(('/(manager)/artist-bookings?artistId=' + item.user!.id) as Href)}
-          >
-            <MaterialIcons name="event-note" size={15} color={colors.primary} />
-            <Text style={[styles.actionBtnText, { color: colors.primary }]}>Bookings</Text>
-          </Pressable>
-        </View>
-      </View>
+        <Pressable
+          style={({ pressed }) => [styles.bookingsBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+          onPress={(e) => { e.stopPropagation?.(); router.push(('/(manager)/artist-bookings?artistId=' + item.user!.id) as Href); }}
+          hitSlop={6}
+        >
+          <MaterialIcons name="event-note" size={15} color={colors.primary} />
+          <Text style={[styles.bookingsBtnText, { color: colors.primary }]}>Bookings</Text>
+        </Pressable>
+      </Pressable>
     );
   };
 
@@ -434,6 +394,10 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   cardName: { fontSize: 15, fontWeight: '600', letterSpacing: -0.2 },
   cardMeta: { fontSize: 13, marginTop: 1 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  bookingsBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  bookingsBtnText: { fontSize: 13, fontWeight: '600' },
 
   // ─── Inline action buttons ─────────────────────────────────────────────────
   actionRow: {
