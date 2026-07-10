@@ -9,13 +9,12 @@
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
 <!-- EXECUTION ORDER (set Jul 8 2026, per Tuts): do the polish/features FIRST, submit to App Store LAST.
-     1. Session 2 leftover — manager-avatar.png replace
-     2. Session 3 — Android FCM push + gig reminders (separate Android track; needs a build)
-     3. Session 4 — Manager Assign Venue → native sheet (verify wiring)
-     4. Session 5 — Design pass (calendar sizing, profile photo, venue/booking look, invoice preview)
-     5. Session 7 — Dashboard fixes (hidden-venue photo snapshot col; multi-artist slot grouping)
-     6. Transactional email (moved up from Phase 4, per Tuts) — wire SES/Resend to app events
-     7. Session 1b — App Store submission (demo account + metadata + Submit) — DO LAST
+     1. Session 3 — Android FCM push + gig reminders (separate Android track; needs a build)
+     2. Session 4 — Manager Assign Venue → native sheet (verify wiring)
+     3. Session 5 — Design pass (calendar sizing, profile photo, venue/booking look, invoice preview)
+     4. Session 7 — Dashboard fixes (hidden-venue photo snapshot col; multi-artist slot grouping)
+     5. Transactional email (moved up from Phase 4, per Tuts) — wire SES/Resend to app events
+     6. Session 1b — App Store submission (demo account + metadata + Submit) — DO LAST
      Note: Session 6 (time format) already DONE. Session 8 stays post-launch. Tap Payments + Google Calendar stay post-launch. -->
 
 ### PHASE 1 — Ship to the stores (do first)
@@ -35,7 +34,7 @@
 - ~~Auth screen redesign~~ — DONE (Jul 7): FULL redesign of Welcome + Sign-in, shipped via OTA. Cream (#F6F2EC) background; "Nexgig." logo (black text, CORAL dot); "BOOK. PLAY. DISCOVER." slogan tucked under logo; coral CTA; clean white inputs; Apple/Google made COMPACT side-by-side (shared oauth-buttons.tsx, everywhere). Sign-in now MIRRORS Welcome: press Continue → slogan slot becomes the email, email input becomes password input, Continue becomes Sign In, Apple/Google removed. New-user flow (choose-account-type → wizard) left untouched. Responsive: proportional top offset (height*0.16) so it mirrors + adapts across all iPhone/Android sizes; tight logo↔slogan spacing (gap 2). App display name kept "Nexgig" (no trailing dot — avoid Apple naming hassle + rebuild).
 - App icon + splash → FINAL send-arrow (black 'send' glyph, optical-centered, on coral) — committed + submitting to TestFlight. VERIFY on device; lock before submit.
 - ~~Marketing site (nexgigapp.com)~~ — UPDATED (Jul 7): hero now shows the send-arrow app icon (was 'gig.' text); removed "Where venues and artists meet." tagline; refreshed both feature lists (venues: venues+lineup, discover talent, track received invoices; artists: +create/send invoices); added favicon + apple-touch-icon (send-arrow) with <link> tags in index/support. 5 files to upload to nexgig.github.io repo root: index.html, support.html, favicon.png, apple-touch-icon.png, hero-icon.png. NOTE: fonts must stay beside HTML.
-- STILL OPEN: manager-avatar.png is still the old default placeholder.
+- ~~manager-avatar.png placeholder~~ — DONE / OBSOLETE (Jul 8 session 2): superseded by the avatar registry (`lib/avatars.ts` — 22 bundled avatars) + `AvatarImage` (photo → chosen avatar → deterministic default, never empty) + the new avatar picker. Managers now get a deterministic default or a chosen avatar/photo everywhere; the old `manager-avatar.png` placeholder is no longer used. Closed per Tuts.
 - ~~Whole-app responsive pass~~ — DONE / audited (Jul 8): code audit of representative screens (both dashboards, manager calendar, venue-detail, create-venue, profile) shows the app was already built responsively — ScrollViews throughout (no clipping on small phones), calendar grid uses `width:'14.28%'`+`aspectRatio:1` (adapts to any width), NO hardcoded widths ≥200, `flexWrap` on chip/tag grids, `numberOfLines` on names/titles, `maxWidth` caps on sheets, `adjustsFontSizeToFit` on calendar labels. Only non-issues found: one `Dimensions.get('window')` for a modal height (per-device-correct on phones, no rotation) + a few fixed-height touch-target rows (only clip under extreme accessibility Dynamic Type — deferred as post-launch a11y polish). No blind edits made (can't verify renders). The old "only auth screens done" note was overly cautious.
 
 **Session 3 · Android parity**
