@@ -408,9 +408,9 @@ Linking.openURL(url);
                       </View>
                     )}
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.slotRowTitle, { color: colors.foreground }]} numberOfLines={1}>{slot.name}</Text>
+                      <Text style={[styles.slotRowTitle, { color: colors.foreground }]} numberOfLines={1}>{dj ? dj.fullName : slot.name}</Text>
                       <Text style={[styles.slotRowSub, { color: colors.muted }]} numberOfLines={1}>
-                        {formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}{dj ? ` · ${dj.fullName}` : ''}
+                        {dj ? `${slot.name} · ` : ''}{formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
                       </Text>
                     </View>
                     {booking ? (
