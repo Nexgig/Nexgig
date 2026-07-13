@@ -8,6 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip, SoftButton } from '@/components/ui/card-free';
 import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, useSlotStore, useVenueStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import * as Haptics from 'expo-haptics';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
@@ -24,6 +25,7 @@ function formatMemberSince(createdAt?: string): string {
 
 export default function ArtistProfileScreen() {
   const router = useRouter();
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -321,34 +323,40 @@ export default function ArtistProfileScreen() {
 
           {/* History */}
           <View style={styles.gigHistorySection}>
-            <View style={[styles.collapseHeader, { borderColor: colors.border }]}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.collapseHeader,
+                { borderColor: historyExpanded ? colors.border : 'transparent', marginBottom: historyExpanded ? 12 : 0, opacity: pressed ? 0.85 : 1 },
+              ]}
+              onPress={() => { setHistoryExpanded((v) => !v); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
               <View style={styles.collapseHeaderLeft}>
                 <MaterialIcons name="history" size={18} color={colors.muted} style={{ marginRight: 8 }} />
                 <Text style={[styles.collapseTitle, { color: colors.foreground }]}>History</Text>
-                <View style={[styles.collapseBadge, { backgroundColor: colors.muted + '22' }]}>
-                  <Text style={[styles.collapseBadgeText, { color: colors.muted }]}>{completedBookings.length}</Text>
-                </View>
+                {/* Eye sits by the title now (the count badge is gone). Nested Pressable,
+                    so tapping it toggles visibility without collapsing the section. */}
+                <Pressable
+                  onPress={(e) => { e.stopPropagation?.(); toggleHistoryVisibility(); }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, paddingHorizontal: 6, paddingVertical: 4 }]}
+                  hitSlop={8}
+                >
+                  <MaterialIcons
+                    name={isHistoryHidden ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={isHistoryHidden ? colors.muted : colors.primary}
+                  />
+                </Pressable>
                 {isHistoryHidden && (
-                  <View style={[styles.privateBadge, { backgroundColor: colors.background, borderColor: colors.border, marginLeft: 6 }]}>
+                  <View style={[styles.privateBadge, { backgroundColor: colors.background, borderColor: colors.border, marginLeft: 2 }]}>
                     <MaterialIcons name="lock" size={10} color={colors.muted} />
                     <Text style={[styles.privateText, { color: colors.muted }]}>Private</Text>
                   </View>
                 )}
               </View>
-              <Pressable
-                onPress={toggleHistoryVisibility}
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
-                hitSlop={8}
-              >
-                <MaterialIcons
-                  name={isHistoryHidden ? 'visibility-off' : 'visibility'}
-                  size={20}
-                  color={isHistoryHidden ? colors.muted : colors.primary}
-                />
-              </Pressable>
-            </View>
+              <MaterialIcons name={historyExpanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
+            </Pressable>
 
-            {completedBookings.length === 0 ? (
+            {!historyExpanded ? null : completedBookings.length === 0 ? (
               <View style={styles.emptyCard}>
                 <MaterialIcons name="history" size={32} color={colors.muted} />
                 <Text style={[styles.emptyText, { color: colors.muted }]}>No completed gigs yet</Text>
@@ -479,7 +487,7 @@ const styles = StyleSheet.create({
   // Gig History
   gigHistorySection: { paddingHorizontal: 20, paddingVertical: 16 },
   gigHistoryScroll: { height: 270 },
-  collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
+  collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   collapseTitle: { fontSize: 16, fontWeight: '700' },
   collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
