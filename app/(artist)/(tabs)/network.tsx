@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   youPillText: { fontSize: 10, fontWeight: '700' },
   connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
   connectedText: { fontSize: 11, fontWeight: '700' },
-  applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
+  applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   applyBtnText: { fontSize: 12, fontWeight: '700' },
   statusBadge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },

@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, useReviewStore, venuePhotoUri } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
@@ -18,6 +18,12 @@ export default function CompletedGigsScreen() {
   const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
   const allBookings = useBookingStore((s) => s.bookings);
+  const reviews = useReviewStore((s) => s.reviews);
+  // bookingId -> rating, so a reviewed gig is visible at a glance in the list
+  const reviewByBooking = useMemo(
+    () => new Map(reviews.map((r) => [r.bookingId, r.rating])),
+    [reviews]
+  );
   const slots = useSlotStore((s) => s.slots);
   const artistUsers = useLineupStore((s) => s.artistUsers);
 
@@ -72,6 +78,7 @@ export default function CompletedGigsScreen() {
           </View>
         }
         renderItem={({ item: booking }) => {
+          const rating = reviewByBooking.get(booking.id);
           return (
           <Pressable
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
@@ -84,6 +91,12 @@ export default function CompletedGigsScreen() {
                   {booking.dj?.fullName ?? 'Unknown Artist'}
                   {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
                 </Text>
+                {rating !== undefined && (
+                  <View style={[styles.reviewChip, { backgroundColor: colors.warning + '1A' }]}>
+                    <MaterialIcons name="star" size={12} color={colors.warning} />
+                    <Text style={[styles.reviewChipText, { color: colors.warning }]}>{rating}</Text>
+                  </View>
+                )}
                 {booking.isInvoiced && (
                   <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
                     <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
@@ -114,6 +127,8 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  reviewChip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  reviewChipText: { fontSize: 10, fontWeight: '700' },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   djName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   venueName: { fontSize: 13, marginBottom: 2 },

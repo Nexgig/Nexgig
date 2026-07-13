@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Alert, ActivityIndicator, Image, RefreshControl } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from '@/lib/rn';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -184,16 +184,24 @@ export default function NetworkScreen() {
     [applications]
   );
 
-  const filteredArtists = useMemo(
-    () => [...sbArtists.filter((u) => u.id !== currentUser?.id)]
-      .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase())),
-    [sbArtists, currentUser?.id]
-  );
+  const [search, setSearch] = useState('');
 
-  const filteredVenues = useMemo(
-    () => [...sbVenues].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())),
-    [sbVenues]
-  );
+  const filteredArtists = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return [...sbArtists.filter((u) => u.id !== currentUser?.id)]
+      .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
+      .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
+  }, [sbArtists, currentUser?.id, search]);
+
+  const filteredVenues = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return [...sbVenues]
+      .filter((v) => !q
+        || v.name.toLowerCase().includes(q)
+        || (v.venueType ?? '').toLowerCase().includes(q)
+        || (v.googleMapsLocation?.address ?? '').toLowerCase().includes(q))
+      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  }, [sbVenues, search]);
 
   // ── Accept / Decline handlers ─────────────────────────────────────────────
   const handleAccept = async (app: Application) => {
@@ -404,6 +412,25 @@ export default function NetworkScreen() {
         ))}
       </View>
 
+      {/* Search — artists and venues */}
+      <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <MaterialIcons name="search" size={18} color={colors.muted} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.foreground }]}
+          placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
+          placeholderTextColor={colors.muted}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          autoCapitalize="none"
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch('')} hitSlop={8}>
+            <MaterialIcons name="close" size={16} color={colors.muted} />
+          </Pressable>
+        )}
+      </View>
+
       {/* Artists tab */}
       {activeTab === 'artists' && (
         artistsLoading ? (
@@ -589,7 +616,13 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   connectedWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   disconnectIconBtn: { padding: 7, borderRadius: 6 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 12, marginBottom: 4,
+    borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  searchInput: { flex: 1, fontSize: 14 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   respondBtn: { borderRadius: 6, paddingHorizontal: 13, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },

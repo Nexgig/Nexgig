@@ -413,9 +413,9 @@ export default function VenueDetailScreen() {
                       </View>
                     )}
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.slotRowTitle, { color: colors.foreground }]} numberOfLines={1}>{dj ? dj.fullName : slot.name}</Text>
+                      <Text style={[styles.slotRowTitle, { color: colors.foreground }]} numberOfLines={1}>{dj ? dj.fullName : 'Unassigned'}</Text>
                       <Text style={[styles.slotRowSub, { color: colors.muted }]} numberOfLines={1}>
-                        {dj ? `${slot.name} · ` : ''}{formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
+                        {formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
                       </Text>
                     </View>
                     {booking ? (

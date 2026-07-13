@@ -1224,7 +1224,7 @@ export default function CalendarScreen() {
           >
             <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
             <View style={styles.slotInfo}>
-              <Text style={[styles.slotName, { color: colors.foreground }]} numberOfLines={1}>{venue?.name ?? slot.name}</Text>
+              <Text style={[styles.slotName, { color: colors.foreground }]} numberOfLines={1}>{venue?.name ?? 'Unknown Venue'}</Text>
               <Text style={[styles.slotTime, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
             </View>
           </Pressable>
@@ -1432,7 +1432,7 @@ export default function CalendarScreen() {
           >
             <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
             <View style={styles.slotInfo}>
-              <Text style={[styles.slotName, { color: colors.foreground }]}>{venue?.name ?? slot.name}</Text>
+              <Text style={[styles.slotName, { color: colors.foreground }]}>{venue?.name ?? 'Unknown Venue'}</Text>
               <Text style={[styles.slotTime, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
             </View>
           </Pressable>
@@ -2464,7 +2464,7 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },

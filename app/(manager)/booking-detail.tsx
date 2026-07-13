@@ -160,7 +160,6 @@ export default function DJBookingDetailScreen() {
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
-          <StatusBadge status={booking.status} />
         </View>
 
         <View style={styles.content}>
