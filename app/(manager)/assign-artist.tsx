@@ -68,7 +68,6 @@ export default function AssignDJScreen() {
     [globalLineup, currentUser?.id]
   );
 
-  const [venueSearch, setVenueSearch] = useState('');
 
   // ── Cross-manager conflict detection ─────────────────────────────────────
   // Fetch confirmed bookings + blocks from OTHER managers for lineup artists on this slot's date
@@ -139,15 +138,9 @@ export default function AssignDJScreen() {
         user: getArtistUser(entry.artistId),
         profile: getArtistProfile(entry.artistId),
       }))
-      .filter((item) => {
-        if (!item.user) return false;
-        if (!venueSearch.trim()) return true;
-        const q = venueSearch.toLowerCase();
-        return (item.user.fullName ?? '').toLowerCase().includes(q) ||
-          (item.profile?.primaryGenre ?? '').toLowerCase().includes(q);
-      })
+      .filter((item) => !!item.user)
       .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? '')),
-    [myGlobalLineup, activeVenueAssignmentIds, getArtistUser, getArtistProfile, venueSearch]
+    [myGlobalLineup, activeVenueAssignmentIds, getArtistUser, getArtistProfile]
   );
 
   const handleAddToVenueLineup = (artistId: string) => {
@@ -204,33 +197,6 @@ export default function AssignDJScreen() {
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>Add Artist</Text>
             <Text style={[styles.headerSub, { color: colors.muted }]}>{venueForLineup?.name ?? 'Venue'}</Text>
           </View>
-        </View>
-
-        {/* Search */}
-        <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <MaterialIcons name="search" size={18} color={colors.muted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder="Search artists..."
-            placeholderTextColor={colors.muted}
-            value={venueSearch}
-            onChangeText={setVenueSearch}
-            returnKeyType="search"
-            autoCapitalize="none"
-          />
-          {venueSearch.length > 0 && (
-            <Pressable onPress={() => setVenueSearch('')} hitSlop={8}>
-              <MaterialIcons name="close" size={16} color={colors.muted} />
-            </Pressable>
-          )}
-        </View>
-
-        {/* Info note */}
-        <View style={[styles.infoNote, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <MaterialIcons name="info-outline" size={14} color={colors.muted} />
-          <Text style={[styles.infoNoteText, { color: colors.muted }]}>
-            Select an artist from your global lineup to add them to this venue.
-          </Text>
         </View>
 
         <FlatList
