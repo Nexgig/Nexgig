@@ -120,7 +120,7 @@ export default function ManagerProfileScreen() {
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>Manager</Text>
           <Pressable
-            style={({ pressed }) => [styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => router.push('/(manager)/settings' as Href)}
           >
             <MaterialIcons name="settings" size={22} color={colors.foreground} />
@@ -497,7 +497,7 @@ const invStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 6, position: 'relative' },
   editBtn: { position: 'absolute', top: 12, right: 16, zIndex: 1, padding: 4 },
   name: { fontSize: 22, fontFamily: fonts.bodyBold, marginTop: 8 },
