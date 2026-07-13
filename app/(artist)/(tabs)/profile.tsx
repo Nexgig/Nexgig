@@ -195,8 +195,8 @@ export default function ArtistProfileScreen() {
     <ScreenContainer>
       <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.foreground }]}>My Profile</Text>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Artist</Text>
           <View style={styles.headerRight}>
             <Pressable
               style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
@@ -428,8 +428,8 @@ export default function ArtistProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
-  title: { fontSize: 24, fontWeight: '800' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', gap: 8 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },

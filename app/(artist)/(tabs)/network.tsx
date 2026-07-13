@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -258,7 +259,7 @@ export default function ArtistNetworkScreen() {
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
       </View>
 
@@ -467,8 +468,8 @@ export default function ArtistNetworkScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
-  title: { fontSize: 22, fontWeight: '800' },
+  header: { paddingHorizontal: 20, paddingVertical: 16 },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   subtitle: { fontSize: 12, marginTop: 2 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
