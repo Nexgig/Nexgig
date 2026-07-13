@@ -377,7 +377,10 @@ function InvoicesSection({ colors, currentUserId, router }: {
                 )}
                 <View style={[invStyles.cardTop, { flex: 1 }]}>
                   <View style={invStyles.cardLeft}>
-                    <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.error }]} numberOfLines={1}>{inv.artistLegalName}</Text>
+                    <View style={invStyles.nameRow}>
+                      <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.error, flexShrink: 1 }]} numberOfLines={1}>{inv.artistLegalName}</Text>
+                      {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: colors.error }]} />}
+                    </View>
                     <Text style={[invStyles.venueName, { color: colors.foreground, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
                     <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
                       {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
@@ -385,7 +388,6 @@ function InvoicesSection({ colors, currentUserId, router }: {
                   </View>
                   <View style={invStyles.cardRight}>
                     <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.error, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
-                    {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: '#F97316' }]} />}
                   </View>
                   {inv.status === 'cancelled' && (
                     <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
@@ -491,7 +493,8 @@ const invStyles = StyleSheet.create({
   cancelledBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   cardRight: { alignItems: 'flex-end', gap: 6 },
   amountText: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
-  unreadDot: { width: 8, height: 8, borderRadius: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
 });
 
 const styles = StyleSheet.create({
