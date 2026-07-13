@@ -410,8 +410,6 @@ export default function ArtistProfileScreen() {
             )}
           </Section>
 
-          <Divider />
-
           {/* Sign Out */}
           <View style={styles.signOutWrap}>
             <SoftButton tone="danger" icon="logout" label="Sign Out" onPress={handleSignOut} />
