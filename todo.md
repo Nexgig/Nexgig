@@ -10,8 +10,14 @@
 
 Priority order — do polish/features first, App Store submit LAST. (Done work lives in the DONE log below.)
 
-**1 · Design pass** (OTA) — card-free pass is DONE across the app. Only this remains:
+**1 · Design pass** (OTA) — the card-free pass is DONE across the app. Remaining:
 - **The 3 auth screens** — `choose-account-type`, `manager-register`, `artist-setup`. The designer never produced a design for these; needs a decision (leave as-is, or extend the card-free patterns we settled on).
+- **Coral balance** — audit where `colors.primary` is used across the app. It now carries a lot of jobs (selected states, links, CTAs, drafted marks). Decide what should stay coral and what should drop to neutral.
+- **Venue avatars** — venues have photos but no avatar/fallback system. Artists and managers have one (`AvatarImage` + bundled avatars + seeded initials); venues fall back to a grey `place` icon.
+- **Sets on the calendar — should they be coral?** Currently the slot cards use the per-venue colour bar. Open question whether the set itself should read coral.
+- **Booking detail polish** — the card-free pass landed, but the page hasn't had a proper design look since.
+- **Logo** — review. (Icon is FINAL/locked = send-arrow; this is about the in-app logo/wordmark.)
+- **Website** — review.
 
 **2 · Transactional email** — wire SES/Resend to app events.
 
