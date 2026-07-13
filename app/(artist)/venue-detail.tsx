@@ -16,6 +16,20 @@ import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 
+function MapsBadge({ onPress }: { onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
+    >
+      <MaterialIcons name="directions" size={15} color={colors.primary} />
+      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
+    </Pressable>
+  );
+}
+
 export default function ArtistVenueDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -137,12 +151,6 @@ export default function ArtistVenueDetailScreen() {
                 </View>
               ) : null}
             </View>
-            {venue.googleMapsLocation?.address ? (
-              <View style={styles.infoRow}>
-                <MaterialIcons name="location-on" size={16} color={colors.muted} />
-                <Text style={[styles.infoText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
-              </View>
-            ) : null}
           </View>
         </View>
 
@@ -240,6 +248,27 @@ export default function ArtistVenueDetailScreen() {
                 </>
               );
             })()}
+
+            {venue.googleMapsLocation?.address ? (
+              <>
+                <Section label="Location">
+                  <View style={styles.locationSectionRow}>
+                    <MapsBadge
+                      onPress={() => {
+                        const loc = venue.googleMapsLocation;
+                        const url = (loc?.lat && loc?.lng)
+                          ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                          : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
+                        Linking.openURL(url);
+                      }}
+                    />
+                    <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
+                  </View>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+
             {!venue.vibeDescription && !venue.rulesTemplate && (!venue.preferredEnergy || venue.preferredEnergy.length === 0) && (!venue.genrePreferences || venue.genrePreferences.length === 0) && (!venue.audienceType || venue.audienceType.length === 0) && (!venue.subVibe || venue.subVibe.length === 0) && !venue.instagramUrl && !venue.musicLink && (
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="info-outline" size={40} color={colors.muted} />
@@ -280,6 +309,10 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   venueName: { fontSize: 18, fontFamily: fonts.bodyBold, flexShrink: 1 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  locationSectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  locationAddress: { fontSize: 14, lineHeight: 20, flex: 1 },
+  mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
+  mapsBadgeText: { fontSize: 13, fontWeight: '700' },
   infoText: { fontSize: 13, flex: 1 },
   tabBar: {
     flexDirection: 'row', borderBottomWidth: 0.5, marginHorizontal: 16,

@@ -17,6 +17,20 @@ import { performerLabel } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 
+function MapsBadge({ onPress }: { onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
+    >
+      <MaterialIcons name="directions" size={15} color={colors.primary} />
+      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
+    </Pressable>
+  );
+}
+
 export default function VenueDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -235,10 +249,6 @@ export default function VenueDetailScreen() {
                 </View>
               ) : null}
             </View>
-            <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={16} color={colors.muted} />
-              <Text style={[styles.locationText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation?.address)}</Text>
-            </View>
           </View>
           {isOwner && venue.verificationStatus !== 'verified' && (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -361,6 +371,27 @@ export default function VenueDetailScreen() {
                 </>
               );
             })()}
+
+            {venue.googleMapsLocation?.address ? (
+              <>
+                <Section label="Location">
+                  <View style={styles.locationSectionRow}>
+                    <MapsBadge
+                      onPress={() => {
+                        const loc = venue.googleMapsLocation;
+                        const url = (loc?.lat && loc?.lng)
+                          ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                          : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
+                        Linking.openURL(url);
+                      }}
+                    />
+                    <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
+                  </View>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+
             {isOwner && (
             <Pressable
               style={({ pressed }) => [styles.greyBtn, { opacity: pressed ? 0.7 : 1, borderColor: colors.error, marginHorizontal: 20 }]}
@@ -546,6 +577,10 @@ const styles = StyleSheet.create({
   venueName: { fontSize: 18, fontFamily: fonts.bodyBold, flexShrink: 1 },
   venueType: { fontSize: 13, fontWeight: '500' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  locationSectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  locationAddress: { fontSize: 14, lineHeight: 20, flex: 1 },
+  mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
+  mapsBadgeText: { fontSize: 13, fontWeight: '700' },
   locationText: { fontSize: 13 },
   verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   verifyPillText: { fontSize: 11, fontWeight: '700' },
