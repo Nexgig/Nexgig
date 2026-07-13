@@ -184,7 +184,7 @@ export default function ArtistNetworkScreen() {
           addNotification({
             id: notifId,
             userId: venue.manager_id,
-            type: 'lineup_request' as any,
+            type: 'lineup_request',
             title: 'New Join Request',
             body: `${currentUser.fullName ?? 'An artist'} · ${venue.name}`,
             isRead: false,

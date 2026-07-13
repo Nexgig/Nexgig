@@ -18,6 +18,10 @@ const NOTIF_ICONS: Record<string, string> = {
   booking_completed: 'star',
   lineup_invite: 'person-add',
   invite_accepted: 'how-to-reg',
+  lineup_request: 'person-add',
+  review_submitted: 'star',
+  invoice_received: 'receipt-long',
+  invoice_cancelled: 'receipt-long',
 };
 
 const NOTIF_COLORS: Record<string, string> = {
@@ -28,6 +32,10 @@ const NOTIF_COLORS: Record<string, string> = {
   booking_completed: '#8B5CF6',
   lineup_invite: '#F59E0B',
   invite_accepted: '#22C55E',
+  lineup_request: '#22C55E',
+  review_submitted: '#22C55E',
+  invoice_received: '#22C55E',
+  invoice_cancelled: '#8E8E93',
 };
 
 function timeAgo(dateStr: string): string {
@@ -99,7 +107,7 @@ export default function ManagerNotificationsScreen() {
     const isFading = fadingIds.has(item.id);
     const showUnread = isFading || !item.isRead;
     const dotColor =
-      item.type === 'booking_request' || item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' ? '#22C55E' :
+      item.type === 'booking_request' || item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' || item.type === 'lineup_request' || item.type === 'review_submitted' || item.type === 'invoice_received' ? '#22C55E' :
       item.type === 'booking_cancelled' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' ? '#EF4444' :
       colors.primary;
     return (

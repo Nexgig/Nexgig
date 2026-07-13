@@ -377,7 +377,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
                 )}
                 <View style={[invStyles.cardTop, { flex: 1 }]}>
                   <View style={invStyles.cardLeft}>
-                    <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.primary }]} numberOfLines={1}>{inv.artistLegalName}</Text>
+                    <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.error }]} numberOfLines={1}>{inv.artistLegalName}</Text>
                     <Text style={[invStyles.venueName, { color: colors.foreground, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
                     <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
                       {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
@@ -389,7 +389,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
                     )}
                   </View>
                   <View style={invStyles.cardRight}>
-                    <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.primary, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
+                    <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.error, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
                     {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: '#F97316' }]} />}
                   </View>
                 </View>

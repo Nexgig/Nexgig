@@ -286,6 +286,7 @@ export type NotificationType =
   | 'booking_request_cancelled'
   | 'past_confirmation_request'
   | 'lineup_invite'
+  | 'lineup_request'
   | 'lineup_accepted'
   | 'lineup_declined'
   | 'artist_joined'
