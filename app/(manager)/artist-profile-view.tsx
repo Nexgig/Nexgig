@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
 import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore } from '@/lib/store';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -671,7 +672,7 @@ const styles = StyleSheet.create({
   heroPhoto: { width: 80, height: 80, borderRadius: 40 },
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  djName: { fontSize: 22, fontWeight: '800' },
+  djName: { fontSize: 22, fontFamily: fonts.bodyBold },
   djGenre: { fontSize: 15 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },

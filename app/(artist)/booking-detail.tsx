@@ -403,6 +403,12 @@ export default function DJBookingDetailScreen() {
                         Alert.alert('Rating required', 'Please select at least 1 star.');
                         return;
                       }
+                      Alert.alert(
+                        'Submit review?',
+                        `Send your ${reviewRating}-star review to the manager? This can't be changed later.`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Submit', onPress: () => {
                       addReview({
                         id: `review-${Date.now()}`,
                         bookingId: booking.id,
@@ -426,6 +432,9 @@ export default function DJBookingDetailScreen() {
                         });
                       }
                       setReviewSubmitted(true);
+                          } },
+                        ]
+                      );
                     }}
                   >
                     <Text style={styles.reviewSubmitText}>Submit Review</Text>

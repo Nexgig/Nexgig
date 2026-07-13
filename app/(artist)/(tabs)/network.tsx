@@ -13,7 +13,6 @@ import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { cityFromAddress } from '@/lib/places';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 type NetworkTab = 'venues' | 'artists';
 
@@ -387,23 +386,6 @@ export default function ArtistNetworkScreen() {
                   )}
                 </Pressable>
               );
-              if (isConnected) {
-                return (
-                  <Swipeable
-                    renderRightActions={() => (
-                      <Pressable
-                        style={({ pressed }) => [styles.leaveAction, { opacity: pressed ? 0.8 : 1 }]}
-                        onPress={() => handleLeaveVenue(venue)}
-                      >
-                        <MaterialIcons name="logout" size={20} color="#fff" />
-                        <Text style={styles.leaveActionText}>Leave</Text>
-                      </Pressable>
-                    )}
-                  >
-                    {rowContent}
-                  </Swipeable>
-                );
-              }
               return rowContent;
             }}
           />
@@ -498,8 +480,6 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   applyBtnText: { fontSize: 12, fontWeight: '700' },
-  leaveAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 88, borderRadius: 14, marginLeft: 8 },
-  leaveActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
   statusBadge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },

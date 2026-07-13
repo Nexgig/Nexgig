@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   profileNameBlock: { flex: 1, gap: 4 },
   profileBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileInfo: { flex: 1, gap: 4 },
-  name: { fontSize: 22, fontWeight: '800' },
+  name: { fontSize: 22, fontFamily: fonts.bodyBold },
   genre: { fontSize: 15 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },

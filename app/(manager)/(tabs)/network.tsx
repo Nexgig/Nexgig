@@ -11,7 +11,6 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
@@ -494,23 +493,6 @@ export default function NetworkScreen() {
                   )}
                 </Pressable>
               );
-              if (isConnected) {
-                return (
-                  <Swipeable
-                    renderRightActions={() => (
-                      <Pressable
-                        style={({ pressed }) => [styles.disconnectAction, { opacity: pressed ? 0.8 : 1 }]}
-                        onPress={() => handleDisconnect(user)}
-                      >
-                        <MaterialIcons name="link-off" size={20} color="#fff" />
-                        <Text style={styles.disconnectActionText}>Disconnect</Text>
-                      </Pressable>
-                    )}
-                  >
-                    {rowContent}
-                  </Swipeable>
-                );
-              }
               return rowContent;
             }}
           />
@@ -611,7 +593,5 @@ const styles = StyleSheet.create({
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   respondBtn: { borderRadius: 6, paddingHorizontal: 13, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
-  disconnectAction: { backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', width: 96, borderRadius: 14, marginLeft: 8 },
-  disconnectActionText: { color: '#fff', fontSize: 11, fontWeight: '600', marginTop: 2 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
 });

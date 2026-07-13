@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
 import { useLineupStore, useBookingStore, useVenueStore, useSlotStore, useArtistDirectoryStore } from '@/lib/store';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroInfo: { flex: 1, gap: 4 },
-  djName: { fontSize: 18, fontWeight: '800' },
+  djName: { fontSize: 18, fontFamily: fonts.bodyBold },
   djGenre: { fontSize: 14 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   locationText: { fontSize: 13 },

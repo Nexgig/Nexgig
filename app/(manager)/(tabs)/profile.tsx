@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 6, position: 'relative' },
   editBtn: { position: 'absolute', top: 12, right: 16, zIndex: 1, padding: 4 },
-  name: { fontSize: 22, fontWeight: '800', marginTop: 8 },
+  name: { fontSize: 22, fontFamily: fonts.bodyBold, marginTop: 8 },
   role: { fontSize: 15, fontWeight: '600' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },
