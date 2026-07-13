@@ -30,7 +30,7 @@ const NOTIF_ICONS: Record<string, string> = {
 };
 
 const NOTIF_COLORS: Record<string, string> = {
-  booking_request: '#E2674A',
+  booking_request: '#22C55E',
   booking_confirmed: '#22C55E',
   booking_declined: '#EF4444',
   booking_cancelled: '#94A3B8',
@@ -138,7 +138,7 @@ export default function ArtistNotificationsScreen() {
     const isFading = fadingIds.has(item.id);
     const showUnread = isFading || !item.isRead;
     const dotColor =
-      item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' || item.type === 'venue_assigned' ? '#22C55E' :
+      item.type === 'booking_request' || item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' || item.type === 'venue_assigned' ? '#22C55E' :
       item.type === 'booking_cancelled' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' || item.type === 'venue_removed' ? '#EF4444' :
       colors.primary;
     return (

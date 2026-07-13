@@ -253,6 +253,9 @@ export default function InvoiceGigsScreen() {
       </View>
 
       <FlatList
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         data={listData}
         keyExtractor={(item, index) =>
           item.type === 'header' ? `header-${item.label}` : `gig-${item.data.booking.id}`

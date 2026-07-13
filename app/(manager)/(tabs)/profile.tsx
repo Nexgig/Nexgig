@@ -127,15 +127,8 @@ export default function ManagerProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Hero — centered avatar, name, role, location. Edit pencil top-right. */}
+        {/* Hero — centered avatar, name, role, location. */}
         <View style={styles.hero}>
-          <Pressable
-            style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.push('/(manager)/edit-profile' as Href)}
-            hitSlop={8}
-          >
-            <MaterialIcons name="edit" size={18} color={colors.muted} />
-          </Pressable>
           <AvatarImage uri={currentUser?.profilePhotoUrl} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} variant="manager" />
           <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName}</Text>
           <Text style={[styles.role, { color: colors.muted }]}>Venue Manager</Text>

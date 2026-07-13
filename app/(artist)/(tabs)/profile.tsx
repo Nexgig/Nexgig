@@ -207,15 +207,8 @@ export default function ArtistProfileScreen() {
           </View>
         </View>
 
-        {/* Hero — centered avatar, name + seal, role, location. Edit pencil top-right. */}
+        {/* Hero — centered avatar, name + seal, role, location. */}
         <View style={styles.hero}>
-          <Pressable
-            style={({ pressed }) => [styles.heroEditBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.push('/(artist)/edit-profile' as Href)}
-            hitSlop={8}
-          >
-            <MaterialIcons name="edit" size={18} color={colors.muted} />
-          </Pressable>
           <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
             <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
