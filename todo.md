@@ -8,73 +8,34 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-<!-- EXECUTION ORDER (set Jul 8 2026, per Tuts): do the polish/features FIRST, submit to App Store LAST.
-     1. Session 3 — Android FCM push + gig reminders (separate Android track; needs a build)
-     2. Session 4 — Manager Assign Venue → native sheet (verify wiring)
-     3. Session 5 — Design pass (calendar sizing, profile photo, venue/booking look, invoice preview)
-     4. Session 7 — Dashboard fixes (hidden-venue photo snapshot col; multi-artist slot grouping)
-     5. Transactional email (moved up from Phase 4, per Tuts) — wire SES/Resend to app events
-     6. Session 1b — App Store submission (demo account + metadata + Submit) — DO LAST
-     Note: Session 6 (time format) already DONE. Session 8 stays post-launch. Tap Payments + Google Calendar stay post-launch. -->
+Priority order — do polish/features first, App Store submit LAST. (Done work lives in the DONE log below.)
 
-### PHASE 1 — Ship to the stores (do first)
+**1 · Design pass** (OTA)
+- Make the calendar numbers + day-name labels bigger.
+- Artist + Manager profile general polish — layout, spacing, hierarchy, overall feel (the round-photo-upload part is already covered by the avatar system).
+- Venue page → cleaner "menu-like" look.
+- Booking page → "agreement-like" look.
+- Invoice preview → content sits too low + "Nexgig." wordmark not rendering in Clash Display Bold.
 
-**Session 1 · Production build readiness**
-- ~~Dependency alignment~~ — DONE (Jul 7): checked via expo-doctor; only 2 nav packages are harmlessly AHEAD of Expo SDK 54's minimums (7.8.12 vs 7.4.0, 7.1.25 vs 7.1.8), same major version, build 9 runs fine — left as-is on purpose (don't downgrade; caret ranges make `expo install --fix` a no-op anyway). If the doctor warning ever needs silencing, add these two to `expo.install.exclude` in package.json.
-- Deferred lint hygiene — DEPRIORITIZED: cosmetic only (unused imports/vars, unescaped apostrophes, hook-dep warnings). `pnpm check` (tsc) already passes, which is what matters for a working build. Not a submission blocker; do as a later cleanup.
+**2 · Transactional email** — wire SES/Resend to app events.
 
-**Session 1b · App Store submission** — build 9 (with the 'gig.' icon) is ALREADY uploaded to App Store Connect; version status is "Prepare for Submission". Remaining before hitting Submit:
-- Create a DEMO / REVIEW account for Apple: a MANAGER login with sample data (a venue or two, a few artists in the lineup, a couple of gigs) so the reviewer doesn't hit an empty app. NEEDS Tuts in the app (Claude can't create accounts) — then give Claude the creds for the review notes.
-- Fill App Store Connect metadata: screenshots (6.7" iPhone required), description / subtitle / keywords / promo text (ALL DRAFTED this session — ready to paste), App Privacy questionnaire, age rating, App Review notes (with demo creds + note that both managers AND artists use the same app).
-- Then Submit for Review.
-- Icon decision: FINAL = SEND-ARROW icon (black MaterialIcons 'send', optical-centered, on coral). VERIFIED on device + locked.
+**3 · App Store submission — DO LAST.** Build 9 already uploaded to App Store Connect (status "Prepare for Submission"). Remaining:
+- Create a demo/review MANAGER account with sample data (a venue or two, a few lineup artists, a couple of gigs) — needs Tuts in the app, then give Claude the creds for the review notes.
+- Fill App Store Connect metadata: 6.7" iPhone screenshots, description/subtitle/keywords/promo (all drafted — ready to paste), App Privacy questionnaire, age rating, App Review notes (note managers AND artists share one app).
+- Then Submit for Review. Icon FINAL/locked = send-arrow.
 
-**Session 2 · Store assets / first impression**  [mostly DONE Jul 7]
-- ~~Clean unused asset images~~ — DONE (Jul 7): removed react-logo*, partial-react-logo, old nexgig-icon-blue/icon/home-logo/icon-coral-bg, android-icon-background. assets/images now holds only app-icon/splash/android-fg/mono + in-app nexgig-logo/nexgig-icon/manager-avatar + favicon.
-- ~~Auth screen redesign~~ — DONE (Jul 7): FULL redesign of Welcome + Sign-in, shipped via OTA. Cream (#F6F2EC) background; "Nexgig." logo (black text, CORAL dot); "BOOK. PLAY. DISCOVER." slogan tucked under logo; coral CTA; clean white inputs; Apple/Google made COMPACT side-by-side (shared oauth-buttons.tsx, everywhere). Sign-in now MIRRORS Welcome: press Continue → slogan slot becomes the email, email input becomes password input, Continue becomes Sign In, Apple/Google removed. New-user flow (choose-account-type → wizard) left untouched. Responsive: proportional top offset (height*0.16) so it mirrors + adapts across all iPhone/Android sizes; tight logo↔slogan spacing (gap 2). App display name kept "Nexgig" (no trailing dot — avoid Apple naming hassle + rebuild).
-- App icon + splash → FINAL send-arrow (black 'send' glyph, optical-centered, on coral) — committed + submitting to TestFlight. VERIFY on device; lock before submit.
-- ~~Marketing site (nexgigapp.com)~~ — UPDATED (Jul 7): hero now shows the send-arrow app icon (was 'gig.' text); removed "Where venues and artists meet." tagline; refreshed both feature lists (venues: venues+lineup, discover talent, track received invoices; artists: +create/send invoices); added favicon + apple-touch-icon (send-arrow) with <link> tags in index/support. 5 files to upload to nexgig.github.io repo root: index.html, support.html, favicon.png, apple-touch-icon.png, hero-icon.png. NOTE: fonts must stay beside HTML.
-- ~~manager-avatar.png placeholder~~ — DONE / OBSOLETE (Jul 8 session 2): superseded by the avatar registry (`lib/avatars.ts` — 22 bundled avatars) + `AvatarImage` (photo → chosen avatar → deterministic default, never empty) + the new avatar picker. Managers now get a deterministic default or a chosen avatar/photo everywhere; the old `manager-avatar.png` placeholder is no longer used. Closed per Tuts.
-- ~~Whole-app responsive pass~~ — DONE / audited (Jul 8): code audit of representative screens (both dashboards, manager calendar, venue-detail, create-venue, profile) shows the app was already built responsively — ScrollViews throughout (no clipping on small phones), calendar grid uses `width:'14.28%'`+`aspectRatio:1` (adapts to any width), NO hardcoded widths ≥200, `flexWrap` on chip/tag grids, `numberOfLines` on names/titles, `maxWidth` caps on sheets, `adjustsFontSizeToFit` on calendar labels. Only non-issues found: one `Dimensions.get('window')` for a modal height (per-device-correct on phones, no rotation) + a few fixed-height touch-target rows (only clip under extreme accessibility Dynamic Type — deferred as post-launch a11y polish). No blind edits made (can't verify renders). The old "only auth screens done" note was overly cautious.
-
-**Session 3 · Android parity**
-- Android FCM push + gig reminders
-
-### PHASE 2 — Launch-quality polish
-
-**Session 4 · Native sheet conversions**
-- ~~Artist Add Block → native sheet like Add Set~~ — DONE (Jul 7, OTA): new `app/(artist)/add-block.tsx` native formSheet (mirrors Add Set: date-title header + round close, detent 0.78, grabber). Handles BOTH create AND edit (block + private event) via URL params; old transparent `<Modal>` + PanResponder + handleSave removed from calendar.tsx (navigates to the sheet instead). NEW: **Date Range** mode — block many consecutive days full-day for travel (Single Day / Date Range toggle; inline date dropdowns, no new native dep). Fixed sheet grey-gap at bottom (trailing filler minHeight 600 to always fill the detent). Block card X → `delete-outline` (matches manager empty-slot delete). Delete behavior: **blocks delete directly (no confirm)**; **private events keep the confirm popup** (icon now delete-outline, not X). Also this session: moved the invoice icon off the dashboard FAB onto the **calendar header** (right of the title, same circular style as the profile Settings / dashboard Notifications icons, carries the overdue red badge); left-aligned the Network tab title to match the other tabs.
-- Manager Assign Venue (from My Artists) → native sheet; wiring may be dead from the earlier rollback, needs verifying. Do second. STILL OPEN.
-- Misc UI fixes (Jul 7, OTA, all tested): (1) **manager Network** tab title left-aligned to match other tabs; (2) **manager Calendar** title left-aligned (removed the flex-spacer centering) + the header **Send** button is now ALWAYS visible (was drafts-only) as a big icon-only `send` chevron (size 26 coral, no pill/text), with a floating orange count badge that appears only when the period has drafts — tapping with zero drafts opens the send sheet's empty state; (3) **invoice reminder day now persists across sign-out/sign-in** — removed `useInvoiceReminderStore.setState({reminders:[]})` from `resetAllStores()` (it's device-local + persisted + scoped by artistId, exactly like drafts; was previously wiped on sign-out and silently fell back to the 1st).
-
-**Session 5 · Design pass**
-- maket the calendar numbers and days name bigger
-- Artist Profile / Manager Profile (round photo upload, minimal)
-- **Artist Profile page + Manager Profile page — general polish pass** (added Jul 8): both profile screens need a visual cleanup/refinement (layout, spacing, hierarchy, overall feel) beyond just the round-photo-upload item above.
-- Venue page (menu-like), Booking page (agreement-like)
-- Invoice preview — content sits too low; "Nexgig." wordmark not rendering in Clash Bold
-
-**Session 6 · Unified time format**
-- ~~Unified time format — consistent 12h/24h app-wide + settings toggle~~ — DONE (Jul 7, OTA): central `lib/conflict-detection.ts` now owns a persisted `useTimeFormatStore` (`'12h'|'24h'`, DEFAULT 24h, AsyncStorage key `nexgig:time-format`) + pure `formatTimeValue(time,fmt)` + store-aware `formatTime()` (legacy callers auto-pick-up) + `formatTimeRange()` + reactive **`useFormatTime()`** hook. Core screens switched to the hook so they re-render live on toggle: both calendars (cards/blocks/private-events/sync-modal/send-modal), both booking-details, both dashboards, invoice-preview (screen) + invoice-gigs. Invoice-preview's HTML/PDF EXPORT builder correctly keeps the non-reactive `formatTime()` (reads pref at export time). Settings toggle added to BOTH artist + manager settings — a "TIME FORMAT" segmented control (24-hour `21:00` / 12-hour `9:00 PM`); artist Reset All resets it to 24h. Scope was core-first (ii); non-core screens (add-slot/add-block picker LABELS, network, pending/confirmed/completed lists, notification bodies) still render raw 24h — mop-up later if desired.
-
-### PHASE 3 — Functional fixes
-
-**Session 7 · Dashboard**
-- Dashboard — venue photo missing for disconnected/hidden venue (needs DB snapshot column)
-- Dashboard — multi-artist slot on one line (group by slotId)
-
-**Session 8 · Booking lifecycle**
-- Bug: leave/rejoin vs other venues (declined re-join coupling)
-- Auto gig-feedback prompt + completion push
-
-### PHASE 4 — Revenue & integrations (post-launch OK)
-- Tap Payments integration
-- Transactional email
-- Google Calendar sync
+### Parked — post-launch (not now)
+- **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
+- **Tap Payments** integration.
+- **Google Calendar** sync.
 
 ---
 
 ## ⟢ DONE  (never shown when asked what's left; newest first)
+- (Jul 10 2026) **Android push (FCM) + gig reminders — DONE** (verified this session). CODE complete: `registerForPushNotifications` saves the Expo push token to `users.push_token` on app load (`app/_layout.tsx`), Android notification channel set (importance MAX), `create-notification` Edge Function sends via Expo→FCM, and `lib/reminders.ts` + `lib/invoice-reminders.ts` schedule local gig/invoice reminders (Android-safe — only web is guarded out). INFRA verified: `google-services.json` (Firebase project `nexgigapp-b34e6`) wired via `app.config` `googleServicesFile` + `POST_NOTIFICATIONS`; **Android production build exists** (EAS build code 3, Jun 28, channel `production`, SDK 54); **FCM V1 Google Service Account key uploaded to Expo** (`firebase-adminsdk-fbsvc@nexgigapp-b34e6`, matches the repo's Firebase project, updated ~Jun 25). ONLY remaining = a one-off on-device smoke-test: send to a real Android phone's `ExponentPushToken` via https://expo.dev/notifications to confirm end-to-end delivery. (A Google Play Store launch/submission path is separate and stays post-launch.)
+- (Jul 8 2026) **LEAVE/REJOIN vs OTHER VENUES — VERIFIED SAFE, no fix needed** (was logged as a "confirm this can't happen" item June 27). Investigated `handleDecline` in `app/(manager)/(tabs)/network.tsx`: declining a re-join application ONLY updates that one `applications` row by id (`status:'declined'`, `.eq('id', app.id)`) + drops it from the local list + notifies the artist. It NEVER touches `venue_assignments`. `applications` and `venue_assignments` are independent tables (no FK cascade), so a declined re-join physically can't remove/alter the artist's other venue assignments with that manager. The only bulk `venue_assignments.delete` is the separate, deliberate "disconnect artist from roster" action (unrelated to decline). No coupling → closed.
+- (Jul 8 2026, session 3) **Manager redesign + dashboard fixes** (OTA + 1 SQL col). My Artists → flat Network rows (tap→profile, Bookings button on right; Profile/Assign-Venue/disconnect removed — old Assign-Venue Modal + openAssignSheet/handleDisconnect now dead code in artists.tsx, strip later). venue-detail Slots tab → dashboard-style rows (artist-name title when assigned + `slot · date · time` sub, Clash "." status dot green/amber/blue, else amber "Unassigned"); Lineup tab → Network rows (avatar+verified+DJ/Musician label) + remove-from-lineup on the right. **Venue-photo snapshot:** new `venuePhotoUrl` on Booking — DB `alter table public.bookings add column if not exists venue_photo_url text;` — written at all 3 booking inserts (assign-artist, manager calendar, add-slot) via `venuePhotoUri(venue)`, mapped `venue_photo_url→venuePhotoUrl` in every loader, and the name-only venue fallback carries `photoUrls:[venuePhotoUrl]` so hidden/disconnected venues keep their photo on the artist dashboard + gig lists (new bookings only). **Multi-artist slots:** manager dashboard groups bookings by slotId → one row (stacked avatars + "A, B +N", priority status dot pending→confirmed→completed; single→booking-detail, multi→assign-artist?slotId).
+- (Jul 7 2026) **Pre-launch batch (old Sessions 1/2/6):** dependency alignment verified (2 nav pkgs harmlessly ahead of SDK54 mins, left as-is); unused asset images cleaned; Welcome+Sign-in redesign (cream bg, coral-dot "Nexgig." logo, BOOK.PLAY.DISCOVER slogan); app icon/splash = send-arrow (locked); marketing site nexgigapp.com refreshed (5 files for the gh-pages repo); whole-app responsive audit (already responsive); unified 12h/24h time format + settings toggle (`useTimeFormatStore`, default 24h). Lint hygiene deprioritized (tsc passes, cosmetic only).
 - (Jul 8 2026, session 2) **Avatar system + manager-profile polish + invoice multi-select** (all JS-only → OTA). Worked in Cowork (files edited directly on disk; Tuts runs git/eas).
   • **Upload centralization** — new `lib/upload.ts`: `pickImage()` (permission→library/camera→square crop) + `uploadImageAsync()`. All 3 upload screens (artist/manager edit-profile, edit-venue) use it. [committed + PUSHED]
   • **Round-preview confirm step** — new `components/ui/avatar-preview-modal.tsx`: after the native square crop, shows the image in a CIRCULAR frame with Use Photo / Choose Another / Cancel (Instagram pattern). Wired into both edit-profiles. NOTE: native picker can't re-open its crop on an already-picked image; a true circular crop OVERLAY would need `react-native-image-crop-picker` (native → rebuild) or a custom gesture cropper (needs `expo-image-manipulator`, not installed) — PARKED as post-launch polish. [PUSHED]
