@@ -262,13 +262,21 @@ export default function InvoiceGigsScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: ListItem }) => {
+  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
     if (item.type === 'header') {
       return (
         <Text style={[styles.sectionHeader, { color: colors.muted }]}>{item.label}</Text>
       );
     }
-    return renderGigRow(item.data);
+    // Hairline only *between* consecutive gigs, so a section's last row has no
+    // trailing divider butting up against the next section header.
+    const prev = listData[index - 1];
+    return (
+      <>
+        {prev && prev.type === 'gig' ? <Divider full /> : null}
+        {renderGigRow(item.data)}
+      </>
+    );
   };
 
   const currentReminder = currentUser && venueId ? getReminder(venueId, currentUser.id) : 1;
@@ -298,7 +306,6 @@ export default function InvoiceGigsScreen() {
       </View>
 
       <FlatList
-        ItemSeparatorComponent={() => <Divider full />}
         data={listData}
         keyExtractor={(item, index) =>
           item.type === 'header' ? `header-${item.label}` : `gig-${item.data.booking.id}`
