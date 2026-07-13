@@ -12,7 +12,6 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { cityFromAddress } from '@/lib/places';
 
 type NetworkTab = 'venues' | 'artists';
 
@@ -38,6 +37,13 @@ type ArtistItem = {
   instruments?: string[];
   has_completed_booking?: boolean;
 };
+
+/** "night_club" -> "Night club" */
+function venueTypeLabel(t?: string | null): string {
+  if (!t) return '';
+  const s = t.replace(/_/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function ArtistNetworkScreen() {
   const colors = useColors();
@@ -347,9 +353,9 @@ export default function ArtistNetworkScreen() {
                           <MaterialIcons name="verified" size={15} color={colors.primary} />
                         )}
                       </View>
-                      {venue.address ? (
+                      {venue.venue_type ? (
                         <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                          {cityFromAddress(venue.address)}
+                          {venueTypeLabel(venue.venue_type)}
                         </Text>
                       ) : null}
                     </View>

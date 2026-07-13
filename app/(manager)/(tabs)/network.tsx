@@ -5,7 +5,6 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
-import { cityFromAddress } from '@/lib/places';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
@@ -26,6 +25,13 @@ type Application = {
   artist: { full_name: string; primary_genre: string; based_in: string; profile_photo_url: string } | null;
   venue: { name: string } | null;
 };
+
+/** "night_club" -> "Night club" */
+function venueTypeLabel(t?: string | null): string {
+  if (!t) return '';
+  const s = t.replace(/_/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function NetworkScreen() {
   const router = useRouter();
@@ -565,9 +571,9 @@ export default function NetworkScreen() {
                         <MaterialIcons name="verified" size={15} color={colors.primary} />
                       )}
                     </View>
-                    {venue.googleMapsLocation?.address ? (
+                    {venue.venueType ? (
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {cityFromAddress(venue.googleMapsLocation.address)}
+                        {venueTypeLabel(venue.venueType)}
                       </Text>
                     ) : null}
                   </View>
