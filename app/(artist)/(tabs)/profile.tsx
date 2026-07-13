@@ -228,8 +228,6 @@ export default function ArtistProfileScreen() {
           ) : null}
         </View>
 
-        <Divider />
-
         {/* Stats — inline, no boxes */}
         <StatRow
           items={[
