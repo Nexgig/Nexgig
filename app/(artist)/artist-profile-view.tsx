@@ -9,7 +9,6 @@ import { useLineupStore, useBookingStore, useVenueStore, useSlotStore, useArtist
 import { fonts } from '@/lib/fonts';
 import { SHOW_ARTIST_HISTORY } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
-import { performerLabel } from '@/lib/utils';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
 import { ReportModal } from '@/components/report-modal';
@@ -154,21 +153,14 @@ export default function ArtistProfileViewScreen() {
         {/* 1. Profile Hero: photo, name, location, member since */}
         <View style={styles.hero}>
           <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-            <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+          <View style={styles.nameWrap}>
+            <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
               {dj.fullName}
             </Text>
             {profile?.hasCompletedBooking ? (
-              <MaterialIcons name="verified" size={18} color={colors.primary} />
+              <MaterialIcons name="verified" size={18} color={colors.primary} style={styles.nameSeal} />
             ) : null}
           </View>
-          <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
-          {basedInCountry ? (
-            <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={13} color={colors.muted} />
-              <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
-            </View>
-          ) : null}
         </View>
 
         <Divider />
@@ -252,6 +244,15 @@ export default function ArtistProfileViewScreen() {
             );
           })()}
 
+          {basedInCountry ? (
+            <Section label="Based In">
+              <View style={styles.basedInRow}>
+                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
+              </View>
+            </Section>
+          ) : null}
+
           {/* Last 5 completed gigs — hidden if artist set isHistoryHidden */}
           {SHOW_ARTIST_HISTORY && !profile?.isHistoryHidden && (
           <View style={styles.gigHistorySection}>
@@ -327,10 +328,12 @@ const styles = StyleSheet.create({
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroInfo: { flex: 1, gap: 4 },
-  djName: { fontSize: 18, fontFamily: fonts.bodyBold },
-  djGenre: { fontSize: 14 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  locationText: { fontSize: 13 },
+  djName: { fontSize: 18, fontFamily: fonts.bodyBold, textAlign: 'center' },
+  nameWrap: { alignSelf: 'center', marginTop: 8, position: 'relative' },
+  nameSeal: { position: 'absolute', left: '100%', marginLeft: 6, top: '50%', marginTop: -9 },
+  basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  basedInText: { fontSize: 14 },
+
   memberSince: { fontSize: 12, marginTop: 4 },
   statsRow: { flexDirection: 'row', gap: 12, marginHorizontal: 20, marginBottom: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },

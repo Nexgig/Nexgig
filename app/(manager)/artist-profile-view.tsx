@@ -10,7 +10,6 @@ import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotSt
 import { fonts } from '@/lib/fonts';
 import { SHOW_ARTIST_HISTORY } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
-import { performerLabel } from '@/lib/utils';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
 import { ReportModal } from '@/components/report-modal';
@@ -356,29 +355,17 @@ export default function ArtistProfileViewScreen() {
             <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
           )}
           {loading ? (
-            <>
-              <Skeleton width={150} height={20} radius={6} color={colors.border} style={{ marginTop: 10 }} />
-              <Skeleton width={90} height={13} radius={5} color={colors.border} style={{ marginTop: 6 }} />
-            </>
+            <Skeleton width={150} height={20} radius={6} color={colors.border} style={{ marginTop: 10 }} />
           ) : (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                  {dj.fullName}
-                </Text>
-                {profile?.hasCompletedBooking ? (
-                  <MaterialIcons name="verified" size={18} color={colors.primary} />
-                ) : null}
-              </View>
-              <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
-            </>
-          )}
-          {basedInCountry && !loading ? (
-            <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={13} color={colors.muted} />
-              <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
+            <View style={styles.nameWrap}>
+              <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
+                {dj.fullName}
+              </Text>
+              {profile?.hasCompletedBooking ? (
+                <MaterialIcons name="verified" size={18} color={colors.primary} style={styles.nameSeal} />
+              ) : null}
             </View>
-          ) : null}
+          )}
         </View>
 
         <Divider />
@@ -462,6 +449,15 @@ export default function ArtistProfileViewScreen() {
               </>
             );
           })()}
+
+          {basedInCountry && !loading ? (
+            <Section label="Based In">
+              <View style={styles.basedInRow}>
+                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
+              </View>
+            </Section>
+          ) : null}
 
           {/* 6. Last 5 completed gigs — hidden if artist set isHistoryHidden */}
           {SHOW_ARTIST_HISTORY && !profile?.isHistoryHidden && (
@@ -672,10 +668,11 @@ const styles = StyleSheet.create({
   heroPhoto: { width: 80, height: 80, borderRadius: 40 },
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  djName: { fontSize: 22, fontFamily: fonts.bodyBold },
-  djGenre: { fontSize: 15 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { fontSize: 13 },
+  djName: { fontSize: 22, fontFamily: fonts.bodyBold, textAlign: 'center' },
+  nameWrap: { alignSelf: 'center', marginTop: 8, position: 'relative' },
+  nameSeal: { position: 'absolute', left: '100%', marginLeft: 6, top: '50%', marginTop: -9 },
+  basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  basedInText: { fontSize: 14 },
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 28, fontWeight: '800' },
