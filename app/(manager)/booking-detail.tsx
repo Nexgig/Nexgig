@@ -66,7 +66,16 @@ export default function DJBookingDetailScreen() {
 
   // Other artists booked on the SAME slot (a slot can hold a multi-artist lineup).
   // Manager-only: lets them see/switch between everyone on this gig.
-  const coBookings = allBookings.filter((b) => b.slotId === booking.slotId && b.id !== booking.id);
+  // Co-artists on this set. A cancelled or declined booking means that artist is no
+  // longer on it, so they must drop out of the list — otherwise a manager who
+  // cancels someone (or an artist who declines) still sees them here.
+  const coBookings = allBookings.filter(
+    (b) =>
+      b.slotId === booking.slotId &&
+      b.id !== booking.id &&
+      b.status !== 'cancelled' &&
+      b.status !== 'declined'
+  );
 
   const isManager = currentUser?.accountType === 'manager';
   const isDJ = currentUser?.accountType === 'artist';
