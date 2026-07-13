@@ -134,12 +134,7 @@ export default function ArtistMyVenuesScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.card,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: isHighlighted ? colors.primary : colors.border,
-                  borderWidth: isHighlighted ? 1.5 : 1,
-                  opacity: pressed ? 0.85 : 1,
-                },
+                { opacity: pressed ? 0.6 : 1 },
               ]}
               onPress={() => handleVenuePress(venue.id)}
             >
@@ -185,14 +180,14 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700' },
-  list: { padding: 20, gap: 10, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
   card: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 14, borderWidth: 1, padding: 14,
+    paddingVertical: 8,
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   iconWrap: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 48, height: 48, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
   },
