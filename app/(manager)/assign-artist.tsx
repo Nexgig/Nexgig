@@ -190,9 +190,6 @@ export default function AssignDJScreen() {
       <ScreenContainer>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
-          </Pressable>
           <View style={styles.headerInfo}>
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>Add Artist</Text>
             <Text style={[styles.headerSub, { color: colors.muted }]}>{venueForLineup?.name ?? 'Venue'}</Text>
@@ -527,9 +524,6 @@ export default function AssignDJScreen() {
     <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
-        </Pressable>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             {isPastSlot ? 'Add to Completed Gigs' : 'Assign Artist'}
@@ -616,7 +610,6 @@ export default function AssignDJScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
-  backBtn: { padding: 4 },
   headerInfo: { flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: '800' },
   headerSub: { fontSize: 13, marginTop: 2 },
