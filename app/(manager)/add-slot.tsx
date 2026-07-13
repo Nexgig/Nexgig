@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   pillRow: { flexDirection: 'row', gap: 6, paddingRight: 4, alignItems: 'center' },
-  venuePill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7, minHeight: 34 },
+  venuePill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 7, minHeight: 34 },
   venuePillText: { fontSize: 12, fontWeight: '600', includeFontPadding: false },
   presetRow: { flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
   presetChip: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5, minHeight: 30, justifyContent: 'center', alignItems: 'center' },

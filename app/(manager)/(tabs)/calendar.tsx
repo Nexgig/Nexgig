@@ -2739,7 +2739,7 @@ const slotModalStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     borderWidth: 1.5,
-    borderRadius: 6,
+    borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 7,
     minHeight: 34,
