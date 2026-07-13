@@ -71,20 +71,33 @@ export function ListRow({
   onPress?: () => void; divider?: boolean;
 }) {
   const colors = useColors();
-  const Row: any = onPress ? Pressable : View;
+
+  // NOTE: a plain <View> does NOT accept a function as `style` (only Pressable
+  // does). Passing one silently drops the style, which killed flexDirection:'row'
+  // and stacked every row vertically. So branch explicitly.
+  const content = (
+    <>
+      {leading}
+      <View style={{ flex: 1 }}>
+        <View style={styles.rowTitleLine}>
+          <Text style={[styles.rowTitle, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+          {titleAccessory}
+        </View>
+        {subtitle ? <Text style={[styles.rowSub, { color: colors.muted }]}>{subtitle}</Text> : null}
+      </View>
+      {trailing}
+    </>
+  );
+
   return (
     <>
-      <Row onPress={onPress} style={({ pressed }: any) => [styles.row, onPress && pressed ? { opacity: 0.6 } : null]}>
-        {leading}
-        <View style={{ flex: 1 }}>
-          <View style={styles.rowTitleLine}>
-            <Text style={[styles.rowTitle, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
-            {titleAccessory}
-          </View>
-          {subtitle ? <Text style={[styles.rowSub, { color: colors.muted }]}>{subtitle}</Text> : null}
-        </View>
-        {trailing}
-      </Row>
+      {onPress ? (
+        <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed ? { opacity: 0.6 } : null]}>
+          {content}
+        </Pressable>
+      ) : (
+        <View style={styles.row}>{content}</View>
+      )}
       {divider ? <Divider full /> : null}
     </>
   );
