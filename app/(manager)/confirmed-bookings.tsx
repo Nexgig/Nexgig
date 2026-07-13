@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   venueName: { fontSize: 13, marginBottom: 2 },
   time: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
+  statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },

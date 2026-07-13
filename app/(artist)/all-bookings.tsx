@@ -159,5 +159,5 @@ const styles = StyleSheet.create({
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
+  statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
 });

@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   slotRowTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   slotRowSub: { fontSize: 13 },
   slotStatusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  slotStatusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
+  slotStatusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
   slotPlaceholder: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   djCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
   djName: { fontSize: 15, fontWeight: '700' },

@@ -219,5 +219,5 @@ const styles = StyleSheet.create({
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
+  statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
 });
