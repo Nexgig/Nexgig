@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import type { AvailabilityBlock, Booking, BookingStatus } from '@/lib/types';
 import { useFocusEffect } from 'expo-router';
@@ -1404,7 +1405,7 @@ export default function DJAvailabilityScreen() {
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 0.5 },
-  title: { fontSize: 24, fontWeight: '800' },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', gap: 8 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#F6F2EC' },

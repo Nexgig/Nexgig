@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, venuePhotoUri } from '@/lib/store';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -2464,7 +2465,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
-  title: { fontSize: 22, fontWeight: '800' },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },
   toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 9, borderRadius: 10 },
