@@ -527,7 +527,7 @@ export default function AddSlotScreen() {
 const styles = StyleSheet.create({
   sheet: { paddingHorizontal: 13, paddingTop: 8, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 12 },
-  sheetTitle: { fontSize: 20, fontFamily: fonts.displayBold, letterSpacing: -0.4, marginBottom: 1 },
+  sheetTitle: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4, marginBottom: 1 },
   closeBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },

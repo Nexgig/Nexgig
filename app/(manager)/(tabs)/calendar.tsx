@@ -2703,7 +2703,7 @@ const slotModalStyles = StyleSheet.create({
   },
   sheetTitle: {
     fontSize: 20,
-    fontFamily: fonts.displayBold,
+    fontFamily: fonts.bodyBold,
     letterSpacing: -0.4,
     marginBottom: 1,
   },
