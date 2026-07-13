@@ -232,7 +232,7 @@ export default function InvoiceGigsScreen() {
       ? `${fmtTime(item.slot.startTime)} – ${fmtTime(item.slot.endTime)}`
       : '';
     return (
-      <View key={item.booking.id} style={[styles.gigRow, { backgroundColor: item.selected ? colors.primary + '12' : 'transparent' }]}>
+      <View key={item.booking.id} style={styles.gigRow}>
         <Pressable
           style={({ pressed }) => [styles.checkbox, { borderColor: item.selected ? colors.primary : colors.border, backgroundColor: item.selected ? colors.primary : 'transparent', opacity: pressed ? 0.7 : 1 }]}
           onPress={() => toggleGig(item.booking.id)}
