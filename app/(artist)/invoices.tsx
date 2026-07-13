@@ -44,14 +44,15 @@ export default function InvoicesScreen() {
     [invoices, currentUser]
   );
 
-  // Get all venues where artist has completed OR confirmed gigs
+  // Venues where the artist has COMPLETED gigs. Only a completed gig is
+  // invoiceable — a confirmed one hasn't been played yet.
   const artistVenues = useMemo(() => {
     if (!currentUser) return [];
     const invoiceableBookings = allBookings.filter(
       (b) =>
         b.artistId === currentUser.id &&
-        ((b.isCompleted && b.status === 'completed') ||
-          (b.status === 'confirmed' && !b.isCompleted))
+        b.isCompleted &&
+        b.status === 'completed'
     );
     const venueIds = [...new Set(invoiceableBookings.map((b) => b.venueId))];
     return venueIds.map((vid) => {
@@ -63,9 +64,9 @@ export default function InvoicesScreen() {
       const venue = liveVenue ?? (snapshotName
         ? ({ id: vid, name: snapshotName, color: '#2563EB' } as typeof allVenues[number])
         : undefined);
-      // Count uninvoiced gigs: completed or confirmed, not yet in any ACTIVE sent
-      // invoice. Cancelled invoices are excluded so their gigs become invoiceable
-      // again (the artist can re-invoice them).
+      // Count uninvoiced gigs: completed, not yet in any ACTIVE sent invoice.
+      // Cancelled invoices are excluded so their gigs become invoiceable again
+      // (the artist can re-invoice them).
       const invoicedBookingIds = new Set(
         invoices
           .filter((inv) => inv.venueId === vid && inv.artistId === currentUser.id && inv.status !== 'cancelled')

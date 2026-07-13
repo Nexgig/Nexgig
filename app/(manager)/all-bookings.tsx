@@ -120,17 +120,18 @@ export default function AllBookingsScreen() {
                       {booking.dj?.fullName ?? 'Unknown Artist'}
                       {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
                     </Text>
-                    {booking.isInvoiced && (
-                      <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                        <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                      </View>
-                    )}
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                <View style={[styles.statusMark, { backgroundColor: booking.dotColor }]} />
+                {booking.isInvoiced ? (
+                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.statusMark, { backgroundColor: booking.dotColor }]} />
+                )}
               </Pressable>
             );
           })
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
-  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingSub: { fontSize: 13 },

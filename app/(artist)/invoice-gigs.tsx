@@ -87,30 +87,6 @@ export default function InvoiceGigsScreen() {
       .sort((a, b) => (a.slotDate ?? '').localeCompare(b.slotDate ?? ''));
   }, [allBookings, currentUser, venueId, invoicedBookingIds]);
 
-  // Confirmed (upcoming) gigs, excluding already-invoiced
-  const confirmedGigsSource = useMemo(() => {
-    if (!currentUser || !venueId) return [];
-    return allBookings
-      .filter(
-        (b) =>
-          b.artistId === currentUser.id &&
-          b.venueId === venueId &&
-          b.status === 'confirmed' &&
-          !b.isCompleted &&
-          !invoicedBookingIds.has(b.id)
-      )
-      .sort((a, b) => (a.slotDate ?? '').localeCompare(b.slotDate ?? ''));
-  }, [allBookings, currentUser, venueId, invoicedBookingIds]);
-
-  const [upcomingGigRows, setUpcomingGigRows] = useState<GigRow[]>(() =>
-    confirmedGigsSource.map((b) => ({
-      booking: b,
-      slot: slots.find((s) => s.id === b.slotId),
-      selected: true,
-      price: '',
-    }))
-  );
-
   const [completedGigRows, setCompletedGigRows] = useState<GigRow[]>(() =>
     completedGigsSource.map((b) => ({
       booking: b,
@@ -120,27 +96,11 @@ export default function InvoiceGigsScreen() {
     }))
   );
 
-  // Re-sync the row state when the source lists change. The useState initializers
-  // above only run on mount, so if bookings/slots are still loading on the first
-  // render (confirmedGigsSource === []), the Upcoming section would stay empty
-  // forever and confirmed gigs could never be invoiced. This effect reconciles
-  // each source list into its row state: it preserves the user's existing
-  // selection + typed price for rows that persist, adds rows for newly-arrived
-  // bookings, and drops rows whose booking is gone (e.g. just got invoiced).
-  const confirmedKey = useMemo(() => confirmedGigsSource.map((b) => b.id).join(','), [confirmedGigsSource]);
+  // Re-sync row state when the source list changes. The useState initializer only
+  // runs on mount, so if bookings/slots are still loading on the first render the
+  // list would stay empty forever. Preserves selection + typed price across
+  // updates, adds newly-arrived bookings, drops ones that just got invoiced.
   const completedKey = useMemo(() => completedGigsSource.map((b) => b.id).join(','), [completedGigsSource]);
-  useEffect(() => {
-    setUpcomingGigRows((prev) => {
-      const byId = new Map(prev.map((r) => [r.booking.id, r]));
-      return confirmedGigsSource.map((b) => {
-        const existing = byId.get(b.id);
-        return existing
-          ? { ...existing, booking: b, slot: slots.find((s) => s.id === b.slotId) }
-          : { booking: b, slot: slots.find((s) => s.id === b.slotId), selected: true, price: '' };
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmedKey]);
   useEffect(() => {
     setCompletedGigRows((prev) => {
       const byId = new Map(prev.map((r) => [r.booking.id, r]));
@@ -155,9 +115,6 @@ export default function InvoiceGigsScreen() {
   }, [completedKey]);
 
   const toggleGig = useCallback((bookingId: string) => {
-    setUpcomingGigRows((prev) =>
-      prev.map((g) => (g.booking.id === bookingId ? { ...g, selected: !g.selected } : g))
-    );
     setCompletedGigRows((prev) =>
       prev.map((g) => (g.booking.id === bookingId ? { ...g, selected: !g.selected } : g))
     );
@@ -165,32 +122,21 @@ export default function InvoiceGigsScreen() {
 
   const updatePrice = useCallback((bookingId: string, price: string) => {
     const cleaned = price.replace(/[^0-9.]/g, '');
-    setUpcomingGigRows((prev) =>
-      prev.map((g) => (g.booking.id === bookingId ? { ...g, price: cleaned } : g))
-    );
     setCompletedGigRows((prev) =>
       prev.map((g) => (g.booking.id === bookingId ? { ...g, price: cleaned } : g))
     );
   }, []);
 
-  const allGigRows = [...upcomingGigRows, ...completedGigRows];
+  const allGigRows = completedGigRows;
   const selectedGigs = allGigRows.filter((g) => g.selected);
   const total = selectedGigs.reduce((sum, g) => sum + (parseFloat(g.price) || 0), 0);
   const allPriced = selectedGigs.every((g) => parseFloat(g.price) > 0);
 
-  // Build sectioned list data
-  const listData = useMemo((): ListItem[] => {
-    const items: ListItem[] = [];
-    if (upcomingGigRows.length > 0) {
-      items.push({ type: 'header', label: 'Upcoming' });
-      upcomingGigRows.forEach((g) => items.push({ type: 'gig', data: g }));
-    }
-    if (completedGigRows.length > 0) {
-      items.push({ type: 'header', label: 'Completed' });
-      completedGigRows.forEach((g) => items.push({ type: 'gig', data: g }));
-    }
-    return items;
-  }, [upcomingGigRows, completedGigRows]);
+  // Only completed gigs are invoiceable, so there is a single unlabelled section.
+  const listData = useMemo(
+    (): ListItem[] => completedGigRows.map((g) => ({ type: 'gig', data: g })),
+    [completedGigRows]
+  );
 
   const handleContinue = () => {
     if (selectedGigs.length === 0) {

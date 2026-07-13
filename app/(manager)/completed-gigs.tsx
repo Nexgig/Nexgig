@@ -97,17 +97,18 @@ export default function CompletedGigsScreen() {
                     <Text style={[styles.reviewChipText, { color: colors.warning }]}>{rating}</Text>
                   </View>
                 )}
-                {booking.isInvoiced && (
-                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                  </View>
-                )}
               </View>
               <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
-            <View style={[styles.statusMark, { backgroundColor: '#2563EB' }]} />
+            {booking.isInvoiced ? (
+              <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+              </View>
+            ) : (
+              <View style={[styles.statusMark, { backgroundColor: '#2563EB' }]} />
+            )}
           </Pressable>
           );
         }}
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   info: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
-  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
   reviewChip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
   reviewChipText: { fontSize: 10, fontWeight: '700' },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
