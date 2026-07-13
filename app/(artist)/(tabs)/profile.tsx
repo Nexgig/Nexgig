@@ -313,8 +313,6 @@ export default function ArtistProfileScreen() {
             );
           })()}
 
-          <Divider />
-
           {/* History — hidden behind SHOW_ARTIST_HISTORY */}
           {SHOW_ARTIST_HISTORY && (
           <>
