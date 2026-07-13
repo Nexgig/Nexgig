@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard, Image } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore, venuePhotoUri } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
+import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -296,13 +297,7 @@ export default function AddSlotScreen() {
         style={({ pressed }) => [styles.artistRow, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => handleTapArtist(item.artistId)}
       >
-        {item.user.profilePhotoUrl ? (
-          <Image source={{ uri: item.user.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
-        ) : (
-          <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-            <MaterialIcons name="person" size={20} color={colors.muted} />
-          </View>
-        )}
+        <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user.id} name={item.user.fullName} size={42} variant="artist" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user.fullName}</Text>
           <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
@@ -488,13 +483,7 @@ export default function AddSlotScreen() {
                   <Fragment key={item.artistId}>
                   {i > 0 ? <Divider full /> : null}
                   <View style={styles.artistRow}>
-                    {item.user!.profilePhotoUrl ? (
-                      <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.artistPhoto, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                        <MaterialIcons name="person" size={20} color={colors.muted} />
-                      </View>
-                    )}
+                    <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user!.id} name={item.user!.fullName} size={42} variant="artist" />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
                       <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
@@ -551,7 +540,6 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   sectionTitle: { fontSize: 13, fontWeight: '700' },
   artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  artistPhoto: { width: 42, height: 42, borderRadius: 21, borderWidth: 1 },
   artistName: { fontSize: 15, fontWeight: '700' },
   artistSub: { fontSize: 12, marginTop: 1 },
   conflictBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 3 },
