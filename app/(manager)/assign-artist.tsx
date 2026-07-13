@@ -1,10 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
+import { Fragment, useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
@@ -235,6 +236,7 @@ export default function AssignDJScreen() {
         </View>
 
         <FlatList
+          ItemSeparatorComponent={() => <Divider full />}
           removeClippedSubviews={true}
           windowSize={5}
           maxToRenderPerBatch={10}
@@ -255,10 +257,7 @@ export default function AssignDJScreen() {
           }
           renderItem={({ item }) => (
             <Pressable
-              style={({ pressed }) => [
-                styles.djRow,
-                { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
-              ]}
+              style={({ pressed }) => [styles.djRow, { opacity: pressed ? 0.6 : 1 }]}
               onPress={() => handleAddToVenueLineup(item.entry.artistId)}
             >
               <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
@@ -483,7 +482,7 @@ export default function AssignDJScreen() {
     });
   };
 
-  const renderDJ = (item: typeof djsWithConflicts[0]) => {
+  const renderDJ = (item: typeof djsWithConflicts[0], index = 0) => {
     const isAssigned = assignedDJIds.has(item.user.id);
     // Real booking on this slot for this DJ (any non-cancelled/declined status).
     const bookingForDJ = slotBookings.find((b) => b.artistId === item.user.id);
@@ -497,34 +496,10 @@ export default function AssignDJScreen() {
     const isDrafted = !isPastSlot && isAssigned && !bookingForDJ;
 
     return (
+      <Fragment key={item.user.id}>
+        {index > 0 ? <Divider full /> : null}
       <Pressable
-        key={item.user.id}
-        style={({ pressed }) => [
-          styles.djRow,
-          {
-            backgroundColor: isCompleted
-              ? colors.success + '15'
-              : isConfirmed
-              ? colors.success + '15'
-              : isPastPending || isPending
-              ? colors.warning + '15'
-              : isDrafted
-              ? colors.primary + '15'
-              : colors.surface,
-            borderColor: isCompleted
-              ? colors.success
-              : isConfirmed
-              ? colors.success
-              : isPastPending || isPending
-              ? colors.warning
-              : isDrafted
-              ? colors.primary
-              : item.hasConflict
-              ? colors.error + '40'
-              : colors.border,
-            opacity: pressed ? 0.85 : 1,
-          }
-        ]}
+        style={({ pressed }) => [styles.djRow, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => handleTapDJ(item.user.id)}
       >
         <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={item.user.avatarId} seed={item.user.id} name={item.user.fullName} size={48} />
@@ -581,6 +556,7 @@ export default function AssignDJScreen() {
           : <MaterialIcons name="add-circle-outline" size={20} color={colors.muted} />
         }
       </Pressable>
+      </Fragment>
     );
   };
 
@@ -656,7 +632,7 @@ export default function AssignDJScreen() {
                   <MaterialIcons name="check-circle" size={16} color={colors.success} />
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Available ({available.length})</Text>
                 </View>
-                {available.map((dj) => renderDJ(dj))}
+                {available.map((dj, i) => renderDJ(dj, i))}
               </View>
             )}
 
@@ -667,7 +643,7 @@ export default function AssignDJScreen() {
                   <MaterialIcons name="warning" size={16} color={colors.warning} />
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Has Conflict ({withConflict.length})</Text>
                 </View>
-                {withConflict.map((dj) => renderDJ(dj))}
+                {withConflict.map((dj, i) => renderDJ(dj, i))}
               </View>
             )}
 
@@ -678,11 +654,10 @@ export default function AssignDJScreen() {
                   <MaterialIcons name="group-add" size={16} color={colors.muted} />
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Not in Lineup ({notInLineup.length})</Text>
                 </View>
-                {notInLineup.map((item) => (
-                  <View
-                    key={item.entry.artistId}
-                    style={[styles.djRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  >
+                {notInLineup.map((item, i) => (
+                  <Fragment key={item.entry.artistId}>
+                  {i > 0 ? <Divider full /> : null}
+                  <View style={styles.djRow}>
                     <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
                     <View style={styles.djInfo}>
                       <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
@@ -697,6 +672,7 @@ export default function AssignDJScreen() {
                       <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
                     </Pressable>
                   </View>
+                  </Fragment>
                 ))}
               </View>
             )}
@@ -731,7 +707,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   sectionTitle: { fontSize: 14, fontWeight: '700' },
-  djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10 },
+  djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   artistPhoto: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   djInfo: { flex: 1 },
   djNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
