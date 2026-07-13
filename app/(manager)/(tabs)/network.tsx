@@ -574,7 +574,7 @@ export default function NetworkScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingVertical: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   subtitle: { fontSize: 12, marginTop: 2 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
