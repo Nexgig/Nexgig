@@ -419,7 +419,7 @@ export default function VenueDetailScreen() {
                 <Text style={{ color: colors.muted, fontSize: 14 }}>No sets created yet</Text>
               </View>
             ) : (
-              slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot) => {
+              slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot, i, arr) => {
                 const booking = getBookingBySlot(slot.id);
                 const dj = booking ? getArtistUser(booking.artistId) : undefined;
                 const isDone = booking && (booking.status === 'completed' || booking.isCompleted);
@@ -428,7 +428,7 @@ export default function VenueDetailScreen() {
                 return (
                   <Pressable
                     key={slot.id}
-                    style={({ pressed }) => [styles.slotRow, { opacity: pressed ? 0.6 : 1 }]}
+                    style={({ pressed }) => [styles.slotRow, { borderBottomColor: colors.border, borderBottomWidth: i === arr.length - 1 ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.6 : 1 }]}
                     onPress={() => {
                       if (booking) {
                         router.push(('/(manager)/booking-detail?id=' + booking.id) as Href);
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   slotTime: { fontSize: 12 },
   slotDJ: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   unassigned: { fontSize: 12, fontWeight: '600' },
-  slotRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
+  slotRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   slotRowTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   slotRowSub: { fontSize: 13 },
   slotStatusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },

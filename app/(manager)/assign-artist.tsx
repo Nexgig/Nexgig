@@ -234,6 +234,7 @@ export default function AssignDJScreen() {
         </View>
 
         <FlatList
+          style={{ flex: 1, backgroundColor: colors.background }}
           ItemSeparatorComponent={() => <Divider full />}
           removeClippedSubviews={true}
           windowSize={5}
@@ -661,7 +662,7 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 13, marginTop: 2 },
   infoNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginTop: 10, borderRadius: 10, borderWidth: 1, padding: 10 },
   infoNoteText: { flex: 1, fontSize: 12, lineHeight: 18 },
-  listContent: { padding: 20 },
+  listContent: { padding: 20, flexGrow: 1 },
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   sectionTitle: { fontSize: 14, fontWeight: '700' },
