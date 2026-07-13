@@ -231,6 +231,8 @@ export default function InvoiceGigsScreen() {
     const timeStr = item.slot
       ? `${fmtTime(item.slot.startTime)} – ${fmtTime(item.slot.endTime)}`
       : '';
+    // Same test the Preview Invoice CTA uses, so the border never disagrees with it.
+    const isPriced = parseFloat(item.price) > 0;
     return (
       <View key={item.booking.id} style={styles.gigRow}>
         <Pressable
@@ -248,7 +250,7 @@ export default function InvoiceGigsScreen() {
         <View style={styles.priceCol}>
           <Text style={[styles.priceLabel, { color: colors.muted }]}>AED</Text>
           <TextInput
-            style={[styles.priceInput, { backgroundColor: colors.background, borderColor: item.selected ? colors.primary : colors.border, color: colors.foreground }]}
+            style={[styles.priceInput, { backgroundColor: colors.background, borderColor: isPriced ? colors.success : item.selected ? colors.primary : colors.border, color: colors.foreground }]}
             placeholder="0"
             placeholderTextColor={colors.muted}
             value={item.price}
