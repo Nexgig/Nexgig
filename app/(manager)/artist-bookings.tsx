@@ -178,7 +178,7 @@ export default function ArtistBookingsScreen() {
                 </Text>
               </View>
               {/* Status dot — Clash Display period, like the Nexgig "." */}
-              <View style={[styles.statusSquare, { backgroundColor: dotColor }]} />
+              <View style={[styles.statusMark, { backgroundColor: dotColor }]} />
             </Pressable>
           );
         }}
@@ -219,5 +219,5 @@ const styles = StyleSheet.create({
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
+  statusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
 });

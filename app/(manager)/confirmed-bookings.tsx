@@ -79,7 +79,7 @@ export default function ConfirmedBookingsScreen() {
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
-            <View style={[styles.statusSquare, { backgroundColor: '#22C55E' }]} />
+            <View style={[styles.statusMark, { backgroundColor: '#22C55E' }]} />
           </Pressable>
           );
         }}
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   venueName: { fontSize: 13, marginBottom: 2 },
   time: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
+  statusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },

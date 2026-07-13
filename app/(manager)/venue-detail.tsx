@@ -419,7 +419,7 @@ export default function VenueDetailScreen() {
                       </Text>
                     </View>
                     {booking ? (
-                      <View style={[styles.slotStatusSquare, { backgroundColor: dotColor }]} />
+                      <View style={[styles.slotStatusMark, { backgroundColor: dotColor }]} />
                     ) : (
                       <Text style={[styles.unassigned, { color: colors.warning }]}>Unassigned</Text>
                     )}
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   slotRowTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   slotRowSub: { fontSize: 13 },
   slotStatusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  slotStatusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
+  slotStatusMark: { width: 14, height: 14, borderRadius: 7, marginLeft: 6 },
   slotPlaceholder: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   djCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
   djName: { fontSize: 15, fontWeight: '700' },
