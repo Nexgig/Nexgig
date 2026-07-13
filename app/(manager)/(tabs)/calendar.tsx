@@ -2506,7 +2506,7 @@ const styles = StyleSheet.create({
   // Venue tabs
   venueScroll: { marginTop: 10, flexGrow: 0 },
   venueScrollContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 4, paddingTop: 4, alignItems: 'center' },
-  venueTab: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  venueTab: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   venueTabText: { fontSize: 13, fontWeight: '700', flexShrink: 0 },
   // Month view
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
@@ -2529,7 +2529,7 @@ const styles = StyleSheet.create({
   slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
   slotHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconActionBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
+  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   addSetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   noSlotsCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
   noSlotsText: { fontSize: 14 },

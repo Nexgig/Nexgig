@@ -1474,7 +1474,7 @@ const styles = StyleSheet.create({
   slotDeleteBtn: { padding: 12 },
 
   // Add/Block button (matching manager Add Slot style)
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 7 },
+  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
   addSetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   // Empty day
