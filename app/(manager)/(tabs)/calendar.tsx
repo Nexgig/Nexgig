@@ -2111,8 +2111,9 @@ export default function CalendarScreen() {
                       <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 }}>{dateLabel}</Text>
                     </View>
                     {/* Draft rows */}
-                    {items.map((item) => {
+                    {items.map((item, i) => {
                       const isSelected = selectedDraftKeys.has(item.key);
+                      const isLastInGroup = i === items.length - 1;
                       const venueColor = getVenueColor(item.slot.venueId);
                       return (
                         <Pressable
@@ -2120,7 +2121,7 @@ export default function CalendarScreen() {
                           style={({ pressed }) => [{
                             flexDirection: 'row', alignItems: 'center', gap: 12,
                             paddingHorizontal: 20, paddingVertical: 14,
-                            borderBottomWidth: 0.5, borderBottomColor: colors.border,
+                            borderBottomWidth: isLastInGroup ? 0 : 0.5, borderBottomColor: colors.border,
                             backgroundColor: isSelected ? colors.primary + '0A' : (pressed ? colors.surface : colors.background),
                           }]}
                           onPress={() => {
