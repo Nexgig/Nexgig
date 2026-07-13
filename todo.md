@@ -27,9 +27,6 @@ Priority order — do polish/features first, App Store submit LAST. (Done work l
 - Fill App Store Connect metadata: 6.7" iPhone screenshots, description/subtitle/keywords/promo (all drafted — ready to paste), App Privacy questionnaire, age rating, App Review notes (note managers AND artists share one app).
 - Then Submit for Review. Icon FINAL/locked = send-arrow.
 
-### Optional / nice-to-have
-- One-time SQL backfill to stamp `venue_photo_url` onto **existing** bookings (new bookings already snapshot it).
-
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
 - **Tap Payments** integration.
