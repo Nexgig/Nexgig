@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   pendingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 24 },
   pendingBannerText: { flex: 1, fontSize: 13, fontWeight: '600' },
   pendingBannerAction: { fontSize: 13, fontWeight: '700' },
-  section: { marginBottom: 28 },
+  section: { marginTop: 24, marginBottom: 28 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   gigCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },

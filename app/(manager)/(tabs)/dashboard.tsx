@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 16, alignItems: 'center', gap: 4 },
   summaryValue: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
   summaryLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  section: { marginBottom: 28 },
+  section: { marginTop: 24, marginBottom: 28 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
