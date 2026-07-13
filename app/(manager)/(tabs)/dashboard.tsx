@@ -338,7 +338,6 @@ export default function ManagerDashboard() {
         </View>
 
         {/* Summary — inline stat row, no boxes */}
-        <Divider full />
         <StatRow
           items={[
             {

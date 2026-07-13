@@ -228,7 +228,6 @@ export default function DJHomeScreen() {
         </View>
 
         {/* Summary — inline stat row, no boxes */}
-        <Divider full />
         <StatRow
           items={[
             { value: confirmedCount, label: 'Confirmed', color: colors.success, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
