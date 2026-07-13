@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
 import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
@@ -346,138 +347,127 @@ export default function ArtistProfileViewScreen() {
         </View>
 
         {/* 1. Profile Hero: photo, name, location, member since */}
-        <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {/* Top row: photo + name/flag */}
-          <View style={styles.heroTopRow}>
-            {loading ? (
-              <Skeleton width={80} height={80} radius={16} color={colors.border} />
-            ) : (
-              <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
-            )}
-            <View style={styles.heroNameBlock}>
-              {loading ? (
-                <>
-                  <Skeleton width={150} height={20} radius={6} color={colors.border} />
-                  <Skeleton width={90} height={13} radius={5} color={colors.border} style={{ marginTop: 6 }} />
-                </>
-              ) : (
-                <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                      {dj.fullName}
-                    </Text>
-                    {profile?.hasCompletedBooking ? (
-                      <MaterialIcons name="verified" size={18} color={colors.primary} />
-                    ) : null}
-                  </View>
-                  <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
-                </>
-              )}
-            </View>
-          </View>
-          {/* Bottom row: based in */}
-          {basedInCountry && (
-            <View style={[styles.heroBottomRow, { justifyContent: 'flex-start' }]}>
-              <View style={styles.locationRow}>
-                <MaterialIcons name="location-on" size={13} color={colors.muted} />
-                <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
-              </View>
-            </View>
+        <View style={styles.hero}>
+          {loading ? (
+            <Skeleton width={80} height={80} radius={40} color={colors.border} />
+          ) : (
+            <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
           )}
+          {loading ? (
+            <>
+              <Skeleton width={150} height={20} radius={6} color={colors.border} style={{ marginTop: 10 }} />
+              <Skeleton width={90} height={13} radius={5} color={colors.border} style={{ marginTop: 6 }} />
+            </>
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+                  {dj.fullName}
+                </Text>
+                {profile?.hasCompletedBooking ? (
+                  <MaterialIcons name="verified" size={18} color={colors.primary} />
+                ) : null}
+              </View>
+              <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
+            </>
+          )}
+          {basedInCountry && !loading ? (
+            <View style={styles.locationRow}>
+              <MaterialIcons name="location-on" size={13} color={colors.muted} />
+              <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
+            </View>
+          ) : null}
         </View>
+
+        <Divider />
 
         {contentReady ? (
         <>
         {/* 2. Stats: Monthly Plays + Completed Gigs */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyPlays}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Monthly Plays</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: '#2563EB' }]}>{completedGigs}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Completed Gigs</Text>
-          </View>
-        </View>
+        <StatRow
+          items={[
+            { value: monthlyPlays, label: 'Monthly Plays' },
+            { value: completedGigs, label: 'Completed Gigs' },
+          ]}
+        />
+
+        <Divider />
 
         <View style={styles.content}>
           {/* 3. Bio — only if filled */}
           {dj.bio ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Bio</Text>
-              <Text style={[styles.cardText, { color: colors.foreground }]}>{dj.bio}</Text>
-            </View>
+            <>
+              <Section label="Bio">
+                <Text style={[styles.cardText, { color: colors.foreground }]}>{dj.bio}</Text>
+              </Section>
+              <Divider />
+            </>
           ) : null}
 
           {/* 4. Music Genres */}
-          {profile && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Music Genres</Text>
-              <View style={styles.chipRow}>
-                <View style={[styles.primaryChip, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.primaryChipText}>{profile.primaryGenre}</Text>
+          {profile ? (
+            <>
+              <Section label="Music Genres">
+                <View style={styles.chipRow}>
+                  <Chip label={profile.primaryGenre ?? ''} selected />
+                  {secondaryGenres.map((g) => <Chip key={g} label={g} />)}
                 </View>
-                {secondaryGenres.map((g) => (
-                  <View key={g} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.chipText, { color: colors.foreground }]}>{g}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
           {/* 5. Instruments */}
-          {instruments.length > 0 && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Instruments</Text>
-              <View style={styles.chipRow}>
-                {instruments.map((i) => (
-                  <View key={i} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.chipText, { color: colors.foreground }]}>{i}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          {instruments.length > 0 ? (
+            <>
+              <Section label="Instruments">
+                <View style={styles.chipRow}>
+                  {instruments.map((i) => <Chip key={i} label={i} />)}
+                </View>
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
-          {/* Links — only show filled ones (shown before History) */}
-          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Links</Text>
-              <View style={styles.linksCol}>
-                {mediaLinks.instagram && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.instagram!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#E1306C20' }]}>
-                      <MaterialIcons name="camera-alt" size={18} color="#E1306C" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.soundcloud && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.soundcloud!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#FF550020' }]}>
-                      <MaterialIcons name="music-note" size={18} color="#FF5500" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>SoundCloud</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.spotify && (
-                  <Pressable style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={() => Linking.openURL(mediaLinks.spotify!)}>
-                    <View style={[styles.linkIcon, { backgroundColor: '#1DB95420' }]}>
-                      <MaterialIcons name="headset" size={18} color="#1DB954" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Spotify</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          )}
+          {/* Links — text-only rows, no trailing separator on the last one */}
+          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (() => {
+            const links = [
+              mediaLinks.instagram && { key: 'instagram', label: 'Instagram', url: mediaLinks.instagram },
+              mediaLinks.soundcloud && { key: 'soundcloud', label: 'SoundCloud', url: mediaLinks.soundcloud },
+              mediaLinks.spotify && { key: 'spotify', label: 'Spotify', url: mediaLinks.spotify },
+            ].filter(Boolean) as { key: string; label: string; url: string }[];
+
+            return (
+              <>
+                <Section label="Links">
+                  <View style={styles.linksCol}>
+                    {links.map((l, i) => (
+                      <Pressable
+                        key={l.key}
+                        style={({ pressed }) => [
+                          styles.linkRow,
+                          {
+                            borderBottomColor: colors.border,
+                            borderBottomWidth: i === links.length - 1 ? 0 : StyleSheet.hairlineWidth * 2,
+                            opacity: pressed ? 0.7 : 1,
+                          },
+                        ]}
+                        onPress={() => Linking.openURL(l.url)}
+                      >
+                        <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
+                        <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                      </Pressable>
+                    ))}
+                  </View>
+                </Section>
+                <Divider />
+              </>
+            );
+          })()}
 
           {/* 6. Last 5 completed gigs — hidden if artist set isHistoryHidden */}
           {!profile?.isHistoryHidden && (
+          <>
           <View style={styles.gigHistorySection}>
             <View style={[styles.collapseHeader, { borderColor: colors.border }]}>
               <View style={styles.collapseHeaderLeft}>
@@ -489,21 +479,21 @@ export default function ArtistProfileViewScreen() {
               </View>
             </View>
             {last5Gigs.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.emptyCard}>
                 <MaterialIcons name="history" size={32} color={colors.muted} />
                 <Text style={[styles.emptyText, { color: colors.muted }]}>No completed gigs yet</Text>
               </View>
             ) : (
               <ScrollView
-                style={[styles.gigHistoryScroll, { borderColor: colors.border }]}
+                style={styles.gigHistoryScroll}
                 nestedScrollEnabled
                 showsVerticalScrollIndicator={false}
               >
-                <View style={[styles.monthTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.monthTable}>
                   {last5Gigs.map((gig, idx) => (
                     <View
                       key={idx}
-                      style={[styles.bookingSubRow, { backgroundColor: colors.background, borderTopColor: colors.border }, idx === 0 && { borderTopWidth: 0 }]}
+                      style={[styles.bookingSubRow, { borderTopColor: colors.border }, idx === 0 && { borderTopWidth: 0 }]}
                     >
                       <View style={styles.bookingSubLeft}>
                         <View style={[styles.bookingSubDot, { backgroundColor: colors.success + '20' }]}>
@@ -526,12 +516,13 @@ export default function ArtistProfileViewScreen() {
               </ScrollView>
             )}
           </View>
+          <Divider />
+          </>
           )}
 
           {/* Contact — shown only for artists on your lineup */}
           {isConnected && (dj.email || dj.phone) ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Contact</Text>
+            <Section label="Contact">
               {dj.email ? (
                 <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`mailto:${dj.email}`)}>
                   <MaterialIcons name="email" size={18} color={colors.muted} />
@@ -546,7 +537,7 @@ export default function ArtistProfileViewScreen() {
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
               ) : null}
-            </View>
+            </Section>
           ) : null}
         </View>
         </>
@@ -554,21 +545,21 @@ export default function ArtistProfileViewScreen() {
         <View style={styles.content}>
           {/* Shimmer skeletons while the artist's data loads */}
           <View style={styles.statsRow}>
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'flex-start', gap: 10 }]}>
+            <View style={[styles.statCard, { alignItems: 'flex-start', gap: 10 }]}>
               <Skeleton width={44} height={20} radius={6} color={colors.border} />
               <Skeleton width={78} height={11} radius={5} color={colors.border} />
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'flex-start', gap: 10 }]}>
+            <View style={[styles.statCard, { alignItems: 'flex-start', gap: 10 }]}>
               <Skeleton width={44} height={20} radius={6} color={colors.border} />
               <Skeleton width={78} height={11} radius={5} color={colors.border} />
             </View>
           </View>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: 10 }]}>
+          <View style={[styles.card, { gap: 10 }]}>
             <Skeleton width={36} height={11} radius={5} color={colors.border} />
             <Skeleton width={260} height={11} radius={5} color={colors.border} />
             <Skeleton width={200} height={11} radius={5} color={colors.border} />
           </View>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: 12 }]}>
+          <View style={[styles.card, { gap: 12 }]}>
             <Skeleton width={92} height={11} radius={5} color={colors.border} />
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <Skeleton width={68} height={28} radius={14} color={colors.border} />
@@ -677,6 +668,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', flex: 1 },
   reportBtn: { padding: 4 },
+  hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 4 },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   heroPhoto: { width: 80, height: 80, borderRadius: 40 },
@@ -690,8 +682,8 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 28, fontWeight: '800' },
   statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
-  content: { padding: 20, gap: 14 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  content: {},
+  card: { padding: 14, gap: 10 },
   cardLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   cardText: { fontSize: 14, lineHeight: 21 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -708,19 +700,19 @@ const styles = StyleSheet.create({
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   contactValue: { flex: 1, fontSize: 14, fontWeight: '500' },
   linksCol: { gap: 0 },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 0.5 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: 0.5 },
   linkIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   linkRowText: { flex: 1, fontSize: 14, fontWeight: '500' },
-  gigHistorySection: { gap: 0 },
-  gigHistoryScroll: { height: 270, borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  gigHistorySection: { paddingHorizontal: 20, paddingVertical: 16 },
+  gigHistoryScroll: { height: 270 },
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   collapseTitle: { fontSize: 16, fontWeight: '700' },
   collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   collapseBadgeText: { fontSize: 12, fontWeight: '600' },
-  emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
+  emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
-  monthTable: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  monthTable: {},
   bookingSubRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 0.5 },
   bookingSubLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   bookingSubDot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

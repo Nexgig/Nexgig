@@ -130,7 +130,7 @@ export default function AllBookingsScreen() {
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                <Text allowFontScaling={false} style={[styles.statusDot, { color: booking.dotColor }]}>.</Text>
+                <View style={[styles.statusSquare, { backgroundColor: booking.dotColor }]} />
               </Pressable>
             );
           })
@@ -161,4 +161,5 @@ const styles = StyleSheet.create({
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingSub: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
+  statusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
 });

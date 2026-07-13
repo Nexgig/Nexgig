@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { Wordmark } from '@/components/wordmark';
+import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -336,30 +337,31 @@ export default function ManagerDashboard() {
           </View>
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryRow}>
-          <SummaryCard
-            label="CONFIRMED"
-            value={upcomingBookings.filter((b) => b.status === 'confirmed').length}
-            color={colors.success}
-            colors={colors}
-            onPress={() => router.push('/(manager)/confirmed-bookings' as Href)}
-          />
-          <SummaryCard
-            label="PENDING"
-            value={pendingCount}
-            color={colors.warning}
-            colors={colors}
-            onPress={() => router.push('/(manager)/pending-requests' as Href)}
-          />
-          <SummaryCard
-            label="COMPLETED"
-            value={completedCount}
-            color="#2563EB"
-            colors={colors}
-            onPress={() => router.push('/(manager)/completed-gigs' as Href)}
-          />
-        </View>
+        {/* Summary — inline stat row, no boxes */}
+        <Divider full />
+        <StatRow
+          items={[
+            {
+              value: upcomingBookings.filter((b) => b.status === 'confirmed').length,
+              label: 'Confirmed',
+              color: colors.success,
+              onPress: () => router.push('/(manager)/confirmed-bookings' as Href),
+            },
+            {
+              value: pendingCount,
+              label: 'Pending',
+              color: colors.warning,
+              onPress: () => router.push('/(manager)/pending-requests' as Href),
+            },
+            {
+              value: completedCount,
+              label: 'Completed',
+              color: '#2563EB',
+              onPress: () => router.push('/(manager)/completed-gigs' as Href),
+            },
+          ]}
+        />
+        <Divider full />
 
         {/* Bookings */}
         <View style={styles.section}>
@@ -374,7 +376,7 @@ export default function ManagerDashboard() {
             }
           />
           {groupedBookingsPreview.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
@@ -417,8 +419,8 @@ export default function ManagerDashboard() {
                     {g.first.slot ? `${formatDate(g.first.slot.date)} · ${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                {/* Status dot — Clash Display period, like the Nexgig "." */}
-                <Text allowFontScaling={false} style={[styles.statusDot, { color: g.dotColor }]}>.</Text>
+                {/* Status mark — 12px rounded square (green/amber/blue) */}
+                <View style={[styles.statusSquare, { backgroundColor: g.dotColor }]} />
               </Pressable>
               );
             })
@@ -468,12 +470,12 @@ export default function ManagerDashboard() {
                 </ScrollView>
               )}
               {filteredByMonth.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.emptyCard}>
                 <MaterialIcons name="check-circle" size={32} color={colors.muted} />
                 <Text style={[styles.emptyText, { color: colors.muted }]}>No completed bookings yet</Text>
               </View>
             ) : (
-              <View style={[styles.monthTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.monthTable}>
                 {filteredByMonth.map(([month, monthBookings], idx) => {
                   const isExpanded = expandedMonth === month;
                   return (
@@ -550,7 +552,7 @@ export default function ManagerDashboard() {
                   style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
                   onPress={() => currentUser && setBookingFilter(currentUser.id, opt.key, !checked)}
                 >
-                  <Text allowFontScaling={false} style={[styles.filterRowDot, { color: opt.dot }]}>.</Text>
+                  <View style={[styles.filterRowSquare, { backgroundColor: opt.dot }]} />
                   <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>{opt.label}</Text>
                   <View style={[styles.filterCheck, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : 'transparent' }]}>
                     {checked && <MaterialIcons name="check" size={14} color="#fff" />}
@@ -600,7 +602,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
   summaryLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   section: { marginBottom: 28 },
-  emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
+  emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
   avatarStack: { flexDirection: 'row', alignItems: 'center' },
@@ -615,6 +617,7 @@ const styles = StyleSheet.create({
   filterTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
   filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 4 },
   filterRowDot: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 30, width: 18, transform: [{ translateY: -8 }] },
+  filterRowSquare: { width: 12, height: 12, borderRadius: 4, marginRight: 6 },
   filterRowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
   filterCheck: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
@@ -622,13 +625,14 @@ const styles = StyleSheet.create({
   bookingTime: { fontSize: 12 },
   bookingSub: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
+  statusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
   venueBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 36, marginLeft: 12 },
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   collapseTitle: { fontSize: 18, fontFamily: fonts.display },
   collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   collapseBadgeText: { fontSize: 12, fontWeight: '600' },
-  monthTable: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  monthTable: {},
   monthRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 0.5 },
   monthLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   monthBadge: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },

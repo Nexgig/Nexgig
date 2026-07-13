@@ -16,6 +16,7 @@ import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
 import { performerLabel } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
+import { Section, Divider, Chip } from '@/components/ui/card-free';
 
 export default function VenueDetailScreen() {
   const router = useRouter();
@@ -222,7 +223,7 @@ export default function VenueDetailScreen() {
         )}
 
         {/* Venue Info */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <Text style={[styles.venueType, { color: colors.muted }]}>{venue.venueType}</Text>
             <StatusBadge status={venue.isHidden ? 'hidden' : 'active'} />
@@ -254,6 +255,10 @@ export default function VenueDetailScreen() {
           )}
         </View>
 
+        {/* Only when there's no tab bar — otherwise the tab bar's own underline
+            already separates the info block from the content. */}
+        {!isOwner && <Divider />}
+
         {/* Tab Bar — Slots and Lineup only visible to the venue owner */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
@@ -269,94 +274,94 @@ export default function VenueDetailScreen() {
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <View style={styles.tabContent}>
-            {venue.vibeDescription && (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Vibe</Text>
-                <Text style={[styles.cardBody, { color: colors.muted }]}>{venue.vibeDescription}</Text>
-              </View>
-            )}
-            {venue.preferredEnergy.length > 0 && (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Preferred Energy</Text>
-                <View style={styles.chipRow}>
-                  {(venue.preferredEnergy ?? []).map((e) => (
-                    <View key={e} style={[styles.chip, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-                       <Text style={[styles.chipText, { color: colors.muted }]}>{e}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            {(venue.genrePreferences.length > 0 || (venue.subVibe && venue.subVibe.length > 0)) && (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Genre Preferences</Text>
-                <View style={styles.chipRow}>
-                  {venue.genrePreferences.map((g) => (
-                    <View key={g} style={[styles.chip, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-                       <Text style={[styles.chipText, { color: colors.muted }]}>{g}</Text>
-                    </View>
-                  ))}
-                  {(venue.subVibe ?? []).map((sv) => (
-                    <View key={sv} style={[styles.chip, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-                     <Text style={[styles.chipText, { color: colors.muted }]}>{sv}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            {venue.audienceType && venue.audienceType.length > 0 && (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Audience</Text>
-                <View style={styles.chipRow}>
-                  {venue.audienceType.map((a) => (
-                    <View key={a} style={[styles.chip, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
-                       <Text style={[styles.chipText, { color: colors.muted }]}>{a}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            {venue.rulesTemplate && (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Venue Rules</Text>
-                <Text style={[styles.cardBody, { color: colors.muted }]}>{venue.rulesTemplate}</Text>
-              </View>
-            )}
-            {(venue.instagramUrl || venue.musicLink) && (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Links</Text>
-                {venue.instagramUrl && (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => {
-  const url = venue.instagramUrl!.startsWith('http') ? venue.instagramUrl! : `https://www.instagram.com/${venue.instagramUrl}`;
-Linking.openURL(url);
-}}
-                  >
-                    <MaterialIcons name="camera-alt" size={20} color="#E1306C" />
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} style={{ marginLeft: 'auto' }} />
-                  </Pressable>
-                )}
-                {venue.musicLink && (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => {
-  const url = venue.musicLink!.startsWith('http') ? venue.musicLink! : `https://${venue.musicLink}`;
-  Linking.openURL(url);
-}}
-                  >
-                    <MaterialIcons name="music-note" size={20} color="#1DB954" />
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Music</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} style={{ marginLeft: 'auto' }} />
-                  </Pressable>
-                )}
-              </View>
-            )}
+          <View style={styles.overviewTab}>
+            {venue.vibeDescription ? (
+              <>
+                <Section label="Vibe">
+                  <Text style={[styles.cardBody, { color: colors.foreground }]}>{venue.vibeDescription}</Text>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+            {venue.preferredEnergy.length > 0 ? (
+              <>
+                <Section label="Preferred Energy">
+                  <View style={styles.chipRow}>
+                    {(venue.preferredEnergy ?? []).map((e) => <Chip key={e} label={e} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+            {(venue.genrePreferences.length > 0 || (venue.subVibe && venue.subVibe.length > 0)) ? (
+              <>
+                <Section label="Genre Preferences">
+                  <View style={styles.chipRow}>
+                    {venue.genrePreferences.map((g) => <Chip key={g} label={g} />)}
+                    {(venue.subVibe ?? []).map((sv) => <Chip key={sv} label={sv} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+            {venue.audienceType && venue.audienceType.length > 0 ? (
+              <>
+                <Section label="Audience">
+                  <View style={styles.chipRow}>
+                    {venue.audienceType.map((a) => <Chip key={a} label={a} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+            {venue.rulesTemplate ? (
+              <>
+                <Section label="Venue Rules">
+                  <Text style={[styles.cardBody, { color: colors.foreground }]}>{venue.rulesTemplate}</Text>
+                </Section>
+                <Divider />
+              </>
+            ) : null}
+            {(venue.instagramUrl || venue.musicLink) && (() => {
+              const links = [
+                venue.instagramUrl && {
+                  key: 'instagram', label: 'Instagram',
+                  url: venue.instagramUrl.startsWith('http') ? venue.instagramUrl : `https://www.instagram.com/${venue.instagramUrl}`,
+                },
+                venue.musicLink && {
+                  key: 'music', label: 'Music',
+                  url: venue.musicLink.startsWith('http') ? venue.musicLink : `https://${venue.musicLink}`,
+                },
+              ].filter(Boolean) as { key: string; label: string; url: string }[];
+
+              return (
+                <>
+                  <Section label="Links">
+                    {links.map((l, i) => (
+                      <Pressable
+                        key={l.key}
+                        style={({ pressed }) => [
+                          styles.linkRow,
+                          {
+                            borderBottomColor: colors.border,
+                            borderBottomWidth: i === links.length - 1 ? 0 : StyleSheet.hairlineWidth * 2,
+                            opacity: pressed ? 0.7 : 1,
+                          },
+                        ]}
+                        onPress={() => Linking.openURL(l.url)}
+                      >
+                        <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
+                        <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                      </Pressable>
+                    ))}
+                  </Section>
+                  <Divider />
+                </>
+              );
+            })()}
             {isOwner && (
             <Pressable
-              style={({ pressed }) => [styles.greyBtn, { opacity: pressed ? 0.7 : 1, borderColor: colors.error }]}
+              style={({ pressed }) => [styles.greyBtn, { opacity: pressed ? 0.7 : 1, borderColor: colors.error, marginHorizontal: 20 }]}
               onPress={handleDelete}
             >
               <MaterialIcons name="delete" size={18} color={colors.error} />
@@ -377,7 +382,7 @@ Linking.openURL(url);
               <Text style={[styles.greyBtnText, { color: colors.muted }]}>Manage in Calendar</Text>
             </Pressable>
             {slots.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.emptyCard}>
                 <MaterialIcons name="event" size={32} color={colors.muted} />
                 <Text style={{ color: colors.muted, fontSize: 14 }}>No slots created yet</Text>
               </View>
@@ -414,7 +419,7 @@ Linking.openURL(url);
                       </Text>
                     </View>
                     {booking ? (
-                      <Text allowFontScaling={false} style={[styles.slotStatusDot, { color: dotColor }]}>.</Text>
+                      <View style={[styles.slotStatusSquare, { backgroundColor: dotColor }]} />
                     ) : (
                       <Text style={[styles.unassigned, { color: colors.warning }]}>Unassigned</Text>
                     )}
@@ -437,7 +442,7 @@ Linking.openURL(url);
               <Text style={[styles.greyBtnText, { color: colors.muted }]}>Add Artist</Text>
             </Pressable>
             {venueAssignments.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.emptyCard}>
                 <MaterialIcons name="group" size={32} color={colors.muted} />
                 <Text style={{ color: colors.muted, fontSize: 14 }}>No artists assigned to this venue</Text>
               </View>
@@ -527,22 +532,23 @@ Linking.openURL(url);
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
+  scroll: { paddingTop: 16, paddingBottom: 40 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   backBtn: { padding: 4 },
   title: { fontSize: 20, fontWeight: '800', flex: 1, textAlign: 'center' },
-  venuePhoto: { width: '100%', height: 180, borderRadius: 16, marginBottom: 16 },
-  infoCard: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 16, gap: 8 },
+  venuePhoto: { height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
+  infoCard: { paddingHorizontal: 20, paddingBottom: 16, gap: 8 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   venueType: { fontSize: 13, fontWeight: '500' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   locationText: { fontSize: 13 },
   verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   verifyPillText: { fontSize: 11, fontWeight: '700' },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16 },
+  tabBar: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16, marginHorizontal: 20 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabText: { fontSize: 14, fontWeight: '600' },
-  tabContent: { gap: 12 },
+  tabContent: { gap: 12, paddingHorizontal: 20 },
+  overviewTab: {},
   card: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },
   cardTitle: { fontSize: 15, fontWeight: '700' },
   cardBody: { fontSize: 14, lineHeight: 20 },
@@ -568,12 +574,13 @@ const styles = StyleSheet.create({
   slotRowTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   slotRowSub: { fontSize: 13 },
   slotStatusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
+  slotStatusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
   slotPlaceholder: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   djCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
   djName: { fontSize: 15, fontWeight: '700' },
   djLocation: { fontSize: 13 },
   lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
   lineupRowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
   linkRowText: { fontSize: 14, fontWeight: '500', flex: 1 },
 });

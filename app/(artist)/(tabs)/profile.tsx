@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { Section, Divider, StatRow, Chip, SoftButton } from '@/components/ui/card-free';
 import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, useSlotStore, useVenueStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
@@ -204,9 +205,8 @@ export default function ArtistProfileScreen() {
           </View>
         </View>
 
-        {/* Profile Card */}
-        <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {/* Edit icon top-right */}
+        {/* Hero — centered avatar, name + seal, role, location. Edit pencil top-right. */}
+        <View style={styles.hero}>
           <Pressable
             style={({ pressed }) => [styles.heroEditBtn, { opacity: pressed ? 0.6 : 1 }]}
             onPress={() => router.push('/(artist)/edit-profile' as Href)}
@@ -214,144 +214,113 @@ export default function ArtistProfileScreen() {
           >
             <MaterialIcons name="edit" size={18} color={colors.muted} />
           </Pressable>
-          {/* Top row: photo + name/flag */}
-          <View style={styles.profileTopRow}>
-            <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
-            <View style={styles.profileNameBlock}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                  {currentUser?.fullName}
-                </Text>
-                {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
-                  <MaterialIcons name="verified" size={18} color={colors.primary} />
-                ) : null}
-              </View>
-              <Text style={[styles.genre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
-            </View>
+          <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+            <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+              {currentUser?.fullName}
+            </Text>
+            {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
+              <MaterialIcons name="verified" size={18} color={colors.primary} />
+            ) : null}
           </View>
-          {/* Bottom row: based in on the left (consistent across all profile views) */}
+          <Text style={[styles.genre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
           {basedInCountry ? (
-            <View style={[styles.profileBottomRow, { justifyContent: 'flex-start' }]}>
-              <View style={styles.locationRow}>
-                <MaterialIcons name="location-on" size={13} color={colors.muted} />
-                <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
-              </View>
+            <View style={styles.locationRow}>
+              <MaterialIcons name="location-on" size={13} color={colors.muted} />
+              <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
             </View>
           ) : null}
         </View>
 
-        {/* Stats — Monthly Plays + Completed Gigs */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{monthlyPlays}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Monthly Plays</Text>
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => router.push('/(artist)/completed-gigs' as Href)}
-          >
-            <Text style={[styles.statValue, { color: '#2563EB' }]}>{completedBookings.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.muted }]}>Completed Gigs</Text>
-          </Pressable>
-        </View>
+        <Divider />
+
+        {/* Stats — inline, no boxes */}
+        <StatRow
+          items={[
+            { value: monthlyPlays, label: 'Monthly Plays' },
+            {
+              value: completedBookings.length,
+              label: 'Completed Gigs',
+              onPress: () => router.push('/(artist)/completed-gigs' as Href),
+            },
+          ]}
+        />
+
+        <Divider />
 
         <View style={styles.content}>
           {/* Bio — only if filled */}
           {currentUser?.bio ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Bio</Text>
-              <Text style={[styles.cardText, { color: colors.foreground }]}>{currentUser.bio}</Text>
-            </View>
+            <>
+              <Section label="Bio">
+                <Text style={[styles.cardText, { color: colors.foreground }]}>{currentUser.bio}</Text>
+              </Section>
+              <Divider />
+            </>
           ) : null}
 
           {/* Music Genres */}
-          {profile && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Music Genres</Text>
-              <View style={styles.chipRow}>
-                <View style={[styles.primaryChip, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.primaryChipText}>{profile.primaryGenre}</Text>
+          {profile ? (
+            <>
+              <Section label="Music Genres">
+                <View style={styles.chipRow}>
+                  <Chip label={profile.primaryGenre ?? ''} selected />
+                  {secondaryGenres.map((g) => <Chip key={g} label={g} />)}
                 </View>
-                {secondaryGenres.map((g) => (
-                  <View key={g} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.chipText, { color: colors.foreground }]}>{g}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
           {/* Instruments */}
-          {instruments.length > 0 && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Instruments</Text>
-              <View style={styles.chipRow}>
-                {instruments.map((i: string) => (
-                  <View key={i} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.chipText, { color: colors.foreground }]}>{i}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
+          {instruments.length > 0 ? (
+            <>
+              <Section label="Instruments">
+                <View style={styles.chipRow}>
+                  {instruments.map((i: string) => <Chip key={i} label={i} />)}
+                </View>
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
           {/* Links */}
-          {hasLinks && (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardLabel, { color: colors.muted }]}>Links</Text>
-              <View style={styles.linksCol}>
-                {mediaLinks.instagram && (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(mediaLinks.instagram!)}
-                  >
-                    <View style={[styles.linkIcon, { backgroundColor: '#E1306C20' }]}>
-                      <MaterialIcons name="camera-alt" size={18} color="#E1306C" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.soundcloud && (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(mediaLinks.soundcloud!)}
-                  >
-                    <View style={[styles.linkIcon, { backgroundColor: '#FF550020' }]}>
-                      <MaterialIcons name="music-note" size={18} color="#FF5500" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>SoundCloud</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.mixcloud && (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(mediaLinks.mixcloud!)}
-                  >
-                    <View style={[styles.linkIcon, { backgroundColor: '#5000FF20' }]}>
-                      <MaterialIcons name="cloud" size={18} color="#5000FF" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Mixcloud</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-                {mediaLinks.spotify && (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(mediaLinks.spotify!)}
-                  >
-                    <View style={[styles.linkIcon, { backgroundColor: '#1DB95420' }]}>
-                      <MaterialIcons name="headset" size={18} color="#1DB954" />
-                    </View>
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Spotify</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          )}
+          {hasLinks && (() => {
+            // Only the links that actually exist — so the LAST one drops its
+            // separator (the Section's own <Divider/> already closes the block).
+            const links = [
+              mediaLinks.instagram && { key: 'instagram', label: 'Instagram', url: mediaLinks.instagram, icon: 'camera-alt' as const, tint: '#E1306C' },
+              mediaLinks.soundcloud && { key: 'soundcloud', label: 'SoundCloud', url: mediaLinks.soundcloud, icon: 'music-note' as const, tint: '#FF5500' },
+              mediaLinks.mixcloud && { key: 'mixcloud', label: 'Mixcloud', url: mediaLinks.mixcloud, icon: 'cloud' as const, tint: '#5000FF' },
+              mediaLinks.spotify && { key: 'spotify', label: 'Spotify', url: mediaLinks.spotify, icon: 'headset' as const, tint: '#1DB954' },
+            ].filter(Boolean) as { key: string; label: string; url: string; icon: 'camera-alt' | 'music-note' | 'cloud' | 'headset'; tint: string }[];
+
+            return (
+              <Section label="Links">
+                <View style={styles.linksCol}>
+                  {links.map((l, i) => (
+                    <Pressable
+                      key={l.key}
+                      style={({ pressed }) => [
+                        styles.linkRow,
+                        {
+                          borderBottomColor: colors.border,
+                          borderBottomWidth: i === links.length - 1 ? 0 : StyleSheet.hairlineWidth * 2,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                      onPress={() => Linking.openURL(l.url)}
+                    >
+                      <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
+                      <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                    </Pressable>
+                  ))}
+                </View>
+              </Section>
+            );
+          })()}
+
+          <Divider />
 
           {/* History */}
           <View style={styles.gigHistorySection}>
@@ -383,17 +352,17 @@ export default function ArtistProfileScreen() {
             </View>
 
             {completedBookings.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.emptyCard}>
                 <MaterialIcons name="history" size={32} color={colors.muted} />
                 <Text style={[styles.emptyText, { color: colors.muted }]}>No completed gigs yet</Text>
               </View>
             ) : (
               <ScrollView
-                style={[styles.gigHistoryScroll, { borderColor: colors.border }]}
+                style={styles.gigHistoryScroll}
                 nestedScrollEnabled
                 showsVerticalScrollIndicator={false}
               >
-                <View style={[styles.monthTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.monthTable}>
                   {completedBookings.map((booking, idx) => (
                     <Pressable
                       key={booking.id}
@@ -425,9 +394,10 @@ export default function ArtistProfileScreen() {
             )}
           </View>
 
+          <Divider />
+
           {/* Account */}
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.muted }]}>Account</Text>
+          <Section label="Account">
             <View style={styles.accountRow}>
               <MaterialIcons name="email" size={16} color={colors.muted} />
               <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>
@@ -438,16 +408,14 @@ export default function ArtistProfileScreen() {
                 <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.phone}</Text>
               </View>
             )}
-          </View>
+          </Section>
+
+          <Divider />
 
           {/* Sign Out */}
-          <Pressable
-            style={({ pressed }) => [styles.signOutBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
-            onPress={handleSignOut}
-          >
-            <MaterialIcons name="logout" size={18} color={colors.error} />
-            <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
-          </Pressable>
+          <View style={styles.signOutWrap}>
+            <SoftButton tone="danger" icon="logout" label="Sign Out" onPress={handleSignOut} />
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -461,8 +429,9 @@ const styles = StyleSheet.create({
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  profileCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14, position: 'relative' },
-  heroEditBtn: { position: 'absolute', top: 12, right: 12, zIndex: 1, padding: 4 },
+  hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 4, position: 'relative' },
+  signOutWrap: { paddingHorizontal: 20, paddingVertical: 20 },
+  heroEditBtn: { position: 'absolute', top: 12, right: 16, zIndex: 1, padding: 4 },
   profileTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   profilePhoto: { width: 80, height: 80, borderRadius: 40, borderWidth: 1 },
   profileNameBlock: { flex: 1, gap: 4 },
@@ -473,7 +442,7 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },
   memberSince: { fontSize: 11, marginTop: 4 },
-  content: { padding: 20, paddingBottom: 40, gap: 14 },
+  content: { paddingBottom: 40 },
   // Stats
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4, marginTop: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
@@ -501,7 +470,7 @@ const styles = StyleSheet.create({
   rateValue: { fontSize: 15, fontWeight: '700' },
   // Links
   linksCol: { gap: 0 },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 0.5 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: 0.5 },
   linkIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   linkRowText: { flex: 1, fontSize: 14, fontWeight: '500' },
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -511,16 +480,16 @@ const styles = StyleSheet.create({
   editBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cardActions: { flexDirection: 'row', gap: 8 },
   // Gig History
-  gigHistorySection: { gap: 0 },
-  gigHistoryScroll: { height: 270, borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  gigHistorySection: { paddingHorizontal: 20, paddingVertical: 16 },
+  gigHistoryScroll: { height: 270 },
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   collapseTitle: { fontSize: 16, fontWeight: '700' },
   collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   collapseBadgeText: { fontSize: 12, fontWeight: '600' },
-  emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
+  emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
-  monthTable: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  monthTable: {},
   bookingSubRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 0.5 },
   bookingSubLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   bookingSubDot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

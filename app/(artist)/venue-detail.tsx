@@ -8,6 +8,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
+import { Section, Divider, Chip } from '@/components/ui/card-free';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -122,7 +123,7 @@ export default function ArtistVenueDetailScreen() {
         )}
 
         {/* Venue Info Card */}
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.infoCard}>
           <Text style={[styles.venueType, { color: colors.muted }]}>{venueTypeLabel}</Text>
           {venue.googleMapsLocation?.address ? (
             <View style={styles.infoRow}>
@@ -138,96 +139,100 @@ export default function ArtistVenueDetailScreen() {
           ) : null}
         </View>
 
+        <Divider />
+
         {/* Tab Bar — Overview only for artists viewing any venue */}
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <View style={styles.tabContent}>
             {venue.vibeDescription ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Vibe</Text>
-                <Text style={[styles.cardBody, { color: colors.muted }]}>{venue.vibeDescription}</Text>
-              </View>
+              <>
+                <Section label="Vibe">
+                  <Text style={[styles.cardBody, { color: colors.foreground }]}>{venue.vibeDescription}</Text>
+                </Section>
+                <Divider />
+              </>
             ) : null}
             {venue.preferredEnergy && venue.preferredEnergy.length > 0 ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Preferred Energy</Text>
-                <View style={styles.chipRow}>
-                  {venue.preferredEnergy.map((e) => (
-                    <View key={e} style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
-                      <Text style={[styles.chipText, { color: colors.foreground }]}>{e}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
+              <>
+                <Section label="Preferred Energy">
+                  <View style={styles.chipRow}>
+                    {venue.preferredEnergy.map((e) => <Chip key={e} label={e} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
             ) : null}
             {venue.genrePreferences && venue.genrePreferences.length > 0 ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Genre Preferences</Text>
-                <View style={styles.chipRow}>
-                  {venue.genrePreferences.map((g) => (
-                    <View key={g} style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
-                      <Text style={[styles.chipText, { color: colors.foreground }]}>{g}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
+              <>
+                <Section label="Genre Preferences">
+                  <View style={styles.chipRow}>
+                    {venue.genrePreferences.map((g) => <Chip key={g} label={g} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
             ) : null}
             {venue.rulesTemplate ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Venue Rules</Text>
-                <Text style={[styles.cardBody, { color: colors.muted }]}>{venue.rulesTemplate}</Text>
-              </View>
+              <>
+                <Section label="Venue Rules">
+                  <Text style={[styles.cardBody, { color: colors.foreground }]}>{venue.rulesTemplate}</Text>
+                </Section>
+                <Divider />
+              </>
             ) : null}
             {venue.audienceType && venue.audienceType.length > 0 ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Audience</Text>
-                <View style={styles.chipRow}>
-                  {venue.audienceType.map((a) => (
-                    <View key={a} style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
-                      <Text style={[styles.chipText, { color: colors.foreground }]}>{a}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
+              <>
+                <Section label="Audience">
+                  <View style={styles.chipRow}>
+                    {venue.audienceType.map((a) => <Chip key={a} label={a} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
             ) : null}
             {venue.subVibe && venue.subVibe.length > 0 ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Sub-Vibe</Text>
-                <View style={styles.chipRow}>
-                  {venue.subVibe.map((sv) => (
-                    <View key={sv} style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
-                      <Text style={[styles.chipText, { color: colors.foreground }]}>{sv}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
+              <>
+                <Section label="Sub-Vibe">
+                  <View style={styles.chipRow}>
+                    {venue.subVibe.map((sv) => <Chip key={sv} label={sv} />)}
+                  </View>
+                </Section>
+                <Divider />
+              </>
             ) : null}
-            {(venue.instagramUrl || venue.musicLink) ? (
-              <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Links</Text>
-                {venue.instagramUrl ? (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(venue.instagramUrl!)}
-                  >
-                    <MaterialIcons name="camera-alt" size={20} color="#E1306C" />
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Instagram</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} style={{ marginLeft: 'auto' }} />
-                  </Pressable>
-                ) : null}
-                {venue.musicLink ? (
-                  <Pressable
-                    style={({ pressed }) => [styles.linkRow, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => Linking.openURL(venue.musicLink!)}
-                  >
-                    <MaterialIcons name="music-note" size={20} color="#1DB954" />
-                    <Text style={[styles.linkRowText, { color: colors.foreground }]}>Music</Text>
-                    <MaterialIcons name="open-in-new" size={16} color={colors.muted} style={{ marginLeft: 'auto' }} />
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
+            {(venue.instagramUrl || venue.musicLink) && (() => {
+              const links = [
+                venue.instagramUrl && { key: 'instagram', label: 'Instagram', url: venue.instagramUrl },
+                venue.musicLink && { key: 'music', label: 'Music', url: venue.musicLink },
+              ].filter(Boolean) as { key: string; label: string; url: string }[];
+
+              return (
+                <>
+                  <Section label="Links">
+                    {links.map((l, i) => (
+                      <Pressable
+                        key={l.key}
+                        style={({ pressed }) => [
+                          styles.linkRow,
+                          {
+                            borderBottomColor: colors.border,
+                            borderBottomWidth: i === links.length - 1 ? 0 : StyleSheet.hairlineWidth * 2,
+                            opacity: pressed ? 0.7 : 1,
+                          },
+                        ]}
+                        onPress={() => Linking.openURL(l.url)}
+                      >
+                        <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
+                        <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
+                      </Pressable>
+                    ))}
+                  </Section>
+                  <Divider />
+                </>
+              );
+            })()}
             {!venue.vibeDescription && !venue.rulesTemplate && (!venue.preferredEnergy || venue.preferredEnergy.length === 0) && (!venue.genrePreferences || venue.genrePreferences.length === 0) && (!venue.audienceType || venue.audienceType.length === 0) && (!venue.subVibe || venue.subVibe.length === 0) && !venue.instagramUrl && !venue.musicLink && (
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="info-outline" size={40} color={colors.muted} />
@@ -260,7 +265,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', flex: 1, textAlign: 'center' },
   venuePhoto: { width: '100%', height: 200 },
   infoCard: {
-    margin: 16, marginBottom: 0, borderRadius: 14, borderWidth: 1, padding: 14, gap: 8,
+    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4, gap: 8,
   },
   venueType: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -270,8 +275,8 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontSize: 14, fontWeight: '600' },
-  tabContent: { padding: 16, gap: 12 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  tabContent: {},
+  card: { padding: 14, gap: 8 },
   cardTitle: { fontSize: 14, fontWeight: '700' },
   cardBody: { fontSize: 14, lineHeight: 20 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -291,6 +296,6 @@ const styles = StyleSheet.create({
   artistGenre: { fontSize: 13 },
   emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 8 },
   emptyText: { fontSize: 14 },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
   linkRowText: { fontSize: 14, fontWeight: '500', flex: 1 },
 });

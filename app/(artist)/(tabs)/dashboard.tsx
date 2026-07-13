@@ -284,7 +284,7 @@ export default function DJHomeScreen() {
                   </Text>
                 </View>
                 {/* Status dot — Clash Display period, like the manager dashboard */}
-                <Text allowFontScaling={false} style={[styles.statusDot, { color: booking.dotColor }]}>.</Text>
+                <View style={[styles.statusSquare, { backgroundColor: booking.dotColor }]} />
               </Pressable>
               );
             })
@@ -310,7 +310,7 @@ export default function DJHomeScreen() {
                   style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
                   onPress={() => currentUser && setBookingFilter(currentUser.id, opt.key, !checked)}
                 >
-                  <Text allowFontScaling={false} style={[styles.filterRowDot, { color: opt.dot }]}>.</Text>
+                  <View style={[styles.filterRowSquare, { backgroundColor: opt.dot }]} />
                   <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>{opt.label}</Text>
                   <View style={[styles.filterCheck, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : 'transparent' }]}>
                     {checked && <MaterialIcons name="check" size={14} color="#fff" />}
@@ -372,11 +372,13 @@ const styles = StyleSheet.create({
   filterTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
   filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 4 },
   filterRowDot: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 30, width: 18, transform: [{ translateY: -8 }] },
+  filterRowSquare: { width: 12, height: 12, borderRadius: 4, marginRight: 6 },
   filterRowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
   filterCheck: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
+  statusSquare: { width: 12, height: 12, borderRadius: 4, marginLeft: 6 },
   // Completed Gigs section — mirrors manager dashboard styles
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
