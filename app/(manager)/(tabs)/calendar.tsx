@@ -1208,7 +1208,7 @@ export default function CalendarScreen() {
     const venueColor = getVenueColor(slot.venueId);
 
     const cardContent = (
-      <View style={[styles.slotCard, { backgroundColor: colors.surface, borderColor: colors.border, flex: 1 }]}>
+      <View style={[styles.slotCard, { borderColor: colors.border, flex: 1 }]}>
         {/* Slot header — venue name, time, + assign button */}
         <View style={styles.slotHeaderRow}>
           <Pressable
@@ -1416,7 +1416,7 @@ export default function CalendarScreen() {
     const venueColor = getVenueColor(slot.venueId);
 
     const slotCardContent = (
-      <View style={[styles.slotCard, { backgroundColor: colors.surface, borderColor: colors.border, flex: 1 }]}>
+      <View style={[styles.slotCard, { borderColor: colors.border, flex: 1 }]}>
         {/* Slot header row */}
         <View style={styles.slotHeaderRow}>
           <Pressable
@@ -1622,7 +1622,7 @@ export default function CalendarScreen() {
     if (lineupRows.length === 0 && !isMonthView) return null;
     const maxCount = Math.max(...lineupRows.map((r) => r.gigCount), 1);
     return (
-      <View style={[styles.lineupPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.lineupPanel, { borderColor: colors.border }]}>
         {/* Panel header — tap to collapse/expand */}
         <Pressable
           style={styles.lineupHeader}
