@@ -286,6 +286,13 @@ export default function AddSlotScreen() {
     });
   };
 
+  const StatusPill = ({ tone, icon, label }: { tone: string; icon: any; label: string }) => (
+    <View style={[styles.statusPill, { backgroundColor: tone + '20' }]}>
+      <MaterialIcons name={icon} size={11} color={tone} />
+      <Text style={[styles.statusPillText, { color: tone }]}>{label}</Text>
+    </View>
+  );
+
   const renderAssignRow = (item: { artistId: string; user: any; profile: any; hasConflict?: boolean; conflicts?: ConflictInfo[] }, index = 0) => {
     const drafted = !isPast && draftedIds.has(item.artistId);
     // Card-free: no tint, no state border. Drafted reads from the trailing coral
@@ -308,11 +315,12 @@ export default function AddSlotScreen() {
             </View>
           )}
         </View>
-        {isPast && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 }}>
-            <MaterialIcons name="history" size={11} color={colors.warning} />
-            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.warning }}>Past gig</Text>
-          </View>
+        {isPast ? (
+          <StatusPill tone={colors.warning} icon="history" label="Past gig" />
+        ) : item.hasConflict ? (
+          <StatusPill tone={colors.warning} icon="warning" label="Conflict" />
+        ) : (
+          <StatusPill tone={colors.success} icon="check-circle" label="Available" />
         )}
         <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
       </Pressable>
@@ -453,41 +461,28 @@ export default function AddSlotScreen() {
           </>
         ) : (
           <>
-            {available.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons name="check-circle" size={15} color={colors.success} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Available ({available.length})</Text>
-                </View>
-                {available.map((item, i) => renderAssignRow(item, i))}
-              </View>
-            )}
+            <View style={styles.listHeaderRow}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>ASSIGN GIG TO</Text>
+            </View>
 
-            {withConflict.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons name="warning" size={15} color={colors.warning} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Has Conflict ({withConflict.length})</Text>
-                </View>
-                {withConflict.map((item, i) => renderAssignRow(item, i))}
-              </View>
-            )}
+            {available.length === 0 && withConflict.length === 0 && notInLineup.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+            ) : null}
+
+            {[...available, ...withConflict].map((item, i) => renderAssignRow(item, i))}
 
             {notInLineup.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons name="group-add" size={15} color={colors.muted} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Not in Lineup ({notInLineup.length})</Text>
-                </View>
+              <>
                 {notInLineup.map((item, i) => (
                   <Fragment key={item.artistId}>
-                  {i > 0 ? <Divider full /> : null}
+                  {(i > 0 || available.length > 0 || withConflict.length > 0) ? <Divider full /> : null}
                   <View style={styles.artistRow}>
                     <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user!.id} name={item.user!.fullName} size={42} variant="artist" />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
                       <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
                     </View>
+                    <StatusPill tone={colors.muted} icon="group-add" label="Not in lineup" />
                     <Pressable
                       style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
                       onPress={() => handleAddToVenue(item.artistId)}
@@ -499,7 +494,7 @@ export default function AddSlotScreen() {
                   </View>
                   </Fragment>
                 ))}
-              </View>
+              </>
             )}
 
             {available.length === 0 && withConflict.length === 0 && notInLineup.length === 0 && (
@@ -536,14 +531,13 @@ const styles = StyleSheet.create({
   timeOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
   timeOptionText: { fontSize: 14 },
   listHeaderRow: { marginTop: 8, marginBottom: 6 },
-  section: { marginTop: 8, marginBottom: 6 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  sectionTitle: { fontSize: 13, fontWeight: '700' },
   artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   artistName: { fontSize: 15, fontWeight: '700' },
   artistSub: { fontSize: 12, marginTop: 1 },
   conflictBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 3 },
   conflictText: { fontSize: 12, flex: 1, lineHeight: 16 },
+  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
+  statusPillText: { fontSize: 10, fontWeight: '700' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
