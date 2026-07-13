@@ -3,6 +3,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, M
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { Divider, StatRow } from '@/components/ui/card-free';
 import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
@@ -226,12 +227,16 @@ export default function DJHomeScreen() {
           </View>
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryRow}>
-          <SummaryCard label="CONFIRMED" value={confirmedCount} color={colors.success} colors={colors} onPress={() => router.push('/(artist)/confirmed-gigs' as Href)} />
-          <SummaryCard label="PENDING" value={pendingCount} color={colors.warning} colors={colors} onPress={() => router.push('/(artist)/pending-requests' as Href)} />
-          <SummaryCard label="COMPLETED" value={completedBookings.length} color="#2563EB" colors={colors} onPress={() => router.push('/(artist)/completed-gigs' as Href)} />
-        </View>
+        {/* Summary — inline stat row, no boxes */}
+        <Divider full />
+        <StatRow
+          items={[
+            { value: confirmedCount, label: 'Confirmed', color: colors.success, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
+            { value: pendingCount, label: 'Pending', color: colors.warning, onPress: () => router.push('/(artist)/pending-requests' as Href) },
+            { value: completedBookings.length, label: 'Completed', color: '#2563EB', onPress: () => router.push('/(artist)/completed-gigs' as Href) },
+          ]}
+        />
+        <Divider full />
 
         {/* Bookings */}
         <View style={styles.section}>
@@ -246,7 +251,7 @@ export default function DJHomeScreen() {
             }
           />
           {dashboardBookingsPreviewFiltered.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
@@ -359,7 +364,7 @@ const styles = StyleSheet.create({
   pendingBannerText: { flex: 1, fontSize: 13, fontWeight: '600' },
   pendingBannerAction: { fontSize: 13, fontWeight: '700' },
   section: { marginBottom: 28 },
-  emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
+  emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   gigCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
@@ -385,7 +390,7 @@ const styles = StyleSheet.create({
   collapseTitle: { fontSize: 16, fontWeight: '700' },
   collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   collapseBadgeText: { fontSize: 12, fontWeight: '600' },
-  monthTable: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  monthTable: {},
   monthRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 0.5 },
   monthLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   monthBadge: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },
