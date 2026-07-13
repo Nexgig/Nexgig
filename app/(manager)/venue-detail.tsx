@@ -5,7 +5,6 @@ import type { Href } from 'expo-router';
 import type { Venue } from '@/lib/types';
 import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
@@ -200,11 +199,8 @@ export default function VenueDetailScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Text style={[styles.title, { color: colors.foreground, flex: 0, flexShrink: 1 }]} numberOfLines={1}>{venue.name}</Text>
-            {venue.verificationStatus === 'verified' && (
-              <MaterialIcons name="verified" size={16} color={colors.primary} />
-            )}
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>Venue Profile</Text>
           </View>
           {isOwner ? (
             <Pressable onPress={() => router.push(('/(manager)/edit-venue?id=' + venue.id) as Href)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]}>
@@ -225,8 +221,24 @@ export default function VenueDetailScreen() {
         {/* Venue Info */}
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Text style={[styles.venueType, { color: colors.muted }]}>{venue.venueType}</Text>
-            <StatusBadge status={venue.isHidden ? 'hidden' : 'active'} />
+            <View style={styles.infoLeft}>
+              <View style={styles.nameRow}>
+                <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+                {venue.verificationStatus === 'verified' && (
+                  <MaterialIcons name="verified" size={16} color={colors.primary} />
+                )}
+              </View>
+              {venue.capacity ? (
+                <View style={styles.locationRow}>
+                  <MaterialIcons name="people" size={16} color={colors.muted} />
+                  <Text style={[styles.locationText, { color: colors.muted }]}>Capacity: {venue.capacity}</Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.locationRow}>
+              <MaterialIcons name="location-on" size={16} color={colors.muted} />
+              <Text style={[styles.locationText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation?.address)}</Text>
+            </View>
           </View>
           {isOwner && venue.verificationStatus !== 'verified' && (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -241,16 +253,6 @@ export default function VenueDetailScreen() {
                   <Text style={[styles.verifyPillText, { color: colors.warning }]}>Pending verification</Text>
                 </View>
               )}
-            </View>
-          )}
-          <View style={styles.locationRow}>
-            <MaterialIcons name="location-on" size={16} color={colors.muted} />
-            <Text style={[styles.locationText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation?.address)}</Text>
-          </View>
-          {venue.capacity && (
-            <View style={styles.locationRow}>
-              <MaterialIcons name="people" size={16} color={colors.muted} />
-              <Text style={[styles.locationText, { color: colors.muted }]}>Capacity: {venue.capacity}</Text>
             </View>
           )}
         </View>
@@ -538,7 +540,10 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', flex: 1, textAlign: 'center' },
   venuePhoto: { height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
   infoCard: { paddingHorizontal: 20, paddingBottom: 16, gap: 8 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  infoLeft: { flex: 1, gap: 6 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  venueName: { fontSize: 18, fontFamily: fonts.bodyBold, flexShrink: 1 },
   venueType: { fontSize: 13, fontWeight: '500' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   locationText: { fontSize: 13 },
