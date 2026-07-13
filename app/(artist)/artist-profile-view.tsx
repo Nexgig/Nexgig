@@ -166,7 +166,6 @@ export default function ArtistProfileViewScreen() {
           </View>
         </View>
 
-        <Divider />
 
         {/* 2. Stats: Monthly Plays + Completed Gigs */}
         <StatRow

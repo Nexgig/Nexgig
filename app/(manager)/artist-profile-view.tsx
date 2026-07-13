@@ -371,8 +371,6 @@ export default function ArtistProfileViewScreen() {
           )}
         </View>
 
-        <Divider />
-
         {contentReady ? (
         <>
         {/* 2. Stats: Monthly Plays + Completed Gigs */}
