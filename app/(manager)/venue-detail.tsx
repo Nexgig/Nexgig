@@ -406,13 +406,6 @@ export default function VenueDetailScreen() {
         {/* Slots Tab — owner only */}
         {isOwner && activeTab === 'slots' && (
           <View style={styles.tabContent}>
-            <Pressable
-              style={({ pressed }) => [styles.greyBtn, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push(('/(manager)/(tabs)/calendar') as Href)}
-            >
-              <MaterialIcons name="calendar-today" size={18} color={colors.muted} />
-              <Text style={[styles.greyBtnText, { color: colors.muted }]}>Manage in Calendar</Text>
-            </Pressable>
             {slots.length === 0 ? (
               <View style={styles.emptyCard}>
                 <MaterialIcons name="event" size={32} color={colors.muted} />
@@ -481,20 +474,21 @@ export default function VenueDetailScreen() {
                 <Text style={{ color: colors.muted, fontSize: 14 }}>No artists assigned to this venue</Text>
               </View>
             ) : (
-              [...venueAssignments]
+              <View>
+              {[...venueAssignments]
                 .sort((a, b) => {
                   const nameA = (getArtistUser(a.artistId)?.fullName ?? '').toLowerCase();
                   const nameB = (getArtistUser(b.artistId)?.fullName ?? '').toLowerCase();
                   return nameA.localeCompare(nameB);
                 })
-                .map((a) => {
+                .map((a, i, arr) => {
                 const dj = getArtistUser(a.artistId);
                 if (!dj) return null;
                 const profile = getArtistProfile(a.artistId);
                 return (
                   <View
                     key={a.id}
-                    style={styles.lineupRow}
+                    style={[styles.lineupRow, { borderBottomColor: colors.border, borderBottomWidth: i === arr.length - 1 ? 0 : StyleSheet.hairlineWidth * 2 }]}
                   >
                     <Pressable
                       style={({ pressed }) => [styles.lineupRowLeft, { opacity: pressed ? 0.6 : 1 }]}
@@ -549,7 +543,8 @@ export default function VenueDetailScreen() {
                     </Pressable>
                   </View>
                 );
-              })
+              })}
+              </View>
             )}
           </View>
         )}
@@ -618,9 +613,9 @@ const styles = StyleSheet.create({
   slotStatusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
   slotPlaceholder: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   djCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
-  djName: { fontSize: 15, fontWeight: '700' },
+  djName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   djLocation: { fontSize: 13 },
-  lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  lineupRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
   lineupRowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
   linkRowText: { fontSize: 14, fontWeight: '500', flex: 1 },
