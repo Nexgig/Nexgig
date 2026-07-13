@@ -380,7 +380,7 @@ export default function AddBlockScreen() {
               <>
                 <View style={styles.fieldBlock}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>EVENT NAME *</Text>
-                  <View style={[styles.textInputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
                       placeholder="e.g. Wedding, Corporate Party"
@@ -393,7 +393,7 @@ export default function AddBlockScreen() {
                 </View>
                 <View style={styles.fieldBlock}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION (OPTIONAL)</Text>
-                  <View style={[styles.textInputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
                       placeholder="e.g. Dubai Marina"
