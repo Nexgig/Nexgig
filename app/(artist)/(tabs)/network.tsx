@@ -279,7 +279,7 @@ export default function ArtistNetworkScreen() {
 
       {/* Search bar for venues and artists */}
       {(activeTab === 'venues' || activeTab === 'artists') && (
-        <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.searchWrap, { borderColor: colors.border }]}>
           <MaterialIcons name="search" size={18} color={colors.muted} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
