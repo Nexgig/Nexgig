@@ -45,6 +45,7 @@ export default function AddSlotScreen() {
   const assignToVenue = useLineupStore((s) => s.assignToVenue);
   const allDrafts = useDraftStore((s) => s.drafts);
   const setDraft = useDraftStore((s) => s.setDraft);
+  const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
   const allBookings = useBookingStore((s) => s.bookings);
   const addBooking = useBookingStore((s) => s.addBooking);
   const blocks = useAvailabilityStore((s) => s.blocks);
@@ -103,7 +104,9 @@ export default function AddSlotScreen() {
   // On close without assigning anyone, delete the empty background slot.
   useEffect(() => {
     return () => {
-      if (!assignedRef.current && createdSlotId) {
+      if (!createdSlotId) return;
+      const hasDrafts = useDraftStore.getState().drafts.some((d) => d.slotId === createdSlotId);
+      if (!assignedRef.current && !hasDrafts) {
         deleteSlot(createdSlotId);
         supabase.from('slots').delete().eq('id', createdSlotId).then(() => {});
       }
@@ -251,10 +254,13 @@ export default function AddSlotScreen() {
       );
       return;
     }
-    setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
-    assignedRef.current = true;
+    // Toggle, and stay open so the manager can draft several artists onto the slot.
+    if (draftedIds.has(artistId)) {
+      removeDraftByDJ(createdSlotId, artistId);
+    } else {
+      setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
+    }
     Keyboard.dismiss();
-    router.back();
   };
 
   // Add a roster artist to this venue's lineup (stays open; they move into the assignable list).
