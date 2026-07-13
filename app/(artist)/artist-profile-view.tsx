@@ -245,7 +245,7 @@ export default function ArtistProfileViewScreen() {
                     ))}
                   </View>
                 </Section>
-                <Divider />
+                {!profile?.isHistoryHidden ? <Divider /> : null}
               </>
             );
           })()}

@@ -457,7 +457,7 @@ export default function ArtistProfileViewScreen() {
                     ))}
                   </View>
                 </Section>
-                <Divider />
+                {(!profile?.isHistoryHidden || (isConnected && (dj.email || dj.phone))) ? <Divider /> : null}
               </>
             );
           })()}
