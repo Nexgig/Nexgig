@@ -116,11 +116,6 @@ export default function AllBookingsScreen() {
                     <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                       {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
                     </Text>
-                    {booking.isInvoiced && (
-                      <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                        <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                      </View>
-                    )}
                   </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
                     {booking.isArtistCreated && booking.slotDate
@@ -128,7 +123,13 @@ export default function AllBookingsScreen() {
                       : booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                <View style={[styles.statusMark, { backgroundColor: booking.dotColor }]} />
+                {booking.isInvoiced ? (
+                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.statusMark, { backgroundColor: booking.dotColor }]} />
+                )}
               </Pressable>
             );
           })
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
-  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   gigSlot: { fontSize: 13 },

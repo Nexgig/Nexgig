@@ -97,11 +97,6 @@ export default function ArtistCompletedGigsScreen() {
                 <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                   {booking.resolvedVenueName}
                 </Text>
-                {booking.isInvoiced && (
-                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                  </View>
-                )}
               </View>
               <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
                 {booking.slot
@@ -109,7 +104,13 @@ export default function ArtistCompletedGigsScreen() {
                   : ''}
               </Text>
             </View>
-            <View style={[styles.statusMark, { backgroundColor: '#2563EB' }]} />
+            {booking.isInvoiced ? (
+              <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+              </View>
+            ) : (
+              <View style={[styles.statusMark, { backgroundColor: '#2563EB' }]} />
+            )}
           </Pressable>
           );
         }}
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
-  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   time: { fontSize: 13 },
