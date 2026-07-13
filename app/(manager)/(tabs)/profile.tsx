@@ -4,6 +4,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { Section, Divider, StatRow, SoftButton } from '@/components/ui/card-free';
 import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
@@ -126,8 +127,8 @@ export default function ManagerProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Profile Card */}
-        <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {/* Hero — centered avatar, name, role, location. Edit pencil top-right. */}
+        <View style={styles.hero}>
           <Pressable
             style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.6 : 1 }]}
             onPress={() => router.push('/(manager)/edit-profile' as Href)}
@@ -136,69 +137,70 @@ export default function ManagerProfileScreen() {
             <MaterialIcons name="edit" size={18} color={colors.muted} />
           </Pressable>
           <AvatarImage uri={currentUser?.profilePhotoUrl} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} variant="manager" />
-          <View style={styles.profileInfo}>
-            <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName}</Text>
-            <Text style={[styles.role, { color: colors.foreground }]}>Venue Manager</Text>
-            {managerBasedInCountry && (
-              <View style={styles.locationRow}>
-                <MaterialIcons name="location-on" size={14} color={colors.muted} />
-                <Text style={[styles.locationText, { color: colors.muted }]}>{managerBasedInCountry.name}</Text>
-              </View>
-            )}
-          </View>
+          <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName}</Text>
+          <Text style={[styles.role, { color: colors.muted }]}>Venue Manager</Text>
+          {managerBasedInCountry && (
+            <View style={styles.locationRow}>
+              <MaterialIcons name="location-on" size={14} color={colors.muted} />
+              <Text style={[styles.locationText, { color: colors.muted }]}>{managerBasedInCountry.name}</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.content}>
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <Pressable
-              style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => router.push((venues.length === 0 ? '/(manager)/create-venue' : '/(manager)/my-venues') as Href)}
-            >
-              <Text style={[styles.statNumber, { color: venues.length === 0 ? colors.primary : colors.foreground }]}>{venues.length === 0 ? '+' : venues.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Venues</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => router.push((djCount === 0 ? '/(manager)/(tabs)/network?tab=artists' : '/(manager)/artists') as Href)}
-            >
-              <Text style={[styles.statNumber, { color: djCount === 0 ? colors.primary : colors.foreground }]}>{djCount === 0 ? '+' : djCount}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>Artists</Text>
-            </Pressable>
-          </View>
+        <Divider />
 
+        {/* Stats — inline, no boxes */}
+        <StatRow
+          items={[
+            {
+              value: venues.length === 0 ? '+' : venues.length,
+              label: 'Venues',
+              color: venues.length === 0 ? colors.primary : colors.foreground,
+              onPress: () => router.push((venues.length === 0 ? '/(manager)/create-venue' : '/(manager)/my-venues') as Href),
+            },
+            {
+              value: djCount === 0 ? '+' : djCount,
+              label: 'Artists',
+              color: djCount === 0 ? colors.primary : colors.foreground,
+              onPress: () => router.push((djCount === 0 ? '/(manager)/(tabs)/network?tab=artists' : '/(manager)/artists') as Href),
+            },
+          ]}
+        />
+
+        <Divider />
+
+        <View style={styles.content}>
           {/* Invoices */}
           <InvoicesSection colors={colors} currentUserId={currentUser?.id ?? ''} router={router} />
+        </View>
 
-          {/* Account */}
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.muted }]}>Account</Text>
-            <View style={styles.accountRow}>
-              <MaterialIcons name="email" size={16} color={colors.muted} />
-              <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>
-            </View>
-            {currentUser?.companyName ? (
-              <View style={styles.accountRow}>
-                <MaterialIcons name="business" size={16} color={colors.muted} />
-                <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.companyName}</Text>
-              </View>
-            ) : null}
-            {currentUser?.phone && (
-              <View style={styles.accountRow}>
-                <MaterialIcons name="phone" size={16} color={colors.muted} />
-                <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.phone}</Text>
-              </View>
-            )}
+        <Divider />
+
+        {/* Account */}
+        <Section label="Account">
+          <View style={styles.accountRow}>
+            <MaterialIcons name="email" size={16} color={colors.muted} />
+            <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>
           </View>
+          {currentUser?.companyName ? (
+            <View style={styles.accountRow}>
+              <MaterialIcons name="business" size={16} color={colors.muted} />
+              <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.companyName}</Text>
+            </View>
+          ) : null}
+          {currentUser?.phone && (
+            <View style={styles.accountRow}>
+              <MaterialIcons name="phone" size={16} color={colors.muted} />
+              <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.phone}</Text>
+            </View>
+          )}
+        </Section>
 
-          {/* Sign Out */}
-          <Pressable
-            style={({ pressed }) => [styles.signOutBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
-            onPress={handleSignOut}
-          >
-            <MaterialIcons name="logout" size={18} color={colors.error} />
-            <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
-          </Pressable>
+        <Divider />
+
+        {/* Sign Out */}
+        <View style={styles.signOutWrap}>
+          <SoftButton tone="danger" icon="logout" label="Sign Out" onPress={handleSignOut} />
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -305,7 +307,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
   const allSelected = selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0;
 
   return (
-    <View style={[invStyles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={invStyles.container}>
       <Pressable
         style={({ pressed }) => [invStyles.collapseHeader, { borderBottomColor: expanded ? colors.border : 'transparent', opacity: pressed ? 0.85 : 1 }]}
         onPress={() => { if (selectMode) return; setExpanded((v) => !v); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -401,7 +403,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
               </View>
             );
 
-            const cardStyle = ({ pressed }: { pressed: boolean }) => [invStyles.invoiceCard, { backgroundColor: colors.surface, borderColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : 0.5, opacity: pressed ? 0.85 : 1 }];
+            const cardStyle = ({ pressed }: { pressed: boolean }) => [invStyles.invoiceCard, { borderColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.85 : 1 }];
 
             if (selectMode) {
               return (
@@ -471,7 +473,7 @@ function generateManagerInvoiceHTML(inv: Invoice): string {
 }
 
 const invStyles = StyleSheet.create({
-  container: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  container: {},
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0.5 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   collapseHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -503,16 +505,14 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   title: { fontSize: 24, fontWeight: '800' },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, position: 'relative' },
-  editBtn: { position: 'absolute', top: 12, right: 12, zIndex: 1, padding: 4 },
-  profileInfo: { flex: 1, gap: 4 },
-  name: { fontSize: 22, fontWeight: '800' },
+  hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 6, position: 'relative' },
+  editBtn: { position: 'absolute', top: 12, right: 16, zIndex: 1, padding: 4 },
+  name: { fontSize: 22, fontWeight: '800', marginTop: 8 },
   role: { fontSize: 15, fontWeight: '600' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 13 },
-  content: { paddingHorizontal: 16, paddingBottom: 22, gap: 12 },
-  statsRow: { flexDirection: 'row', gap: 12 },
-  statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
+  content: { paddingHorizontal: 20, paddingVertical: 16 },
+  signOutWrap: { paddingHorizontal: 20, paddingVertical: 20 },
   statNumber: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
   statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   card: { borderRadius: 14, borderWidth: 1, padding: 12, gap: 10 },

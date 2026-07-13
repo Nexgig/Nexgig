@@ -49,18 +49,28 @@ export function Section({ label, children, style }: { label?: string; children: 
   );
 }
 
-/** Instagram-style inline stat row (replaces the boxed stat tiles). */
-export function StatRow({ items }: { items: { value: string | number; label: string; color?: string }[] }) {
+/** Instagram-style inline stat row (replaces the boxed stat tiles). Cells may be tappable. */
+export function StatRow({ items }: { items: { value: string | number; label: string; color?: string; onPress?: () => void }[] }) {
   const colors = useColors();
   return (
     <View style={styles.statRow}>
-      {items.map((it, i) => (
-        <View key={it.label} style={styles.statCell}>
-          {i > 0 && <View style={[styles.statSep, { backgroundColor: colors.border }]} />}
-          <Text style={[styles.statValue, { color: it.color ?? colors.foreground }]}>{it.value}</Text>
-          <Text style={[styles.statCaption, { color: colors.muted }]}>{it.label}</Text>
-        </View>
-      ))}
+      {items.map((it, i) => {
+        const inner = (
+          <>
+            {i > 0 && <View style={[styles.statSep, { backgroundColor: colors.border }]} />}
+            <Text style={[styles.statValue, { color: it.color ?? colors.foreground }]}>{it.value}</Text>
+            <Text style={[styles.statCaption, { color: colors.muted }]}>{it.label}</Text>
+          </>
+        );
+        // Branch explicitly: a plain <View> ignores function styles (Pressable-only).
+        return it.onPress ? (
+          <Pressable key={it.label} onPress={it.onPress} style={({ pressed }) => [styles.statCell, pressed ? { opacity: 0.6 } : null]}>
+            {inner}
+          </Pressable>
+        ) : (
+          <View key={it.label} style={styles.statCell}>{inner}</View>
+        );
+      })}
     </View>
   );
 }
