@@ -388,7 +388,6 @@ export default function VenueDetailScreen() {
                     <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
                   </View>
                 </Section>
-                <Divider />
               </>
             ) : null}
 
