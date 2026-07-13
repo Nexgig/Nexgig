@@ -871,7 +871,7 @@ export default function DJAvailabilityScreen() {
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
           <View style={styles.headerRight}>
             <Pressable
@@ -1404,7 +1404,7 @@ export default function DJAvailabilityScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', gap: 8 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

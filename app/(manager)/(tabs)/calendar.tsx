@@ -1690,7 +1690,7 @@ export default function CalendarScreen() {
       <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={<RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
           {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.header}>
             <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
             <Pressable
               style={({ pressed }) => [styles.headerSendBtn, { opacity: pressed ? 0.6 : 1 }]}
@@ -2464,7 +2464,7 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },
