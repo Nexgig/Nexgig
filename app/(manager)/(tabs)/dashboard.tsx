@@ -9,7 +9,7 @@ import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useReviewStore, useBookingFilterStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -39,6 +39,11 @@ export default function ManagerDashboard() {
 
   // Booking ids that appear in a non-cancelled invoice → "Invoiced" chip.
   const allInvoices = useInvoiceStore((s) => s.invoices);
+  const reviews = useReviewStore((s) => s.reviews);
+  const reviewByBooking = useMemo(
+    () => new Map(reviews.map((r) => [r.bookingId, r.rating])),
+    [reviews]
+  );
   const invoicedBookingIds = useMemo(() => new Set(
     allInvoices
       .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
@@ -144,10 +149,11 @@ export default function ManagerDashboard() {
         djs: items.map((it) => it.dj),
         dotColor: dotFor[statusKey],
         isInvoiced: items.some((it) => it.isInvoiced),
+        rating: items.map((it) => reviewByBooking.get(it.id)).find((r) => r !== undefined),
         count: items.length,
       };
     });
-  }, [filteredDashboardBookings]);
+  }, [filteredDashboardBookings, reviewByBooking]);
 
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
@@ -408,6 +414,12 @@ export default function ManagerDashboard() {
                       {title}
                       {g.first.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {g.first.venue.name}</Text> : null}
                     </Text>
+                    {g.rating !== undefined && (
+                      <View style={[styles.reviewChip, { backgroundColor: colors.warning + '1A' }]}>
+                        <MaterialIcons name="star" size={12} color={colors.warning} />
+                        <Text style={[styles.reviewChipText, { color: colors.warning }]}>{g.rating}</Text>
+                      </View>
+                    )}
                     {g.isInvoiced && (
                       <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
                         <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
@@ -610,6 +622,8 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  reviewChip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
+  reviewChipText: { fontSize: 10, fontWeight: '700' },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
   filterSheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, padding: 18, gap: 4 },
