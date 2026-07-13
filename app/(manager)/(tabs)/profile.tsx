@@ -12,7 +12,6 @@ import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { useMemo, useState, useCallback } from 'react';
-import { COUNTRIES } from '@/components/country-picker';
 
 export default function ManagerProfileScreen() {
   const router = useRouter();
@@ -99,9 +98,6 @@ export default function ManagerProfileScreen() {
     }, [currentUser?.id])
   );
 
-  const managerBasedIn = currentUser?.location ?? '';
-  const managerBasedInCountry = managerBasedIn ? COUNTRIES.find((c) => c.name === managerBasedIn) : undefined;
-
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -127,20 +123,11 @@ export default function ManagerProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Hero — centered avatar, name, role, location. */}
+        {/* Hero — centred avatar + name */}
         <View style={styles.hero}>
           <AvatarImage uri={currentUser?.profilePhotoUrl} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} variant="manager" />
           <Text style={[styles.name, { color: colors.foreground }]}>{currentUser?.fullName}</Text>
-          <Text style={[styles.role, { color: colors.muted }]}>Venue Manager</Text>
-          {managerBasedInCountry && (
-            <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={14} color={colors.muted} />
-              <Text style={[styles.locationText, { color: colors.muted }]}>{managerBasedInCountry.name}</Text>
-            </View>
-          )}
         </View>
-
-        <Divider />
 
         {/* Stats — inline, no boxes */}
         <StatRow
@@ -188,8 +175,6 @@ export default function ManagerProfileScreen() {
             </View>
           )}
         </Section>
-
-        <Divider />
 
         {/* Sign Out */}
         <View style={styles.signOutWrap}>
@@ -504,9 +489,6 @@ const styles = StyleSheet.create({
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 6, position: 'relative' },
   editBtn: { position: 'absolute', top: 12, right: 16, zIndex: 1, padding: 4 },
   name: { fontSize: 22, fontFamily: fonts.bodyBold, marginTop: 8 },
-  role: { fontSize: 15, fontWeight: '600' },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { fontSize: 13 },
   content: { paddingHorizontal: 20, paddingVertical: 16 },
   signOutWrap: { paddingHorizontal: 20, paddingVertical: 20 },
   statNumber: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
