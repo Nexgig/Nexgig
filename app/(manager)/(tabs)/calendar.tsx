@@ -1785,7 +1785,7 @@ export default function CalendarScreen() {
               const hasSlots = daySlots.length > 0;
               const mondayIdx = toMondayIndex(viewedDate.getDay());
               const isActualToday = viewedDayStr === todayStr;
-              const badgeBg = isActualToday ? colors.primary : colors.surface;
+              const badgeBg = isActualToday ? colors.primary : 'transparent';
               const badgeTextColor = isActualToday ? '#fff' : colors.foreground;
               const dayNavLabel = viewedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
               return (
@@ -1868,7 +1868,7 @@ export default function CalendarScreen() {
                   return (
                     <View key={day.dateStr} style={[styles.weekDaySection, { borderBottomColor: colors.border }]}>
                       <View style={styles.weekDayHeader}>
-                        <View style={[styles.weekDayBadge, day.isToday ? { backgroundColor: colors.primary } : { backgroundColor: colors.surface }]}>
+                        <View style={[styles.weekDayBadge, { backgroundColor: day.isToday ? colors.primary : 'transparent' }]}>
                           <Text style={[styles.weekDayShort, { color: day.isToday ? '#fff' : colors.muted }]}>{day.dayShort}</Text>
                           <Text style={[styles.weekDayNum, { color: day.isToday ? '#fff' : colors.foreground }]}>{day.date.getDate()}</Text>
                         </View>
@@ -2340,7 +2340,7 @@ export default function CalendarScreen() {
                           key={preset.name}
                           onPress={() => setBulkTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, name: preset.name, startTime: preset.start, endTime: preset.end } : t))}
                           style={({ pressed }) => [slotModalStyles.presetChip, {
-                            backgroundColor: tpl.name === preset.name ? colors.primary + '18' : colors.surface,
+                            backgroundColor: tpl.name === preset.name ? colors.primary + '18' : 'transparent',
                             borderColor: tpl.name === preset.name ? colors.primary : colors.border,
                             opacity: pressed ? 0.7 : 1,
                           }]}
@@ -2358,7 +2358,7 @@ export default function CalendarScreen() {
                       <View style={{ flex: 1, zIndex: bulkStartOpen === tpl.id ? 10 : 1 }}>
                         <Text style={[slotModalStyles.fieldLabel, { color: colors.muted }]}>START</Text>
                         <Pressable
-                          style={[slotModalStyles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          style={[slotModalStyles.timeDropdownBtn, { borderColor: colors.border }]}
                           onPress={() => { setBulkStartOpen(bulkStartOpen === tpl.id ? null : tpl.id); setBulkEndOpen(null); }}
                         >
                           <Text style={[slotModalStyles.timeDropdownText, { color: colors.foreground }]}>{tpl.startTime}</Text>
@@ -2389,7 +2389,7 @@ export default function CalendarScreen() {
                       <View style={{ flex: 1, zIndex: bulkEndOpen === tpl.id ? 10 : 1 }}>
                         <Text style={[slotModalStyles.fieldLabel, { color: colors.muted }]}>END</Text>
                         <Pressable
-                          style={[slotModalStyles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          style={[slotModalStyles.timeDropdownBtn, { borderColor: colors.border }]}
                           onPress={() => { setBulkEndOpen(bulkEndOpen === tpl.id ? null : tpl.id); setBulkStartOpen(null); }}
                         >
                           <Text style={[slotModalStyles.timeDropdownText, { color: colors.foreground }]}>{tpl.endTime}</Text>

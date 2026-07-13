@@ -945,7 +945,7 @@ export default function DJAvailabilityScreen() {
                 return (
                   <View key={dateStr} style={[styles.weekDaySection, { borderBottomColor: colors.border }]}>
                     <View style={styles.weekDayHeader}>
-                      <View style={[styles.weekDayBadge, isToday ? { backgroundColor: colors.primary } : { backgroundColor: colors.surface }]}>
+                      <View style={[styles.weekDayBadge, { backgroundColor: isToday ? colors.primary : 'transparent' }]}>
                         <Text style={[styles.weekDayShort, { color: isToday ? '#fff' : colors.muted }]}>{DAYS_SHORT[idx]}</Text>
                         <Text style={[styles.weekDayNum, { color: isToday ? '#fff' : colors.foreground }]}>{dayDate.getDate()}</Text>
                       </View>
@@ -998,7 +998,7 @@ export default function DJAvailabilityScreen() {
           const dayBlocks = blocks.filter((b) => b.date === viewedDayStr);
           const hasItems = dayBookings.length > 0 || dayBlocks.length > 0;
           const isActualToday = viewedDayStr === todayStr;
-          const badgeBg = isActualToday ? colors.primary : colors.surface;
+          const badgeBg = isActualToday ? colors.primary : 'transparent';
           const badgeTextColor = isActualToday ? '#fff' : colors.foreground;
           const dayNavLabel = viewedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
           return (

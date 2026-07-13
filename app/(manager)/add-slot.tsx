@@ -369,7 +369,7 @@ export default function AddSlotScreen() {
                 key={preset.name}
                 onPress={() => setSlotForm((f) => ({ ...f, name: preset.name, startTime: preset.start, endTime: preset.end }))}
                 style={({ pressed }) => [styles.presetChip, {
-                  backgroundColor: slotForm.name === preset.name ? colors.primary + '18' : colors.surface,
+                  backgroundColor: slotForm.name === preset.name ? colors.primary + '18' : 'transparent',
                   borderColor: slotForm.name === preset.name ? colors.primary : colors.border,
                   opacity: pressed ? 0.7 : 1,
                 }]}
@@ -385,7 +385,7 @@ export default function AddSlotScreen() {
             <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
             <View style={{ position: 'relative', zIndex: startTimeOpen ? 20 : 1 }}>
               <Pressable
-                style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: startTimeOpen ? colors.primary : colors.border }]}
+                style={[styles.timeDropdownBtn, { borderColor: startTimeOpen ? colors.primary : colors.border }]}
                 onPress={() => { Keyboard.dismiss(); setStartTimeOpen(!startTimeOpen); setEndTimeOpen(false); }}
               >
                 <MaterialIcons name="access-time" size={14} color={startTimeOpen ? colors.primary : colors.muted} />
@@ -418,7 +418,7 @@ export default function AddSlotScreen() {
             <Text style={[styles.fieldLabel, { color: colors.muted }]}>END</Text>
             <View style={{ position: 'relative', zIndex: endTimeOpen ? 20 : 1 }}>
               <Pressable
-                style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: endTimeOpen ? colors.primary : colors.border }]}
+                style={[styles.timeDropdownBtn, { borderColor: endTimeOpen ? colors.primary : colors.border }]}
                 onPress={() => { Keyboard.dismiss(); setEndTimeOpen(!endTimeOpen); setStartTimeOpen(false); }}
               >
                 <MaterialIcons name="access-time" size={14} color={endTimeOpen ? colors.primary : colors.muted} />
