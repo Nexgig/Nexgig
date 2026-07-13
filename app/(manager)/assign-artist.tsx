@@ -185,7 +185,7 @@ export default function AssignDJScreen() {
     return (
       <ScreenContainer>
         <View style={styles.center}>
-          <Text style={{ color: colors.foreground }}>Slot not found</Text>
+          <Text style={{ color: colors.foreground }}>Set not found</Text>
         </View>
       </ScreenContainer>
     );

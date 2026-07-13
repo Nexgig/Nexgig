@@ -265,7 +265,7 @@ export default function VenueDetailScreen() {
             {(['overview', 'slots', 'lineup'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : tab === 'slots' ? 'Slots' : 'Lineup'}
+                  {tab === 'overview' ? 'Overview' : tab === 'slots' ? 'Sets' : 'Lineup'}
                 </Text>
               </Pressable>
             ))}
@@ -384,7 +384,7 @@ export default function VenueDetailScreen() {
             {slots.length === 0 ? (
               <View style={styles.emptyCard}>
                 <MaterialIcons name="event" size={32} color={colors.muted} />
-                <Text style={{ color: colors.muted, fontSize: 14 }}>No slots created yet</Text>
+                <Text style={{ color: colors.muted, fontSize: 14 }}>No sets created yet</Text>
               </View>
             ) : (
               slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot) => {
