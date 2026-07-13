@@ -1700,7 +1700,7 @@ export default function CalendarScreen() {
               }}
               hitSlop={8}
             >
-              <MaterialIcons name="send" size={26} color={colors.primary} />
+              <MaterialIcons name="send" size={26} color={colors.foreground} />
               {totalPeriodDraftCount > 0 && (
                 <View style={styles.headerSendBadge}>
                   <Text style={styles.headerSendBadgeText}>{totalPeriodDraftCount}</Text>
