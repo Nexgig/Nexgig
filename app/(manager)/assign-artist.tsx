@@ -433,6 +433,13 @@ export default function AssignDJScreen() {
     });
   };
 
+  const StatusPill = ({ tone, icon, label }: { tone: string; icon: any; label: string }) => (
+    <View style={[styles.statusPill, { backgroundColor: tone + '20' }]}>
+      <MaterialIcons name={icon} size={11} color={tone} />
+      <Text style={[styles.statusPillText, { color: tone }]}>{label}</Text>
+    </View>
+  );
+
   const renderDJ = (item: typeof djsWithConflicts[0], index = 0) => {
     const isAssigned = assignedDJIds.has(item.user.id);
     // Real booking on this slot for this DJ (any non-cancelled/declined status).
@@ -486,6 +493,11 @@ export default function AssignDJScreen() {
                 <MaterialIcons name="edit" size={10} color="#fff" />
                 <Text style={styles.draftBadgeText}>Drafted</Text>
               </View>
+            )}
+            {!isCompleted && !isConfirmed && !isPending && !isPastPending && !isDrafted && (
+              item.hasConflict
+                ? <StatusPill tone={colors.warning} icon="warning" label="Conflict" />
+                : <StatusPill tone={colors.success} icon="check-circle" label="Available" />
             )}
           </View>
           <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
@@ -550,44 +562,26 @@ export default function AssignDJScreen() {
         renderItem={() => null}
         ListHeaderComponent={
           <View style={styles.listContent}>
-            {/* Available */}
-            {available.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons name="check-circle" size={16} color={colors.success} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Available ({available.length})</Text>
-                </View>
-                {available.map((dj, i) => renderDJ(dj, i))}
-              </View>
-            )}
+            <View style={styles.listHeaderRow}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>
+                {isPastSlot ? 'SEND COMPLETED GIG TO' : 'ASSIGN GIG TO'}
+              </Text>
+            </View>
 
-            {/* With Conflict */}
-            {withConflict.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons name="warning" size={16} color={colors.warning} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Has Conflict ({withConflict.length})</Text>
-                </View>
-                {withConflict.map((dj, i) => renderDJ(dj, i))}
-              </View>
-            )}
+            {[...available, ...withConflict].map((dj, i) => renderDJ(dj, i))}
 
-            {/* Not in Lineup — roster artists not yet on this venue */}
             {notInLineup.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <MaterialIcons name="group-add" size={16} color={colors.muted} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Not in Lineup ({notInLineup.length})</Text>
-                </View>
+              <>
                 {notInLineup.map((item, i) => (
                   <Fragment key={item.entry.artistId}>
-                  {i > 0 ? <Divider full /> : null}
+                  {(i > 0 || available.length > 0 || withConflict.length > 0) ? <Divider full /> : null}
                   <View style={styles.djRow}>
                     <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
                     <View style={styles.djInfo}>
                       <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
                       <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
                     </View>
+                    <StatusPill tone={colors.muted} icon="group-add" label="Not in lineup" />
                     <Pressable
                       style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
                       onPress={() => handleAddToVenueFromSlot(item.entry.artistId)}
@@ -599,7 +593,7 @@ export default function AssignDJScreen() {
                   </View>
                   </Fragment>
                 ))}
-              </View>
+              </>
             )}
 
             {djsWithConflicts.length === 0 && notInLineup.length === 0 && (
@@ -629,9 +623,10 @@ const styles = StyleSheet.create({
   infoNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginTop: 10, borderRadius: 10, borderWidth: 1, padding: 10 },
   infoNoteText: { flex: 1, fontSize: 12, lineHeight: 18 },
   listContent: { padding: 20, flexGrow: 1 },
-  section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  sectionTitle: { fontSize: 14, fontWeight: '700' },
+  listHeaderRow: { marginBottom: 6 },
+  fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
+  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
+  statusPillText: { fontSize: 10, fontWeight: '700' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   artistPhoto: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   djInfo: { flex: 1 },
