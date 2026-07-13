@@ -172,6 +172,7 @@ export default function DJBookingDetailScreen() {
                   leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
+                  trailing={<StatusBadge status={booking.status} />}
                   divider={coBookings.length > 0}
                 />
                 {coBookings.map((cb, i) => {
