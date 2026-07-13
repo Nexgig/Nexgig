@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { useColors } from '@/hooks/use-colors';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore, loadNotificationsFromSupabase } from '@/lib/store';
@@ -7,6 +8,7 @@ import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import type { Booking } from '@/lib/types';
 
 export default function DJLayout() {
+  const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
 
   useEffect(() => {
@@ -292,7 +294,7 @@ export default function DJLayout() {
   }, [currentUser?.id]);
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="booking-detail" />
       <Stack.Screen

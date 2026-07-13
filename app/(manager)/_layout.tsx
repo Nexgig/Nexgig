@@ -1,10 +1,12 @@
 import { Stack } from 'expo-router';
+import { useColors } from '@/hooks/use-colors';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase, useArtistDirectoryStore, mapVenueRow } from '@/lib/store';
 
 export default function ManagerLayout() {
+  const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
 
   useEffect(() => {
@@ -361,7 +363,7 @@ if (!lineupError && lineupData) {
   }, [currentUser?.id]);
 
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="venue-detail" />
       <Stack.Screen name="booking-detail" />
