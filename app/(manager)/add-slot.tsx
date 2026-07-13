@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore, venuePhotoUri } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -277,16 +278,15 @@ export default function AddSlotScreen() {
     });
   };
 
-  const renderAssignRow = (item: { artistId: string; user: any; profile: any; hasConflict?: boolean; conflicts?: ConflictInfo[] }) => {
+  const renderAssignRow = (item: { artistId: string; user: any; profile: any; hasConflict?: boolean; conflicts?: ConflictInfo[] }, index = 0) => {
     const drafted = !isPast && draftedIds.has(item.artistId);
+    // Card-free: no tint, no state border. Drafted reads from the trailing coral
+    // check-circle; a conflict reads from the inline red banner below the name.
     return (
+      <Fragment key={item.artistId}>
+        {index > 0 ? <Divider full /> : null}
       <Pressable
-        key={item.artistId}
-        style={({ pressed }) => [styles.artistRow, {
-          backgroundColor: drafted ? colors.primary + '15' : colors.surface,
-          borderColor: drafted ? colors.primary : (item.hasConflict ? colors.error + '40' : colors.border),
-          opacity: pressed ? 0.85 : 1,
-        }]}
+        style={({ pressed }) => [styles.artistRow, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => handleTapArtist(item.artistId)}
       >
         {item.user.profilePhotoUrl ? (
@@ -314,6 +314,7 @@ export default function AddSlotScreen() {
         )}
         <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
       </Pressable>
+      </Fragment>
     );
   };
 
@@ -445,7 +446,7 @@ export default function AddSlotScreen() {
             {pastLineup.length === 0 ? (
               <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
             ) : (
-              pastLineup.map((item) => renderAssignRow(item))
+              pastLineup.map((item, i) => renderAssignRow(item, i))
             )}
           </>
         ) : (
@@ -456,7 +457,7 @@ export default function AddSlotScreen() {
                   <MaterialIcons name="check-circle" size={15} color={colors.success} />
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Available ({available.length})</Text>
                 </View>
-                {available.map((item) => renderAssignRow(item))}
+                {available.map((item, i) => renderAssignRow(item, i))}
               </View>
             )}
 
@@ -466,7 +467,7 @@ export default function AddSlotScreen() {
                   <MaterialIcons name="warning" size={15} color={colors.warning} />
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Has Conflict ({withConflict.length})</Text>
                 </View>
-                {withConflict.map((item) => renderAssignRow(item))}
+                {withConflict.map((item, i) => renderAssignRow(item, i))}
               </View>
             )}
 
@@ -476,8 +477,10 @@ export default function AddSlotScreen() {
                   <MaterialIcons name="group-add" size={15} color={colors.muted} />
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Not in Lineup ({notInLineup.length})</Text>
                 </View>
-                {notInLineup.map((item) => (
-                  <View key={item.artistId} style={[styles.artistRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {notInLineup.map((item, i) => (
+                  <Fragment key={item.artistId}>
+                  {i > 0 ? <Divider full /> : null}
+                  <View style={styles.artistRow}>
                     {item.user!.profilePhotoUrl ? (
                       <Image source={{ uri: item.user!.profilePhotoUrl }} style={styles.artistPhoto} resizeMode="cover" />
                     ) : (
@@ -498,6 +501,7 @@ export default function AddSlotScreen() {
                       <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
                     </Pressable>
                   </View>
+                  </Fragment>
                 ))}
               </View>
             )}
@@ -539,7 +543,7 @@ const styles = StyleSheet.create({
   section: { marginTop: 8, marginBottom: 6 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   sectionTitle: { fontSize: 13, fontWeight: '700' },
-  artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 8 },
+  artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   artistPhoto: { width: 42, height: 42, borderRadius: 21, borderWidth: 1 },
   artistName: { fontSize: 15, fontWeight: '700' },
   artistSub: { fontSize: 12, marginTop: 1 },
