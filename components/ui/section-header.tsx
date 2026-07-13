@@ -12,7 +12,7 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, actionLabel, onAction, leftAccessory }: SectionHeaderProps) {
   return (
-    <View className="flex-row items-center justify-between mb-3">
+    <View className="flex-row items-center justify-between" style={{ marginBottom: 20 }}>
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <Text className="text-lg text-foreground" style={{ fontFamily: fonts.display }}>{title}</Text>
         {leftAccessory}
