@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, venuePhotoUri } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -56,6 +57,7 @@ export default function ArtistConfirmedGigsScreen() {
       </View>
 
       <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
         data={confirmedGigs}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700' },
-  list: { paddingHorizontal: 20, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  list: { paddingHorizontal: 20, paddingVertical: 8, flexGrow: 1 },
   card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
   photo: { width: 48, height: 48, borderRadius: 24 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },

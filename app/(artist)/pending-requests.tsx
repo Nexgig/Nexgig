@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
@@ -227,6 +228,7 @@ export default function ArtistPendingRequestsScreen() {
       </View>
 
       <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
         data={pendingRequests}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -248,7 +250,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700' },
-  list: { paddingHorizontal: 20, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  list: { paddingHorizontal: 20, paddingVertical: 8, flexGrow: 1 },
 
   // Flat IG row
   card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },

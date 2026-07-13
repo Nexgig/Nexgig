@@ -91,17 +91,17 @@ export default function AllBookingsScreen() {
         </View>
 
         {list.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.emptyCard}>
             <MaterialIcons name="event" size={32} color={colors.muted} />
             <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
           </View>
         ) : (
-          list.map((booking) => {
+          list.map((booking, i) => {
             const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
             return (
               <Pressable
                 key={booking.id}
-                style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.bookingCard, { borderBottomColor: colors.border, borderBottomWidth: i === list.length - 1 ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
               >
                 {venuePhoto ? (
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { fontFamily: fonts.displayBold, fontSize: 26, lineHeight: 26, transform: [{ translateY: -7 }] },
   legendText: { fontSize: 12, fontWeight: '600' },
-  emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
+  emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
