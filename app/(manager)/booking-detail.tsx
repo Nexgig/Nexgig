@@ -169,7 +169,7 @@ export default function DJBookingDetailScreen() {
             <>
               <Section label={coBookings.length > 0 ? 'Artists' : 'Artist'}>
                 <ListRow
-                  leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={56} />}
+                  leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
                   divider={coBookings.length > 0}
@@ -179,7 +179,7 @@ export default function DJBookingDetailScreen() {
                   return (
                     <ListRow
                       key={cb.id}
-                      leading={<AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={56} />}
+                      leading={<AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={44} />}
                       title={coArtist?.fullName ?? 'Former Artist'}
                       subtitle="Also on this slot"
                       trailing={<StatusBadge status={cb.status} />}
@@ -296,7 +296,7 @@ export default function DJBookingDetailScreen() {
               <>
                 <Section label="Review">
                   <Text style={[styles.reviewTitle, { color: colors.foreground }]}>No review yet</Text>
-                  <Text style={{ fontSize: 14, color: colors.muted, marginTop: 5 }}>The artist hasn&apos;t reviewed this gig yet.</Text>
+                  <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4 }}>The artist hasn&apos;t reviewed this gig yet.</Text>
                 </Section>
                 <Divider />
               </>
@@ -369,17 +369,17 @@ export default function DJBookingDetailScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth * 2 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   backBtn: { padding: 4 },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: '800' },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
   content: {},
-  bodyText: { fontSize: 15, lineHeight: 22 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 7 },
+  bodyText: { fontSize: 14, lineHeight: 21 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
   mapsBadgeText: { fontSize: 13, fontWeight: '700' },
-  reviewTitle: { fontSize: 18, fontWeight: '700' },
+  reviewTitle: { fontSize: 16, fontWeight: '700' },
   starsRow: { flexDirection: 'row', gap: 6 },
-  actions: { gap: 12, paddingHorizontal: 24, paddingVertical: 22 },
-  acceptBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 16 },
-  acceptBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  actions: { gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
+  acceptBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14 },
+  acceptBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
 });

@@ -22,7 +22,10 @@ import { useColors } from '@/hooks/use-colors';
  * app, so these compose with existing screens without a NativeWind refactor.
  */
 
-const GUTTER = 24;
+// Sizing/spacing deliberately matches the app's EXISTING scale (per Tuts) — the
+// redesign changes STRUCTURE (open sections + hairlines, no boxes), not the type
+// scale. Do not adopt the HANDOFF's larger sizes.
+const GUTTER = 20;
 
 /** 11px uppercase group label. Precedes each Section's content. */
 export function SectionLabel({ children }: { children: ReactNode }) {
@@ -104,11 +107,11 @@ export function ListRow({
 }
 
 /** Rounded coral-tint icon tile (venue / date rows). */
-export function IconTile({ icon, size = 48 }: { icon: keyof typeof MaterialIcons.glyphMap; size?: number }) {
+export function IconTile({ icon, size = 44 }: { icon: keyof typeof MaterialIcons.glyphMap; size?: number }) {
   const colors = useColors();
   return (
-    <View style={{ width: size, height: size, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary + '20' }}>
-      <MaterialIcons name={icon} size={size * 0.46} color={colors.primary} />
+    <View style={{ width: size, height: size, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary + '20' }}>
+      <MaterialIcons name={icon} size={size * 0.5} color={colors.primary} />
     </View>
   );
 }
@@ -142,20 +145,20 @@ export function SoftButton({
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 12 },
+  label: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   divider: { height: StyleSheet.hairlineWidth * 2 },
-  section: { paddingHorizontal: GUTTER, paddingVertical: 22 },
-  statRow: { flexDirection: 'row', alignItems: 'stretch', paddingHorizontal: 12, paddingVertical: 22 },
+  section: { paddingHorizontal: GUTTER, paddingVertical: 16 },
+  statRow: { flexDirection: 'row', alignItems: 'stretch', paddingHorizontal: 12, paddingVertical: 18 },
   statCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   statSep: { position: 'absolute', left: 0, top: 4, bottom: 4, width: StyleSheet.hairlineWidth * 2 },
-  statValue: { fontSize: 30, fontWeight: '800' },
-  statCaption: { fontSize: 12, fontWeight: '600', marginTop: 7 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15 },
+  statValue: { fontSize: 28, fontWeight: '800' },
+  statCaption: { fontSize: 12, fontWeight: '600', marginTop: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rowTitle: { fontSize: 17, fontWeight: '700' },
-  rowSub: { fontSize: 14, marginTop: 2 },
-  chip: { borderRadius: 100, paddingHorizontal: 16, paddingVertical: 9 },
-  chipText: { fontSize: 14, fontWeight: '600' },
-  softBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 16, paddingVertical: 16 },
-  softBtnText: { fontSize: 16, fontWeight: '700' },
+  rowTitle: { fontSize: 15, fontWeight: '700' },
+  rowSub: { fontSize: 13, lineHeight: 18, marginTop: 2 },
+  chip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  chipText: { fontSize: 13, fontWeight: '500' },
+  softBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14 },
+  softBtnText: { fontSize: 15, fontWeight: '700' },
 });
