@@ -188,7 +188,6 @@ export default function ArtistProfileViewScreen() {
               <Section label="Bio">
                 <Text style={[styles.cardText, { color: colors.foreground }]}>{bio}</Text>
               </Section>
-              <Divider />
             </>
           ) : null}
 
@@ -201,7 +200,6 @@ export default function ArtistProfileViewScreen() {
                   {secondaryGenres.map((g) => <Chip key={g} label={g} />)}
                 </View>
               </Section>
-              <Divider />
             </>
           ) : null}
 
@@ -213,7 +211,6 @@ export default function ArtistProfileViewScreen() {
                   {instruments.map((i) => <Chip key={i} label={i} />)}
                 </View>
               </Section>
-              <Divider />
             </>
           ) : null}
 
