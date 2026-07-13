@@ -8,6 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
 import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
+import { SHOW_ARTIST_HISTORY } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -458,13 +459,13 @@ export default function ArtistProfileViewScreen() {
                     ))}
                   </View>
                 </Section>
-                {(!profile?.isHistoryHidden || (isConnected && (dj.email || dj.phone))) ? <Divider /> : null}
+                {((SHOW_ARTIST_HISTORY && !profile?.isHistoryHidden) || (isConnected && (dj.email || dj.phone))) ? <Divider /> : null}
               </>
             );
           })()}
 
           {/* 6. Last 5 completed gigs — hidden if artist set isHistoryHidden */}
-          {!profile?.isHistoryHidden && (
+          {SHOW_ARTIST_HISTORY && !profile?.isHistoryHidden && (
           <>
           <View style={styles.gigHistorySection}>
             <View style={[styles.collapseHeader, { borderColor: colors.border }]}>

@@ -13,6 +13,7 @@ import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
+import { SHOW_ARTIST_HISTORY } from '@/lib/features';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { COUNTRIES } from '@/components/country-picker';
@@ -314,7 +315,9 @@ export default function ArtistProfileScreen() {
 
           <Divider />
 
-          {/* History */}
+          {/* History — hidden behind SHOW_ARTIST_HISTORY */}
+          {SHOW_ARTIST_HISTORY && (
+          <>
           <View style={styles.gigHistorySection}>
             <Pressable
               style={({ pressed }) => [
@@ -392,7 +395,8 @@ export default function ArtistProfileScreen() {
             )}
           </View>
 
-          <Divider />
+          </>
+          )}
 
           {/* Account */}
           <Section label="Account">
