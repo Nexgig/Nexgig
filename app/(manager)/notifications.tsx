@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useNotificationStore, loadNotificationsFromSupabase } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import type { AppNotification } from '@/lib/types';
 
@@ -105,14 +106,14 @@ export default function ManagerNotificationsScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.notifCard,
-          { backgroundColor: item.isRead ? colors.surface : colors.primary + '08', borderColor: item.isRead ? colors.border : colors.primary + '30', opacity: pressed ? 0.85 : 1 }
+          { backgroundColor: item.isRead ? 'transparent' : colors.primary + '08', opacity: pressed ? 0.6 : 1 }
         ]}
         onPress={() => handlePress(item)}
       >
         {isFading && (
           <Animated.View
             pointerEvents="none"
-            style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: colors.primary + '08', borderWidth: 1, borderColor: colors.primary + '30', opacity: fadeAnim }]}
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.primary + '08', opacity: fadeAnim }]}
           />
         )}
         <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
@@ -151,6 +152,7 @@ export default function ManagerNotificationsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderNotif}
         contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <Divider full />}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
@@ -166,8 +168,8 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   title: { flex: 1, fontSize: 20, fontWeight: '800' },
   markAllText: { fontSize: 13, fontWeight: '600' },
-  list: { padding: 16, gap: 10, flexGrow: 1 },
-  notifCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
+  list: { paddingVertical: 8, flexGrow: 1 },
+  notifCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
   iconContainer: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   notifContent: { flex: 1 },
   notifTitle: { fontSize: 14, marginBottom: 3 },
