@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import type { Venue } from '@/lib/types';
@@ -112,6 +113,7 @@ export default function ArtistMyVenuesScreen() {
         </View>
       ) : (
       <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
         data={myVenues}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -180,7 +182,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700' },
-  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
   card: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 8,

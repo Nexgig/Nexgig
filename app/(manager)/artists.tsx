@@ -12,6 +12,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useNotificationStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import type { VenueAssignment } from '@/lib/types';
@@ -253,6 +254,7 @@ export default function RosterScreen() {
 
       {/* Artist list */}
       <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
         data={djListGlobal}
         keyExtractor={(item) => item.entry.id}
         renderItem={renderArtist}
@@ -384,7 +386,7 @@ const styles = StyleSheet.create({
   discoverBtnText: { fontSize: 13, fontWeight: '700' },
 
   // ─── List ─────────────────────────────────────────────────────────────────
-  list: { padding: 16, gap: 10, flexGrow: 1 },
+  list: { padding: 16, flexGrow: 1 },
 
   // ─── Artist Card ──────────────────────────────────────────────────────────
   card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },

@@ -7,6 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -303,6 +304,7 @@ export default function ArtistNetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
             data={filteredVenues}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -413,6 +415,7 @@ export default function ArtistNetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
             data={filteredArtists}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -476,7 +479,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },
-  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },

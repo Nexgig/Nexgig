@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useVenueStore, venuePhotoUri } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import type { Venue } from '@/lib/types';
 
@@ -45,6 +46,7 @@ export default function ManagerMyVenuesScreen() {
       </View>
 
       <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
         data={venues}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 32, alignItems: 'flex-start' },
   addBtn: { padding: 4 },
   title: { fontSize: 20, fontWeight: '700', flex: 1 },
-  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
   rowCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 8,

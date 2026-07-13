@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
@@ -409,6 +410,7 @@ export default function NetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
             data={filteredArtists}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -520,6 +522,7 @@ export default function NetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
             data={filteredVenues}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -576,7 +579,7 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontSize: 13, fontWeight: '600' },
-  list: { paddingHorizontal: 16, paddingVertical: 8, gap: 2, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
