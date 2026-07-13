@@ -798,7 +798,7 @@ export default function DJAvailabilityScreen() {
     return (
       <Pressable
         key={b.id}
-        style={({ pressed }) => [styles.slotCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [styles.slotCard, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
         onPress={() => !isCancelled && !isDeclined && router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
       >
         <View style={[styles.slotColorBar, { backgroundColor: statusColor }]} />
@@ -829,7 +829,7 @@ export default function DJAvailabilityScreen() {
 
   // ─── Render a block card (same design as slot card, red color bar) ───
   const renderBlockCard = (b: AvailabilityBlock) => (
-    <View key={b.id} style={[styles.slotCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View key={b.id} style={[styles.slotCard, { borderColor: colors.border }]}>
       <View style={[styles.slotColorBar, { backgroundColor: STATUS_COLORS.cancelled }]} />
       <View style={styles.slotCardContent}>
         <View style={styles.slotCardTop}>

@@ -251,7 +251,7 @@ export default function AddBlockScreen() {
         {!isEditing && (
           <View style={styles.fieldBlock}>
             <Text style={[styles.fieldLabel, { color: colors.muted }]}>WHEN</Text>
-            <View style={[styles.segment, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.segment, { borderColor: colors.border }]}>
               {(['single', 'range'] as const).map((m) => (
                 <Pressable
                   key={m}
@@ -283,7 +283,7 @@ export default function AddBlockScreen() {
               <View style={{ flex: 1, zIndex: rangeStartOpen ? 30 : 1 }}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>FROM</Text>
                 <Pressable
-                  style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: rangeStartOpen ? colors.primary : colors.border }]}
+                  style={[styles.timeDropdownBtn, { borderColor: rangeStartOpen ? colors.primary : colors.border }]}
                   onPress={() => { setRangeStartOpen((v) => !v); setRangeEndOpen(false); }}
                 >
                   <MaterialIcons name="calendar-today" size={14} color={rangeStartOpen ? colors.primary : colors.muted} />
@@ -319,7 +319,7 @@ export default function AddBlockScreen() {
               <View style={{ flex: 1, zIndex: rangeEndOpen ? 30 : 1 }}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>TO</Text>
                 <Pressable
-                  style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: rangeEndOpen ? colors.primary : colors.border }]}
+                  style={[styles.timeDropdownBtn, { borderColor: rangeEndOpen ? colors.primary : colors.border }]}
                   onPress={() => { setRangeEndOpen((v) => !v); setRangeStartOpen(false); }}
                 >
                   <MaterialIcons name="calendar-today" size={14} color={rangeEndOpen ? colors.primary : colors.muted} />
@@ -359,7 +359,7 @@ export default function AddBlockScreen() {
             {/* Type toggle: Block / Private Event */}
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
-              <View style={[styles.segment, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.segment, { borderColor: colors.border }]}>
                 {(['block', 'private_event'] as const).map((t) => (
                   <Pressable
                     key={t}
@@ -412,7 +412,7 @@ export default function AddBlockScreen() {
                 <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
                   <Pressable
-                    style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: startOpen ? colors.primary : colors.border }]}
+                    style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.border }]}
                     onPress={() => { Keyboard.dismiss(); setStartOpen((v) => !v); setEndOpen(false); }}
                   >
                     <MaterialIcons name="access-time" size={14} color={startOpen ? colors.primary : colors.muted} />
@@ -447,7 +447,7 @@ export default function AddBlockScreen() {
                 <View style={{ flex: 1, zIndex: endOpen ? 20 : 1 }}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>END</Text>
                   <Pressable
-                    style={[styles.timeDropdownBtn, { backgroundColor: colors.surface, borderColor: endOpen ? colors.primary : colors.border }]}
+                    style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.border }]}
                     onPress={() => { Keyboard.dismiss(); setEndOpen((v) => !v); setStartOpen(false); }}
                   >
                     <MaterialIcons name="access-time" size={14} color={endOpen ? colors.primary : colors.muted} />
