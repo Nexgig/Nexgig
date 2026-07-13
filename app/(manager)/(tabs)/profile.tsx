@@ -382,16 +382,16 @@ function InvoicesSection({ colors, currentUserId, router }: {
                     <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
                       {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
                     </Text>
-                    {inv.status === 'cancelled' && (
-                      <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
-                        <Text style={[invStyles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
-                      </View>
-                    )}
                   </View>
                   <View style={invStyles.cardRight}>
                     <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.error, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
                     {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: '#F97316' }]} />}
                   </View>
+                  {inv.status === 'cancelled' && (
+                    <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
+                      <Text style={[invStyles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
+                    </View>
+                  )}
                 </View>
               </View>
             );
@@ -482,12 +482,12 @@ const invStyles = StyleSheet.create({
   selectCountText: { fontSize: 12 },
   content: {},
   invoiceCard: { paddingHorizontal: 16, paddingVertical: 14 },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardLeft: { flex: 1, gap: 3 },
   artistNameLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
   venueName: { fontSize: 15, fontWeight: '700' },
   sentDateText: { fontSize: 12 },
-  cancelledBadge: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginTop: 4 },
+  cancelledBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
   cancelledBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   cardRight: { alignItems: 'flex-end', gap: 6 },
   amountText: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
