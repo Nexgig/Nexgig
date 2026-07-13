@@ -176,15 +176,11 @@ export default function InvoicesScreen() {
           <View style={styles.sentCardRight}>
             <Text style={[styles.sentAmount, { color: isCancelled ? colors.muted : colors.success, textDecorationLine: isCancelled ? 'line-through' : 'none' }]}>AED {item.totalAmount.toLocaleString()}</Text>
           </View>
-        </View>
-        {/* Bottom row: CANCELLED badge (left) + three-dots menu (right) */}
-        <View style={styles.sentCardBottom}>
           {isCancelled ? (
             <View style={[styles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
               <Text style={[styles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
             </View>
-          ) : <View />}
-          {!isCancelled && (
+          ) : (
             <Pressable
               style={({ pressed }) => [styles.dotsBtn, { opacity: pressed ? 0.5 : 1 }]}
               onPress={(e) => { e.stopPropagation?.(); handleCancelInvoice(item); }}
@@ -321,17 +317,16 @@ const styles = StyleSheet.create({
   uninvoicedText: { fontSize: 12, fontWeight: '700' },
   badgeDot: { width: 10, height: 10, borderRadius: 5 },
   sentCard: { paddingVertical: 12 },
-  sentCardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  sentCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sentCardLeft: { flex: 1, gap: 3 },
   sentInvoiceNumber: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
   sentVenue: { fontSize: 15, fontWeight: '700' },
   sentDate: { fontSize: 12 },
   sentCardRight: { alignItems: 'flex-end' },
   sentAmount: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
-  sentCardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, minHeight: 24 },
-  cancelledBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  cancelledBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
   cancelledBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  dotsBtn: { padding: 2, marginLeft: 'auto' },
+  dotsBtn: { padding: 2 },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
