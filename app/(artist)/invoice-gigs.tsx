@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -39,6 +40,7 @@ function getDayDateTitle(dateStr: string): string {
 export default function InvoiceGigsScreen() {
   const router = useRouter();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { formatTime: fmtTime } = useFormatTime();
   const { venueId } = useLocalSearchParams<{ venueId: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -313,7 +315,7 @@ export default function InvoiceGigsScreen() {
 
       {/* Bottom bar */}
       {allGigRows.length > 0 && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
           <View>
             <Text style={[styles.totalLabel, { color: colors.muted }]}>Total ({selectedGigs.length} gig{selectedGigs.length !== 1 ? 's' : ''})</Text>
             <Text style={[styles.totalValue, { color: colors.foreground }]}>AED {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>

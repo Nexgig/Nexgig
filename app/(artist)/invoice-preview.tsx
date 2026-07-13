@@ -5,6 +5,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useInvoiceStore, useNotificationStore, useLineupStore, mapVenueRow } from '@/lib/store';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime, useFormatTime } from '@/lib/conflict-detection';
@@ -16,6 +17,7 @@ import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 export default function InvoicePreviewScreen() {
   const router = useRouter();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { formatTime: fmtTime } = useFormatTime();
   const { venueId, gigsJson, total, invoiceId, readOnly, managerId: paramManagerId, venueName: paramVenueName } = useLocalSearchParams<{
     venueId?: string;
@@ -332,7 +334,7 @@ export default function InvoicePreviewScreen() {
 
       {/* Bottom Action */}
       {!isReadOnly && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
           <Pressable
             style={({ pressed }) => [styles.sendBtn, { opacity: pressed || isSending ? 0.85 : 1 }]}
             onPress={handleSend}
