@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore, useInvoiceReminderStore, useNotificationStore } from '@/lib/store';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -101,7 +102,7 @@ export default function InvoicesScreen() {
     const badge = getVenueBadge(item.venueId);
     return (
       <Pressable
-        style={({ pressed }) => [styles.venueCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [styles.venueCard, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => router.push(`/(artist)/invoice-gigs?venueId=${item.venueId}` as Href)}
       >
         <View style={[styles.venueColorBar, { backgroundColor: item.venue.color }]} />
@@ -160,7 +161,7 @@ export default function InvoicesScreen() {
     const isCancelled = item.status === 'cancelled';
     return (
       <Pressable
-        style={({ pressed }) => [styles.sentCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [styles.sentCard, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => router.push(`/(artist)/invoice-preview?invoiceId=${item.id}&readOnly=1` as Href)}
       >
         <View style={styles.sentCardTop}>
@@ -230,6 +231,7 @@ export default function InvoicesScreen() {
 
       {tab === 'new' ? (
         <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
           data={artistVenues}
           keyExtractor={(item) => item.venueId}
           renderItem={renderVenueCard}
@@ -243,6 +245,7 @@ export default function InvoicesScreen() {
         />
       ) : (
         <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
           data={sentInvoices}
           keyExtractor={(item) => item.id}
           renderItem={renderSentInvoice}
@@ -307,8 +310,8 @@ const styles = StyleSheet.create({
   tabRow: { flexDirection: 'row', borderBottomWidth: 0.5 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontSize: 14 },
-  list: { padding: 16, gap: 10 },
-  venueCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
+  venueCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   venueColorBar: { width: 4, height: 44, borderRadius: 2 },
   venueInfo: { flex: 1 },
   venueName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
@@ -316,7 +319,7 @@ const styles = StyleSheet.create({
   uninvoicedBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, minWidth: 24, alignItems: 'center' },
   uninvoicedText: { fontSize: 12, fontWeight: '700' },
   badgeDot: { width: 10, height: 10, borderRadius: 5 },
-  sentCard: { borderRadius: 14, borderWidth: 1, padding: 14 },
+  sentCard: { paddingVertical: 12 },
   sentCardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   sentCardLeft: { flex: 1, gap: 3 },
   sentInvoiceNumber: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },

@@ -279,7 +279,7 @@ export default function InvoicePreviewScreen() {
           {/* Invoice Header */}
           <View style={styles.invoiceHeader}>
             <View>
-              <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>Nexgig<Text style={{ color: colors.primary }}>.</Text></Text>
+              <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>Nexgig<Text style={{ color: colors.primary, fontFamily: fonts.displayBold }}>.</Text></Text>
               <Text style={[styles.brandSlogan, { color: colors.muted }]}>BOOK. PLAY. DISCOVER.</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>

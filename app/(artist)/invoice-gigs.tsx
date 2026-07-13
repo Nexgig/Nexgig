@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -229,7 +230,7 @@ export default function InvoiceGigsScreen() {
       ? `${fmtTime(item.slot.startTime)} – ${fmtTime(item.slot.endTime)}`
       : '';
     return (
-      <View key={item.booking.id} style={[styles.gigRow, { backgroundColor: colors.surface, borderColor: item.selected ? colors.primary : colors.border }]}>
+      <View key={item.booking.id} style={[styles.gigRow, { backgroundColor: item.selected ? colors.primary + '12' : 'transparent' }]}>
         <Pressable
           style={({ pressed }) => [styles.checkbox, { borderColor: item.selected ? colors.primary : colors.border, backgroundColor: item.selected ? colors.primary : 'transparent', opacity: pressed ? 0.7 : 1 }]}
           onPress={() => toggleGig(item.booking.id)}
@@ -295,6 +296,7 @@ export default function InvoiceGigsScreen() {
       </View>
 
       <FlatList
+        ItemSeparatorComponent={() => <Divider full />}
         data={listData}
         keyExtractor={(item, index) =>
           item.type === 'header' ? `header-${item.label}` : `gig-${item.data.booking.id}`
@@ -370,9 +372,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '800' },
   subtitle: { fontSize: 12 },
   bellBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, gap: 10, paddingBottom: 120 },
+  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 },
   sectionHeader: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4, marginBottom: 2 },
-  gigRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
+  gigRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, gap: 12 },
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   gigInfo: { flex: 1 },
   gigName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
