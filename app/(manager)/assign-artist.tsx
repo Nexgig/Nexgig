@@ -101,8 +101,23 @@ export default function AssignDJScreen() {
       const add = (artistId: string, c: ConflictInfo) => {
         map.set(artistId, [...(map.get(artistId) ?? []), c]);
       };
+      // Artists already booked on THIS slot. Their own booking comes back from the
+      // RPC as a busy range, so without this they'd flag as "Booked elsewhere" —
+      // against themselves.
+      const hhmm = (t?: string | null) => (t ?? '').slice(0, 5);
+      const onThisSlot = new Set(
+        getBookingsBySlot(slot.id)
+          .filter((b) => b.status !== 'cancelled' && b.status !== 'declined')
+          .map((b) => b.artistId)
+      );
       (busyRes.data ?? []).forEach((b: any) => {
         if (!b.start_time || !b.end_time) return;
+        // This exact set, for an artist who's already on it — not a conflict.
+        if (
+          onThisSlot.has(b.artist_id) &&
+          hhmm(b.start_time) === hhmm(slot.startTime) &&
+          hhmm(b.end_time) === hhmm(slot.endTime)
+        ) return;
         if (timesOverlap(b.start_time, b.end_time, slot.startTime, slot.endTime, slot.date, slot.date)) {
           add(b.artist_id, {
             // Venue intentionally omitted — another manager's venue is private.
@@ -128,7 +143,8 @@ export default function AssignDJScreen() {
       setCrossConflicts(map);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [slot?.id, slot?.date, slot?.venueId, currentUser?.id, isVenueLineupMode, venueAssignments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slot?.id, slot?.date, slot?.venueId, currentUser?.id, isVenueLineupMode, venueAssignments, allBookings]);
 
   const unassignedLineupArtists = useMemo(
     () => myGlobalLineup
