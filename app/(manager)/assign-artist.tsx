@@ -69,8 +69,6 @@ export default function AssignDJScreen() {
   );
 
   const [venueSearch, setVenueSearch] = useState('');
-  // slotSearch moved up here (was below an early return, which violated rules-of-hooks)
-  const [slotSearch, setSlotSearch] = useState('');
 
   // ── Cross-manager conflict detection ─────────────────────────────────────
   // Fetch confirmed bookings + blocks from OTHER managers for lineup artists on this slot's date
@@ -333,18 +331,10 @@ export default function AssignDJScreen() {
   // Was a useMemo here — changed to plain computation because its dependency chain
   // includes values defined below early-return branches, which broke rules-of-hooks.
   // The filter runs on a small artist list, so losing memoization is imperceptible.
-  const filteredDjs = !slotSearch.trim()
-    ? djsWithConflicts
-    : djsWithConflicts.filter((d) => {
-        const q = slotSearch.toLowerCase();
-        return (d.user.fullName ?? '').toLowerCase().includes(q) ||
-          (d.profile?.primaryGenre ?? '').toLowerCase().includes(q);
-      });
-
-  const available = filteredDjs
+  const available = djsWithConflicts
     .filter((d) => !d.hasConflict)
     .sort((a, b) => (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase()));
-  const withConflict = filteredDjs
+  const withConflict = djsWithConflicts
     .filter((d) => d.hasConflict)
     .sort((a, b) => (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase()));
 
@@ -355,13 +345,7 @@ export default function AssignDJScreen() {
   const notInLineup = myGlobalLineup
     .filter((entry) => !venueLineupIds.has(entry.artistId))
     .map((entry) => ({ entry, user: getArtistUser(entry.artistId), profile: getArtistProfile(entry.artistId) }))
-    .filter((item) => {
-      if (!item.user) return false;
-      if (!slotSearch.trim()) return true;
-      const q = slotSearch.toLowerCase();
-      return (item.user.fullName ?? '').toLowerCase().includes(q) ||
-        (item.profile?.primaryGenre ?? '').toLowerCase().includes(q);
-    })
+    .filter((item) => !!item.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
 
   // For past slots: tapping a DJ sends a past-gig confirmation request to the artist
@@ -577,41 +561,15 @@ export default function AssignDJScreen() {
         </View>
       </View>
 
-      {/* Search */}
-      <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <MaterialIcons name="search" size={18} color={colors.muted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder="Search artists..."
-          placeholderTextColor={colors.muted}
-          value={slotSearch}
-          onChangeText={setSlotSearch}
-          returnKeyType="search"
-          autoCapitalize="none"
-        />
-        {slotSearch.length > 0 && (
-          <Pressable onPress={() => setSlotSearch('')} hitSlop={8}>
-            <MaterialIcons name="close" size={16} color={colors.muted} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* Info note */}
-      <View style={[styles.infoNote, {
-        backgroundColor: isPastSlot ? colors.warning + '15' : colors.surface,
-        borderColor: isPastSlot ? colors.warning : colors.border,
-      }]}>
-        <MaterialIcons
-          name={isPastSlot ? 'history' : 'info-outline'}
-          size={14}
-          color={isPastSlot ? colors.warning : colors.muted}
-        />
-        <Text style={[styles.infoNoteText, { color: isPastSlot ? colors.warning : colors.muted }]}>
-          {isPastSlot
-            ? 'This slot is in the past. Tapping an artist will send them a completed gig request — they must confirm or decline the completed gig.'
-            : 'Tap an artist to save a draft — no request is sent yet. Use "Send All Requests" on the calendar when ready.'}
-        </Text>
-      </View>
+      {/* Past slots still warn: tapping fires a real request, not a draft. */}
+      {isPastSlot && (
+        <View style={[styles.infoNote, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
+          <MaterialIcons name="history" size={14} color={colors.warning} />
+          <Text style={[styles.infoNoteText, { color: colors.warning }]}>
+            This slot is in the past. Tapping an artist will send them a completed gig request — they must confirm or decline the completed gig.
+          </Text>
+        </View>
+      )}
 
       <FlatList
         style={{ flex: 1, backgroundColor: colors.background }}
