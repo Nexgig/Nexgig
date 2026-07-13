@@ -419,7 +419,8 @@ export default function VenueDetailScreen() {
                 <Text style={{ color: colors.muted, fontSize: 14 }}>No sets created yet</Text>
               </View>
             ) : (
-              slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot, i, arr) => {
+              <View>
+              {slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot, i, arr) => {
                 const booking = getBookingBySlot(slot.id);
                 const dj = booking ? getArtistUser(booking.artistId) : undefined;
                 const isDone = booking && (booking.status === 'completed' || booking.isCompleted);
@@ -457,7 +458,8 @@ export default function VenueDetailScreen() {
                     )}
                   </Pressable>
                 );
-              })
+              })}
+              </View>
             )}
           </View>
         )}
@@ -609,7 +611,7 @@ const styles = StyleSheet.create({
   slotTime: { fontSize: 12 },
   slotDJ: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   unassigned: { fontSize: 12, fontWeight: '600' },
-  slotRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
+  slotRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
   slotRowTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   slotRowSub: { fontSize: 13 },
   slotStatusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
