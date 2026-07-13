@@ -199,7 +199,7 @@ export default function ArtistProfileScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>My Profile</Text>
           <View style={styles.headerRight}>
             <Pressable
-              style={({ pressed }) => [styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
               onPress={() => router.push('/(artist)/settings' as Href)}
             >
               <MaterialIcons name="settings" size={22} color={colors.foreground} />
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   title: { fontSize: 24, fontWeight: '800' },
   headerRight: { flexDirection: 'row', gap: 8 },
-  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 4, position: 'relative' },

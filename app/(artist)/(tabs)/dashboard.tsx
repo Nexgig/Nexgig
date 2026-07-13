@@ -214,7 +214,7 @@ export default function DJHomeScreen() {
           </View>
           <View style={styles.headerRight}>
             <Pressable
-              style={[styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={styles.notifBtn}
               onPress={() => router.push('/(artist)/notifications' as Href)}
             >
               <MaterialIcons name="notifications" size={22} color={colors.foreground} />
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13, marginBottom: 2 },
   name: { fontSize: 22, fontWeight: '800' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },

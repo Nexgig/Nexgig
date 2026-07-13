@@ -874,7 +874,7 @@ export default function DJAvailabilityScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
           <View style={styles.headerRight}>
             <Pressable
-              style={({ pressed }) => [styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
               onPress={() => router.push('/(artist)/invoices' as Href)}
             >
               <MaterialIcons name="receipt-long" size={22} color={colors.foreground} />
@@ -1406,7 +1406,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 0.5 },
   title: { fontSize: 24, fontWeight: '800' },
   headerRight: { flexDirection: 'row', gap: 8 },
-  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#F6F2EC' },
 
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
