@@ -369,7 +369,6 @@ export type InvoiceStatus = 'sent' | 'downloaded' | 'cancelled';
 export interface InvoiceGig {
   bookingId: string;
   date: string;       // YYYY-MM-DD
-  setName: string;
   startTime: string;  // HH:MM
   endTime: string;    // HH:MM
   price: number;      // AED

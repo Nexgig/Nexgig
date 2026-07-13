@@ -435,7 +435,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
 function generateManagerInvoiceHTML(inv: Invoice): string {
   const rows = inv.gigs.map((g) => `
     <tr>
-      <td>${g.date}</td><td>${g.setName}</td>
+      <td>${g.date}</td>
       <td>${g.startTime} – ${g.endTime}</td>
       <td style="text-align:right">${g.price.toLocaleString()}</td>
     </tr>
@@ -465,7 +465,7 @@ function generateManagerInvoiceHTML(inv: Invoice): string {
         ${inv.venueAddress ? `<div class="party-detail">${inv.venueAddress}</div>` : ''}
       </div>
     </div>
-    <table><thead><tr><th>Date</th><th>Set</th><th>Time</th><th>AED</th></tr></thead><tbody>${rows}</tbody></table>
+    <table><thead><tr><th>Date</th><th>Time</th><th>AED</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="total-row"><span class="total-label">TOTAL</span>
       <span class="total-value">AED ${inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
     </div>

@@ -2151,7 +2151,7 @@ export default function CalendarScreen() {
                               {item.djUser?.fullName ?? 'Unknown Artist'}
                             </Text>
                             <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }} numberOfLines={1}>
-                              {item.venue?.name ?? item.slot.name} · {fmtTime(item.slot.startTime)}–{fmtTime(item.slot.endTime)}
+                              {item.venue?.name ?? 'Unknown Venue'} · {fmtTime(item.slot.startTime)}–{fmtTime(item.slot.endTime)}
                             </Text>
                           </View>
                         </Pressable>

@@ -204,7 +204,6 @@ export default function InvoiceGigsScreen() {
     const gigsData = selectedGigs.map((g) => ({
       bookingId: g.booking.id,
       date: g.booking.slotDate || g.slot?.date || '',
-      setName: g.slot?.name ?? 'Set',
       startTime: g.slot?.startTime ?? g.booking.slotStartTime ?? '',
       endTime: g.slot?.endTime ?? g.booking.slotEndTime ?? '',
       price: parseFloat(g.price),
@@ -227,7 +226,7 @@ export default function InvoiceGigsScreen() {
   const renderGigRow = (item: GigRow) => {
     // Use booking.slotDate first (set on completed gigs), fall back to slot.date (for confirmed gigs)
     const dateStr = item.booking.slotDate || item.slot?.date || '';
-    const dayDateTitle = dateStr ? getDayDateTitle(dateStr) : (item.slot?.name ?? 'Set');
+    const dayDateTitle = dateStr ? getDayDateTitle(dateStr) : 'Gig';
     const timeStr = item.slot
       ? `${fmtTime(item.slot.startTime)} – ${fmtTime(item.slot.endTime)}`
       : '';
