@@ -447,7 +447,7 @@ export default function ArtistProfileViewScreen() {
                           styles.linkRow,
                           {
                             borderBottomColor: colors.border,
-                            borderBottomWidth: i === links.length - 1 ? 0 : StyleSheet.hairlineWidth * 2,
+                            borderBottomWidth: StyleSheet.hairlineWidth * 2,
                             opacity: pressed ? 0.7 : 1,
                           },
                         ]}
@@ -459,7 +459,7 @@ export default function ArtistProfileViewScreen() {
                     ))}
                   </View>
                 </Section>
-                <Divider />
+                {((SHOW_ARTIST_HISTORY && !profile?.isHistoryHidden) || (isConnected && (dj.email || dj.phone))) ? <Divider /> : null}
               </>
             );
           })()}
