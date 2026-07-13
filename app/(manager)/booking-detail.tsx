@@ -22,6 +22,7 @@ export default function DJBookingDetailScreen() {
   const getReviewByBooking = useReviewStore((s) => s.getReviewByBooking);
 
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === id));
+  const allBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const getSlotById = useSlotStore((s) => s.getSlotById);
@@ -46,6 +47,10 @@ export default function DJBookingDetailScreen() {
   // Artist shown to the manager. getArtistUser returns a "Former Artist"
   // placeholder when the artist_id is null (account deleted).
   const artistUser = getArtistUser(booking.artistId);
+
+  // Other artists booked on the SAME slot (a slot can hold a multi-artist lineup).
+  // Manager-only: lets them see/switch between everyone on this gig.
+  const coBookings = allBookings.filter((b) => b.slotId === booking.slotId && b.id !== booking.id);
 
   const isManager = currentUser?.accountType === 'manager';
   const isDJ = currentUser?.accountType === 'artist';
@@ -146,13 +151,32 @@ export default function DJBookingDetailScreen() {
           {/* Artist Card — shown to the manager so they can see who the booking is with */}
           {isManager && (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <AvatarImage uri={artistUser?.profilePhotoUrl} name={artistUser?.fullName ?? 'Former Artist'} size={44} />
+              <AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />
               <View style={styles.cardInfo}>
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>{artistUser?.fullName ?? 'Former Artist'}</Text>
                 <Text style={[styles.cardSub, { color: colors.muted }]}>Artist</Text>
               </View>
             </View>
           )}
+
+          {/* Other artists on the SAME slot — tap to open that artist's booking. */}
+          {isManager && coBookings.map((cb) => {
+            const coArtist = getArtistUser(cb.artistId);
+            return (
+              <Pressable
+                key={cb.id}
+                style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}
+              >
+                <AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={44} />
+                <View style={styles.cardInfo}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{coArtist?.fullName ?? 'Former Artist'}</Text>
+                  <Text style={[styles.cardSub, { color: colors.muted }]}>Also on this slot</Text>
+                </View>
+                <StatusBadge status={cb.status} />
+              </Pressable>
+            );
+          })}
 
           {/* Venue Card — falls back to the booking's venueName snapshot when the venue
               has been deleted, so completed-gig history keeps the real venue name.

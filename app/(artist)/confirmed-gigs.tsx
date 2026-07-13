@@ -33,7 +33,7 @@ export default function ArtistConfirmedGigsScreen() {
           name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
           endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
         } : undefined);
-        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as any : undefined);
         return { ...b, slot: resolvedSlot, venue: resolvedVenue };
       })
       .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime))

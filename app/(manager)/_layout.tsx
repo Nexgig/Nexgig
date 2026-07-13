@@ -80,7 +80,7 @@ export default function ManagerLayout() {
           slotName: b.slot_name ?? undefined,
           slotStartTime: b.slot_start_time ?? undefined,
           slotEndTime: b.slot_end_time ?? undefined,
-          venueName: b.venue_name ?? undefined,
+          venueName: b.venue_name ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined,
           createdAt: b.created_at,
           updatedAt: b.updated_at,
         }));
@@ -95,7 +95,20 @@ export default function ManagerLayout() {
         .eq('status', 'active');
 
 if (!lineupError && lineupData) {
-  const artistIds = lineupData.map((l) => l.artist_id);
+  // Roster = the manager's current global_lineup.
+  const rosterIds = lineupData.map((l) => l.artist_id);
+  // ALSO fetch any artist referenced by this manager's BOOKINGS. A disconnected
+  // artist is no longer in global_lineup, so without this their historical
+  // bookings resolved to no user and rendered as "Unknown Artist". The artists
+  // table is world-readable to authenticated users, so this is allowed.
+  // NOTE: these extra artists go into `artistUsers` (the name/avatar lookup pool)
+  // ONLY — `globalLineup` (the roster) is still built from rosterIds below, so a
+  // disconnected artist never reappears as "connected" in My Artists / assign.
+  const bookingArtistIds = (bookingsData ?? [])
+    .map((b: any) => b.artist_id)
+    .filter((x: string | null): x is string => !!x);
+  const rosterIdSet = new Set(rosterIds);
+  const artistIds = Array.from(new Set([...rosterIds, ...bookingArtistIds]));
         if (artistIds.length > 0) {
           const { data: artistsData } = await supabase
             .from('artists')
@@ -121,13 +134,17 @@ if (!lineupError && lineupData) {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             }));
-            const globalLineup = artistsData.map((a) => ({
-              id: `${user.id}-${a.id}`,
-              managerId: user.id,
-              artistId: a.id,
-              status: 'active' as const,
-              addedAt: new Date().toISOString(),
-            }));
+            // Roster ONLY — exclude the booking-only (disconnected) artists that
+            // were added to the fetch above purely for name/avatar resolution.
+            const globalLineup = artistsData
+              .filter((a) => rosterIdSet.has(a.id))
+              .map((a) => ({
+                id: `${user.id}-${a.id}`,
+                managerId: user.id,
+                artistId: a.id,
+                status: 'active' as const,
+                addedAt: new Date().toISOString(),
+              }));
             useLineupStore.setState({ artistUsers, globalLineup });
             // Seed the shared artist directory with FULL lineup-artist data so their
             // profile screens open complete on the first frame (no fetch-on-open pop).

@@ -10,7 +10,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -133,6 +133,7 @@ export default function CalendarScreen() {
     slot_start_time: slotStartTime,
     slot_end_time: slotEndTime,
     venue_name: venueName,
+    venue_photo_url: venuePhotoUri(getVenueById(venueId)) ?? null,
   });
   if (error) console.warn('booking insert error:', JSON.stringify(error));
 };

@@ -265,6 +265,7 @@ export interface Booking {
   slotStartTime?: string; // HH:MM
   slotEndTime?: string;   // HH:MM
   venueName?: string;     // snapshot of venue name
+  venuePhotoUrl?: string; // snapshot of venue photo — persists even if venue is hidden/disconnected
   hiddenFromCalendar?: boolean; // artist dismissed past booking from calendar view
   hiddenFromManagerCalendar?: boolean; // manager dismissed declined/cancelled booking from their calendar view
   cancellationAcknowledged?: boolean; // artist dismissed the cancellation from New tab — moves to Cancelled tab

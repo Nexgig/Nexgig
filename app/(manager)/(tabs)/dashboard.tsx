@@ -120,6 +120,34 @@ export default function ManagerDashboard() {
   );
   const dashboardBookingsPreviewFiltered = useMemo(() => filteredDashboardBookings.slice(0, 6), [filteredDashboardBookings]);
 
+  // Group bookings by slot so a slot with several artists shows as ONE row
+  // (stacked avatars + joined names). Status dot uses the highest-priority
+  // status among the slot's artists: pending > confirmed > completed.
+  const groupedBookingsPreview = useMemo(() => {
+    const groups = new Map<string, typeof filteredDashboardBookings>();
+    const order: string[] = [];
+    for (const b of filteredDashboardBookings) {
+      const key = b.slotId ?? b.id;
+      if (!groups.has(key)) { groups.set(key, []); order.push(key); }
+      groups.get(key)!.push(b);
+    }
+    const rank: Record<string, number> = { pending: 0, confirmed: 1, completed: 2 };
+    const dotFor: Record<string, string> = { pending: '#F59E0B', confirmed: '#22C55E', completed: '#2563EB' };
+    return order.slice(0, 6).map((key) => {
+      const items = groups.get(key)!;
+      const first = items[0];
+      const statusKey = items.reduce((acc, it) => (rank[it.statusKey] < rank[acc] ? it.statusKey : acc), first.statusKey);
+      return {
+        key,
+        first,
+        djs: items.map((it) => it.dj),
+        dotColor: dotFor[statusKey],
+        isInvoiced: items.some((it) => it.isInvoiced),
+        count: items.length,
+      };
+    });
+  }, [filteredDashboardBookings]);
+
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
@@ -142,7 +170,7 @@ export default function ManagerDashboard() {
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
         slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
-        venueName: b.venue_name ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+        venueName: b.venue_name ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
     setRefreshing(false);
@@ -345,38 +373,52 @@ export default function ManagerDashboard() {
               </Pressable>
             }
           />
-          {dashboardBookingsPreviewFiltered.length === 0 ? (
+          {groupedBookingsPreview.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            dashboardBookingsPreviewFiltered.map((booking) => {
+            groupedBookingsPreview.map((g) => {
+              const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
+              const title = g.count === 1
+                ? names[0]
+                : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
               return (
               <Pressable
-                key={booking.id}
+                key={g.key}
                 style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
+                onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
               >
-                <AvatarImage uri={booking.dj?.profilePhotoUrl} size={48} variant="artist" />
+                {g.count === 1 ? (
+                  <AvatarImage uri={g.djs[0]?.profilePhotoUrl} avatarId={(g.djs[0] as any)?.avatarId} seed={(g.djs[0] as any)?.id} size={48} variant="artist" />
+                ) : (
+                  <View style={styles.avatarStack}>
+                    {g.djs.slice(0, 3).map((d, i) => (
+                      <View key={i} style={[styles.stackedAvatar, { marginLeft: i === 0 ? 0 : -16, zIndex: 3 - i, borderColor: colors.background }]}>
+                        <AvatarImage uri={d?.profilePhotoUrl} avatarId={(d as any)?.avatarId} seed={(d as any)?.id} name={d?.fullName} size={44} variant="artist" />
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                      {booking.dj?.fullName ?? 'Unknown Artist'}
-                      {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
+                      {title}
+                      {g.first.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {g.first.venue.name}</Text> : null}
                     </Text>
-                    {booking.isInvoiced && (
+                    {g.isInvoiced && (
                       <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
                         <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
                       </View>
                     )}
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
-                    {booking.slot ? `${formatDate(booking.slot.date)} · ${fmtTime(booking.slot.startTime)}–${fmtTime(booking.slot.endTime)}` : ''}
+                    {g.first.slot ? `${formatDate(g.first.slot.date)} · ${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
                   </Text>
                 </View>
                 {/* Status dot — Clash Display period, like the Nexgig "." */}
-                <Text allowFontScaling={false} style={[styles.statusDot, { color: booking.dotColor }]}>.</Text>
+                <Text allowFontScaling={false} style={[styles.statusDot, { color: g.dotColor }]}>.</Text>
               </Pressable>
               );
             })
@@ -561,6 +603,8 @@ const styles = StyleSheet.create({
   emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
+  avatarStack: { flexDirection: 'row', alignItems: 'center' },
+  stackedAvatar: { borderRadius: 999, borderWidth: 2 },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
