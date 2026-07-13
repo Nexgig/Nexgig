@@ -357,12 +357,15 @@ export default function ArtistProfileViewScreen() {
           {loading ? (
             <Skeleton width={150} height={20} radius={6} color={colors.border} style={{ marginTop: 10 }} />
           ) : (
-            <View style={styles.nameWrap}>
-              <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
+            <View style={styles.nameRow}>
+              {profile?.hasCompletedBooking ? (
+                <MaterialIcons name="verified" size={18} color="transparent" style={{ marginRight: 6 }} />
+              ) : null}
+              <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                 {dj.fullName}
               </Text>
               {profile?.hasCompletedBooking ? (
-                <MaterialIcons name="verified" size={18} color={colors.primary} style={styles.nameSeal} />
+                <MaterialIcons name="verified" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
               ) : null}
             </View>
           )}
@@ -669,8 +672,7 @@ const styles = StyleSheet.create({
   heroNameBlock: { flex: 1, gap: 4 },
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   djName: { fontSize: 22, fontFamily: fonts.bodyBold, textAlign: 'center' },
-  nameWrap: { alignSelf: 'center', marginTop: 8, position: 'relative' },
-  nameSeal: { position: 'absolute', left: '100%', marginLeft: 6, top: '50%', marginTop: -9 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   basedInText: { fontSize: 14 },
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4 },

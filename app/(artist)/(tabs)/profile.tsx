@@ -211,12 +211,15 @@ export default function ArtistProfileScreen() {
             name's right edge, so it never pulls the name off centre. */}
         <View style={styles.hero}>
           <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
-          <View style={styles.nameWrap}>
-            <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+          <View style={styles.nameRow}>
+            {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
+              <MaterialIcons name="verified" size={18} color="transparent" style={{ marginRight: 6 }} />
+            ) : null}
+            <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
               {currentUser?.fullName}
             </Text>
             {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
-              <MaterialIcons name="verified" size={18} color={colors.primary} style={styles.nameSeal} />
+              <MaterialIcons name="verified" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
             ) : null}
           </View>
         </View>
@@ -435,9 +438,8 @@ const styles = StyleSheet.create({
   profileNameBlock: { flex: 1, gap: 4 },
   profileBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileInfo: { flex: 1, gap: 4 },
-  nameWrap: { alignSelf: 'center', marginTop: 8, position: 'relative' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   name: { fontSize: 22, fontFamily: fonts.bodyBold, textAlign: 'center' },
-  nameSeal: { position: 'absolute', left: '100%', marginLeft: 6, top: '50%', marginTop: -9 },
   basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   basedInText: { fontSize: 14 },
   memberSince: { fontSize: 11, marginTop: 4 },

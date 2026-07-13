@@ -153,12 +153,15 @@ export default function ArtistProfileViewScreen() {
         {/* 1. Profile Hero: photo, name, location, member since */}
         <View style={styles.hero}>
           <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
-          <View style={styles.nameWrap}>
-            <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
+          <View style={styles.nameRow}>
+            {profile?.hasCompletedBooking ? (
+              <MaterialIcons name="verified" size={18} color="transparent" style={{ marginRight: 6 }} />
+            ) : null}
+            <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
               {dj.fullName}
             </Text>
             {profile?.hasCompletedBooking ? (
-              <MaterialIcons name="verified" size={18} color={colors.primary} style={styles.nameSeal} />
+              <MaterialIcons name="verified" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
             ) : null}
           </View>
         </View>
@@ -329,8 +332,7 @@ const styles = StyleSheet.create({
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroInfo: { flex: 1, gap: 4 },
   djName: { fontSize: 18, fontFamily: fonts.bodyBold, textAlign: 'center' },
-  nameWrap: { alignSelf: 'center', marginTop: 8, position: 'relative' },
-  nameSeal: { position: 'absolute', left: '100%', marginLeft: 6, top: '50%', marginTop: -9 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   basedInText: { fontSize: 14 },
 
