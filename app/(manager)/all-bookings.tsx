@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, useReviewStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, venuePhotoUri } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -27,11 +27,6 @@ export default function AllBookingsScreen() {
   );
 
   const allInvoices = useInvoiceStore((s) => s.invoices);
-  const reviews = useReviewStore((s) => s.reviews);
-  const reviewByBooking = useMemo(
-    () => new Map(reviews.map((r) => [r.bookingId, r.rating])),
-    [reviews]
-  );
   const invoicedBookingIds = useMemo(() => new Set(
     allInvoices
       .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
@@ -125,12 +120,6 @@ export default function AllBookingsScreen() {
                       {booking.dj?.fullName ?? 'Unknown Artist'}
                       {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
                     </Text>
-                    {reviewByBooking.get(booking.id) !== undefined && (
-                      <View style={[styles.reviewChip, { backgroundColor: colors.warning + '1A' }]}>
-                        <MaterialIcons name="star" size={12} color={colors.warning} />
-                        <Text style={[styles.reviewChipText, { color: colors.warning }]}>{reviewByBooking.get(booking.id)}</Text>
-                      </View>
-                    )}
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
                     {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
@@ -169,8 +158,6 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
-  reviewChip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0 },
-  reviewChipText: { fontSize: 10, fontWeight: '700' },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   bookingDJ: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingSub: { fontSize: 13 },
