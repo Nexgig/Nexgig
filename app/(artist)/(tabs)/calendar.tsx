@@ -900,7 +900,7 @@ export default function DJAvailabilityScreen() {
           ];
           return (
             <View style={styles.viewToggleContainer}>
-              <View style={[styles.viewToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.viewToggle, { borderColor: colors.border }]}>
                 {ordered.map(({ mode, label, icon }) => (
                   <Pressable
                     key={mode}
