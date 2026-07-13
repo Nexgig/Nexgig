@@ -10,6 +10,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 import { supabase } from '@/lib/supabase';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
@@ -106,11 +107,8 @@ export default function ArtistVenueDetailScreen() {
           >
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Text style={[styles.title, { color: colors.foreground, flex: 0, flexShrink: 1 }]} numberOfLines={1}>{venue.name}</Text>
-            {venue.verificationStatus === 'verified' && (
-              <MaterialIcons name="verified" size={16} color={colors.primary} />
-            )}
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>Venue Profile</Text>
           </View>
           <Pressable onPress={() => setShowReport(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.6 : 1, alignItems: 'flex-end' }]} hitSlop={8}>
             <MaterialIcons name="flag" size={20} color={colors.muted} />
@@ -124,19 +122,28 @@ export default function ArtistVenueDetailScreen() {
 
         {/* Venue Info Card */}
         <View style={styles.infoCard}>
-          <Text style={[styles.venueType, { color: colors.muted }]}>{venueTypeLabel}</Text>
-          {venue.googleMapsLocation?.address ? (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="location-on" size={16} color={colors.muted} />
-              <Text style={[styles.infoText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
+          <View style={styles.infoTopRow}>
+            <View style={styles.infoLeft}>
+              <View style={styles.nameRow}>
+                <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
+                {venue.verificationStatus === 'verified' && (
+                  <MaterialIcons name="verified" size={16} color={colors.primary} />
+                )}
+              </View>
+              {venue.capacity ? (
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="people" size={16} color={colors.muted} />
+                  <Text style={[styles.infoText, { color: colors.muted }]}>Capacity: {venue.capacity}</Text>
+                </View>
+              ) : null}
             </View>
-          ) : null}
-          {venue.capacity ? (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="people" size={16} color={colors.muted} />
-              <Text style={[styles.infoText, { color: colors.muted }]}>Capacity: {venue.capacity}</Text>
-            </View>
-          ) : null}
+            {venue.googleMapsLocation?.address ? (
+              <View style={styles.infoRow}>
+                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <Text style={[styles.infoText, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
 
         <Divider />
@@ -268,6 +275,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4, gap: 8,
   },
   venueType: { fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
+  infoTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  infoLeft: { flex: 1, gap: 6 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  venueName: { fontSize: 18, fontFamily: fonts.bodyBold, flexShrink: 1 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   infoText: { fontSize: 13, flex: 1 },
   tabBar: {
