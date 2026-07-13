@@ -2501,7 +2501,7 @@ const styles = StyleSheet.create({
   legendScroll: { marginTop: 6, marginBottom: 4 },
   legendContent: { paddingHorizontal: 20, gap: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 0 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 12, fontWeight: '600' },
   // Venue tabs
   venueScroll: { marginTop: 10, flexGrow: 0 },
@@ -2522,7 +2522,7 @@ const styles = StyleSheet.create({
   dayCircle: { width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 18, fontWeight: '600' },
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
-  dot: { width: 4, height: 4, borderRadius: 0 },
+  dot: { width: 4, height: 4, borderRadius: 2 },
   // Slots section
   slotsSection: { padding: 20 },
   slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
@@ -2628,7 +2628,7 @@ const styles = StyleSheet.create({
   // Dot legend
   dotLegend: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 2, paddingBottom: 4, paddingHorizontal: 16 },
   dotLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  dotLegendDot: { width: 8, height: 8, borderRadius: 0 },
+  dotLegendDot: { width: 8, height: 8, borderRadius: 4 },
   dotLegendText: { fontSize: 11 },
   slotHeaderRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   djAssignmentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
