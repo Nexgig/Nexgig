@@ -11,7 +11,6 @@ import { supabase } from '@/lib/supabase';
 import * as Haptics from 'expo-haptics';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
-import { performerLabel } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
 import { SHOW_ARTIST_HISTORY } from '@/lib/features';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -208,24 +207,18 @@ export default function ArtistProfileScreen() {
           </View>
         </View>
 
-        {/* Hero — centered avatar, name + seal, role, location. */}
+        {/* Hero — centred avatar + name. The seal is absolutely positioned off the
+            name's right edge, so it never pulls the name off centre. */}
         <View style={styles.hero}>
           <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-            <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
+          <View style={styles.nameWrap}>
+            <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
               {currentUser?.fullName}
             </Text>
             {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
-              <MaterialIcons name="verified" size={18} color={colors.primary} />
+              <MaterialIcons name="verified" size={18} color={colors.primary} style={styles.nameSeal} />
             ) : null}
           </View>
-          <Text style={[styles.genre, { color: colors.muted }]}>{performerLabel(profile?.instruments)}</Text>
-          {basedInCountry ? (
-            <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={13} color={colors.muted} />
-              <Text style={[styles.locationText, { color: colors.muted }]}>{basedInCountry.name}</Text>
-            </View>
-          ) : null}
         </View>
 
         {/* Stats — inline, no boxes */}
@@ -310,6 +303,15 @@ export default function ArtistProfileScreen() {
               </Section>
             );
           })()}
+
+          {basedInCountry ? (
+            <Section label="Based In">
+              <View style={styles.basedInRow}>
+                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
+              </View>
+            </Section>
+          ) : null}
 
           {/* History — hidden behind SHOW_ARTIST_HISTORY */}
           {SHOW_ARTIST_HISTORY && (
@@ -433,10 +435,11 @@ const styles = StyleSheet.create({
   profileNameBlock: { flex: 1, gap: 4 },
   profileBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profileInfo: { flex: 1, gap: 4 },
-  name: { fontSize: 22, fontFamily: fonts.bodyBold },
-  genre: { fontSize: 15 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { fontSize: 13 },
+  nameWrap: { alignSelf: 'center', marginTop: 8, position: 'relative' },
+  name: { fontSize: 22, fontFamily: fonts.bodyBold, textAlign: 'center' },
+  nameSeal: { position: 'absolute', left: '100%', marginLeft: 6, top: '50%', marginTop: -9 },
+  basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  basedInText: { fontSize: 14 },
   memberSince: { fontSize: 11, marginTop: 4 },
   content: { paddingBottom: 40 },
   // Stats
