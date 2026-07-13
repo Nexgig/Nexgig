@@ -12,6 +12,22 @@ import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { isPastStart } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
+import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
+
+/** Compact coral "Maps" badge — replaces the old full-width "Open in Google Maps" row. */
+function MapsBadge({ onPress }: { onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
+    >
+      <MaterialIcons name="directions" size={15} color={colors.primary} />
+      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
+    </Pressable>
+  );
+}
 
 export default function DJBookingDetailScreen() {
   const router = useRouter();
@@ -200,146 +216,128 @@ export default function DJBookingDetailScreen() {
           {/* Venue Card — the Maps button lives INSIDE the card (below the venue info),
               matching the manager booking-detail. */}
           {venue ? (
-            <View style={[styles.venueCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.venueCardTop}>
-                <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
-                  <MaterialIcons name="business" size={22} color={colors.primary} />
-                </View>
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{venue.name}</Text>
-                  <Text style={[styles.cardSub, { color: colors.muted }]}>{venue.venueType}</Text>
-                  {venue.googleMapsLocation?.address && (
-                    <Text style={[styles.cardSub, { color: colors.muted }]}>{cityFromAddress(venue.googleMapsLocation.address)}</Text>
-                  )}
-                </View>
-              </View>
-              {(venue?.googleMapsLocation?.address || (venue?.googleMapsLocation?.lat && venue?.googleMapsLocation?.lng) || venue?.name) ? (
-                <Pressable
-                  style={({ pressed }) => [styles.mapsRow, { borderTopColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                  onPress={() => {
-                    const loc = venue?.googleMapsLocation;
-                    const url = (loc?.lat && loc?.lng)
-                      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || '')}`;
-                    Linking.openURL(url);
-                  }}
-                >
-                  <MaterialIcons name="directions" size={18} color={colors.primary} />
-                  <Text style={[styles.mapsRowText, { color: colors.primary }]}>Open in Google Maps</Text>
-                </Pressable>
-              ) : null}
-            </View>
+            <>
+              <Section label="Venue">
+                <ListRow
+                  leading={<IconTile icon="business" />}
+                  title={venue.name}
+                  subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
+                  trailing={
+                    (venue?.googleMapsLocation?.address || (venue?.googleMapsLocation?.lat && venue?.googleMapsLocation?.lng) || venue?.name) ? (
+                      <MapsBadge
+                        onPress={() => {
+                          const loc = venue?.googleMapsLocation;
+                          const url = (loc?.lat && loc?.lng)
+                            ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                            : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || '')}`;
+                          Linking.openURL(url);
+                        }}
+                      />
+                    ) : undefined
+                  }
+                  divider={false}
+                />
+              </Section>
+              <Divider />
+            </>
           ) : booking.isArtistCreated ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
-                <MaterialIcons name="event-note" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{booking.slotName ?? 'Private Event'}</Text>
-                {booking.privateEventLocation ? (
-                  <Text style={[styles.cardSub, { color: colors.muted }]}>{booking.privateEventLocation}</Text>
-                ) : null}
-                <Text style={[styles.cardSub, { color: colors.muted }]}>Private Event</Text>
-              </View>
-            </View>
+            <>
+              <Section label="Private Event">
+                <ListRow
+                  leading={<IconTile icon="event-note" />}
+                  title={booking.slotName ?? 'Private Event'}
+                  subtitle={[booking.privateEventLocation, 'Private Event'].filter(Boolean).join('\n')}
+                  divider={false}
+                />
+              </Section>
+              <Divider />
+            </>
           ) : booking.venueName ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
-                <MaterialIcons name="business" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{booking.venueName}</Text>
-              </View>
-            </View>
+            <>
+              <Section label="Venue">
+                <ListRow leading={<IconTile icon="business" />} title={booking.venueName} divider={false} />
+              </Section>
+              <Divider />
+            </>
           ) : null}
 
           {/* Slot / Day Details */}
           {slot ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
-                <MaterialIcons name="event" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{formatDate(slot.date)}</Text>
-                <Text style={[styles.cardSub, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
-              </View>
-            </View>
+            <>
+              <Section label="Date & Time">
+                <ListRow
+                  leading={<IconTile icon="event" />}
+                  title={formatDate(slot.date)}
+                  subtitle={`${fmtTime(slot.startTime)} – ${fmtTime(slot.endTime)}`}
+                  divider={false}
+                />
+              </Section>
+              <Divider />
+            </>
           ) : (booking.slotDate || booking.slotStartTime) ? (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.cardIcon, { backgroundColor: colors.primary + '20' }]}>
-                <MaterialIcons name="schedule" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.cardInfo}>
-                {booking.slotDate ? (
-                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>{formatDate(booking.slotDate)}</Text>
-                ) : null}
-                {booking.slotStartTime && booking.slotEndTime ? (
-                  <Text style={[styles.cardSub, { color: colors.muted }]}>{fmtTime(booking.slotStartTime)} – {fmtTime(booking.slotEndTime)}</Text>
-                ) : null}
-              </View>
-            </View>
+            <>
+              <Section label="Date & Time">
+                <ListRow
+                  leading={<IconTile icon="schedule" />}
+                  title={booking.slotDate ? formatDate(booking.slotDate) : ''}
+                  subtitle={booking.slotStartTime && booking.slotEndTime ? `${fmtTime(booking.slotStartTime)} – ${fmtTime(booking.slotEndTime)}` : undefined}
+                  divider={false}
+                />
+              </Section>
+              <Divider />
+            </>
           ) : null}
 
           {/* Venue Vibe */}
-          {venue && venue.vibeDescription && (
-            <View style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.notesLabel, { color: colors.muted }]}>Venue Vibe</Text>
-              <Text style={[styles.notesText, { color: colors.foreground }]}>{venue.vibeDescription}</Text>
-            </View>
-          )}
+          {venue && venue.vibeDescription ? (
+            <>
+              <Section label="Venue Vibe">
+                <Text style={[styles.bodyText, { color: colors.foreground }]}>{venue.vibeDescription}</Text>
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
           {/* Venue Energy */}
-          {venue && Array.isArray(venue.preferredEnergy) && venue.preferredEnergy.length > 0 && (
-            <View style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.notesLabel, { color: colors.muted }]}>Expected Energy</Text>
-              <View style={styles.chips}>
-                {venue.preferredEnergy.map((e) => (
-                  <View key={e} style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.chipText, { color: colors.foreground }]}>{e}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+          {venue && Array.isArray(venue.preferredEnergy) && venue.preferredEnergy.length > 0 ? (
+            <>
+              <Section label="Expected Energy">
+                <View style={styles.chips}>
+                  {venue.preferredEnergy.map((e) => <Chip key={e} label={e} />)}
+                </View>
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
           {/* Venue Rules */}
-          {venue?.rulesTemplate && (
-            <View style={[styles.notesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.notesLabel, { color: colors.muted }]}>Venue Rules</Text>
-              <Text style={[styles.notesText, { color: colors.foreground }]}>{venue.rulesTemplate}</Text>
-            </View>
-          )}
+          {venue?.rulesTemplate ? (
+            <>
+              <Section label="Venue Rules">
+                <Text style={[styles.bodyText, { color: colors.foreground }]}>{venue.rulesTemplate}</Text>
+              </Section>
+              <Divider />
+            </>
+          ) : null}
 
-          {/* Actions — DJ: Accept/Decline for requested and past_confirmation bookings (not for private events) */}
+          {/* Actions — Accept/Decline for requested + past_confirmation (not private events) */}
           {!booking.isArtistCreated && (booking.status === 'requested' || booking.status === 'past_confirmation') && (
             <View style={styles.actions}>
               <Pressable
-                style={({ pressed }) => [styles.actionBtn, styles.acceptBtn, { opacity: pressed ? 0.8 : 1 }]}
+                style={({ pressed }) => [styles.acceptBtn, { backgroundColor: colors.success, opacity: pressed ? 0.8 : 1 }]}
                 onPress={handleAccept}
               >
                 <MaterialIcons name="check-circle" size={18} color="#000" />
                 <Text style={styles.acceptBtnText}>Confirm</Text>
               </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, styles.declineBtn, { borderColor: colors.error, opacity: pressed ? 0.8 : 1 }]}
-                onPress={handleDecline}
-              >
-                <MaterialIcons name="cancel" size={18} color={colors.error} />
-                <Text style={[styles.declineBtnText, { color: colors.error }]}>Decline</Text>
-              </Pressable>
+              <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
             </View>
           )}
 
-          {/* Actions — DJ: Cancel confirmed bookings */}
+          {/* Actions — Cancel confirmed bookings */}
           {booking.status === 'confirmed' && (
             <View style={styles.actions}>
-              <Pressable
-                style={({ pressed }) => [styles.actionBtn, styles.declineBtn, { borderColor: colors.error, opacity: pressed ? 0.8 : 1 }]}
-                onPress={handleCancelConfirmed}
-              >
-                <MaterialIcons name="cancel" size={18} color={colors.error} />
-                <Text style={[styles.declineBtnText, { color: colors.error }]}>Cancel Booking</Text>
-              </Pressable>
+              <SoftButton tone="danger" icon="cancel" label="Cancel Booking" onPress={handleCancelConfirmed} />
             </View>
           )}
 
@@ -351,43 +349,45 @@ export default function DJBookingDetailScreen() {
             if (submitted && displayReview) {
               // Read-only view
               return (
-                <View style={[styles.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text style={[styles.reviewTitle, { color: colors.foreground }]}>Your Review</Text>
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <MaterialIcons
-                        key={star}
-                        name="star"
-                        size={28}
-                        color={star <= displayReview.rating ? '#F59E0B' : colors.border}
-                      />
-                    ))}
-                  </View>
-                  {displayReview.text ? (
-                    <Text style={[styles.reviewReadText, { color: colors.foreground }]}>{displayReview.text}</Text>
-                  ) : null}
-                </View>
+                <>
+                  <Section label="Your Review">
+                    <View style={styles.starsRow}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <MaterialIcons
+                          key={star}
+                          name="star"
+                          size={28}
+                          color={star <= displayReview.rating ? colors.warning : colors.border}
+                        />
+                      ))}
+                    </View>
+                    {displayReview.text ? (
+                      <Text style={[styles.bodyText, { color: colors.foreground, marginTop: 12 }]}>{displayReview.text}</Text>
+                    ) : null}
+                  </Section>
+                  <Divider />
+                </>
               );
             }
 
             // Input form
             return (
               <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <View style={[styles.reviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text style={[styles.reviewTitle, { color: colors.foreground }]}>How was this gig?</Text>
+                <Section label="Review">
+                  <Text style={[styles.reviewTitle, { color: colors.foreground, marginBottom: 12 }]}>How was this gig?</Text>
                   <View style={styles.starsRow}>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Pressable key={star} onPress={() => setReviewRating(star)} hitSlop={8}>
                         <MaterialIcons
                           name="star"
                           size={32}
-                          color={star <= reviewRating ? '#F59E0B' : colors.border}
+                          color={star <= reviewRating ? colors.warning : colors.border}
                         />
                       </Pressable>
                     ))}
                   </View>
                   <TextInput
-                    style={[styles.reviewInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                    style={[styles.reviewInput, { backgroundColor: colors.surface, color: colors.foreground }]}
                     placeholder="Share your experience..."
                     placeholderTextColor={colors.muted}
                     multiline
@@ -430,27 +430,28 @@ export default function DJBookingDetailScreen() {
                   >
                     <Text style={styles.reviewSubmitText}>Submit Review</Text>
                   </Pressable>
-                </View>
+                </Section>
               </KeyboardAvoidingView>
             );
           })()}
 
           {/* Show on Calendar */}
-          {(slot?.date ?? booking.slotDate) && (
-            <Pressable
-              style={({ pressed }) => [styles.calendarBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => {
-                const date = slot?.date ?? booking.slotDate ?? '';
-                if (date) {
-                  useCalendarJumpStore.getState().setPendingDate(date);
-                  router.push('/(artist)/(tabs)/calendar' as Href);
-                }
-              }}
-            >
-              <MaterialIcons name="event" size={18} color={colors.primary} />
-              <Text style={[styles.calendarBtnText, { color: colors.primary }]}>Show on Calendar</Text>
-            </Pressable>
-          )}
+          {(slot?.date ?? booking.slotDate) ? (
+            <View style={styles.actions}>
+              <SoftButton
+                tone="primary"
+                icon="event"
+                label="Show on Calendar"
+                onPress={() => {
+                  const date = slot?.date ?? booking.slotDate ?? '';
+                  if (date) {
+                    useCalendarJumpStore.getState().setPendingDate(date);
+                    router.push('/(artist)/(tabs)/calendar' as Href);
+                  }
+                }}
+              />
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -462,35 +463,17 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
-  content: { padding: 20, gap: 14 },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
-  venueCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  venueCardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  mapsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderTopWidth: StyleSheet.hairlineWidth },
-  mapsRowText: { fontSize: 14, fontWeight: '600' },
-  cardIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  cardSub: { fontSize: 13, lineHeight: 18 },
-  notesCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
-  notesLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  notesText: { fontSize: 14, lineHeight: 21 },
+  content: {},
+  bodyText: { fontSize: 14, lineHeight: 21 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  chipText: { fontSize: 13, fontWeight: '500' },
-  actions: { gap: 12, marginTop: 8 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14 },
-  acceptBtn: { backgroundColor: '#22C55E' },
+  mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
+  mapsBadgeText: { fontSize: 13, fontWeight: '700' },
+  actions: { gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
+  acceptBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14 },
   acceptBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
-  declineBtn: { borderWidth: 1.5, backgroundColor: 'transparent' },
-  declineBtnText: { fontSize: 15, fontWeight: '700' },
-  calendarBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, borderWidth: 1, paddingVertical: 14, marginTop: 4 },
-  calendarBtnText: { fontSize: 15, fontWeight: '600' },
-  reviewCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 12, marginTop: 4 },
   reviewTitle: { fontSize: 16, fontWeight: '700' },
   starsRow: { flexDirection: 'row', gap: 6 },
-  reviewInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top' },
-  reviewReadText: { fontSize: 14, lineHeight: 21 },
-  reviewSubmitBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  reviewInput: { borderRadius: 10, padding: 12, fontSize: 14, minHeight: 80, textAlignVertical: 'top', marginTop: 12 },
+  reviewSubmitBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   reviewSubmitText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
