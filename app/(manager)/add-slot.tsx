@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore, venuePhotoUri } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -526,7 +527,7 @@ export default function AddSlotScreen() {
 const styles = StyleSheet.create({
   sheet: { paddingHorizontal: 13, paddingTop: 8, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 12 },
-  sheetTitle: { fontSize: 20, fontWeight: '800', letterSpacing: -0.4, marginBottom: 1 },
+  sheetTitle: { fontSize: 20, fontFamily: fonts.displayBold, letterSpacing: -0.4, marginBottom: 1 },
   closeBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
