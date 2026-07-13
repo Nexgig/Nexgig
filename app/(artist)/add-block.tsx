@@ -237,7 +237,7 @@ export default function AddBlockScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
-        <Pressable style={[styles.closeBtn, { backgroundColor: colors.surface }]} onPress={closeSheet} hitSlop={8}>
+        <Pressable style={[styles.closeBtn, { borderWidth: 1, borderColor: colors.border }]} onPress={closeSheet} hitSlop={8}>
           <MaterialIcons name="close" size={16} color={colors.muted} />
         </Pressable>
       </View>

@@ -10,12 +10,8 @@
 
 Priority order — do polish/features first, App Store submit LAST. (Done work lives in the DONE log below.)
 
-**1 · Design pass** (OTA)
-- Make the calendar numbers + day-name labels bigger.
-- Artist + Manager profile general polish — layout, spacing, hierarchy, overall feel (the round-photo-upload part is already covered by the avatar system).
-- Venue page → cleaner "menu-like" look.
-- Booking page → "agreement-like" look.
-- Invoice preview → content sits too low + "Nexgig." wordmark not rendering in Clash Display Bold.
+**1 · Design pass** (OTA) — card-free pass is DONE across the app. Only this remains:
+- **The 3 auth screens** — `choose-account-type`, `manager-register`, `artist-setup`. The designer never produced a design for these; needs a decision (leave as-is, or extend the card-free patterns we settled on).
 
 **2 · Transactional email** — wire SES/Resend to app events.
 
@@ -24,10 +20,32 @@ Priority order — do polish/features first, App Store submit LAST. (Done work l
 - Fill App Store Connect metadata: 6.7" iPhone screenshots, description/subtitle/keywords/promo (all drafted — ready to paste), App Privacy questionnaire, age rating, App Review notes (note managers AND artists share one app).
 - Then Submit for Review. Icon FINAL/locked = send-arrow.
 
+### Optional / nice-to-have
+- One-time SQL backfill to stamp `venue_photo_url` onto **existing** bookings (new bookings already snapshot it).
+
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
 - **Tap Payments** integration.
 - **Google Calendar** sync.
+
+<!-- Closed during the design pass (July 2026), kept here so they aren't re-raised:
+     · Calendar numbers/day names "bigger" — SUPERSEDED. Tuts went the other way:
+       16px General Sans Semibold, Bold when selected. Week strip + month grid now
+       share one font (fontWeight 800 was silently routing them to Clash Display).
+     · Artist + Manager profile polish — done (name-only hero, Based In section,
+       collapsible History, dividers stripped).
+     · Venue page "menu-like" — done ("Venue Profile" header, name under the photo,
+       Location section with a Maps button).
+     · Booking page "agreement-like" — done (card-free Sections).
+     · Invoice preview: content sat too low — it was a missing bottom safe-area inset
+       on a pushed screen with no tab bar. Wordmark — the nested coral period had no
+       fontFamily, so app-text fell back to General Sans.
+     · Card-free tints — done everywhere; controls and state tints deliberately kept.
+     · Manager "Based In" section — decided against.
+     · Artist History — hidden behind SHOW_ARTIST_HISTORY in lib/features.ts.
+     · design-pass branch merged into main.
+-->
+
 
 ---
 

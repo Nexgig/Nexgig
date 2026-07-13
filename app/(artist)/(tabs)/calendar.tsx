@@ -1147,7 +1147,7 @@ export default function DJAvailabilityScreen() {
 
             {/* Selected date detail */}
             {!selectedDate ? (
-              <View style={[styles.emptyDay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.emptyDay, { borderColor: colors.border }]}>
                 <MaterialIcons name="touch-app" size={28} color={colors.muted} />
                 <Text style={[styles.emptyDayText, { color: colors.muted }]}>Tap a date to see details</Text>
               </View>
@@ -1173,7 +1173,7 @@ export default function DJAvailabilityScreen() {
               {selectedDateBlocks.map((b) => renderBlockCard(b))}
 
               {(bookingsByDate.get(selectedDate) ?? []).length === 0 && selectedDateBlocks.length === 0 && (
-                <View style={[styles.emptyDay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.emptyDay, { borderColor: colors.border }]}>
                   <MaterialIcons name="check-circle" size={28} color={colors.success} />
                   <Text style={[styles.emptyDayText, { color: colors.muted }]}>Available — no gigs or blocks</Text>
                 </View>
@@ -1306,7 +1306,7 @@ export default function DJAvailabilityScreen() {
           }}>
             <Pressable
               onPress={() => setShowSyncModal(false)}
-              style={({ pressed }) => [{ padding: 8, borderRadius: 20, backgroundColor: colors.surface, opacity: pressed ? 0.6 : 1 }]}
+              style={({ pressed }) => [{ padding: 8, borderRadius: 20, opacity: pressed ? 0.6 : 1 }]}
             >
               <MaterialIcons name="close" size={20} color={colors.foreground} />
             </Pressable>

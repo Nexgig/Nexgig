@@ -2009,7 +2009,7 @@ export default function CalendarScreen() {
 
               {/* Selected Date Slots */}
               {!selectedDate ? (
-                <View style={[styles.noSlotsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.noSlotsCard, { borderColor: colors.border }]}>
                   <MaterialIcons name="touch-app" size={32} color={colors.muted} />
                   <Text style={[styles.noSlotsText, { color: colors.muted }]}>Tap a date to see sets</Text>
                 </View>
@@ -2032,7 +2032,7 @@ export default function CalendarScreen() {
                 </View>
 
                 {selectedSlots.length === 0 ? (
-                  <View style={[styles.noSlotsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.noSlotsCard, { borderColor: colors.border }]}>
                     <MaterialIcons name="event-busy" size={32} color={colors.muted} />
                     <Text style={[styles.noSlotsText, { color: colors.muted }]}>No sets for this day</Text>
                   </View>
@@ -2066,7 +2066,7 @@ export default function CalendarScreen() {
           }}>
             <Pressable
               onPress={() => setShowSendSheet(false)}
-              style={({ pressed }) => [{ padding: 8, borderRadius: 20, backgroundColor: colors.surface, opacity: pressed ? 0.6 : 1 }]}
+              style={({ pressed }) => [{ padding: 8, borderRadius: 20, opacity: pressed ? 0.6 : 1 }]}
             >
               <MaterialIcons name="close" size={20} color={colors.foreground} />
             </Pressable>
@@ -2083,7 +2083,7 @@ export default function CalendarScreen() {
                   setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
                 }
               }}
-              style={({ pressed }) => [{ padding: 8, borderRadius: 20, backgroundColor: colors.surface, opacity: pressed ? 0.6 : 1 }]}
+              style={({ pressed }) => [{ padding: 8, borderRadius: 20, opacity: pressed ? 0.6 : 1 }]}
             >
               <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
                 {selectedDraftKeys.size === periodScopedDrafts.length && periodScopedDrafts.length > 0 ? 'Deselect All' : 'Select All'}
@@ -2258,7 +2258,7 @@ export default function CalendarScreen() {
                 </Text>
               </View>
               <Pressable
-                style={[slotModalStyles.closeBtn, { backgroundColor: colors.surface }]}
+                style={[slotModalStyles.closeBtn, { borderWidth: 1, borderColor: colors.border }]}
                 onPress={() => { Keyboard.dismiss(); setShowSlotModal(false); setEditingSlot(null); }}
                 hitSlop={8}
               >

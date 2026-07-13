@@ -333,7 +333,7 @@ export default function AddSlotScreen() {
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         <Pressable
-          style={[styles.closeBtn, { backgroundColor: colors.surface }]}
+          style={[styles.closeBtn, { borderWidth: 1, borderColor: colors.border }]}
           onPress={() => { Keyboard.dismiss(); router.back(); }}
           hitSlop={8}
         >
