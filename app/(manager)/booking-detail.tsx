@@ -23,6 +23,24 @@ function VenueThumb({ uri }: { uri?: string }) {
   return <Image source={{ uri }} style={{ width: 44, height: 44, borderRadius: 12 }} resizeMode="cover" />;
 }
 
+/** A label/value row, borrowed from the invoice's document language. No icon — an
+ *  agreement states facts, it doesn't decorate them. `last` drops the hairline. */
+function DetailRow({ label, value, trailing, last = false }: {
+  label: string; value?: string; trailing?: React.ReactNode; last?: boolean;
+}) {
+  const colors = useColors();
+  if (!value && !trailing) return null;
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: colors.border, borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth * 2 }]}>
+      <Text style={[styles.detailLabel, { color: colors.muted }]}>{label}</Text>
+      <View style={styles.detailValueWrap}>
+        {value ? <Text style={[styles.detailValue, { color: colors.foreground }]}>{value}</Text> : null}
+      </View>
+      {trailing}
+    </View>
+  );
+}
+
 function MapsBadge({ onPress }: { onPress: () => void }) {
   const colors = useColors();
   return (
@@ -231,50 +249,38 @@ export default function DJBookingDetailScreen() {
             </>
           ) : null}
 
-          {/* Slot Details — snapshot fallback when the slot is gone (deleted venue) */}
-          {slot ? (
-            <>
-              <Section label="Date & Time">
-                <ListRow
-                  leading={<IconTile icon="event" />}
-                  title={formatDate(slot.date)}
-                  subtitle={`${fmtTime(slot.startTime)} – ${fmtTime(slot.endTime)}`}
-                  divider={false}
-                />
-              </Section>
-            </>
-          ) : (booking.slotDate || booking.slotStartTime) ? (
-            <>
-              <Section label="Date & Time">
-                <ListRow
-                  leading={<IconTile icon="schedule" />}
-                  title={booking.slotDate ? formatDate(booking.slotDate) : ''}
-                  subtitle={booking.slotStartTime && booking.slotEndTime ? `${fmtTime(booking.slotStartTime)} – ${fmtTime(booking.slotEndTime)}` : undefined}
-                  divider={false}
-                />
-              </Section>
-            </>
-          ) : null}
-
-          {/* Location — same shape as the venue detail page: grey label, Maps pill on
-              the left, full address beside it. The Maps button used to live in the
-              Venue row; keeping both would give two Maps buttons on one page. */}
-          {venue?.googleMapsLocation?.address ? (
-            <Section label="Location">
-              <View style={styles.locationSectionRow}>
-                <MapsBadge
-                  onPress={() => {
-                    const loc = venue.googleMapsLocation;
-                    const url = (loc?.lat && loc?.lng)
-                      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
-                    Linking.openURL(url);
-                  }}
-                />
-                <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
-              </View>
-            </Section>
-          ) : null}
+          {/* Details — document-style label/value table. Replaces the icon-tile rows:
+              the coral tiles added colour but said nothing the label didn't. */}
+          <Section label="Details">
+            <DetailRow label="DATE" value={slot ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : undefined)} />
+            <DetailRow
+              label="TIME"
+              value={
+                slot
+                  ? `${fmtTime(slot.startTime)} – ${fmtTime(slot.endTime)}`
+                  : (booking.slotStartTime && booking.slotEndTime ? `${fmtTime(booking.slotStartTime)} – ${fmtTime(booking.slotEndTime)}` : undefined)
+              }
+            />
+            <DetailRow label="VENUE TYPE" value={venue?.venueType} />
+            <DetailRow
+              label="LOCATION"
+              value={venue?.googleMapsLocation?.address}
+              last
+              trailing={
+                venue?.googleMapsLocation?.address ? (
+                  <MapsBadge
+                    onPress={() => {
+                      const loc = venue.googleMapsLocation;
+                      const url = (loc?.lat && loc?.lng)
+                        ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
+                      Linking.openURL(url);
+                    }}
+                  />
+                ) : undefined
+              }
+            />
+          </Section>
 
           <Divider />
 
@@ -390,8 +396,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
-  locationSectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  locationAddress: { fontSize: 14, lineHeight: 20, flex: 1 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  detailLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 92 },
+  detailValueWrap: { flex: 1 },
+  detailValue: { fontSize: 14, lineHeight: 20 },
   content: {},
   bodyText: { fontSize: 14, lineHeight: 21 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
