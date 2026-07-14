@@ -512,6 +512,7 @@ export default function ArtistProfileViewScreen() {
           <Section label="Account">
             {basedInCountry ? (
               <View style={styles.contactRow}>
+                <MaterialIcons name="location-on" size={18} color={colors.muted} style={styles.acctIcon} />
                 <Text style={[styles.contactValue, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             ) : null}
@@ -519,12 +520,14 @@ export default function ArtistProfileViewScreen() {
               <>
               {dj.email ? (
                 <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`mailto:${dj.email}`)}>
+                  <MaterialIcons name="email" size={18} color={colors.muted} style={styles.acctIcon} />
                   <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.email}</Text>
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
               ) : null}
               {dj.phone ? (
                 <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`tel:${dj.phone}`)}>
+                  <MaterialIcons name="phone" size={18} color={colors.muted} style={styles.acctIcon} />
                   <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.phone}</Text>
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
@@ -689,6 +692,7 @@ const styles = StyleSheet.create({
   rateLabel: { fontSize: 13 },
   rateValue: { fontSize: 15, fontWeight: '700' },
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  acctIcon: { width: 20, textAlign: 'center' },
   contactValue: { flex: 1, fontSize: 14, fontWeight: '500' },
   linksCol: { gap: 0 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: 0.5 },

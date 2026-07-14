@@ -249,6 +249,7 @@ export default function ArtistProfileViewScreen() {
           {basedInCountry ? (
             <Section label="Account">
               <View style={styles.basedInRow}>
+                <MaterialIcons name="location-on" size={18} color={colors.muted} style={styles.acctIcon} />
                 <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             </Section>
@@ -332,6 +333,7 @@ const styles = StyleSheet.create({
   djName: { fontSize: 18, fontFamily: fonts.bodyBold, textAlign: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  acctIcon: { width: 20, textAlign: 'center' },
   basedInText: { fontSize: 14, fontWeight: '500' },
 
   memberSince: { fontSize: 12, marginTop: 4 },
