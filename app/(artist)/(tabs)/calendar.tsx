@@ -904,11 +904,11 @@ export default function DJAvailabilityScreen() {
                 {ordered.map(({ mode, label, icon }) => (
                   <Pressable
                     key={mode}
-                    style={[styles.toggleBtn, viewMode === mode && styles.toggleBtnActive, viewMode === mode && { backgroundColor: colors.foreground }]}
+                    style={[styles.toggleBtn, viewMode === mode && styles.toggleBtnActive, viewMode === mode && { backgroundColor: colors.primary + '1F' }]}
                     onPress={() => { setViewMode(mode); if (mode === 'today') setViewedDayStr(todayStr); }}
                   >
-                    <MaterialIcons name={icon} size={15} color={viewMode === mode ? colors.background : colors.muted} />
-                    <Text style={[styles.toggleBtnText, { color: viewMode === mode ? colors.background : colors.muted }]}>{label}</Text>
+                    <MaterialIcons name={icon} size={15} color={viewMode === mode ? colors.primary : colors.muted} />
+                    <Text style={[styles.toggleBtnText, { color: viewMode === mode ? colors.primary : colors.muted }]}>{label}</Text>
                   </Pressable>
                 ))}
               </View>

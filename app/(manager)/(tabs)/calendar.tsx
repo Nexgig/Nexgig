@@ -1727,14 +1727,14 @@ export default function CalendarScreen() {
                   {ordered.map(({ mode, label, icon }) => (
                     <Pressable
                       key={mode}
-                      style={[styles.toggleBtn, calendarMode === mode && { backgroundColor: colors.foreground }]}
+                      style={[styles.toggleBtn, calendarMode === mode && { backgroundColor: colors.primary + '1F' }]}
                       onPress={() => {
                         setCalendarMode(mode);
                         if (mode === 'today') { setViewedDayStr(todayStr); setCreateSlotDate(todayStr); }
                       }}
                     >
-                      <MaterialIcons name={icon} size={15} color={calendarMode === mode ? colors.background : colors.muted} />
-                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? colors.background : colors.muted }]}>{label}</Text>
+                      <MaterialIcons name={icon} size={15} color={calendarMode === mode ? colors.primary : colors.muted} />
+                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? colors.primary : colors.muted }]}>{label}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -1747,18 +1747,18 @@ export default function CalendarScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
               {/* All option */}
               <Pressable
-                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.foreground : colors.border, backgroundColor: venueFilter === 'all' ? colors.foreground : 'transparent' }]}
+                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: venueFilter === 'all' ? colors.primary + '1F' : 'transparent' }]}
                 onPress={() => setVenueFilter('all')}
               >
-                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.background : colors.foreground }]}>All</Text>
+                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.primary : colors.foreground }]}>All</Text>
               </Pressable>
               {venues.map((v) => (
                 <Pressable
                   key={v.id}
-                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.foreground : colors.border, backgroundColor: venueFilter === v.id ? colors.foreground : 'transparent' }]}
+                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: venueFilter === v.id ? colors.primary + '1F' : 'transparent' }]}
                   onPress={() => setVenueFilter(v.id)}
                 >
-                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.background : colors.foreground }]}>{v.name}</Text>
+                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.primary : colors.foreground }]}>{v.name}</Text>
                 </Pressable>
               ))}
             </ScrollView>
