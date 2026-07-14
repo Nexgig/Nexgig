@@ -131,7 +131,9 @@ export default function ArtistVenueDetailScreen() {
         </View>
 
         {/* Venue Photo */}
-        <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
+        <View style={styles.venuePhotoWrap}>
+          <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
+        </View>
 
         {/* Venue Info Card */}
         <View style={styles.infoCard}>
@@ -297,7 +299,8 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700', flex: 1, textAlign: 'center' },
-  venuePhoto: { alignSelf: 'stretch', height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
+  venuePhotoWrap: { height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20, overflow: 'hidden' },
+  venuePhoto: { width: '100%', height: '100%' },
   infoCard: {
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4, gap: 8,
   },

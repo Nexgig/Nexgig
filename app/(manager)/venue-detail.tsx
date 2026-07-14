@@ -229,7 +229,9 @@ export default function VenueDetailScreen() {
         </View>
 
         {/* Venue Photo — manager's upload, else admin-curated fallback */}
-        <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
+        <View style={styles.venuePhotoWrap}>
+          <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
+        </View>
 
         {/* Venue Info */}
         <View style={styles.infoCard}>
@@ -564,7 +566,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   backBtn: { padding: 4 },
   title: { fontSize: 20, fontWeight: '800', flex: 1, textAlign: 'center' },
-  venuePhoto: { alignSelf: 'stretch', height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
+  venuePhotoWrap: { height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20, overflow: 'hidden' },
+  venuePhoto: { width: '100%', height: '100%' },
   infoCard: { paddingHorizontal: 20, paddingBottom: 16, gap: 8 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   infoLeft: { flex: 1, gap: 6 },
