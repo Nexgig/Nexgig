@@ -394,17 +394,17 @@ export default function ArtistProfileScreen() {
           <Section label="Account">
             {basedInCountry ? (
               <View style={styles.accountRow}>
-                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <MaterialIcons name="location-on" size={18} color={colors.muted} />
                 <Text style={[styles.accountText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             ) : null}
             <View style={styles.accountRow}>
-              <MaterialIcons name="email" size={16} color={colors.muted} />
+              <MaterialIcons name="email" size={18} color={colors.muted} />
               <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>
             </View>
             {currentUser?.phone && (
               <View style={styles.accountRow}>
-                <MaterialIcons name="phone" size={16} color={colors.muted} />
+                <MaterialIcons name="phone" size={18} color={colors.muted} />
                 <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.phone}</Text>
               </View>
             )}
@@ -471,8 +471,8 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: 0.5 },
   linkIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   linkRowText: { flex: 1, fontSize: 14, fontWeight: '500' },
-  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  accountText: { fontSize: 14 },
+  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
+  accountText: { fontSize: 14, fontWeight: '500' },
   signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14 },
   signOutText: { fontSize: 15, fontWeight: '700' },
   editBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

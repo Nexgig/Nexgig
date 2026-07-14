@@ -511,9 +511,9 @@ export default function ArtistProfileViewScreen() {
               contact details. */}
           <Section label="Account">
             {basedInCountry ? (
-              <View style={styles.basedInRow}>
-                <MaterialIcons name="location-on" size={16} color={colors.muted} />
-                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
+              <View style={styles.contactRow}>
+                <MaterialIcons name="location-on" size={18} color={colors.muted} />
+                <Text style={[styles.contactValue, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             ) : null}
             {isConnected ? (
