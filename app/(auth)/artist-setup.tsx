@@ -410,7 +410,7 @@ export default function DJSetupScreen() {
                 <Text style={[styles.label, { color: colors.foreground }]}>Primary Genre *</Text>
                 <View style={styles.chipGrid}>
                   {GENRES.map((g) => (
-                    <Pressable key={g} style={[styles.chip, { borderColor: form.primaryGenre === g ? colors.primary : colors.border, backgroundColor: form.primaryGenre === g ? colors.primary : 'transparent' }]} onPress={() => update('primaryGenre', g)}>
+                    <Pressable key={g} style={[styles.chip, { borderColor: form.primaryGenre === g ? colors.primary : colors.border, backgroundColor: form.primaryGenre === g ? colors.primary : 'transparent' }]} onPress={() => setForm((prev) => ({ ...prev, primaryGenre: g, secondaryGenres: prev.secondaryGenres.filter((x) => x !== g) }))}>
                       <Text style={[styles.chipText, { color: form.primaryGenre === g ? '#fff' : colors.foreground }]}>{g}</Text>
                     </Pressable>
                   ))}

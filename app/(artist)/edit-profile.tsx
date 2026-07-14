@@ -408,7 +408,7 @@ export default function DJEditProfileScreen() {
               {GENRES.map((g) => {
                 const isSelected = primaryGenre === g;
                 return (
-                  <Pressable key={g} style={[styles.chip, { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: isSelected ? colors.primary : colors.border }]} onPress={() => setPrimaryGenre(g)}>
+                  <Pressable key={g} style={[styles.chip, { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: isSelected ? colors.primary : colors.border }]} onPress={() => { setPrimaryGenre(g); setSecondaryGenres((prev) => prev.filter((x) => x !== g)); }}>
                     <Text style={[styles.chipText, { color: isSelected ? '#fff' : colors.foreground }]}>{g}</Text>
                   </Pressable>
                 );

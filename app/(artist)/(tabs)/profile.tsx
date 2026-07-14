@@ -188,7 +188,8 @@ export default function ArtistProfileScreen() {
   };
   const hasLinks = Object.values(mediaLinks).some(Boolean);
   const memberSince = formatMemberSince(currentUser?.createdAt);
-  const secondaryGenres = profile?.secondaryGenres ?? [];
+  // Drop the primary — it already has its own chip — and any repeats.
+  const secondaryGenres = [...new Set(profile?.secondaryGenres ?? [])].filter((g) => g !== profile?.primaryGenre);
   const instruments = profile?.instruments ?? [];
 
   return (

@@ -330,7 +330,8 @@ export default function ArtistProfileViewScreen() {
     instagram: profile?.instagramUrl,
     spotify: profile?.spotifyUrl,
   };
-  const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
+  // Drop the primary — it already has its own chip — and any repeats.
+  const secondaryGenres: string[] = [...new Set<string>(profile?.secondaryGenres ?? [])].filter((g) => g !== profile?.primaryGenre);
   const instruments: string[] = profile?.instruments ?? [];
 
   return (

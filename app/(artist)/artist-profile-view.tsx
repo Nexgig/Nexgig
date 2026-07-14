@@ -126,7 +126,8 @@ export default function ArtistProfileViewScreen() {
   const last5Gigs = publicGigs.slice(0, 5);
   const memberSince = formatMemberSince(dj.createdAt);
   const basedInCountry = profile?.basedIn ? COUNTRIES.find((c) => c.name === profile.basedIn) : undefined;
-  const secondaryGenres: string[] = profile?.secondaryGenres ?? [];
+  // Drop the primary — it already has its own chip — and any repeats.
+  const secondaryGenres: string[] = [...new Set<string>(profile?.secondaryGenres ?? [])].filter((g) => g !== profile?.primaryGenre);
   const instruments: string[] = profile?.instruments ?? [];
   // bio lives on the artists row (profile), not the users row — fall back to it.
   const bio = dj.bio ?? profile?.bio;
