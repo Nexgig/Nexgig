@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Image } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
+import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore } from '@/lib/store';
-import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -101,14 +101,20 @@ export default function AllBookingsScreen() {
           </View>
         ) : (
           list.map((booking, i) => {
-            const venueImg = venueImageFor(booking.venue, booking.venueType);
             return (
               <Pressable
                 key={booking.id}
                 style={({ pressed }) => [styles.bookingCard, { borderBottomColor: colors.border, borderBottomWidth: i === list.length - 1 ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
               >
-                <Image source={venueImg} style={styles.gigPhoto} resizeMode="cover" />
+                <AvatarImage
+                  uri={booking.dj?.profilePhotoUrl}
+                  avatarId={(booking.dj as any)?.avatarId}
+                  seed={(booking.dj as any)?.id}
+                  name={booking.dj?.fullName}
+                  size={48}
+                  variant="artist"
+                />
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
