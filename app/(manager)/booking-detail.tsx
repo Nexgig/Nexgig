@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking, Image } from '@/lib/rn';
 import { useMemo } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
-import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useCalendarJumpStore, useReviewStore, useLineupStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useCalendarJumpStore, useReviewStore, useLineupStore , venuePhotoUri } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -15,6 +15,14 @@ import type { } from '@/lib/types';
 import { syncBookingStatus } from '@/lib/booking-sync';
 
 /** Compact coral "Maps" badge — replaces the old full-width "Open in Google Maps" row. */
+/** Venue photo at IconTile's size/radius. Falls back to the icon tile when the
+ *  venue has no photo — venues have no avatar system yet. Uses the booking's
+ *  venue_photo_url snapshot so hidden/deleted venues still show their picture. */
+function VenueThumb({ uri }: { uri?: string }) {
+  if (!uri) return <IconTile icon="business" />;
+  return <Image source={{ uri }} style={{ width: 44, height: 44, borderRadius: 12 }} resizeMode="cover" />;
+}
+
 function MapsBadge({ onPress }: { onPress: () => void }) {
   const colors = useColors();
   return (
@@ -164,7 +172,7 @@ export default function DJBookingDetailScreen() {
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
@@ -198,7 +206,6 @@ export default function DJBookingDetailScreen() {
                   );
                 })}
               </Section>
-              <Divider />
             </>
           )}
 
@@ -209,7 +216,7 @@ export default function DJBookingDetailScreen() {
             <>
               <Section label="Venue">
                 <ListRow
-                  leading={<IconTile icon="business" />}
+                  leading={<VenueThumb uri={venuePhotoUri(venue) ?? booking.venuePhotoUrl} />}
                   title={venue.name}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
                   trailing={
@@ -228,14 +235,12 @@ export default function DJBookingDetailScreen() {
                   divider={false}
                 />
               </Section>
-              <Divider />
             </>
           ) : booking.venueName ? (
             <>
               <Section label="Venue">
-                <ListRow leading={<IconTile icon="business" />} title={booking.venueName} divider={false} />
+                <ListRow leading={<VenueThumb uri={booking.venuePhotoUrl} />} title={booking.venueName} divider={false} />
               </Section>
-              <Divider />
             </>
           ) : null}
 
@@ -272,7 +277,6 @@ export default function DJBookingDetailScreen() {
               <Section label="Venue Vibe">
                 <Text style={[styles.bodyText, { color: colors.foreground }]}>{venue.vibeDescription}</Text>
               </Section>
-              <Divider />
             </>
           ) : null}
 
@@ -284,7 +288,6 @@ export default function DJBookingDetailScreen() {
                   {venue.preferredEnergy.map((e) => <Chip key={e} label={e} />)}
                 </View>
               </Section>
-              <Divider />
             </>
           ) : null}
 
@@ -294,7 +297,6 @@ export default function DJBookingDetailScreen() {
               <Section label="Venue Rules">
                 <Text style={[styles.bodyText, { color: colors.foreground }]}>{venue.rulesTemplate}</Text>
               </Section>
-              <Divider />
             </>
           ) : null}
 
