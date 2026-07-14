@@ -376,17 +376,17 @@ const styles = StyleSheet.create({
   backBtn: { width: 32, alignItems: 'flex-start' },
 
   // ─── List ─────────────────────────────────────────────────────────────────
-  list: { padding: 16, flexGrow: 1 },
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
 
   // ─── Artist Card ──────────────────────────────────────────────────────────
   card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   cardTop: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 },
   disconnectBtn: { padding: 6, alignSelf: 'flex-start' },
-  cardInfo: { flex: 1, gap: 2 },
+  cardInfo: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  cardName: { fontSize: 15, fontWeight: '600', letterSpacing: -0.2 },
-  cardMeta: { fontSize: 13, marginTop: 1 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
+  cardName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
+  cardMeta: { fontSize: 13 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   bookingsBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
