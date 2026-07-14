@@ -1,19 +1,17 @@
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking, Image } from '@/lib/rn';
-import { useMemo } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
-import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useReviewStore, useLineupStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import type { } from '@/lib/types';
-import { syncBookingStatus } from '@/lib/booking-sync';
 
 /** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
  *  resolves — and it falls back to the type snapshotted on the booking, since the
@@ -68,13 +66,9 @@ export default function DJBookingDetailScreen() {
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === id));
   const allBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
-  const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
-  const notifications = useNotificationStore((s) => s.notifications);
-  const markAsRead = useNotificationStore((s) => s.markAsRead);
-  const addNotification = useNotificationStore((s) => s.addNotification);
 
   if (!booking) {
     return (
@@ -132,30 +126,6 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
-  const handleCancelRequest = () => {
-    Alert.alert('Cancel Request', 'Are you sure you want to cancel this gig request?', [
-      { text: 'Keep', style: 'cancel' },
-      {
-        text: 'Cancel Request', style: 'destructive', onPress: () => {
-          // Set cancellationAcknowledged so booking goes directly to Cancelled tab (no Dismiss step)
-          updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
-          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
-          addNotification({
-            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            userId: booking.artistId,
-            type: 'booking_request_cancelled',
-            title: 'Request Cancelled',
-            body: `${venue?.name ?? booking.venueName ?? 'a venue'} — ${slot?.date ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : '')}`,
-            isRead: false,
-            relatedId: booking.id,
-            relatedType: 'booking',
-            createdAt: new Date().toISOString(),
-          });
-          router.back();
-        }
-      },
-    ]);
-  };
 
 
   return (
@@ -332,10 +302,6 @@ export default function DJBookingDetailScreen() {
                 </Pressable>
                 <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
               </>
-            )}
-
-            {booking.status === 'requested' && isManager && (
-              <SoftButton tone="danger" icon="cancel" label="Cancel Request" onPress={handleCancelRequest} />
             )}
 
           </View>
