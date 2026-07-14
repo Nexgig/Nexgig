@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', width: '100%',
     backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C6C6C8', borderRadius: 14, paddingHorizontal: 16,
   },
-  passwordInput: { flex: 1, paddingVertical: 16, fontSize: 15, color: '#000000' },
+  passwordInput: { flex: 1, paddingVertical: 16, fontSize: 15, color: '#000000', letterSpacing: 0 },
   eyeBtn: { padding: 4 },
   forgotBtn: { alignSelf: 'center', paddingVertical: 2 },
   forgotText: { fontSize: 14, color: '#8E8E93', fontWeight: '600' },

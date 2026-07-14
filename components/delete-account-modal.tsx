@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800' },
   body: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
   prompt: { fontSize: 14, marginTop: 4, alignSelf: 'flex-start' },
-  input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '700', letterSpacing: 1 },
+  input: { width: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '700', letterSpacing: 0 },
   actions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 8 },
   cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   cancelText: { fontSize: 15, fontWeight: '700' },

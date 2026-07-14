@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#C6C6C8', borderRadius: 14,
     paddingHorizontal: 16, paddingVertical: 16, fontSize: 16, color: '#000000',
   },
-  codeInput: { textAlign: 'center', letterSpacing: 4, fontSize: 20, fontWeight: '700' },
+  codeInput: { textAlign: 'center', letterSpacing: 0, fontSize: 22, fontWeight: '700' },
   passwordContainer: { position: 'relative', justifyContent: 'center' },
   passwordInput: {
     borderWidth: 1, borderColor: '#C6C6C8', borderRadius: 14,
