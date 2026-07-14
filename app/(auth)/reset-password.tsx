@@ -10,7 +10,7 @@ import { validateEmail } from '@/lib/validate-email';
 /**
  * Password reset — three steps, no deep links.
  *
- *   1. email    → resetPasswordForEmail() mails a 6-digit recovery code
+ *   1. email    → resetPasswordForEmail() mails a recovery code
  *   2. code     → verifyOtp({ type: 'recovery' }) exchanges it for a session
  *   3. password → updateUser({ password }) sets the new one
  *
@@ -18,9 +18,12 @@ import { validateEmail } from '@/lib/validate-email';
  * generated from the bundle id at build time, and mail clients routinely rewrite
  * links, which makes deep-link recovery the flakiest path on mobile.
  *
- * NOTE: this requires the Supabase "Reset Password" email template to include
- * {{ .Token }} — the 6-digit code. A template with only the magic link will send
- * users a link with no code to type.
+ * The code's LENGTH is a Supabase project setting (6, 8, 10…), so we don't hardcode
+ * it — the input takes any digit string and we only require a sane minimum. That
+ * way the app can't silently drift out of sync with the dashboard.
+ *
+ * NOTE: requires the Supabase "Reset Password" email template to include
+ * {{ .Token }}. A template with only the magic link sends users no code to type.
  */
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -59,7 +62,7 @@ export default function ResetPasswordScreen() {
 
   // ── 2. Verify the code ────────────────────────────────────────────────────
   const verifyCode = async () => {
-    if (code.trim().length < 6) { setError('Enter the 6-digit code from your email.'); return; }
+    if (code.trim().length < 6) { setError('Enter the code from your email.'); return; }
     setError('');
     setBusy(true);
 
@@ -103,13 +106,13 @@ export default function ResetPasswordScreen() {
   const copy = {
     email: {
       title: 'Reset your password',
-      body: 'Enter your email and we’ll send you a 6-digit code.',
+      body: 'Enter your email and we’ll send you a code.',
       cta: busy ? 'Sending…' : 'Send code',
       onPress: sendCode,
     },
     code: {
       title: 'Check your email',
-      body: `We sent a 6-digit code to ${email}. It expires shortly.`,
+      body: `We sent a code to ${email}. It expires shortly.`,
       cta: busy ? 'Checking…' : 'Verify code',
       onPress: verifyCode,
     },
@@ -164,14 +167,14 @@ export default function ResetPasswordScreen() {
             {stage === 'code' && (
               <TextInput
                 style={[styles.input, styles.codeInput]}
-                placeholder="000000"
+                placeholder="Enter code"
                 placeholderTextColor="#8E8E93"
                 value={code}
-                onChangeText={(v) => { setCode(v.replace(/[^0-9]/g, '').slice(0, 6)); setError(''); }}
+                onChangeText={(v) => { setCode(v.replace(/[^0-9]/g, '').slice(0, 10)); setError(''); }}
                 keyboardType="number-pad"
                 autoComplete="one-time-code"
                 textContentType="oneTimeCode"
-                maxLength={6}
+                maxLength={10}
                 returnKeyType="done"
                 onSubmitEditing={verifyCode}
                 autoFocus
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#C6C6C8', borderRadius: 14,
     paddingHorizontal: 16, paddingVertical: 16, fontSize: 16, color: '#000000',
   },
-  codeInput: { textAlign: 'center', letterSpacing: 8, fontSize: 22, fontWeight: '700' },
+  codeInput: { textAlign: 'center', letterSpacing: 4, fontSize: 20, fontWeight: '700' },
   passwordContainer: { position: 'relative', justifyContent: 'center' },
   passwordInput: {
     borderWidth: 1, borderColor: '#C6C6C8', borderRadius: 14,
