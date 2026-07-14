@@ -347,21 +347,21 @@ export default function DJSetupScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Artist Name *</Text>
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Your stage name — shown publicly</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
                   placeholder="DJ Kai" placeholderTextColor={colors.muted}
                   value={form.fullName} onChangeText={(v) => update('fullName', v)} returnKeyType="next" />
               </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Full Legal Name *</Text>
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Kept private, used for invoicing</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
                   placeholder="Kai Nakamura" placeholderTextColor={colors.muted}
                   value={form.fullLegalName} onChangeText={(v) => update('fullLegalName', v)} returnKeyType="next" />
               </View>
               {!isOAuth && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Email *</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: emailError ? '#EF4444' : colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { borderColor: emailError ? '#EF4444' : colors.border, color: colors.foreground }]}
                   placeholder="kai@example.com" placeholderTextColor={colors.muted}
                   value={form.email} onChangeText={(v) => { update('email', v); setEmailError(''); }}
                   keyboardType="email-address" autoCapitalize="none" returnKeyType="next" />
@@ -371,7 +371,7 @@ export default function DJSetupScreen() {
               {!isOAuth && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Password *</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
                   placeholder="Min. 6 characters" placeholderTextColor={colors.muted}
                   value={form.password} onChangeText={(v) => update('password', v)}
                   secureTextEntry autoCapitalize="none" returnKeyType="next" />
@@ -388,7 +388,7 @@ export default function DJSetupScreen() {
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Pick CDJ / Turntables if you DJ, or your instrument(s)</Text>
                 <View style={styles.chipGrid}>
                   {INSTRUMENTS.map((i) => (
-                    <Pressable key={i} style={[styles.chip, { borderColor: form.instruments.includes(i) ? colors.primary : colors.border, backgroundColor: form.instruments.includes(i) ? colors.primary : colors.surface }]} onPress={() => toggleInstrument(i)}>
+                    <Pressable key={i} style={[styles.chip, { borderColor: form.instruments.includes(i) ? colors.primary : colors.border, backgroundColor: form.instruments.includes(i) ? colors.primary : 'transparent' }]} onPress={() => toggleInstrument(i)}>
                       <Text style={[styles.chipText, { color: form.instruments.includes(i) ? '#fff' : colors.foreground }]}>{i}</Text>
                     </Pressable>
                   ))}
@@ -412,7 +412,7 @@ export default function DJSetupScreen() {
                 <Text style={[styles.label, { color: colors.foreground }]}>Primary Genre *</Text>
                 <View style={styles.chipGrid}>
                   {GENRES.map((g) => (
-                    <Pressable key={g} style={[styles.chip, { borderColor: form.primaryGenre === g ? colors.primary : colors.border, backgroundColor: form.primaryGenre === g ? colors.primary : colors.surface }]} onPress={() => update('primaryGenre', g)}>
+                    <Pressable key={g} style={[styles.chip, { borderColor: form.primaryGenre === g ? colors.primary : colors.border, backgroundColor: form.primaryGenre === g ? colors.primary : 'transparent' }]} onPress={() => update('primaryGenre', g)}>
                       <Text style={[styles.chipText, { color: form.primaryGenre === g ? '#fff' : colors.foreground }]}>{g}</Text>
                     </Pressable>
                   ))}
@@ -422,7 +422,7 @@ export default function DJSetupScreen() {
                 <Text style={[styles.label, { color: colors.foreground }]}>Secondary Genres (up to 5)</Text>
                 <View style={styles.chipGrid}>
                   {GENRES.filter((g) => g !== form.primaryGenre).map((g) => (
-                    <Pressable key={g} style={[styles.chip, { borderColor: form.secondaryGenres.includes(g) ? colors.primary : colors.border, backgroundColor: form.secondaryGenres.includes(g) ? colors.primary : colors.surface }]} onPress={() => toggleSecondaryGenre(g)}>
+                    <Pressable key={g} style={[styles.chip, { borderColor: form.secondaryGenres.includes(g) ? colors.primary : colors.border, backgroundColor: form.secondaryGenres.includes(g) ? colors.primary : 'transparent' }]} onPress={() => toggleSecondaryGenre(g)}>
                       <Text style={[styles.chipText, { color: form.secondaryGenres.includes(g) ? '#fff' : colors.foreground }]}>{g}</Text>
                     </Pressable>
                   ))}
@@ -455,7 +455,7 @@ export default function DJSetupScreen() {
               <Text style={[styles.infoText, { color: colors.muted, marginBottom: 8 }]}>At least one link is required.</Text>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Instagram</Text>
-                <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.instagramRow, { borderColor: colors.border }]}>
                   <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
                   <TextInput
                     style={[styles.instagramInput, { color: colors.foreground }]}
@@ -472,7 +472,7 @@ export default function DJSetupScreen() {
               {(['soundcloud', 'spotify', 'mixcloud'] as const).map((platform) => (
                 <View key={platform} style={styles.fieldGroup}>
                   <Text style={[styles.label, { color: colors.foreground }]}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
-                  <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
                     placeholder={`https://${platform}.com/yourprofile`} placeholderTextColor={colors.muted}
                     value={form[platform]} onChangeText={(v) => update(platform, v)}
                     autoCapitalize="none" keyboardType="url" returnKeyType="done" />
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 12, textAlign: 'right' },
   chipRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
+  chip: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { fontSize: 13, fontWeight: '500' },
   infoBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
   infoText: { fontSize: 13, lineHeight: 18, flex: 1 },

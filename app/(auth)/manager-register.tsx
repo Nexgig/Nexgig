@@ -16,8 +16,6 @@ import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
-import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
-import { pickImage, uploadImageAsync, type PickSource } from '@/lib/upload';
 
 const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
@@ -49,12 +47,10 @@ export default function ManagerRegisterScreen() {
     companyName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  // Profile photo / avatar (optional, chosen on the Profile Photo step).
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  // Avatar (optional, chosen on step 2). Managers upload a real photo later, from
+  // Edit Profile — signup is avatar-only.
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
-  const [pendingSource, setPendingSource] = useState<PickSource>('library');
 
   const translateX = useSharedValue(0);
 
@@ -79,14 +75,6 @@ export default function ManagerRegisterScreen() {
   }, [screenWidth, translateX]);
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
-
-  const handlePickPhoto = () => {
-    Alert.alert('Profile Photo', 'Choose an option', [
-      { text: 'Choose from Library', onPress: async () => { const uri = await pickImage({ source: 'library' }); if (uri) { setPendingSource('library'); setPendingPhoto(uri); } } },
-      { text: 'Take Photo', onPress: async () => { const uri = await pickImage({ source: 'camera' }); if (uri) { setPendingSource('camera'); setPendingPhoto(uri); } } },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   const handleNext = async () => {
     if (isAnimating) return;
@@ -176,17 +164,9 @@ export default function ManagerRegisterScreen() {
       return;
     }
 
-    // Upload the chosen profile photo (if any) now that we have the user id.
-    let photoUrl: string | null = null;
-    if (photoUri) {
-      try {
-        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${user.id}`);
-      } catch (e: any) {
-        setIsLoading(false);
-        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
-        return;
-      }
-    }
+    // Managers pick a bundled avatar at signup; no photo upload here. They can
+    // still upload one later from Edit Profile.
+    const photoUrl: string | null = null;
 
     // Insert into managers table
     const { error: insertError } = await supabase.from('managers').upsert({
@@ -273,7 +253,7 @@ export default function ManagerRegisterScreen() {
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]}>
               {displayStep === 1 && 'Step 1 of 3 — Basic information'}
-              {displayStep === 2 && 'Step 2 of 3 — Add a photo or avatar'}
+              {displayStep === 2 && 'Step 2 of 3 — Pick an avatar'}
               {displayStep === 3 && 'Step 3 of 3 — Tell us about yourself'}
             </Text>
           </View>
@@ -303,7 +283,7 @@ export default function ManagerRegisterScreen() {
                 <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
                 <View style={styles.passwordRow}>
                   <TextInput
-                    style={[styles.passwordInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                    style={[styles.passwordInput, { borderColor: colors.border, color: colors.foreground }]}
                     placeholder="Min. 6 characters"
                     placeholderTextColor={colors.muted}
                     value={form.password}
@@ -314,7 +294,7 @@ export default function ManagerRegisterScreen() {
                   />
                   <Pressable
                     onPress={() => setShowPassword((p) => !p)}
-                    style={[styles.eyeBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    style={[styles.eyeBtn, { borderColor: colors.border }]}
                   >
                     <MaterialIcons
                       name={showPassword ? 'visibility-off' : 'visibility'}
@@ -337,13 +317,9 @@ export default function ManagerRegisterScreen() {
           {/* Step 2: Profile Photo (optional) */}
           {displayStep === 2 && (
             <View style={styles.form}>
-              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — upload a photo or pick an avatar. You can change this anytime.</Text>
+              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — pick an avatar. You can change this anytime.</Text>
               <View style={styles.photoStep}>
-                <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} variant="manager" />
-                <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.photoPrimaryBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
-                  <MaterialIcons name="photo-camera" size={18} color="#fff" />
-                  <Text style={styles.photoPrimaryBtnText}>Upload Photo</Text>
-                </Pressable>
+                <AvatarImage avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} variant="manager" />
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                   <MaterialIcons name="face" size={18} color={colors.foreground} />
                   <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
@@ -384,17 +360,10 @@ export default function ManagerRegisterScreen() {
         </Animated.View>
       </ScrollView>
 
-      <AvatarPreviewModal
-        uri={pendingPhoto}
-        onConfirm={() => { if (pendingPhoto) { setPhotoUri(pendingPhoto); setAvatarId(null); } setPendingPhoto(null); }}
-        onRetry={async () => { const uri = await pickImage({ source: pendingSource }); setPendingPhoto(uri ?? null); }}
-        onCancel={() => setPendingPhoto(null)}
-      />
-
       <AvatarPicker
         visible={showAvatarPicker}
         selectedId={avatarId}
-        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>
@@ -410,7 +379,7 @@ function InputField({ label, value, onChangeText, placeholder, keyboardType, col
     <View style={styles.fieldGroup}>
       <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
       <TextInput
-        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+        style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
         placeholder={placeholder}
         placeholderTextColor={colors.muted}
         value={value}
@@ -442,8 +411,6 @@ const styles = StyleSheet.create({
   nextBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   infoText: { fontSize: 13, lineHeight: 18 },
   photoStep: { alignItems: 'center', gap: 16, paddingTop: 12 },
-  photoPrimaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12 },
-  photoPrimaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   photoSecondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
   photoSecondaryBtnText: { fontSize: 15, fontWeight: '600' },
 });
