@@ -222,10 +222,9 @@ export default function RosterScreen() {
         <Pressable
           style={({ pressed }) => [styles.bookingsBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
           onPress={(e) => { e.stopPropagation?.(); router.push(('/(manager)/artist-bookings?artistId=' + item.user!.id) as Href); }}
-          hitSlop={6}
+          hitSlop={10}
         >
-          <MaterialIcons name="event-note" size={15} color={colors.primary} />
-          <Text style={[styles.bookingsBtnText, { color: colors.primary }]}>Bookings</Text>
+          <MaterialIcons name="event-note" size={18} color={colors.primary} />
         </Pressable>
       </Pressable>
     );
@@ -243,13 +242,6 @@ export default function RosterScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>My Artists</Text>
-        <Pressable
-          style={({ pressed }) => [styles.discoverBtn, { borderColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => router.push('/(manager)/(tabs)/network?tab=artists' as Href)}
-        >
-          <MaterialIcons name="explore" size={15} color={colors.primary} />
-          <Text style={[styles.discoverBtnText, { color: colors.primary }]}>Discover</Text>
-        </Pressable>
       </View>
 
       {/* Artist list */}
@@ -382,8 +374,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, flex: 1 },
   backBtn: { width: 32, alignItems: 'flex-start' },
-  discoverBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
-  discoverBtnText: { fontSize: 13, fontWeight: '700' },
 
   // ─── List ─────────────────────────────────────────────────────────────────
   list: { padding: 16, flexGrow: 1 },
@@ -398,8 +388,7 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 13, marginTop: 1 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  bookingsBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  bookingsBtnText: { fontSize: 13, fontWeight: '600' },
+  bookingsBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
   // ─── Inline action buttons ─────────────────────────────────────────────────
   actionRow: {
