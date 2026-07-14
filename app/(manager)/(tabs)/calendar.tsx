@@ -1727,14 +1727,14 @@ export default function CalendarScreen() {
                   {ordered.map(({ mode, label, icon }) => (
                     <Pressable
                       key={mode}
-                      style={[styles.toggleBtn, calendarMode === mode && { backgroundColor: colors.primary }]}
+                      style={[styles.toggleBtn, calendarMode === mode && { backgroundColor: colors.foreground }]}
                       onPress={() => {
                         setCalendarMode(mode);
                         if (mode === 'today') { setViewedDayStr(todayStr); setCreateSlotDate(todayStr); }
                       }}
                     >
-                      <MaterialIcons name={icon} size={15} color={calendarMode === mode ? '#fff' : colors.muted} />
-                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? '#fff' : colors.muted }]}>{label}</Text>
+                      <MaterialIcons name={icon} size={15} color={calendarMode === mode ? colors.background : colors.muted} />
+                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? colors.background : colors.muted }]}>{label}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -1747,18 +1747,18 @@ export default function CalendarScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
               {/* All option */}
               <Pressable
-                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: venueFilter === 'all' ? colors.primary : 'transparent' }]}
+                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.foreground : colors.border, backgroundColor: venueFilter === 'all' ? colors.foreground : 'transparent' }]}
                 onPress={() => setVenueFilter('all')}
               >
-                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? '#fff' : colors.foreground }]}>All</Text>
+                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.background : colors.foreground }]}>All</Text>
               </Pressable>
               {venues.map((v) => (
                 <Pressable
                   key={v.id}
-                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: venueFilter === v.id ? colors.primary : 'transparent' }]}
+                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.foreground : colors.border, backgroundColor: venueFilter === v.id ? colors.foreground : 'transparent' }]}
                   onPress={() => setVenueFilter(v.id)}
                 >
-                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? '#fff' : colors.foreground }]}>{v.name}</Text>
+                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.background : colors.foreground }]}>{v.name}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -1976,9 +1976,9 @@ export default function CalendarScreen() {
                     >
                       <View style={[
                         styles.dayCircle,
-                        isSelected && { backgroundColor: colors.primary + '33' },
+                        isSelected && { backgroundColor: colors.foreground + '1A' },
                       ]}>
-                        <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                        <Text style={[styles.dayNumber, { color: isSelected ? colors.foreground : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                       {dots.length > 0 && (
                         <View style={styles.dotRow}>

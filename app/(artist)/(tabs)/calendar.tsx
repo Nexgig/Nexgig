@@ -904,11 +904,11 @@ export default function DJAvailabilityScreen() {
                 {ordered.map(({ mode, label, icon }) => (
                   <Pressable
                     key={mode}
-                    style={[styles.toggleBtn, viewMode === mode && styles.toggleBtnActive, viewMode === mode && { backgroundColor: colors.primary }]}
+                    style={[styles.toggleBtn, viewMode === mode && styles.toggleBtnActive, viewMode === mode && { backgroundColor: colors.foreground }]}
                     onPress={() => { setViewMode(mode); if (mode === 'today') setViewedDayStr(todayStr); }}
                   >
-                    <MaterialIcons name={icon} size={15} color={viewMode === mode ? '#fff' : colors.muted} />
-                    <Text style={[styles.toggleBtnText, { color: viewMode === mode ? '#fff' : colors.muted }]}>{label}</Text>
+                    <MaterialIcons name={icon} size={15} color={viewMode === mode ? colors.background : colors.muted} />
+                    <Text style={[styles.toggleBtnText, { color: viewMode === mode ? colors.background : colors.muted }]}>{label}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -1119,9 +1119,9 @@ export default function DJAvailabilityScreen() {
                   >
                     <View style={[
                       styles.dayCircle,
-                      isSelected && { backgroundColor: colors.primary + '33' },
+                      isSelected && { backgroundColor: colors.foreground + '1A' },
                     ]}>
-                      <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
+                      <Text style={[styles.dayNumber, { color: isSelected ? colors.foreground : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
                     </View>
                     {dots.length > 0 && (
                       <View style={styles.dotRow}>
