@@ -116,7 +116,7 @@ export function PhoneInput({ value, onChange, label = 'Phone Number', optional =
       <Text style={[styles.label, { color: colors.foreground }]}>
         {label}{optional ? ' (optional)' : ''}
       </Text>
-      <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+      <View style={[styles.inputRow, { borderColor: colors.border }]}>
         {/* Country code picker button */}
         <Pressable
           style={({ pressed }) => [styles.codeBtn, { borderRightColor: colors.border, opacity: pressed ? 0.7 : 1 }]}

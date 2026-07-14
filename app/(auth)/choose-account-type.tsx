@@ -43,7 +43,7 @@ export default function ChooseAccountTypeScreen() {
 
         <View style={styles.options}>
           <Pressable
-            style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.card, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
             onPress={() => go('manager')}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
@@ -57,7 +57,7 @@ export default function ChooseAccountTypeScreen() {
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.card, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
             onPress={() => go('artist')}
           >
             <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>

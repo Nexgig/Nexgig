@@ -236,7 +236,7 @@ export function CountryPicker({ label, value, onChange, placeholder = 'Select co
     <>
       {label ? <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text> : null}
       <Pressable
-        style={[styles.trigger, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[styles.trigger, { borderColor: colors.border }]}
         onPress={() => setModalVisible(true)}
       >
         {selected ? (
