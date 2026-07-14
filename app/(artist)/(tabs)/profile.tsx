@@ -394,17 +394,14 @@ export default function ArtistProfileScreen() {
           <Section label="Account">
             {basedInCountry ? (
               <View style={styles.accountRow}>
-                <MaterialIcons name="location-on" size={18} color={colors.muted} />
                 <Text style={[styles.accountText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             ) : null}
             <View style={styles.accountRow}>
-              <MaterialIcons name="email" size={18} color={colors.muted} />
               <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>
             </View>
             {currentUser?.phone && (
               <View style={styles.accountRow}>
-                <MaterialIcons name="phone" size={18} color={colors.muted} />
                 <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser.phone}</Text>
               </View>
             )}
@@ -437,8 +434,6 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, gap: 4 },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   name: { fontSize: 22, fontFamily: fonts.bodyBold, textAlign: 'center' },
-  basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  basedInText: { fontSize: 14 },
   memberSince: { fontSize: 11, marginTop: 4 },
   content: { paddingBottom: 40 },
   // Stats

@@ -512,7 +512,6 @@ export default function ArtistProfileViewScreen() {
           <Section label="Account">
             {basedInCountry ? (
               <View style={styles.contactRow}>
-                <MaterialIcons name="location-on" size={18} color={colors.muted} />
                 <Text style={[styles.contactValue, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             ) : null}
@@ -520,14 +519,12 @@ export default function ArtistProfileViewScreen() {
               <>
               {dj.email ? (
                 <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`mailto:${dj.email}`)}>
-                  <MaterialIcons name="email" size={18} color={colors.muted} />
                   <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.email}</Text>
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
               ) : null}
               {dj.phone ? (
                 <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`tel:${dj.phone}`)}>
-                  <MaterialIcons name="phone" size={18} color={colors.muted} />
                   <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.phone}</Text>
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
@@ -672,8 +669,6 @@ const styles = StyleSheet.create({
   heroBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   djName: { fontSize: 22, fontFamily: fonts.bodyBold, textAlign: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  basedInRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  basedInText: { fontSize: 14 },
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 4 },
   statCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 28, fontWeight: '800' },

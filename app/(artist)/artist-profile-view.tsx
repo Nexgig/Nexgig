@@ -249,7 +249,6 @@ export default function ArtistProfileViewScreen() {
           {basedInCountry ? (
             <Section label="Account">
               <View style={styles.basedInRow}>
-                <MaterialIcons name="location-on" size={18} color={colors.muted} />
                 <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
               </View>
             </Section>
