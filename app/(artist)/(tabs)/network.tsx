@@ -9,6 +9,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -339,13 +340,7 @@ export default function ArtistNetworkScreen() {
                   onPress={() => router.push((`/(artist)/venue-detail?id=` + venue.id) as Href)}
                 >
                   <View style={styles.cardLeft}>
-                    {(venue.photo_urls?.[0] || venue.admin_photo_url) ? (
-                      <Image source={{ uri: venue.photo_urls?.[0] || venue.admin_photo_url || undefined }} style={styles.thumb} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                        <MaterialIcons name="place" size={22} color={colors.muted} />
-                      </View>
-                    )}
+                    <Image source={venueImage(venue.venue_type)} style={styles.thumb} resizeMode="cover" />
                     <View style={styles.cardInfo}>
                       <View style={styles.titleRow}>
                         <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>

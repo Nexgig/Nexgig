@@ -5,7 +5,8 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useCalendarJumpStore, useReviewStore , venuePhotoUri } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useCalendarJumpStore, useReviewStore } from '@/lib/store';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
@@ -15,12 +16,11 @@ import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
 /** Compact coral "Maps" badge — replaces the old full-width "Open in Google Maps" row. */
-/** Venue photo at IconTile's size/radius. Falls back to the icon tile when the
- *  venue has no photo — venues have no avatar system yet. Uses the booking's
- *  venue_photo_url snapshot so hidden/deleted venues still show their picture. */
-function VenueThumb({ uri }: { uri?: string }) {
-  if (!uri) return <IconTile icon="business" />;
-  return <Image source={{ uri }} style={{ width: 44, height: 44, borderRadius: 12 }} resizeMode="cover" />;
+/** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
+ *  resolves — and it falls back to the type snapshotted on the booking, since the
+ *  venue row can be unreadable (artist disconnected, venue hidden). */
+function VenueThumb({ venue, snapshotType }: { venue?: { venueType?: string } | null; snapshotType?: string }) {
+  return <Image source={venueImageFor(venue, snapshotType)} style={{ width: 44, height: 44, borderRadius: 12 }} resizeMode="cover" />;
 }
 
 /** A label/value row, borrowed from the invoice's document language. No icon — an
@@ -245,7 +245,7 @@ export default function DJBookingDetailScreen() {
             <>
               <Section label="Venue">
                 <ListRow
-                  leading={<VenueThumb uri={venuePhotoUri(venue) ?? booking.venuePhotoUrl} />}
+                  leading={<VenueThumb venue={venue} snapshotType={booking.venueType} />}
                   title={venue.name}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
                   divider={false}
@@ -265,7 +265,7 @@ export default function DJBookingDetailScreen() {
           ) : booking.venueName ? (
             <>
               <Section label="Venue">
-                <ListRow leading={<VenueThumb uri={booking.venuePhotoUrl} />} title={booking.venueName} divider={false} />
+                <ListRow leading={<VenueThumb snapshotType={booking.venueType} />} title={booking.venueName} divider={false} />
               </Section>
             </>
           ) : null}

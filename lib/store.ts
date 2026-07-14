@@ -880,10 +880,7 @@ export function mapVenueRow(data: any): Venue {
 // Resolve which photo a venue card should show: the manager's uploaded photo
 // takes priority; if there is none, fall back to the admin-curated photo; if
 // neither, return undefined so the caller renders its icon placeholder.
-export function venuePhotoUri(venue?: { photoUrls?: string[]; adminPhotoUrl?: string } | null): string | undefined {
-  if (!venue) return undefined;
-  return (Array.isArray(venue.photoUrls) && venue.photoUrls[0]) || venue.adminPhotoUrl || undefined;
-}
+
 
 interface VenueDirectoryState {
   venues: Record<string, Venue>;

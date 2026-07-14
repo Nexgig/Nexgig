@@ -4,9 +4,10 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { performerLabel } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
@@ -557,13 +558,7 @@ export default function NetworkScreen() {
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
               >
                 <View style={styles.cardLeft}>
-                  {venuePhotoUri(venue) ? (
-                    <Image source={{ uri: venuePhotoUri(venue) }} style={styles.thumb} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                      <MaterialIcons name="place" size={22} color={colors.muted} />
-                    </View>
-                  )}
+                  <Image source={venueImage(venue.venueType)} style={styles.thumb} resizeMode="cover" />
                   <View style={styles.cardInfo}>
                     <View style={styles.titleRow}>
                       <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>

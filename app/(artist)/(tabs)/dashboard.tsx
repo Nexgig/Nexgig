@@ -8,8 +8,9 @@ import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
@@ -50,7 +51,7 @@ export default function DJHomeScreen() {
         isArtistCreated: b.is_artist_created ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
         slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
-        venueName: b.venue_name ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+        venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
     setRefreshing(false);
@@ -256,19 +257,19 @@ export default function DJHomeScreen() {
             </View>
           ) : (
             dashboardBookingsPreviewFiltered.map((booking) => {
-              const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
+              const venueImg = venueImageFor(booking.venue, booking.venueType);
               return (
               <Pressable
                 key={booking.id}
                 style={({ pressed }) => [styles.gigCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
               >
-                {venuePhoto ? (
-                  <Image source={{ uri: venuePhoto }} style={styles.gigPhoto} resizeMode="cover" />
-                ) : (
+                {booking.isArtistCreated ? (
                   <View style={[styles.gigPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                    <MaterialIcons name={booking.isArtistCreated ? 'event' : 'place'} size={20} color={colors.muted} />
+                    <MaterialIcons name="event" size={20} color={colors.muted} />
                   </View>
+                ) : (
+                  <Image source={venueImg} style={styles.gigPhoto} resizeMode="cover" />
                 )}
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>

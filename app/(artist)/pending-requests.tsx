@@ -4,9 +4,10 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { Divider } from '@/components/ui/card-free';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
@@ -143,7 +144,7 @@ export default function ArtistPendingRequestsScreen() {
 
   const renderCard = ({ item }: { item: typeof pendingRequests[number] }) => {
     const isManagerCancelled = item.status === 'cancelled';
-    const venuePhoto = item.venue ? venuePhotoUri(item.venue) : undefined;
+    const venueImg = venueImageFor(item.venue, item.venueType);
     const dateLine = item.resolvedDate
       ? `${formatDate(item.resolvedDate)}${item.resolvedStart ? ` · ${formatTime(item.resolvedStart)}–${formatTime(item.resolvedEnd ?? '')}` : ''}`
       : '';
@@ -155,13 +156,7 @@ export default function ArtistPendingRequestsScreen() {
         onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}
       >
         {/* Venue photo */}
-        {venuePhoto ? (
-          <Image source={{ uri: venuePhoto }} style={styles.photo} resizeMode="cover" />
-        ) : (
-          <View style={[styles.photo, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-            <MaterialIcons name="place" size={20} color={colors.muted} />
-          </View>
-        )}
+        <Image source={venueImg} style={styles.photo} resizeMode="cover" />
 
         {/* Info */}
         <View style={styles.info}>

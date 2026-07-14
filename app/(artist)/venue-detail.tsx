@@ -7,10 +7,11 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 import { supabase } from '@/lib/supabase';
 import { fonts } from '@/lib/fonts';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
@@ -130,9 +131,7 @@ export default function ArtistVenueDetailScreen() {
         </View>
 
         {/* Venue Photo */}
-        {venuePhotoUri(venue) && (
-          <Image source={{ uri: venuePhotoUri(venue) }} style={styles.venuePhoto} resizeMode="cover" />
-        )}
+        <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
 
         {/* Venue Info Card */}
         <View style={styles.infoCard}>

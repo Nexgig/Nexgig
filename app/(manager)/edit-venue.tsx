@@ -4,17 +4,16 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore } from '@/lib/store';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import type { VenueType, EnergyType, GenreType, AudienceType, SubVibe } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { supabase } from '@/lib/supabase';
-import { uploadImageAsync, pickImage } from '@/lib/upload';
 import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSuggestion } from '@/lib/places';
 
 // ── Option arrays — kept in sync with create-venue.tsx ───────────────────────
 const VENUE_TYPES: VenueType[] = [
-  'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Bar / Restaurant',
-  'Bar / Club', 'Rooftop', 'Live Music Venue', 'Event Space', 'Wedding Venue', 'Hotel / Resort',
+  'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Rooftop', 'Live Music Venue',
 ];
 const VENUE_COLORS = [
   { hex: '#2563EB', label: 'Blue' },
@@ -73,9 +72,6 @@ export default function EditVenueScreen() {
     billingTrnNumber: venue?.billing?.trnNumber ?? '',
   });
 
-  const [photoUri, setPhotoUri] = useState<string | null>(
-    venue?.photoUrls?.[0] ?? null
-  );
   const [saving, setSaving] = useState(false);
   const [addressCoords, setAddressCoords] = useState<{ lat: number; lng: number } | null>(
     venue?.googleMapsLocation && (venue.googleMapsLocation.lat || venue.googleMapsLocation.lng)
@@ -93,7 +89,6 @@ export default function EditVenueScreen() {
   // resetting the baseline after a save actually re-triggers the hasChanges memo —
   // a ref mutation alone wouldn't, which left "unsaved changes" showing post-save.
   const originalForm = useRef({ ...form });
-  const originalPhoto = useRef<string | null>(venue?.photoUrls?.[0] ?? null);
   // Bumped after every successful save so hasChanges recomputes against the new baseline.
   const [savedTick, setSavedTick] = useState(0);
 
@@ -113,12 +108,11 @@ export default function EditVenueScreen() {
       JSON.stringify(form.genrePreferences) !== JSON.stringify(o.genrePreferences) ||
       JSON.stringify(form.audienceType) !== JSON.stringify(o.audienceType) ||
       JSON.stringify(form.subVibe) !== JSON.stringify(o.subVibe) ||
-      photoUri !== originalPhoto.current ||
       form.billingCompanyName !== o.billingCompanyName ||
       form.billingCompanyAddress !== o.billingCompanyAddress ||
       form.billingTrnNumber !== o.billingTrnNumber
     );
-  }, [form, photoUri, savedTick]);
+  }, [form, savedTick]);
 
   const handleBack = () => {
     if (!hasChanges) { router.back(); return; }
@@ -213,30 +207,6 @@ export default function EditVenueScreen() {
     setLocationDirty(true);
   };
 
-  // ── Photo picker ──────────────────────────────────────────────────────────
-  const handlePickPhoto = () => {
-    Alert.alert('Change Venue Photo', 'Choose an option', [
-      {
-        text: 'Choose from Library',
-        onPress: async () => {
-          const uri = await pickImage({ source: 'library', aspect: [16, 9] });
-          if (uri) setPhotoUri(uri);
-        },
-      },
-      {
-        text: 'Take Photo',
-        onPress: async () => {
-          const uri = await pickImage({ source: 'camera', aspect: [16, 9] });
-          if (uri) setPhotoUri(uri);
-        },
-      },
-      ...(photoUri
-        ? [{ text: 'Remove Photo', style: 'destructive' as const, onPress: () => setPhotoUri(null) }]
-        : []),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
-  };
-
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!form.name.trim()) { Alert.alert('Required', 'Please enter a venue name.'); return; }
@@ -244,18 +214,6 @@ export default function EditVenueScreen() {
     if (locationDirty && !selectedPlaceId) { Alert.alert('Select your venue', 'You changed the address — please tap your venue from the Google list.'); return; }
     if (saving) return;
     setSaving(true);
-    // Upload a newly-picked venue photo (local file) to Storage; existing remote URLs pass through.
-    let photoUrl = photoUri;
-    if (photoUri && !/^https?:\/\//i.test(photoUri)) {
-      try {
-        photoUrl = await uploadImageAsync(photoUri, 'venue-photos', `venue-${venue.id}`);
-      } catch (e: any) {
-        setSaving(false);
-        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload the venue photo. Please try again.');
-        return;
-      }
-    }
-    const photoArr = photoUrl ? [photoUrl] : [];
     const updates = {
       name: form.name.trim(),
       venueType: form.venueType,
@@ -280,7 +238,6 @@ export default function EditVenueScreen() {
         companyAddress: form.billingCompanyAddress.trim(),
         trnNumber: form.billingTrnNumber.trim(),
       } : undefined,
-      photoUrls: photoArr,
     };
     updateVenue(venue.id, updates);
     await supabase.from('venues').update({
@@ -303,12 +260,9 @@ export default function EditVenueScreen() {
       billing_company_name: form.billingCompanyName || null,
       billing_company_address: form.billingCompanyAddress || null,
       billing_trn_number: form.billingTrnNumber || null,
-      photo_urls: photoArr,
       updated_at: new Date().toISOString(),
     }).eq('id', venue.id);
     originalForm.current = { ...form };
-    originalPhoto.current = photoUrl;
-    setPhotoUri(photoUrl);
     setSavedTick((t) => t + 1);
     setSaving(false);
   };
@@ -327,25 +281,9 @@ export default function EditVenueScreen() {
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 + keyboardHeight }}>
 
-        {/* Venue Photo Banner */}
-        <Pressable onPress={handlePickPhoto} style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>
-          {photoUri ? (
-            <View style={styles.photoBanner}>
-              <Image source={{ uri: photoUri }} style={styles.photoImage} />
-              <View style={styles.photoOverlay}>
-                <View style={styles.photoEditBadge}>
-                  <MaterialIcons name="camera-alt" size={18} color="#fff" />
-                  <Text style={styles.photoEditText}>Change Photo</Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View style={[styles.photoPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <MaterialIcons name="add-a-photo" size={32} color={colors.muted} />
-              <Text style={[styles.photoPlaceholderText, { color: colors.muted }]}>Add Venue Photo</Text>
-            </View>
-          )}
-        </Pressable>
+        {/* The venue image is derived from its TYPE (lib/venue-images.ts) — there is
+            no photo upload. Pick a type below and the picture follows. */}
+        <Image source={venueImage(form.venueType)} style={styles.photoBanner} resizeMode="cover" />
 
         <View style={styles.form}>
           {/* Venue Name */}
@@ -647,8 +585,6 @@ const styles = StyleSheet.create({
   photoOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 48, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   photoEditBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   photoEditText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  photoPlaceholder: { height: 140, marginHorizontal: 20, marginTop: 16, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  photoPlaceholderText: { fontSize: 14, fontWeight: '600' },
   form: { padding: 20, gap: 20 },
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 13, fontWeight: '700' },

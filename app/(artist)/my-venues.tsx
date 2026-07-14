@@ -4,9 +4,10 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
 import { Divider } from '@/components/ui/card-free';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import type { Venue } from '@/lib/types';
@@ -141,17 +142,11 @@ export default function ArtistMyVenuesScreen() {
               onPress={() => handleVenuePress(venue.id)}
             >
               <View style={styles.cardLeft}>
-                {venuePhotoUri(venue) ? (
-                  <Image
-                    source={{ uri: venuePhotoUri(venue) }}
-                    style={[styles.iconWrap, { borderColor: colors.border }]}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.iconWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <MaterialIcons name="place" size={22} color={colors.muted} />
-                  </View>
-                )}
+                <Image
+                  source={venueImage(venue.venueType)}
+                  style={[styles.iconWrap, { borderColor: colors.border }]}
+                  resizeMode="cover"
+                />
                 <View style={styles.info}>
                   <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
                     {venue.name}

@@ -171,7 +171,7 @@ export default function ManagerDashboard() {
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
         slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
-        venueName: b.venue_name ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+        venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
     setRefreshing(false);

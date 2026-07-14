@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
@@ -378,7 +378,7 @@ export default function AssignDJScreen() {
               slot_start_time: slot!.startTime,
               slot_end_time: slot!.endTime,
               venue_name: venue?.name ?? null,
-              venue_photo_url: venuePhotoUri(venue) ?? null,
+              venue_type: venue?.venueType ?? null,
             }).then(({ error }) => {
               if (error) console.warn('past booking insert error:', error.message);
             });

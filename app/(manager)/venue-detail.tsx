@@ -6,7 +6,8 @@ import type { Venue } from '@/lib/types';
 import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow, venuePhotoUri } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -228,9 +229,7 @@ export default function VenueDetailScreen() {
         </View>
 
         {/* Venue Photo — manager's upload, else admin-curated fallback */}
-        {venuePhotoUri(venue) && (
-          <Image source={{ uri: venuePhotoUri(venue) }} style={styles.venuePhoto} />
-        )}
+        <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
 
         {/* Venue Info */}
         <View style={styles.infoCard}>

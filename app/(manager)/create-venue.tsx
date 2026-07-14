@@ -13,8 +13,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS
 import { supabase } from '@/lib/supabase';
 
 const VENUE_TYPES: VenueType[] = [
-  'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Bar / Restaurant',
-  'Bar / Club', 'Rooftop', 'Live Music Venue', 'Event Space', 'Wedding Venue', 'Hotel / Resort',
+  'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Rooftop', 'Live Music Venue',
 ];
 const VENUE_COLORS = [
   { hex: '#2563EB', label: 'Blue' },

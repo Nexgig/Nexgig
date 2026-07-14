@@ -5,9 +5,10 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuthStore, useVenueStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
 import { Divider } from '@/components/ui/card-free';
+import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import type { Venue } from '@/lib/types';
 
@@ -71,17 +72,11 @@ export default function ManagerMyVenuesScreen() {
               onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
             >
               <View style={styles.cardLeft}>
-                {venuePhotoUri(venue) ? (
-                  <Image
-                    source={{ uri: venuePhotoUri(venue) }}
-                    style={[styles.thumb, { borderColor: colors.border }]}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.thumb, { backgroundColor: colors.background, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }]}>
-                    <MaterialIcons name="place" size={22} color={colors.muted} />
-                  </View>
-                )}
+                <Image
+                  source={venueImage(venue.venueType)}
+                  style={[styles.thumb, { borderColor: colors.border }]}
+                  resizeMode="cover"
+                />
                 <View style={styles.cardInfo}>
                   <View style={styles.nameRow}>
                     <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>

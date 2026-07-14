@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore, venuePhotoUri } from '@/lib/store';
+import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { AvatarImage } from '@/components/ui/avatar-image';
@@ -233,7 +233,7 @@ export default function AddSlotScreen() {
       id: bookingId, slot_id: createdSlotId, venue_id: createSlotVenueId, artist_id: artistId, manager_id: currentUser.id,
       status: 'requested', is_completed: false, slot_date: targetDate, slot_name: slotForm.name,
       slot_start_time: slotForm.startTime, slot_end_time: slotForm.endTime, venue_name: venueName ?? null,
-      venue_photo_url: venuePhotoUri(getVenueById(createSlotVenueId)) ?? null,
+      venue_type: getVenueById(createSlotVenueId)?.venueType ?? null,
     }).then(({ error }) => { if (error) console.warn('past booking insert:', error.message); });
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,

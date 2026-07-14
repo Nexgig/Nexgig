@@ -115,18 +115,16 @@ export interface ArtistProfile {
 
 // ─── Venue ───────────────────────────────────────────────────────────────────
 
+/** Six types, each with a bundled image in lib/venue-images.ts. Venues have no
+ *  photo upload — the type IS the picture, so this union and that map must stay
+ *  in lockstep. */
 export type VenueType =
   | 'Dance Club'
   | 'Beach Club'
   | 'Lounge'
   | 'Cocktail Bar'
-  | 'Bar / Restaurant'
-  | 'Bar / Club'
   | 'Rooftop'
-  | 'Live Music Venue'
-  | 'Event Space'
-  | 'Wedding Venue'
-  | 'Hotel / Resort';
+  | 'Live Music Venue';
 
 export type AudienceType =
   | 'Tourist-heavy'
@@ -264,7 +262,11 @@ export interface Booking {
   slotName?: string;
   slotStartTime?: string; // HH:MM
   slotEndTime?: string;   // HH:MM
-  venueName?: string;     // snapshot of venue name
+  venueName?: string;
+  /** Snapshot of the venue's type. The venue row can become unreadable (artist
+   *  disconnected, venue hidden), and the venue IMAGE is derived from the type —
+   *  so we stamp it on the booking, the way venuePhotoUrl used to work. */
+  venueType?: VenueType;     // snapshot of venue name
   venuePhotoUrl?: string; // snapshot of venue photo — persists even if venue is hidden/disconnected
   hiddenFromCalendar?: boolean; // artist dismissed past booking from calendar view
   hiddenFromManagerCalendar?: boolean; // manager dismissed declined/cancelled booking from their calendar view

@@ -82,7 +82,7 @@ export default function ManagerLayout() {
           slotName: b.slot_name ?? undefined,
           slotStartTime: b.slot_start_time ?? undefined,
           slotEndTime: b.slot_end_time ?? undefined,
-          venueName: b.venue_name ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined,
+          venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined,
           createdAt: b.created_at,
           updatedAt: b.updated_at,
         }));

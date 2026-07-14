@@ -6,8 +6,9 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, venuePhotoUri } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -70,18 +71,18 @@ export default function ArtistConfirmedGigsScreen() {
           </View>
         }
         renderItem={({ item: booking }) => {
-          const venuePhoto = booking.venue ? venuePhotoUri(booking.venue) : undefined;
+          const venueImg = venueImageFor(booking.venue, booking.venueType);
           return (
           <Pressable
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
           >
-            {venuePhoto ? (
-              <Image source={{ uri: venuePhoto }} style={styles.photo} resizeMode="cover" />
-            ) : (
+            {booking.isArtistCreated ? (
               <View style={[styles.photo, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                <MaterialIcons name="place" size={20} color={colors.muted} />
+                <MaterialIcons name="event" size={20} color={colors.muted} />
               </View>
+            ) : (
+              <Image source={venueImg} style={styles.photo} resizeMode="cover" />
             )}
             <View style={styles.info}>
               <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>
