@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { validateEmail } from '@/lib/validate-email';
 
 const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
@@ -31,8 +32,12 @@ export default function ManagerRegisterScreen() {
 
   // OAuth mode: user already authenticated via Apple/Google, session exists.
   // We skip the email/password signup and pre-fill name/email.
-  const { oauth, name: oauthName, email: oauthEmail } = useLocalSearchParams<{ oauth?: string; name?: string; email?: string }>();
-  const isOAuth = oauth === '1';
+  const { oauth, resume, name: oauthName, email: oauthEmail } = useLocalSearchParams<{ oauth?: string; resume?: string; name?: string; email?: string }>();
+  // Both mean the same thing to this screen: an auth session already exists, so
+  // skip signUp and hide the email/password fields.
+  //   oauth  — Apple/Google signed them in before we got here.
+  //   resume — they signed up, abandoned setup, and sign-in sent them back to finish.
+  const hasSession = oauth === '1' || resume === '1';
 
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
@@ -47,6 +52,7 @@ export default function ManagerRegisterScreen() {
     companyName: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
   // Avatar (optional, chosen on step 2). Managers upload a real photo later, from
   // Edit Profile — signup is avatar-only.
   const [avatarId, setAvatarId] = useState<string | null>(null);
@@ -81,7 +87,7 @@ export default function ManagerRegisterScreen() {
 
     // ✅ Step 1 — sign up with email + password (skipped in OAuth mode)
     if (step === 1) {
-      if (isOAuth) {
+      if (hasSession) {
         // Session already exists from Apple/Google. Just need a name.
         if (!form.fullName.trim()) {
           Alert.alert('Required', 'Please enter your full name.');
@@ -95,6 +101,12 @@ export default function ManagerRegisterScreen() {
         Alert.alert('Required', 'Please fill in all fields.');
         return;
       }
+      const emailErr = validateEmail(form.email);
+      if (emailErr) {
+        setEmailError(emailErr);
+        return;
+      }
+      setEmailError('');
       if (form.password.length < 6) {
         Alert.alert('Weak password', 'Password must be at least 6 characters.');
         return;
@@ -105,11 +117,19 @@ export default function ManagerRegisterScreen() {
       const { error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        // Stamped on auth.users so that if they abandon signup before the profile
+        // rows are written, sign-in can tell which setup flow to resume them into.
+        options: { data: { account_type: 'manager' } },
       });
 
       if (signUpError) {
         setIsLoading(false);
-        Alert.alert('Sign up failed', signUpError.message);
+        const msg = signUpError.message ?? '';
+        if (/already registered|already exists|user already/i.test(msg)) {
+          setEmailError('That email is already registered. Try signing in instead.');
+          return;
+        }
+        Alert.alert('Sign up failed', msg);
         return;
       }
 
@@ -268,17 +288,18 @@ export default function ManagerRegisterScreen() {
                 placeholder="Alex Thompson"
                 colors={colors}
               />
-              {!isOAuth && (
+              {!hasSession && (
                 <InputField
                   label="Email Address"
                   value={form.email}
-                  onChangeText={(v) => update('email', v)}
+                  onChangeText={(v) => { update('email', v); setEmailError(''); }}
                   placeholder="alex@example.com"
                   keyboardType="email-address"
                   colors={colors}
+                  error={emailError}
                 />
               )}
-              {!isOAuth && (
+              {!hasSession && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
                 <View style={styles.passwordRow}>
@@ -370,16 +391,17 @@ export default function ManagerRegisterScreen() {
   );
 }
 
-function InputField({ label, value, onChangeText, placeholder, keyboardType, colors }: {
+function InputField({ label, value, onChangeText, placeholder, keyboardType, colors, error }: {
   label: string; value: string; onChangeText: (v: string) => void;
   placeholder: string; keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad';
   colors: ReturnType<typeof import('@/hooks/use-colors').useColors>;
+  error?: string;
 }) {
   return (
     <View style={styles.fieldGroup}>
       <Text style={[styles.label, { color: colors.foreground }]}>{label}</Text>
       <TextInput
-        style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
+        style={[styles.input, { borderColor: error ? '#EF4444' : colors.border, color: colors.foreground }]}
         placeholder={placeholder}
         placeholderTextColor={colors.muted}
         value={value}
@@ -388,6 +410,7 @@ function InputField({ label, value, onChangeText, placeholder, keyboardType, col
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
         returnKeyType="next"
       />
+      {error ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{error}</Text> : null}
     </View>
   );
 }
@@ -398,6 +421,7 @@ const styles = StyleSheet.create({
   backBtn: { marginBottom: 16, alignSelf: 'flex-start', padding: 4 },
   stepIndicator: { flexDirection: 'row', gap: 6, marginBottom: 20 },
   stepDot: { width: 32, height: 4, borderRadius: 2 },
+  errorText: { fontSize: 12, marginTop: 4 },
   title: { fontSize: 26, fontWeight: '800', marginBottom: 6 },
   subtitle: { fontSize: 14, lineHeight: 20 },
   form: { gap: 20, marginBottom: 32 },

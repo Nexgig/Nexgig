@@ -19,6 +19,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
 import { pickImage, uploadImageAsync, type PickSource } from '@/lib/upload';
+import { validateEmail } from '@/lib/validate-email';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
 
@@ -50,8 +51,12 @@ export default function DJSetupScreen() {
 
   // OAuth mode: user already authenticated via Apple/Google, session exists.
   // We skip the email/password signup and pre-fill name/email.
-  const { oauth, name: oauthName, email: oauthEmail } = useLocalSearchParams<{ oauth?: string; name?: string; email?: string }>();
-  const isOAuth = oauth === '1';
+  const { oauth, resume, name: oauthName, email: oauthEmail } = useLocalSearchParams<{ oauth?: string; resume?: string; name?: string; email?: string }>();
+  // Both mean the same thing to this screen: an auth session already exists, so
+  // skip signUp and hide the email/password fields.
+  //   oauth  — Apple/Google signed them in before we got here.
+  //   resume — they signed up, abandoned setup, and sign-in sent them back to finish.
+  const hasSession = oauth === '1' || resume === '1';
 
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
@@ -133,12 +138,47 @@ export default function DJSetupScreen() {
     if (step === 1) {
       if (!form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
       if (!form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
-      if (!isOAuth) {
-        if (!form.email.trim()) { Alert.alert('Required', 'Please enter your email address.'); return; }
+      if (!hasSession) {
+        const emailErr = validateEmail(form.email);
+        if (emailErr) { setEmailError(emailErr); return; }
+        setEmailError('');
         if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
       }
       if (form.instruments.length === 0) { Alert.alert('Required', 'Please select at least one — CDJ / Turntables if you DJ, or your instrument(s).'); return; }
-      setEmailError('');
+
+      // Create the account here, not at the end. Same as the manager flow: the
+      // "email already taken" error surfaces now, before three steps of typing.
+      // Abandoning mid-signup is recoverable — sign-in resumes an unfinished setup
+      // using the account_type stamped on the auth user below.
+      if (!hasSession) {
+        setIsLoading(true);
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          options: { data: { account_type: 'artist' } },
+        });
+        if (signUpError) {
+          setIsLoading(false);
+          const msg = signUpError.message ?? '';
+          if (/already registered|already exists|user already/i.test(msg)) {
+            setEmailError('That email is already registered. Try signing in instead.');
+            return;
+          }
+          Alert.alert('Sign up failed', msg);
+          return;
+        }
+        // Sign in immediately so the session is live for the rest of the flow
+        // (the photo upload on submit needs it).
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+        });
+        setIsLoading(false);
+        if (signInError) {
+          Alert.alert('Sign in failed', signInError.message);
+          return;
+        }
+      }
     }
 
     if (step === 2 && !form.primaryGenre) {
@@ -159,38 +199,18 @@ export default function DJSetupScreen() {
 
     setIsLoading(true);
 
-    // ✅ Get the user — either from the existing OAuth session, or by signing up.
-    let user;
-    if (isOAuth) {
-      const { data: { user: sessionUser }, error: getUserError } = await supabase.auth.getUser();
-      if (getUserError || !sessionUser) {
-        setIsLoading(false);
-        Alert.alert('Error', 'Session not found. Please sign in again.');
-        return;
-      }
-      user = sessionUser;
-    } else {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-      });
-
-      if (signUpError) {
-        setIsLoading(false);
-        Alert.alert('Sign up failed', signUpError.message);
-        return;
-      }
-
-      if (!signUpData.user) {
-        setIsLoading(false);
-        Alert.alert('Error', 'Could not create account. Try again.');
-        return;
-      }
-      user = signUpData.user;
+    // ✅ The account already exists — created at step 1 (or by OAuth). Just read
+    //    the session back.
+    const { data: { user: sessionUser }, error: getUserError } = await supabase.auth.getUser();
+    if (getUserError || !sessionUser) {
+      setIsLoading(false);
+      Alert.alert('Error', 'Session not found. Please restart registration.');
+      return;
     }
+    const user = sessionUser;
 
     // The email used for profile rows: OAuth users use their session email.
-    const profileEmail = (isOAuth ? (user.email ?? form.email) : form.email).trim().toLowerCase();
+    const profileEmail = (hasSession ? (user.email ?? form.email) : form.email).trim().toLowerCase();
 
     // ✅ Step 2 — insert into users table
     const { error: userInsertError } = await supabase.from('users').upsert({
@@ -358,7 +378,7 @@ export default function DJSetupScreen() {
                   placeholder="Kai Nakamura" placeholderTextColor={colors.muted}
                   value={form.fullLegalName} onChangeText={(v) => update('fullLegalName', v)} returnKeyType="next" />
               </View>
-              {!isOAuth && (
+              {!hasSession && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Email *</Text>
                 <TextInput style={[styles.input, { borderColor: emailError ? '#EF4444' : colors.border, color: colors.foreground }]}
@@ -368,7 +388,7 @@ export default function DJSetupScreen() {
                 {emailError ? <Text style={[styles.errorText, { color: '#EF4444' }]}>{emailError}</Text> : null}
               </View>
               )}
-              {!isOAuth && (
+              {!hasSession && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Password *</Text>
                 <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}

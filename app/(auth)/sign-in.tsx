@@ -131,7 +131,36 @@ export default function SignInScreen() {
           return;
         }
 
-        Alert.alert('Error', 'Account not found. Please register first.');
+        // ── Authenticated, but no profile row ──────────────────────────────
+        // They signed up and abandoned setup before the profile was written. The
+        // account exists, so registering again would fail with "already
+        // registered" — and there's nothing to sign in to. Resume their setup
+        // instead of dead-ending them.
+        //
+        // `account_type` is stamped on the auth user at signup, so we know which
+        // flow to send them back to. If it's missing (an older account, created
+        // before we stamped it), let them pick again.
+        const pendingType = (data.user.user_metadata as { account_type?: string } | null)?.account_type;
+
+        Alert.alert(
+          'Finish setting up your account',
+          'You started signing up but never finished. Let’s pick up where you left off.',
+          [{
+            text: 'Continue',
+            onPress: () => {
+              // resume=1 tells the setup screen a session already exists, so it
+              // skips signUp (which would fail with "already registered") and
+              // hides the email/password fields.
+              if (pendingType === 'manager') {
+                router.replace('/(auth)/manager-register?resume=1' as Href);
+              } else if (pendingType === 'artist') {
+                router.replace('/(auth)/artist-setup?resume=1' as Href);
+              } else {
+                router.replace('/(auth)/choose-account-type?resume=1' as Href);
+              }
+            },
+          }]
+        );
       }
     } catch (error: any) {
       const msg = (error?.message ?? '').toLowerCase();

@@ -11,7 +11,7 @@ import { useColors } from '@/hooks/use-colors';
 export default function ChooseAccountTypeScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { name, email, oauth } = useLocalSearchParams<{ name?: string; email?: string; oauth?: string }>();
+  const { name, email, oauth, resume } = useLocalSearchParams<{ name?: string; email?: string; oauth?: string; resume?: string }>();
 
   const go = (type: 'manager' | 'artist') => {
     const route = type === 'manager' ? '/(auth)/manager-register' : '/(auth)/artist-setup';
@@ -19,6 +19,10 @@ export default function ChooseAccountTypeScreen() {
     // Only carry oauth mode when arriving from an Apple/Google sign-in. New
     // email/password signups omit it so the wizard collects email + password.
     if (oauth === '1') params.set('oauth', '1');
+    // resume: an account already exists but setup was never finished (sent here by
+    // sign-in when the auth user has no account_type stamped on it). Must be carried
+    // through, or the wizard would try to sign them up again and fail.
+    if (resume === '1') params.set('resume', '1');
     if (name) params.set('name', name);
     if (email) params.set('email', email);
     router.push(`${route}?${params.toString()}` as Href);
