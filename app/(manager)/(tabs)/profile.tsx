@@ -34,6 +34,9 @@ export default function ManagerProfileScreen() {
 
   const addInvoice = useInvoiceStore((s) => s.addInvoice);
   const invoicesList = useInvoiceStore((s) => s.invoices);
+  const hasInvoices = invoicesList.some(
+    (inv) => inv.managerId === currentUser?.id && !inv.isDeletedByManager
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -149,12 +152,14 @@ export default function ManagerProfileScreen() {
 
         <Divider />
 
-        <View style={styles.content}>
-          {/* Invoices */}
-          <InvoicesSection colors={colors} currentUserId={currentUser?.id ?? ''} router={router} />
-        </View>
-
-        <Divider />
+        {hasInvoices ? (
+          <>
+            <View style={styles.content}>
+              <InvoicesSection colors={colors} currentUserId={currentUser?.id ?? ''} router={router} />
+            </View>
+            <Divider />
+          </>
+        ) : null}
 
         {/* Account */}
         <Section label="Account">
