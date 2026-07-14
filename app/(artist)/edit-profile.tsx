@@ -4,11 +4,9 @@ import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { uploadImageAsync, pickImage, type PickSource } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
@@ -58,7 +56,6 @@ export default function DJEditProfileScreen() {
   const [instruments, setInstruments] = useState<InstrumentType[]>(
     (djProfile?.instruments as InstrumentType[]) ?? []
   );
-  const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
   const [avatarId, setAvatarId] = useState<string | null>(currentUser?.avatarId ?? null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   // Bumped after each successful save so the unsaved-changes memo recomputes
@@ -82,7 +79,6 @@ export default function DJEditProfileScreen() {
   const originalGenre = useRef(primaryGenre);
   const originalSecondary = useRef(secondaryGenres);
   const originalInstruments = useRef(instruments);
-  const originalPhoto = useRef(photoUri);
   const originalAvatar = useRef(avatarId);
 
   const hasChanges = useMemo(() => {
@@ -101,10 +97,9 @@ export default function DJEditProfileScreen() {
       primaryGenre !== originalGenre.current ||
       JSON.stringify(secondaryGenres) !== JSON.stringify(originalSecondary.current) ||
       JSON.stringify(instruments) !== JSON.stringify(originalInstruments.current) ||
-      photoUri !== originalPhoto.current ||
       avatarId !== originalAvatar.current
     );
-  }, [form, primaryGenre, secondaryGenres, instruments, photoUri, avatarId, baselineVersion]);
+  }, [form, primaryGenre, secondaryGenres, instruments, avatarId, baselineVersion]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -128,8 +123,6 @@ export default function DJEditProfileScreen() {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneForm, setPhoneForm] = useState({ newPhone: '' });
   // Round-preview confirm step: freshly-cropped uri awaiting user approval.
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
-  const [pendingSource, setPendingSource] = useState<PickSource>('library');
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -143,35 +136,6 @@ export default function DJEditProfileScreen() {
     setInstruments((prev) =>
       prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
     );
-  };
-
-  const handlePickPhoto = () => {
-    Alert.alert('Change Profile Photo', 'Choose an option', [
-      {
-        text: 'Choose from Library',
-        onPress: async () => {
-          const uri = await pickImage({ source: 'library' });
-          if (uri) { setPendingSource('library'); setPendingPhoto(uri); }
-        },
-      },
-      {
-        text: 'Take Photo',
-        onPress: async () => {
-          const uri = await pickImage({ source: 'camera' });
-          if (uri) { setPendingSource('camera'); setPendingPhoto(uri); }
-        },
-      },
-      {
-        text: 'Choose an Avatar',
-        onPress: () => setShowAvatarPicker(true),
-      },
-      ...(photoUri ? [{
-        text: 'Remove Photo',
-        style: 'destructive' as const,
-        onPress: () => setPhotoUri(null),
-      }] : []),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
   };
 
   const openEmailModal = () => {
@@ -234,17 +198,8 @@ export default function DJEditProfileScreen() {
     if (saving) return;
     setSaving(true);
 
-    // Upload a newly-picked photo (local file) to Storage; existing remote URLs pass through unchanged.
-    let photoUrl = photoUri ?? undefined;
-    if (photoUri && currentUser) {
-      try {
-        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${currentUser.id}`);
-      } catch (e: any) {
-        setSaving(false);
-        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
-        return;
-      }
-    }
+    // Avatar only — no photo upload anywhere in the app.
+    const photoUrl: string | undefined = undefined;
 
     updateProfile({
       fullName: form.fullName.trim(),
@@ -318,9 +273,7 @@ export default function DJEditProfileScreen() {
     originalGenre.current = primaryGenre;
     originalSecondary.current = secondaryGenres;
     originalInstruments.current = instruments;
-    originalPhoto.current = photoUrl ?? null;
     originalAvatar.current = avatarId;
-    setPhotoUri(photoUrl ?? null);
     setBaselineVersion((v) => v + 1);
     setSaving(false);
     if (exitAfter) router.back();
@@ -346,13 +299,13 @@ export default function DJEditProfileScreen() {
 
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
-            <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} />
+          <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
+            <AvatarImage avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} />
             <View style={styles.cameraOverlay}>
-              <MaterialIcons name="camera-alt" size={18} color="#fff" />
+              <MaterialIcons name="face" size={18} color="#fff" />
             </View>
           </Pressable>
-          <Pressable onPress={handlePickPhoto}>
+          <Pressable onPress={() => setShowAvatarPicker(true)}>
             <Text style={[styles.changePhotoText, { color: colors.primary }]}>Change Photo</Text>
           </Pressable>
           <Text style={[styles.emailLabel, { color: colors.muted }]}>{currentUser?.email}</Text>
@@ -599,20 +552,10 @@ export default function DJEditProfileScreen() {
         </View>
       </Modal>
 
-      <AvatarPreviewModal
-        uri={pendingPhoto}
-        onConfirm={() => { if (pendingPhoto) setPhotoUri(pendingPhoto); setPendingPhoto(null); }}
-        onRetry={async () => {
-          const uri = await pickImage({ source: pendingSource });
-          setPendingPhoto(uri ?? null);
-        }}
-        onCancel={() => setPendingPhoto(null)}
-      />
-
       <AvatarPicker
         visible={showAvatarPicker}
         selectedId={avatarId}
-        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>

@@ -4,11 +4,9 @@ import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { useAuthStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import { uploadImageAsync, pickImage, type PickSource } from '@/lib/upload';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { CountryPicker } from '@/components/country-picker';
@@ -28,7 +26,6 @@ export default function EditProfileScreen() {
     companyName: currentUser?.companyName ?? '',
   });
 
-  const [photoUri, setPhotoUri] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
   const [avatarId, setAvatarId] = useState<string | null>(currentUser?.avatarId ?? null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -41,7 +38,6 @@ export default function EditProfileScreen() {
     basedIn: currentUser?.location ?? '',
     companyName: currentUser?.companyName ?? '',
   });
-  const [originalPhoto, setOriginalPhoto] = useState(photoUri);
   const [originalAvatar, setOriginalAvatar] = useState(avatarId);
 
   const hasChanges = useMemo(() => {
@@ -51,10 +47,9 @@ export default function EditProfileScreen() {
       form.phone !== f.phone ||
       form.basedIn !== f.basedIn ||
       form.companyName !== f.companyName ||
-      photoUri !== originalPhoto ||
       avatarId !== originalAvatar
     );
-  }, [form, photoUri, avatarId, originalForm, originalPhoto, originalAvatar]);
+  }, [form, avatarId, originalForm, originalAvatar]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -78,39 +73,8 @@ export default function EditProfileScreen() {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneForm, setPhoneForm] = useState({ newPhone: '' });
   // Round-preview confirm step: freshly-cropped uri awaiting user approval.
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
-  const [pendingSource, setPendingSource] = useState<PickSource>('library');
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
-
-  const handlePickPhoto = () => {
-    Alert.alert('Change Profile Photo', 'Choose an option', [
-      {
-        text: 'Choose from Library',
-        onPress: async () => {
-          const uri = await pickImage({ source: 'library' });
-          if (uri) { setPendingSource('library'); setPendingPhoto(uri); }
-        },
-      },
-      {
-        text: 'Take Photo',
-        onPress: async () => {
-          const uri = await pickImage({ source: 'camera' });
-          if (uri) { setPendingSource('camera'); setPendingPhoto(uri); }
-        },
-      },
-      {
-        text: 'Choose an Avatar',
-        onPress: () => setShowAvatarPicker(true),
-      },
-      ...(photoUri ? [{
-        text: 'Remove Photo',
-        style: 'destructive' as const,
-        onPress: () => setPhotoUri(null),
-      }] : []),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
-  };
 
   // ─── Secure Email Change ──────────────────────────────────────────────────
   const openEmailModal = () => {
@@ -201,17 +165,8 @@ export default function EditProfileScreen() {
     if (saving) return;
     setSaving(true);
 
-    // Upload a newly-picked photo (local file) to Storage; existing remote URLs pass through unchanged.
-    let photoUrl = photoUri ?? undefined;
-    if (photoUri && currentUser) {
-      try {
-        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${currentUser.id}`);
-      } catch (e: any) {
-        setSaving(false);
-        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
-        return;
-      }
-    }
+    // Avatar only — no photo upload anywhere in the app.
+    const photoUrl: string | undefined = undefined;
 
     updateProfile({
       fullName: form.fullName.trim(),
@@ -262,9 +217,7 @@ export default function EditProfileScreen() {
     // Reset the change baseline (as state, so the hasChanges memo recomputes to false and
     // the back-guard won't fire), and reflect the uploaded photo URL.
     setOriginalForm({ ...form });
-    setOriginalPhoto(photoUrl ?? null);
     setOriginalAvatar(avatarId);
-    setPhotoUri(photoUrl ?? null);
     setSaving(false);
   };
 
@@ -288,13 +241,13 @@ export default function EditProfileScreen() {
 
         {/* Avatar with edit overlay */}
         <View style={styles.avatarSection}>
-          <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
-            <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} variant="manager" />
+          <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
+            <AvatarImage avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} variant="manager" />
             <View style={styles.cameraOverlay}>
-              <MaterialIcons name="camera-alt" size={18} color="#fff" />
+              <MaterialIcons name="face" size={18} color="#fff" />
             </View>
           </Pressable>
-          <Pressable onPress={handlePickPhoto}>
+          <Pressable onPress={() => setShowAvatarPicker(true)}>
             <Text style={[styles.changePhotoText, { color: colors.primary }]}>Change Photo</Text>
           </Pressable>
           <Text style={[styles.emailLabel, { color: colors.muted }]}>{currentUser?.email}</Text>
@@ -485,20 +438,10 @@ export default function EditProfileScreen() {
         </View>
       </Modal>
 
-      <AvatarPreviewModal
-        uri={pendingPhoto}
-        onConfirm={() => { if (pendingPhoto) setPhotoUri(pendingPhoto); setPendingPhoto(null); }}
-        onRetry={async () => {
-          const uri = await pickImage({ source: pendingSource });
-          setPendingPhoto(uri ?? null);
-        }}
-        onCancel={() => setPendingPhoto(null)}
-      />
-
       <AvatarPicker
         visible={showAvatarPicker}
         selectedId={avatarId}
-        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>

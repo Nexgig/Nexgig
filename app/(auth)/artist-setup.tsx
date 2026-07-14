@@ -17,8 +17,6 @@ import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
-import { AvatarPreviewModal } from '@/components/ui/avatar-preview-modal';
-import { pickImage, uploadImageAsync, type PickSource } from '@/lib/upload';
 import { validateEmail } from '@/lib/validate-email';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
@@ -78,19 +76,8 @@ export default function DJSetupScreen() {
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   // Profile photo / avatar (optional, chosen on the Profile Photo step).
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
-  const [pendingSource, setPendingSource] = useState<PickSource>('library');
-
-  const handlePickPhoto = () => {
-    Alert.alert('Profile Photo', 'Choose an option', [
-      { text: 'Choose from Library', onPress: async () => { const uri = await pickImage({ source: 'library' }); if (uri) { setPendingSource('library'); setPendingPhoto(uri); } } },
-      { text: 'Take Photo', onPress: async () => { const uri = await pickImage({ source: 'camera' }); if (uri) { setPendingSource('camera'); setPendingPhoto(uri); } } },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   const translateX = useSharedValue(0);
 
@@ -240,17 +227,8 @@ export default function DJSetupScreen() {
       username = `${baseUsername}${n}`;
     }
 
-    // Upload the chosen profile photo (if any) now that we have the user id.
-    let photoUrl: string | null = null;
-    if (photoUri) {
-      try {
-        photoUrl = await uploadImageAsync(photoUri, 'avatars', `avatar-${user.id}`);
-      } catch (e: any) {
-        setIsLoading(false);
-        Alert.alert('Photo upload failed', e?.message ?? 'Could not upload your photo. Please try again.');
-        return;
-      }
-    }
+    // Avatar only — no photo upload anywhere in the app.
+    const photoUrl: string | null = null;
 
     // ✅ Step 3 — insert into artists table (retry username on a unique clash / race)
     const artistRow = {
@@ -454,13 +432,9 @@ export default function DJSetupScreen() {
           {/* Step 3: Profile Photo (optional) */}
           {displayStep === 3 && (
             <View style={styles.form}>
-              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — upload a photo or pick an avatar. You can change this anytime.</Text>
+              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — pick an avatar. You can change this anytime.</Text>
               <View style={styles.photoStep}>
-                <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} />
-                <Pressable onPress={handlePickPhoto} style={({ pressed }) => [styles.photoPrimaryBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
-                  <MaterialIcons name="photo-camera" size={18} color="#fff" />
-                  <Text style={styles.photoPrimaryBtnText}>Upload Photo</Text>
-                </Pressable>
+                <AvatarImage avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} />
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                   <MaterialIcons name="face" size={18} color={colors.foreground} />
                   <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
@@ -514,17 +488,10 @@ export default function DJSetupScreen() {
         </Pressable>
       </View>
 
-      <AvatarPreviewModal
-        uri={pendingPhoto}
-        onConfirm={() => { if (pendingPhoto) { setPhotoUri(pendingPhoto); setAvatarId(null); } setPendingPhoto(null); }}
-        onRetry={async () => { const uri = await pickImage({ source: pendingSource }); setPendingPhoto(uri ?? null); }}
-        onCancel={() => setPendingPhoto(null)}
-      />
-
       <AvatarPicker
         visible={showAvatarPicker}
         selectedId={avatarId}
-        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
+        onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>
@@ -560,8 +527,6 @@ const styles = StyleSheet.create({
   instagramAt: { paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, fontWeight: '700', borderRightWidth: 1 },
   instagramInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 14, fontSize: 15, letterSpacing: 0 },
   photoStep: { alignItems: 'center', gap: 16, paddingTop: 12 },
-  photoPrimaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12 },
-  photoPrimaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   photoSecondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
   photoSecondaryBtnText: { fontSize: 15, fontWeight: '600' },
 });
