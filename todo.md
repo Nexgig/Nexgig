@@ -11,7 +11,6 @@
 Priority order — do polish/features first, App Store submit LAST. (Done work lives in the DONE log below.)
 
 **1 · Design pass** (OTA) — the card-free pass is DONE across the app. Remaining:
-- **The 3 auth screens** — `choose-account-type`, `manager-register`, `artist-setup`. The designer never produced a design for these; needs a decision (leave as-is, or extend the card-free patterns we settled on).
 - **Coral balance** — audit where `colors.primary` is used across the app. It now carries a lot of jobs (selected states, links, CTAs, drafted marks). Decide what should stay coral and what should drop to neutral.
 - **Venue avatars** — a bundled avatar set for venues, mirroring the 22 artist/manager avatars. Today a venue with no uploaded photo falls back to a grey `place` icon. Needs: the artwork (venue-flavoured, not people), `assets/images/avatars/venue-N.png`, a `VENUE_AVATAR_SOURCES` map in `lib/avatars.ts`, an `avatar_id` column on `venues` (artists/managers already have one), the picker wired into create-venue + edit-venue, and `venuePhotoUri()` extended to resolve photo → chosen avatar → deterministic default. The `AvatarImage` component already supports all three tiers, so it can be reused as-is.
 - **Sets on the calendar — should they be coral?** Currently the slot cards use the per-venue colour bar. Open question whether the set itself should read coral.
@@ -21,6 +20,10 @@ Priority order — do polish/features first, App Store submit LAST. (Done work l
 - **Website** — review.
 
 **2 · Transactional email** — wire SES/Resend to app events.
+- **Point Supabase Auth at Resend's SMTP.** Auth emails (password reset, signup confirmation) are sent by Supabase Auth itself, not by our Edge Function — so they still go out from `noreply@mail.app.supabase.io` instead of our domain. The app's own emails already run through Resend from `notifications@nexgigapp.com`, so the domain is verified and the API key exists; it just needs to be plugged into Supabase.
+  Supabase → Project Settings → Authentication → SMTP Settings → enable Custom SMTP:
+  host `smtp.resend.com`, port `465`, user `resend`, password = the Resend API key, sender `admin@nexgigapp.com` (must be on the verified domain).
+  **Not just cosmetic:** Supabase's built-in email service is explicitly not for production and is rate-limited to a few messages an hour — if several users request a password reset in the same hour, the rest silently receive nothing.
 
 **3 · App Store submission — DO LAST.** Build 9 already uploaded to App Store Connect (status "Prepare for Submission"). Remaining:
 - Create a demo/review MANAGER account with sample data (a venue or two, a few lineup artists, a couple of gigs) — needs Tuts in the app, then give Claude the creds for the review notes.
@@ -46,6 +49,27 @@ Priority order — do polish/features first, App Store submit LAST. (Done work l
        fontFamily, so app-text fell back to General Sans.
      · Card-free tints — done everywhere; controls and state tints deliberately kept.
      · Manager "Based In" section — decided against.
+     · The 3 auth screens — DONE. De-tinted every input (incl. the shared country
+       picker + phone input, which also de-tints both edit-profile screens), pilled
+       the chips, made manager signup avatar-only, and rounded the account-type cards.
+     · Auth correctness fixed along the way (not design):
+       - Abandoning signup left an auth user with no profile row: registering again
+         failed ("already registered") and signing in said "Account not found — please
+         register first". Permanently stuck. Sign-in now resumes an unfinished setup
+         via account_type stamped on the auth user; resume=1 tells the wizard a session
+         exists so it skips signUp. isOAuth renamed hasSession (what it always meant).
+       - Artist signUp moved to step 1, matching the manager, so a taken email surfaces
+         before three steps of typing. Email format validation added to both (this
+         finally wired up the artist's emailError UI, which existed but never fired).
+       - The manager wrote form.email into the profile rows, which is EMPTY when the
+         email field is hidden (resume/OAuth) — saved a blank email. Now reads the
+         session email, as the artist flow already did.
+       - Password reset added (email → code → new password). There was none at all:
+         forgetting your password locked you out permanently.
+       - Placeholders randomly rendered with wide letter spacing in PRODUCTION only:
+         under Fabric, iOS recycles TextInput views without clearing the kern attribute
+         (facebook/react-native#42589), so the reset-code field's letterSpacing leaked
+         into other inputs. Pinned to 0.
      · Artist History — hidden behind SHOW_ARTIST_HISTORY in lib/features.ts.
      · design-pass branch merged into main.
 -->
