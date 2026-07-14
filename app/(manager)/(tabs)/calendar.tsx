@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
+import { SHOW_CALENDAR_LEGEND } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -1723,18 +1724,18 @@ export default function CalendarScreen() {
             ];
             return (
               <View style={styles.viewToggleContainer}>
-                <View style={[styles.viewToggle, { borderColor: colors.border }]}>
+                <View style={[styles.viewToggle, { backgroundColor: colors.surface }]}>
                   {ordered.map(({ mode, label, icon }) => (
                     <Pressable
                       key={mode}
-                      style={[styles.toggleBtn, calendarMode === mode && { backgroundColor: colors.primary + '1F' }]}
+                      style={[styles.toggleBtn, calendarMode === mode && [styles.toggleBtnActive, { backgroundColor: colors.background }]]}
                       onPress={() => {
                         setCalendarMode(mode);
                         if (mode === 'today') { setViewedDayStr(todayStr); setCreateSlotDate(todayStr); }
                       }}
                     >
-                      <MaterialIcons name={icon} size={15} color={calendarMode === mode ? colors.primary : colors.muted} />
-                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? colors.primary : colors.muted }]}>{label}</Text>
+                      {calendarMode === mode ? <MaterialIcons name={icon} size={15} color={colors.foreground} /> : null}
+                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? colors.foreground : colors.muted }]}>{label}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -1747,18 +1748,18 @@ export default function CalendarScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
               {/* All option */}
               <Pressable
-                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: 'transparent' }]}
+                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.foreground : colors.border, backgroundColor: venueFilter === 'all' ? colors.foreground : 'transparent' }]}
                 onPress={() => setVenueFilter('all')}
               >
-                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.primary : colors.foreground }]}>All</Text>
+                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.background : colors.foreground }]}>All</Text>
               </Pressable>
               {venues.map((v) => (
                 <Pressable
                   key={v.id}
-                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: 'transparent' }]}
+                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.foreground : colors.border, backgroundColor: venueFilter === v.id ? colors.foreground : 'transparent' }]}
                   onPress={() => setVenueFilter(v.id)}
                 >
-                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.primary : colors.foreground }]}>{v.name}</Text>
+                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.background : colors.foreground }]}>{v.name}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -1976,9 +1977,9 @@ export default function CalendarScreen() {
                     >
                       <View style={[
                         styles.dayCircle,
-                        isSelected && { backgroundColor: colors.primary + '1F' },
+                        isSelected && { backgroundColor: colors.surface },
                       ]}>
-                        <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                        <Text style={[styles.dayNumber, { color: isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                       {dots.length > 0 && (
                         <View style={styles.dotRow}>
@@ -1992,7 +1993,8 @@ export default function CalendarScreen() {
                 })}
               </View>
 
-              {/* Dot Legend */}
+              {/* Dot Legend — hidden behind SHOW_CALENDAR_LEGEND */}
+              {SHOW_CALENDAR_LEGEND && (
               <View style={styles.dotLegend}>
                 {[
                   { color: colors.warning, label: 'Requested' },
@@ -2006,6 +2008,7 @@ export default function CalendarScreen() {
                   </View>
                 ))}
               </View>
+              )}
 
               {/* Selected Date Slots */}
               {!selectedDate ? (
@@ -2467,9 +2470,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
-  viewToggle: { flexDirection: 'row', borderRadius: 12, borderWidth: 1, padding: 3 },
+  viewToggle: { flexDirection: 'row', borderRadius: 12, padding: 3 },
   toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 9, borderRadius: 10 },
-  toggleBtnActive: {},
+  toggleBtnActive: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
   toggleBtnText: { fontSize: 12, fontWeight: '700' },
   // Week view
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
@@ -2521,7 +2524,7 @@ const styles = StyleSheet.create({
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 0 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-  dayCircle: { width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
   dot: { width: 4, height: 4, borderRadius: 2 },
