@@ -78,7 +78,7 @@ export default function PendingRequestsScreen() {
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
-            <View style={[styles.statusMark, { backgroundColor: '#F59E0B' }]} />
+            <View style={[styles.statusMark, { backgroundColor: '#D4A017' }]} />
           </Pressable>
           );
         }}

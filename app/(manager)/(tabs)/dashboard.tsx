@@ -93,7 +93,7 @@ export default function ManagerDashboard() {
       const isDone = b.status === 'completed' || b.isCompleted;
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
       const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
-      const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+      const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
       const isInvoiced = invoicedBookingIds.has(b.id);
       return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced };
     })
@@ -133,7 +133,7 @@ export default function ManagerDashboard() {
       groups.get(key)!.push(b);
     }
     const rank: Record<string, number> = { pending: 0, confirmed: 1, completed: 2 };
-    const dotFor: Record<string, string> = { pending: '#F59E0B', confirmed: '#22C55E', completed: '#2563EB' };
+    const dotFor: Record<string, string> = { pending: '#D4A017', confirmed: '#22C55E', completed: '#2563EB' };
     return order.slice(0, 6).map((key) => {
       const items = groups.get(key)!;
       const first = items[0];
@@ -540,7 +540,7 @@ export default function ManagerDashboard() {
           <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.filterTitle, { color: colors.foreground }]}>Show in Bookings</Text>
             {([
-              { key: 'pending' as const, label: 'Pending', dot: '#F59E0B' },
+              { key: 'pending' as const, label: 'Pending', dot: '#D4A017' },
               { key: 'confirmed' as const, label: 'Confirmed', dot: '#22C55E' },
               { key: 'completed' as const, label: 'Completed', dot: '#2563EB' },
             ]).map((opt) => {

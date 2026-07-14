@@ -49,7 +49,7 @@ export default function AllBookingsScreen() {
       const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as any : undefined);
       const isDone = b.status === 'completed' || b.isCompleted;
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
-      const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+      const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
       const isInvoiced = invoicedBookingIds.has(b.id);
       return { ...b, slot: resolvedSlot, venue: resolvedVenue, dotColor, isDone, isInvoiced };
     })
@@ -78,7 +78,7 @@ export default function AllBookingsScreen() {
         {/* Legend */}
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <Text allowFontScaling={false} style={[styles.legendDot, { color: '#F59E0B' }]}>.</Text>
+            <Text allowFontScaling={false} style={[styles.legendDot, { color: '#D4A017' }]}>.</Text>
             <Text style={[styles.legendText, { color: colors.muted }]}>Pending</Text>
           </View>
           <View style={styles.legendItem}>

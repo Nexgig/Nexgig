@@ -37,7 +37,7 @@ const NOTIF_COLORS: Record<string, string> = {
   booking_request_cancelled: '#94A3B8',
   booking_completed: '#8B5CF6',
   past_confirmation_request: '#3B82F6',
-  lineup_invite: '#F59E0B',
+  lineup_invite: '#D4A017',
   lineup_accepted: '#22C55E',
   lineup_declined: '#EF4444',
   artist_joined: '#22C55E',
@@ -45,7 +45,7 @@ const NOTIF_COLORS: Record<string, string> = {
   lineup_removed: '#EF4444',
   venue_assigned: '#8B5CF6',
   venue_removed: '#EF4444',
-  manager_invite: '#F59E0B',
+  manager_invite: '#D4A017',
 };
 
 function timeAgo(dateStr: string): string {

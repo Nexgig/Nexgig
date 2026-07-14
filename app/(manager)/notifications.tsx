@@ -30,7 +30,7 @@ const NOTIF_COLORS: Record<string, string> = {
   booking_declined: '#EF4444',
   booking_cancelled: '#8E8E93',
   booking_completed: '#8B5CF6',
-  lineup_invite: '#F59E0B',
+  lineup_invite: '#D4A017',
   invite_accepted: '#22C55E',
   lineup_request: '#22C55E',
   review_submitted: '#22C55E',

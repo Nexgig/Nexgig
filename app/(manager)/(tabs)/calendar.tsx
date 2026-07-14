@@ -1747,7 +1747,7 @@ export default function CalendarScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
               {/* All option */}
               <Pressable
-                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: venueFilter === 'all' ? colors.primary + '1F' : 'transparent' }]}
+                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.primary : colors.border, backgroundColor: 'transparent' }]}
                 onPress={() => setVenueFilter('all')}
               >
                 <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.primary : colors.foreground }]}>All</Text>
@@ -1755,7 +1755,7 @@ export default function CalendarScreen() {
               {venues.map((v) => (
                 <Pressable
                   key={v.id}
-                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: venueFilter === v.id ? colors.primary + '1F' : 'transparent' }]}
+                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.primary : colors.border, backgroundColor: 'transparent' }]}
                   onPress={() => setVenueFilter(v.id)}
                 >
                   <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.primary : colors.foreground }]}>{v.name}</Text>
@@ -1976,9 +1976,9 @@ export default function CalendarScreen() {
                     >
                       <View style={[
                         styles.dayCircle,
-                        isSelected && { backgroundColor: colors.foreground + '1A' },
+                        isSelected && { backgroundColor: colors.primary + '1F' },
                       ]}>
-                        <Text style={[styles.dayNumber, { color: isSelected ? colors.foreground : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                        <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                       {dots.length > 0 && (
                         <View style={styles.dotRow}>

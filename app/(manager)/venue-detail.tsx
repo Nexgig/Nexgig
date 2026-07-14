@@ -419,7 +419,7 @@ export default function VenueDetailScreen() {
                 const dj = booking ? getArtistUser(booking.artistId) : undefined;
                 const isDone = booking && (booking.status === 'completed' || booking.isCompleted);
                 const isPending = booking && (booking.status === 'requested' || booking.status === 'past_confirmation');
-                const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+                const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
                 return (
                   <Pressable
                     key={slot.id}

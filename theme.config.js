@@ -7,7 +7,7 @@ const themeColors = {
   muted: { light: '#8E8E93', dark: '#8E8E93' },
   border: { light: '#C6C6C8', dark: '#2C2C2E' },
   success: { light: '#22C55E', dark: '#4ADE80' },
-  warning: { light: '#F59E0B', dark: '#FBBF24' },
+  warning: { light: '#D4A017', dark: '#E9C46A' },
   error: { light: '#EF4444', dark: '#F87171' },
   navy: { light: '#1B2D4F', dark: '#1B2D4F' },
   accent: { light: '#E2674A', dark: '#E2674A' },

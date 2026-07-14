@@ -35,7 +35,7 @@ for (let h = 0; h < 24; h++) {
 
 // Status colors
 const STATUS_COLORS = {
-  pending: '#F59E0B',   // Orange
+  pending: '#D4A017',   // Orange
   confirmed: '#22C55E', // Green  (also used for Private Event)
   completed: '#2563EB', // Blue
   cancelled: '#EF4444', // Red    (also used for Block/Unavailable)
@@ -1119,9 +1119,9 @@ export default function DJAvailabilityScreen() {
                   >
                     <View style={[
                       styles.dayCircle,
-                      isSelected && { backgroundColor: colors.foreground + '1A' },
+                      isSelected && { backgroundColor: colors.primary + '1F' },
                     ]}>
-                      <Text style={[styles.dayNumber, { color: isSelected ? colors.foreground : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
+                      <Text style={[styles.dayNumber, { color: isSelected ? colors.primary : isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
                     </View>
                     {dots.length > 0 && (
                       <View style={styles.dotRow}>

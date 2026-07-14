@@ -151,7 +151,7 @@ export default function ArtistBookingsScreen() {
         renderItem={({ item }) => {
           const isDone = item.status === 'completed' || item.isCompleted;
           const isPending = item.status === 'requested' || item.status === 'past_confirmation';
-          const dotColor = isDone ? '#2563EB' : isPending ? '#F59E0B' : '#22C55E';
+          const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
           const isInvoiced = invoicedBookingIds.has(item.id);
           return (
             <Pressable
