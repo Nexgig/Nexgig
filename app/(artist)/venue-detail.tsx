@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, alignItems: 'flex-start' },
   title: { fontSize: 17, fontWeight: '700', flex: 1, textAlign: 'center' },
-  venuePhoto: { width: '100%', height: 200 },
+  venuePhoto: { alignSelf: 'stretch', height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
   infoCard: {
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4, gap: 8,
   },

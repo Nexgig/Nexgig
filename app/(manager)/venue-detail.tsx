@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   backBtn: { padding: 4 },
   title: { fontSize: 20, fontWeight: '800', flex: 1, textAlign: 'center' },
-  venuePhoto: { height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
+  venuePhoto: { alignSelf: 'stretch', height: 180, borderRadius: 16, marginBottom: 16, marginHorizontal: 20 },
   infoCard: { paddingHorizontal: 20, paddingBottom: 16, gap: 8 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   infoLeft: { flex: 1, gap: 6 },
