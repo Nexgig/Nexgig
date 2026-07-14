@@ -52,12 +52,13 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
-    supportsTablet: true,
+    // iPhone only. The layouts (calendar, sheets, tab bars) are built for a narrow
+    // viewport; declaring iPad support would make Apple review it on a 12.9" screen
+    // and require a separate set of iPad screenshots.
+    supportsTablet: false,
     bundleIdentifier: env.iosBundleId,
     "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access your photos so you can set a profile or venue picture.",
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to use your camera so you can take a profile or venue picture."
+        "ITSAppUsesNonExemptEncryption": false
       }
   },
   android: {
@@ -112,13 +113,6 @@ const config: ExpoConfig = {
       {
         calendarPermission: "Allow $(PRODUCT_NAME) to access your calendar to export your gigs."
       }
-    ],
-    [
-      "expo-image-picker",
-      {
-        photosPermission: "Allow $(PRODUCT_NAME) to access your photos so you can set a profile or venue picture.",
-        cameraPermission: "Allow $(PRODUCT_NAME) to use your camera so you can take a profile or venue picture.",
-      },
     ],
     [
       "expo-splash-screen",
