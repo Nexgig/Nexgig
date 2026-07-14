@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
-import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useCalendarJumpStore, useReviewStore, useLineupStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useAuthStore, useReviewStore, useLineupStore } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -15,7 +15,6 @@ import { cityFromAddress } from '@/lib/places';
 import type { } from '@/lib/types';
 import { syncBookingStatus } from '@/lib/booking-sync';
 
-/** Compact coral "Maps" badge — replaces the old full-width "Open in Google Maps" row. */
 /** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
  *  resolves — and it falls back to the type snapshotted on the booking, since the
  *  venue row can be unreadable (artist disconnected, venue hidden). */
@@ -41,16 +40,19 @@ function DetailRow({ label, value, trailing, last = false }: {
   );
 }
 
+/** Compact "Maps" badge — ink on a grey surface, so it reads as a control rather than
+ *  competing with the coral used for status. Replaces the old full-width
+ *  "Open in Google Maps" row. */
 function MapsBadge({ onPress }: { onPress: () => void }) {
   const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}
     >
-      <MaterialIcons name="directions" size={15} color={colors.primary} />
-      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
+      <MaterialIcons name="directions" size={15} color={colors.foreground} />
+      <Text style={[styles.mapsBadgeText, { color: colors.foreground }]}>Maps</Text>
     </Pressable>
   );
 }
@@ -155,36 +157,6 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
-  const handleCancelConfirmed = () => {
-    Alert.alert('Cancel Booking', 'This booking is confirmed. Are you sure you want to cancel it?', [
-      { text: 'Keep', style: 'cancel' },
-      {
-        text: 'Cancel Booking', style: 'destructive', onPress: () => {
-          updateBookingStatus(booking.id, 'cancelled', {
-            cancelledAt: new Date().toISOString(),
-            slotDate: slot?.date ?? booking.slotDate,
-            slotName: slot?.name ?? booking.slotName,
-            slotStartTime: slot?.startTime ?? booking.slotStartTime,
-            slotEndTime: slot?.endTime ?? booking.slotEndTime,
-            venueName: venue?.name ?? booking.venueName,
-          });
-          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
-          addNotification({
-            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            userId: booking.artistId,
-            type: 'booking_cancelled',
-            title: 'Booking Cancelled',
-            body: `${venue?.name ?? booking.venueName ?? 'a venue'} — ${slot?.date ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : '')}`,
-            isRead: false,
-            relatedId: booking.id,
-            relatedType: 'booking',
-            createdAt: new Date().toISOString(),
-          });
-          router.back();
-        }
-      },
-    ]);
-  };
 
   return (
     <ScreenContainer>
@@ -366,24 +338,6 @@ export default function DJBookingDetailScreen() {
               <SoftButton tone="danger" icon="cancel" label="Cancel Request" onPress={handleCancelRequest} />
             )}
 
-            {booking.status === 'confirmed' && (
-              <SoftButton tone="danger" icon="cancel" label="Cancel Booking" onPress={handleCancelConfirmed} />
-            )}
-
-            {(slot?.date ?? booking.slotDate) ? (
-              <SoftButton
-                tone="primary"
-                icon="event"
-                label="Show on Calendar"
-                onPress={() => {
-                  const date = slot?.date ?? booking.slotDate ?? '';
-                  if (date) {
-                    useCalendarJumpStore.getState().setPendingDate(date);
-                    router.push('/(manager)/(tabs)/calendar' as Href);
-                  }
-                }}
-              />
-            ) : null}
           </View>
         </View>
       </ScrollView>

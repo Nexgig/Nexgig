@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useCalendarJumpStore, useReviewStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useReviewStore } from '@/lib/store';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -15,7 +15,6 @@ import { isPastStart } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
-/** Compact coral "Maps" badge — replaces the old full-width "Open in Google Maps" row. */
 /** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
  *  resolves — and it falls back to the type snapshotted on the booking, since the
  *  venue row can be unreadable (artist disconnected, venue hidden). */
@@ -41,16 +40,19 @@ function DetailRow({ label, value, trailing, last = false }: {
   );
 }
 
+/** Compact "Maps" badge — ink on a grey surface, so it reads as a control rather than
+ *  competing with the coral used for status. Replaces the old full-width
+ *  "Open in Google Maps" row. */
 function MapsBadge({ onPress }: { onPress: () => void }) {
   const colors = useColors();
   return (
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}
     >
-      <MaterialIcons name="directions" size={15} color={colors.primary} />
-      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
+      <MaterialIcons name="directions" size={15} color={colors.foreground} />
+      <Text style={[styles.mapsBadgeText, { color: colors.foreground }]}>Maps</Text>
     </Pressable>
   );
 }
@@ -209,22 +211,6 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
-  const handleCancelConfirmed = () => {
-    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this confirmed booking? The manager will be notified.', [
-      { text: 'Keep', style: 'cancel' },
-      {
-        text: 'Cancel Booking', style: 'destructive', onPress: () => {
-          updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledByArtist: true, artistRespondedFromRequests: true });
-          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
-          markRelatedNotificationsRead(booking.id);
-          notifyManager('booking_cancelled');
-          // Drop any already-scheduled "gig in X hours" reminder for this gig.
-          if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
-          router.back();
-        }
-      },
-    ]);
-  };
 
   return (
     <ScreenContainer>
@@ -348,13 +334,6 @@ export default function DJBookingDetailScreen() {
             </View>
           )}
 
-          {/* Actions — Cancel confirmed bookings */}
-          {booking.status === 'confirmed' && (
-            <View style={styles.actions}>
-              <SoftButton tone="danger" icon="cancel" label="Cancel Booking" onPress={handleCancelConfirmed} />
-            </View>
-          )}
-
           {/* Review Section — only for completed bookings */}
           {booking.status === 'completed' && (() => {
             const submitted = reviewSubmitted || !!existingReview;
@@ -458,23 +437,6 @@ export default function DJBookingDetailScreen() {
             );
           })()}
 
-          {/* Show on Calendar */}
-          {(slot?.date ?? booking.slotDate) ? (
-            <View style={styles.actions}>
-              <SoftButton
-                tone="primary"
-                icon="event"
-                label="Show on Calendar"
-                onPress={() => {
-                  const date = slot?.date ?? booking.slotDate ?? '';
-                  if (date) {
-                    useCalendarJumpStore.getState().setPendingDate(date);
-                    router.push('/(artist)/(tabs)/calendar' as Href);
-                  }
-                }}
-              />
-            </View>
-          ) : null}
         </View>
       </ScrollView>
     </ScreenContainer>
