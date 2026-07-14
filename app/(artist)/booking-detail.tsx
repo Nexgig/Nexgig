@@ -230,19 +230,6 @@ export default function DJBookingDetailScreen() {
                   leading={<VenueThumb uri={venuePhotoUri(venue) ?? booking.venuePhotoUrl} />}
                   title={venue.name}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
-                  trailing={
-                    (venue?.googleMapsLocation?.address || (venue?.googleMapsLocation?.lat && venue?.googleMapsLocation?.lng) || venue?.name) ? (
-                      <MapsBadge
-                        onPress={() => {
-                          const loc = venue?.googleMapsLocation;
-                          const url = (loc?.lat && loc?.lng)
-                            ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                            : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || '')}`;
-                          Linking.openURL(url);
-                        }}
-                      />
-                    ) : undefined
-                  }
                   divider={false}
                 />
               </Section>
@@ -277,7 +264,6 @@ export default function DJBookingDetailScreen() {
                   divider={false}
                 />
               </Section>
-              <Divider />
             </>
           ) : (booking.slotDate || booking.slotStartTime) ? (
             <>
@@ -289,9 +275,30 @@ export default function DJBookingDetailScreen() {
                   divider={false}
                 />
               </Section>
-              <Divider />
             </>
           ) : null}
+
+          {/* Location — same shape as the venue detail page: grey label, Maps pill on
+              the left, full address beside it. The Maps button used to live in the
+              Venue row; keeping both would give two Maps buttons on one page. */}
+          {venue?.googleMapsLocation?.address ? (
+            <Section label="Location">
+              <View style={styles.locationSectionRow}>
+                <MapsBadge
+                  onPress={() => {
+                    const loc = venue.googleMapsLocation;
+                    const url = (loc?.lat && loc?.lng)
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
+                    Linking.openURL(url);
+                  }}
+                />
+                <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
+              </View>
+            </Section>
+          ) : null}
+
+          <Divider />
 
           {/* Venue Vibe */}
           {venue && venue.vibeDescription ? (
@@ -471,9 +478,11 @@ export default function DJBookingDetailScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
+  locationSectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  locationAddress: { fontSize: 14, lineHeight: 20, flex: 1 },
   content: {},
   bodyText: { fontSize: 14, lineHeight: 21 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
