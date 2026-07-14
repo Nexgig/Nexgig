@@ -167,10 +167,14 @@ export default function ManagerRegisterScreen() {
       return;
     }
 
+    // When a session already exists (OAuth, or resuming an abandoned signup) the
+    // email field isn't shown, so form.email is empty — take it from the session.
+    const profileEmail = (hasSession ? (user.email ?? form.email) : form.email).trim().toLowerCase();
+
     // Insert into users table first
     const { error: userInsertError } = await supabase.from('users').upsert({
       id: user.id,
-      email: form.email.trim().toLowerCase(),
+      email: profileEmail,
       full_name: form.fullName.trim(),
       account_type: 'manager',
       phone: form.phone.trim(),
@@ -191,7 +195,7 @@ export default function ManagerRegisterScreen() {
     // Insert into managers table
     const { error: insertError } = await supabase.from('managers').upsert({
       id: user.id,
-      email: form.email.trim().toLowerCase(),
+      email: profileEmail,
       phone: form.phone.trim(),
       full_name: form.fullName.trim(),
       based_in: form.basedIn || null,
@@ -209,7 +213,7 @@ export default function ManagerRegisterScreen() {
 
     setCurrentUser({
       id: user.id,
-      email: form.email.trim().toLowerCase(),
+      email: profileEmail,
       phone: form.phone.trim(),
       accountType: 'manager' as const,
       fullName: form.fullName.trim(),
