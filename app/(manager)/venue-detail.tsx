@@ -14,7 +14,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
-import { performerLabel } from '@/lib/utils';
+import { genreLabel } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 
@@ -503,7 +503,7 @@ export default function VenueDetailScreen() {
                             <MaterialIcons name="verified" size={15} color={colors.primary} />
                           )}
                         </View>
-                        <Text style={[styles.djLocation, { color: colors.muted }]} numberOfLines={1}>{performerLabel(profile?.instruments)}</Text>
+                        <Text style={[styles.djLocation, { color: colors.muted }]} numberOfLines={1}>{genreLabel(profile?.primaryGenre, profile?.instruments)}</Text>
                       </View>
                     </Pressable>
                     <Pressable

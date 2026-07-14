@@ -74,6 +74,22 @@ export function isPastStart(date: string, startTime?: string): boolean {
  * Musician. Empty only happens for legacy accounts created before the choice
  * was mandatory — falls back to 'Artist'.
  */
+/**
+ * The subtitle under an artist's name in every list (Network, Assign Artist,
+ * Add Set, My Artists, venue Lineup).
+ *
+ * Shows their PRIMARY GENRE — far more useful to a manager picking who to book
+ * than "DJ" / "Musician", which every artist shares. Falls back to performerLabel
+ * when the genre is missing (older rows, incomplete signups).
+ */
+export function genreLabel(
+  primaryGenre?: string | null,
+  instruments?: (InstrumentType | string)[] | null,
+): string {
+  const g = (primaryGenre ?? '').trim();
+  return g || performerLabel(instruments);
+}
+
 export function performerLabel(instruments?: (InstrumentType | string)[] | null): string {
   if (!instruments || instruments.length === 0) return 'Artist';
   return instruments.includes('CDJ / Turntables') ? 'DJ' : 'Musician';

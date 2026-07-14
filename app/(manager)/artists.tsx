@@ -14,7 +14,7 @@ import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useNotifi
 import { supabase } from '@/lib/supabase';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
-import { performerLabel } from '@/lib/utils';
+import { genreLabel } from '@/lib/utils';
 import type { VenueAssignment } from '@/lib/types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
@@ -196,7 +196,7 @@ export default function RosterScreen() {
   // ── Render ───────────────────────────────────────────────────────────────────
   const renderArtist = ({ item }: { item: typeof djListGlobal[0] }) => {
     if (!item.user) return null;
-    const metaLine = performerLabel(item.profile?.instruments);
+    const metaLine = genreLabel(item.profile?.primaryGenre, item.profile?.instruments);
 
     return (
       <Pressable

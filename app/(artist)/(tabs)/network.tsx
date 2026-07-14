@@ -11,7 +11,7 @@ import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
-import { performerLabel } from '@/lib/utils';
+import { genreLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
 type NetworkTab = 'venues' | 'artists';
@@ -429,7 +429,7 @@ export default function ArtistNetworkScreen() {
                       )}
                     </View>
                     <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {performerLabel(artist.instruments)}
+                      {genreLabel(artist.primary_genre, artist.instruments)}
                     </Text>
                   </View>
                 </View>

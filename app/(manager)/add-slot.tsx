@@ -10,7 +10,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { isPastStart, performerLabel } from '@/lib/utils';
+import { isPastStart, genreLabel } from '@/lib/utils';
 import { formatDate, detectConflicts, timesOverlap } from '@/lib/conflict-detection';
 import type { Slot, Booking, ConflictInfo, VenueAssignment } from '@/lib/types';
 
@@ -307,7 +307,7 @@ export default function AddSlotScreen() {
         <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user.id} name={item.user.fullName} size={42} variant="artist" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user.fullName}</Text>
-          <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+          <Text style={[styles.artistSub, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
           {item.hasConflict && item.conflicts && item.conflicts[0] && (
             <View style={styles.conflictBanner}>
               <MaterialIcons name="warning" size={12} color={colors.error} />
@@ -480,7 +480,7 @@ export default function AddSlotScreen() {
                     <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user!.id} name={item.user!.fullName} size={42} variant="artist" />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                      <Text style={[styles.artistSub, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+                      <Text style={[styles.artistSub, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
                     </View>
                     <StatusPill tone={colors.muted} icon="group-add" label="Not in lineup" />
                     <Pressable

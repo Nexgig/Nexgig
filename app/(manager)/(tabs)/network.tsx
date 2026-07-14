@@ -9,7 +9,7 @@ import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
-import { performerLabel } from '@/lib/utils';
+import { genreLabel } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
@@ -478,7 +478,7 @@ export default function NetworkScreen() {
                         )}
                       </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {pendingApp ? `Wants to join ${pendingApp.venue?.name ?? 'a venue'}` : performerLabel(profile?.instruments)}
+                        {pendingApp ? `Wants to join ${pendingApp.venue?.name ?? 'a venue'}` : genreLabel(profile?.primaryGenre, profile?.instruments)}
                       </Text>
                     </View>
                   </View>

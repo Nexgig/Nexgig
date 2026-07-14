@@ -9,7 +9,7 @@ import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
-import { isPastStart, performerLabel } from '@/lib/utils';
+import { isPastStart, genreLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
@@ -241,7 +241,7 @@ export default function AssignDJScreen() {
               <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
               <View style={styles.djInfo}>
               <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+                <Text style={[styles.djGenre, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
               </View>
               <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
             </Pressable>
@@ -513,7 +513,7 @@ export default function AssignDJScreen() {
                 : <StatusPill tone={colors.success} icon="check-circle" label="Available" />
             )}
           </View>
-          <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+          <Text style={[styles.djGenre, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
           {item.hasConflict && item.conflicts[0] && (
             <View style={styles.conflictBanner}>
               <MaterialIcons name="warning" size={12} color={colors.error} />
@@ -589,7 +589,7 @@ export default function AssignDJScreen() {
                     <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
                     <View style={styles.djInfo}>
                       <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                      <Text style={[styles.djGenre, { color: colors.muted }]}>{performerLabel(item.profile?.instruments)}</Text>
+                      <Text style={[styles.djGenre, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
                     </View>
                     <StatusPill tone={colors.muted} icon="group-add" label="Not in lineup" />
                     <Pressable
