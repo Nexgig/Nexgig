@@ -31,15 +31,15 @@ const COMPLETED_BLUE = '#2563EB';
 interface StatusBadgeProps {
   status: BadgeVariant;
   label?: string;
-  /** Hide the small leading dot (default: shown). */
-  dot?: boolean;
 }
 
 /**
- * Card-free status pill: tinted background + colored text + a small leading dot.
- * (Was a solid-filled block with black text.)
+ * Card-free status pill: tinted background + coloured text.
+ *
+ * No leading dot — the pill is already colour-coded, so the dot repeated the same
+ * information in the same colour right next to the word that says it.
  */
-export function StatusBadge({ status, label, dot = true }: StatusBadgeProps) {
+export function StatusBadge({ status, label }: StatusBadgeProps) {
   const colors = useColors();
   const entry = BADGE_MAP[status] ?? { tone: 'muted' as Tone, label: String(status) };
 
@@ -52,7 +52,6 @@ export function StatusBadge({ status, label, dot = true }: StatusBadgeProps) {
 
   return (
     <View style={[styles.pill, { backgroundColor: color + '1F' }]}>
-      {dot ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
       <Text style={[styles.text, { color }]}>{label ?? entry.label}</Text>
     </View>
   );
@@ -62,12 +61,10 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     borderRadius: 100,
     paddingHorizontal: 10,
     paddingVertical: 5,
     alignSelf: 'flex-start',
   },
-  dot: { width: 7, height: 7, borderRadius: 4 },
   text: { fontSize: 12, fontWeight: '700' },
 });
