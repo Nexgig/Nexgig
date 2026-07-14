@@ -8,16 +8,13 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Priority order — do polish/features first, App Store submit LAST. (Done work lives in the DONE log below.)
+The design pass is CLOSED. Ship first, then email, then dual-role.
 
-**1 · Design pass** (OTA) — the card-free pass is DONE across the app. Remaining:
-- **Coral balance** — audit where `colors.primary` is used across the app. It now carries a lot of jobs (selected states, links, CTAs, drafted marks). Decide what should stay coral and what should drop to neutral.
-- **Venue avatars** — a bundled avatar set for venues, mirroring the 22 artist/manager avatars. Today a venue with no uploaded photo falls back to a grey `place` icon. Needs: the artwork (venue-flavoured, not people), `assets/images/avatars/venue-N.png`, a `VENUE_AVATAR_SOURCES` map in `lib/avatars.ts`, an `avatar_id` column on `venues` (artists/managers already have one), the picker wired into create-venue + edit-venue, and `venuePhotoUri()` extended to resolve photo → chosen avatar → deterministic default. The `AvatarImage` component already supports all three tiers, so it can be reused as-is.
-- **Sets on the calendar — should they be coral?** Currently the slot cards use the per-venue colour bar. Open question whether the set itself should read coral.
-- **Calendar venue pills** — the horizontal venue selector at the top of the manager calendar may be what makes the screen feel busy. It stacks with the month/week/day toggle, the legend, the dot legend and the month nav, so there are four control rows before any content. Consider collapsing it (a filter icon / dropdown), merging it with the legend, or dropping it when the manager only has one venue.
-- **Booking detail polish** — the card-free pass landed, but the page hasn't had a proper design look since.
-- **Logo** — review. (Icon is FINAL/locked = send-arrow; this is about the in-app logo/wordmark.)
-- **Website** — review.
+**1 · App Store submission — the priority.** A native build with the rebuilt icon is on TestFlight. Remaining:
+- Create a demo/review MANAGER account with sample data (a venue or two, a few lineup artists, a couple of gigs) — **needs Tuts in the app**, then give Claude the creds for the review notes.
+- Fill App Store Connect metadata: 6.7" iPhone screenshots, description/subtitle/keywords/promo (all drafted — ready to paste), App Privacy questionnaire, age rating, App Review notes (note managers AND artists share one app).
+- Then Submit for Review. Icon FINAL/locked = send-arrow.
+- **App Privacy just got simpler:** the app no longer uploads any photos (avatars + venue-type images are all bundled), so there is no user-generated image content to declare and the `avatars` Storage bucket has no writers.
 
 **2 · Transactional email** — wire SES/Resend to app events.
 - **Point Supabase Auth at Resend's SMTP.** Auth emails (password reset, signup confirmation) are sent by Supabase Auth itself, not by our Edge Function — so they still go out from `noreply@mail.app.supabase.io` instead of our domain. The app's own emails already run through Resend from `notifications@nexgigapp.com`, so the domain is verified and the API key exists; it just needs to be plugged into Supabase.
@@ -25,10 +22,23 @@ Priority order — do polish/features first, App Store submit LAST. (Done work l
   host `smtp.resend.com`, port `465`, user `resend`, password = the Resend API key, sender `admin@nexgigapp.com` (must be on the verified domain).
   **Not just cosmetic:** Supabase's built-in email service is explicitly not for production and is rate-limited to a few messages an hour — if several users request a password reset in the same hour, the rest silently receive nothing.
 
-**3 · App Store submission — DO LAST.** Build 9 already uploaded to App Store Connect (status "Prepare for Submission"). Remaining:
-- Create a demo/review MANAGER account with sample data (a venue or two, a few lineup artists, a couple of gigs) — needs Tuts in the app, then give Claude the creds for the review notes.
-- Fill App Store Connect metadata: 6.7" iPhone screenshots, description/subtitle/keywords/promo (all drafted — ready to paste), App Privacy questionnaire, age rating, App Review notes (note managers AND artists share one app).
-- Then Submit for Review. Icon FINAL/locked = send-arrow.
+**3 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
+
+The DB already supports it: `artists.id` and `managers.id` are both the `auth.users.id`, so one account can have a row in *both* tables. Three app-level things block it:
+  1. `users.account_type` is a single value.
+  2. `sign-in` checks `managers` first and returns — a dual user would always land as manager and never see their artist side.
+  3. Signup forces one choice and never offers the other.
+
+**Model:** one auth user, optionally both profiles. An **active role** held client-side (persisted), not a new DB column; `account_type` becomes the default. Switching = set active role → re-hydrate `currentUser` from the other table → `router.replace` into the other route group (each group's `_layout` already fetches its own data on mount, so a switch is re-entering as the other persona without re-authenticating). Creating the second profile = run the existing setup wizard with `hasSession` — **that machinery already exists**, built for the abandoned-signup fix.
+
+**Five things that will bite. Two need a product decision BEFORE starting:**
+  - ⚠️ **Self-booking** — a dual user could add themselves to their own lineup, book themselves, and invoice themselves. Conflict detection would flag them against their own gigs. DECIDE: forbid (filter own id out of network/lineup) or allow.
+  - ⚠️ **Notifications** — push registers per user id, and the in-app list filters by `userId`, not role. In artist mode you'd see manager notifications. DECIDE: tag notifications with a role and filter, or accept the mixing.
+  - **RLS** — some policies may key off `account_type`; a dual user could get locked out of one side. Needs a policy audit (Tuts, in Supabase).
+  - **Sign-in routing** must change from "manager wins" to "last used role, or ask".
+  - **Persisted stores aren't namespaced by role** — switching must clear/refetch role-specific stores or an artist will see a manager's cached venues.
+
+**Timing:** touches auth, routing, notifications and RLS — the areas where a bug locks a user out. Do it AFTER the submission.
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
