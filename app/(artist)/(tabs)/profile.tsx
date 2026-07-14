@@ -307,15 +307,6 @@ export default function ArtistProfileScreen() {
             );
           })()}
 
-          {basedInCountry ? (
-            <Section label="Based In">
-              <View style={styles.basedInRow}>
-                <MaterialIcons name="location-on" size={16} color={colors.muted} />
-                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
-              </View>
-            </Section>
-          ) : null}
-
           {/* History — hidden behind SHOW_ARTIST_HISTORY */}
           {SHOW_ARTIST_HISTORY && (
           <>
@@ -401,6 +392,12 @@ export default function ArtistProfileScreen() {
 
           {/* Account */}
           <Section label="Account">
+            {basedInCountry ? (
+              <View style={styles.accountRow}>
+                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <Text style={[styles.accountText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
+              </View>
+            ) : null}
             <View style={styles.accountRow}>
               <MaterialIcons name="email" size={16} color={colors.muted} />
               <Text style={[styles.accountText, { color: colors.foreground }]}>{currentUser?.email}</Text>

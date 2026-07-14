@@ -451,15 +451,6 @@ export default function ArtistProfileViewScreen() {
             );
           })()}
 
-          {basedInCountry && !loading ? (
-            <Section label="Based In">
-              <View style={styles.basedInRow}>
-                <MaterialIcons name="location-on" size={16} color={colors.muted} />
-                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
-              </View>
-            </Section>
-          ) : null}
-
           {/* 6. Last 5 completed gigs — hidden if artist set isHistoryHidden */}
           {SHOW_ARTIST_HISTORY && !profile?.isHistoryHidden && (
           <>
@@ -515,9 +506,18 @@ export default function ArtistProfileViewScreen() {
           </>
           )}
 
-          {/* Contact — shown only for artists on your lineup */}
-          {isConnected && (dj.email || dj.phone) ? (
-            <Section label="Contact">
+          {/* Account — location is public; email + phone only for artists on your
+              lineup, since a manager you haven't connected with shouldn't get their
+              contact details. */}
+          <Section label="Account">
+            {basedInCountry ? (
+              <View style={styles.basedInRow}>
+                <MaterialIcons name="location-on" size={16} color={colors.muted} />
+                <Text style={[styles.basedInText, { color: colors.foreground }]}>{basedInCountry.name}</Text>
+              </View>
+            ) : null}
+            {isConnected ? (
+              <>
               {dj.email ? (
                 <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`mailto:${dj.email}`)}>
                   <MaterialIcons name="email" size={18} color={colors.muted} />
@@ -532,8 +532,9 @@ export default function ArtistProfileViewScreen() {
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
               ) : null}
-            </Section>
-          ) : null}
+              </>
+            ) : null}
+          </Section>
         </View>
         </>
         ) : (
