@@ -229,6 +229,14 @@ export default function SignInScreen() {
             </View>
 
             <Pressable
+              onPress={() => router.push(`/(auth)/reset-password?email=${encodeURIComponent(email)}` as Href)}
+              hitSlop={8}
+              style={styles.forgotBtn}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+
+            <Pressable
               style={({ pressed }) => [styles.primaryBtn, (pressed || isLoading) && { opacity: 0.85 }]}
               onPress={handleSignIn}
               disabled={isLoading}
@@ -256,6 +264,8 @@ const styles = StyleSheet.create({
   },
   passwordInput: { flex: 1, paddingVertical: 16, fontSize: 15, color: '#000000' },
   eyeBtn: { padding: 4 },
+  forgotBtn: { alignSelf: 'center', paddingVertical: 2 },
+  forgotText: { fontSize: 14, color: '#8E8E93', fontWeight: '600' },
   primaryBtn: { backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16, width: '100%', alignItems: 'center' },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });
