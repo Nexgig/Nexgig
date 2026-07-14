@@ -144,7 +144,7 @@ export default function DJSetupScreen() {
         setEmailError('');
         if (!form.password.trim() || form.password.length < 6) { Alert.alert('Required', 'Password must be at least 6 characters.'); return; }
       }
-      if (form.instruments.length === 0) { Alert.alert('Required', 'Please select at least one — CDJ / Turntables if you DJ, or your instrument(s).'); return; }
+      if (form.instruments.length === 0) { Alert.alert('Required', 'Please select at least one or more instrument.'); return; }
 
       // Create the account here, not at the end. Same as the manager flow: the
       // "email already taken" error surfaces now, before three steps of typing.
