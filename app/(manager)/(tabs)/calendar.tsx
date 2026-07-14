@@ -170,10 +170,22 @@ export default function CalendarScreen() {
     if (!slotRows) return;
     const pastIds = slotRows.filter((s: any) => isPastStart(s.date, s.start_time)).map((s: any) => s.id);
     if (pastIds.length === 0) return;
-    const { data: bks } = await supabase.from('bookings').select('slot_id, status').in('slot_id', pastIds);
+    const { data: bks, error: bkErr } = await supabase.from('bookings').select('slot_id, status').in('slot_id', pastIds);
+    // If the bookings read failed we know nothing — deleting on a failed read would be
+    // destroying slots we simply couldn't see. Do nothing and try again next focus.
+    if (bkErr) { console.warn('sweep past slots (bookings read):', bkErr.message); return; }
     const keep = new Set(['requested', 'past_confirmation', 'confirmed', 'completed']);
     const keepSlotIds = new Set((bks ?? []).filter((b: any) => keep.has(b.status)).map((b: any) => b.slot_id));
-    const toDelete = pastIds.filter((id: string) => !keepSlotIds.has(id));
+    // Also protect any slot the LOCAL store knows has a booking or a draft on it. A booking
+    // written moments ago may not be readable yet; the sweep must not race the write and
+    // delete the slot out from under it.
+    const localBookings = useBookingStore.getState().bookings;
+    const localDrafts = useDraftStore.getState().drafts;
+    const toDelete = pastIds.filter((id: string) =>
+      !keepSlotIds.has(id) &&
+      !localBookings.some((b) => b.slotId === id && keep.has(b.status)) &&
+      !localDrafts.some((d) => d.slotId === id)
+    );
     if (toDelete.length === 0) return;
     const { error } = await supabase.from('slots').delete().in('id', toDelete);
     if (error) { console.warn('sweep past slots:', error.message); return; }

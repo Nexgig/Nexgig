@@ -338,10 +338,15 @@ export default function AssignDJScreen() {
       'Send Completed Gig Request',
       `Send a completed gig request to ${djUser?.fullName ?? 'this artist'} for "${slot!.name}" on ${formatDate(slot!.date)}?\n\nThey will be asked to confirm or decline this completed gig.`,
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => { deleteSlot(slot!.id); router.back(); } },
+        { text: 'Cancel', style: 'cancel', onPress: () => {
+          // Only bin the slot if nothing is riding on it. A slot with a booking or a
+          // draft is real work — closing the screen must never destroy it.
+          if (assignedDJIds.size === 0) deleteSlot(slot!.id);
+          router.back();
+        } },
         {
           text: 'Send Completed Request',
-          onPress: () => {
+          onPress: async () => {
             const now = new Date().toISOString();
             const bookingId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
               const r = Math.random() * 16 | 0;
@@ -364,8 +369,9 @@ export default function AssignDJScreen() {
               venueName: venue?.name,
             };
             addBooking(booking);
-            // Save to Supabase
-            supabase.from('bookings').insert({
+            // AWAITED on purpose. Fire-and-forget let the manager calendar's past-slot
+            // sweep run first, find no booking rows for this past slot, and delete it.
+            const { error: bkErr } = await supabase.from('bookings').insert({
               id: bookingId,
               slot_id: slot!.id,
               venue_id: slot!.venueId,
@@ -379,9 +385,8 @@ export default function AssignDJScreen() {
               slot_end_time: slot!.endTime,
               venue_name: venue?.name ?? null,
               venue_type: venue?.venueType ?? null,
-            }).then(({ error }) => {
-              if (error) console.warn('past booking insert error:', error.message);
             });
+            if (bkErr) console.warn('past booking insert error:', bkErr.message);
             addNotification({
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               userId: artistId,

@@ -108,7 +108,8 @@ export default function AddSlotScreen() {
     return () => {
       if (!createdSlotId) return;
       const hasDrafts = useDraftStore.getState().drafts.some((d) => d.slotId === createdSlotId);
-      if (!assignedRef.current && !hasDrafts) {
+      const hasBookings = useBookingStore.getState().bookings.some((b) => b.slotId === createdSlotId);
+      if (!assignedRef.current && !hasDrafts && !hasBookings) {
         deleteSlot(createdSlotId);
         supabase.from('slots').delete().eq('id', createdSlotId).then(() => {});
       }
@@ -216,7 +217,7 @@ export default function AddSlotScreen() {
     .filter((x) => !!x.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
 
-  const sendPastGigRequest = (artistId: string) => {
+  const sendPastGigRequest = async (artistId: string) => {
     if (!currentUser || !createdSlotId) return;
     const venueName = venues.find((v) => v.id === createSlotVenueId)?.name;
     const now = new Date().toISOString();
@@ -229,12 +230,14 @@ export default function AddSlotScreen() {
       slotDate: targetDate, slotName: slotForm.name, slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime, venueName,
     };
     addBooking(booking);
-    supabase.from('bookings').insert({
+    // AWAITED on purpose — see the delete-on-close effect and the calendar's past-slot sweep.
+    const { error } = await supabase.from('bookings').insert({
       id: bookingId, slot_id: createdSlotId, venue_id: createSlotVenueId, artist_id: artistId, manager_id: currentUser.id,
       status: 'requested', is_completed: false, slot_date: targetDate, slot_name: slotForm.name,
       slot_start_time: slotForm.startTime, slot_end_time: slotForm.endTime, venue_name: venueName ?? null,
       venue_type: getVenueById(createSlotVenueId)?.venueType ?? null,
-    }).then(({ error }) => { if (error) console.warn('past booking insert:', error.message); });
+    });
+    if (error) console.warn('past booking insert:', error.message);
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
       type: 'past_confirmation_request', title: 'Confirm Past Gig', body: `${venueName ?? 'a venue'} — ${formatDate(targetDate)}`,
@@ -251,7 +254,12 @@ export default function AddSlotScreen() {
         `This date is in the past. Send ${name} a completed-gig request to confirm they played this gig?`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Send Request', onPress: () => { sendPastGigRequest(artistId); assignedRef.current = true; Keyboard.dismiss(); router.back(); } },
+          { text: 'Send Request', onPress: async () => {
+            assignedRef.current = true;              // set FIRST: the unmount cleanup must never race this
+            Keyboard.dismiss();
+            await sendPastGigRequest(artistId);      // row is in Supabase before we leave
+            router.back();
+          } },
         ]
       );
       return;
