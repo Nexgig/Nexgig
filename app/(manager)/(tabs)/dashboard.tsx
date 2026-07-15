@@ -129,6 +129,8 @@ export default function ManagerDashboard() {
   const bookingFilter = useBookingFilterStore((s) => s.getFilter(currentUser?.id ?? ''));
   const setBookingFilter = useBookingFilterStore((s) => s.setFilter);
   const [filterOpen, setFilterOpen] = useState(false);
+  // Venue filter for the Bookings section (local, resets on nav — a quick lens, not a saved preference).
+  const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
   const filteredDashboardBookings = useMemo(
     () => dashboardBookings.filter((b) => bookingFilter[b.statusKey as 'pending' | 'confirmed' | 'completed']),
     [dashboardBookings, bookingFilter]
@@ -139,9 +141,12 @@ export default function ManagerDashboard() {
   // (stacked avatars + joined names). Status dot uses the highest-priority
   // status among the slot's artists: pending > confirmed > completed.
   const groupedBookingsPreview = useMemo(() => {
+    const venueScoped = bookingVenueId
+      ? filteredDashboardBookings.filter((b) => b.venueId === bookingVenueId)
+      : filteredDashboardBookings;
     const groups = new Map<string, typeof filteredDashboardBookings>();
     const order: string[] = [];
-    for (const b of filteredDashboardBookings) {
+    for (const b of venueScoped) {
       const key = b.slotId ?? b.id;
       if (!groups.has(key)) { groups.set(key, []); order.push(key); }
       groups.get(key)!.push(b);
@@ -161,7 +166,7 @@ export default function ManagerDashboard() {
         count: items.length,
       };
     });
-  }, [filteredDashboardBookings]);
+  }, [filteredDashboardBookings, bookingVenueId]);
 
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
@@ -434,6 +439,32 @@ export default function ManagerDashboard() {
             </ScrollView>
           )}
         </View>
+
+        {/* Venue filter for the Bookings list above — only when the manager has 2+ venues */}
+        {venues.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.venueChipRow}
+            style={{ marginBottom: 20 }}
+          >
+            <Pressable
+              style={[styles.venueChip, !bookingVenueId && { backgroundColor: colors.foreground }]}
+              onPress={() => setBookingVenueId(null)}
+            >
+              <Text style={[styles.venueChipText, { color: !bookingVenueId ? colors.background : colors.foreground }]}>All</Text>
+            </Pressable>
+            {venues.map((v) => (
+              <Pressable
+                key={v.id}
+                style={[styles.venueChip, bookingVenueId === v.id && { backgroundColor: colors.foreground }]}
+                onPress={() => setBookingVenueId(v.id)}
+              >
+                <Text style={[styles.venueChipText, { color: bookingVenueId === v.id ? colors.background : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Nexgig */}
         <View style={styles.section}>
