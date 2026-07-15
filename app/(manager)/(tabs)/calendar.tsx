@@ -12,7 +12,6 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
-import { SHOW_CALENDAR_LEGEND } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -1627,6 +1626,30 @@ export default function CalendarScreen() {
   };
 
   // ─── Lineup Balance Panel ──────────────────────────────────────────────────────────────────────────
+  // Venue filter chips — rendered UNDER the calendar in each view (not over it).
+  const renderVenueFilter = () => {
+    if (venues.length <= 1) return null;
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
+        <Pressable
+          style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.foreground : colors.border, backgroundColor: venueFilter === 'all' ? colors.foreground : 'transparent' }]}
+          onPress={() => setVenueFilter('all')}
+        >
+          <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.background : colors.foreground }]}>All</Text>
+        </Pressable>
+        {venues.map((v) => (
+          <Pressable
+            key={v.id}
+            style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.foreground : colors.border, backgroundColor: venueFilter === v.id ? colors.foreground : 'transparent' }]}
+            onPress={() => setVenueFilter(v.id)}
+          >
+            <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.background : colors.foreground }]}>{v.name}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    );
+  };
+
   const renderLineupBalance = () => {
     if (!showLineupBalance) return null;
     // Always show panel in month/venue view (empty state message shown when no bookings).
@@ -1755,28 +1778,6 @@ export default function CalendarScreen() {
             );
           })()}
 
-          {/* Venue Filter: All + individual venues */}
-          {venues.length > 1 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
-              {/* All option */}
-              <Pressable
-                style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.foreground : colors.border, backgroundColor: venueFilter === 'all' ? colors.foreground : 'transparent' }]}
-                onPress={() => setVenueFilter('all')}
-              >
-                <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.background : colors.foreground }]}>All</Text>
-              </Pressable>
-              {venues.map((v) => (
-                <Pressable
-                  key={v.id}
-                  style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.foreground : colors.border, backgroundColor: venueFilter === v.id ? colors.foreground : 'transparent' }]}
-                  onPress={() => setVenueFilter(v.id)}
-                >
-                  <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.background : colors.foreground }]}>{v.name}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-
           {venues.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48 }}>
               <MaterialIcons name="business" size={48} color={colors.muted} />
@@ -1843,6 +1844,7 @@ export default function CalendarScreen() {
                       )}
                     </View>
                   </View>
+                  {renderVenueFilter()}
                   {renderLineupBalance()}
                 </>
               );
@@ -1906,6 +1908,7 @@ export default function CalendarScreen() {
                   );
                 })}
               </View>
+              {renderVenueFilter()}
               {renderLineupBalance()}
             </>
           ) : (
@@ -2005,22 +2008,8 @@ export default function CalendarScreen() {
                 })}
               </View>
 
-              {/* Dot Legend — hidden behind SHOW_CALENDAR_LEGEND */}
-              {SHOW_CALENDAR_LEGEND && (
-              <View style={styles.dotLegend}>
-                {[
-                  { color: colors.warning, label: 'Requested' },
-                  { color: colors.success, label: 'Confirmed' },
-                  { color: '#2563EB', label: 'Completed' },
-                  { color: colors.error, label: 'Declined / Cancelled' },
-                ].map((item) => (
-                  <View key={item.label} style={styles.dotLegendItem}>
-                    <View style={[styles.dotLegendDot, { backgroundColor: item.color }]} />
-                    <Text style={[styles.dotLegendText, { color: colors.muted }]}>{item.label}</Text>
-                  </View>
-                ))}
-              </View>
-              )}
+              {/* Venue filter — under the calendar, filling the old legend gap */}
+              {renderVenueFilter()}
 
               {/* Selected Date Slots */}
               {!selectedDate ? (
@@ -2643,10 +2632,6 @@ const styles = StyleSheet.create({
   monthStartDayBtn: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   monthStartDayText: { fontSize: 12, fontWeight: '700' },
   // Dot legend
-  dotLegend: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 2, paddingBottom: 4, paddingHorizontal: 16 },
-  dotLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  dotLegendDot: { width: 8, height: 8, borderRadius: 4 },
-  dotLegendText: { fontSize: 11 },
   slotHeaderRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   djAssignmentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
   djAssignmentName: { flex: 1, fontSize: 13, fontWeight: '600' },
