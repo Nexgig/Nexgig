@@ -2538,7 +2538,7 @@ const styles = StyleSheet.create({
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
   dot: { width: 4, height: 4, borderRadius: 2 },
   // Slots section
-  slotsSection: { padding: 20 },
+  slotsSection: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
   slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
   slotHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
