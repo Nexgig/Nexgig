@@ -78,7 +78,6 @@ export default function PendingRequestsScreen() {
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
-            <View style={[styles.statusMark, { backgroundColor: '#D4A017' }]} />
           </Pressable>
           );
         }}
@@ -100,7 +99,6 @@ const styles = StyleSheet.create({
   venueName: { fontSize: 13, marginBottom: 2 },
   time: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },

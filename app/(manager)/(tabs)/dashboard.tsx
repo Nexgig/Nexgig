@@ -131,9 +131,11 @@ export default function ManagerDashboard() {
   // (stacked avatars + joined names). Status dot uses the highest-priority
   // status among the slot's artists: pending > confirmed > completed.
   const groupedBookingsPreview = useMemo(() => {
+    // Dashboard shows only live bookings — completed ones live on the Completed page.
+    const active = dashboardBookings.filter((b) => !b.isDone);
     const venueScoped = bookingVenueId
-      ? dashboardBookings.filter((b) => b.venueId === bookingVenueId)
-      : dashboardBookings;
+      ? active.filter((b) => b.venueId === bookingVenueId)
+      : active;
     const groups = new Map<string, typeof dashboardBookings>();
     const order: string[] = [];
     for (const b of venueScoped) {
@@ -375,10 +377,9 @@ export default function ManagerDashboard() {
         <View style={styles.section}>
           <SectionHeader
             title="Bookings"
-            actionLabel={groupedBookingsPreview.length > 0 ? String(groupedBookingsPreview.length) : undefined}
-            leftAccessory={
+            rightAccessory={
               <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <MaterialIcons name="tune" size={18} color={colors.muted} />
+                <MaterialIcons name="tune" size={20} color={colors.muted} />
               </Pressable>
             }
           />
@@ -416,13 +417,6 @@ export default function ManagerDashboard() {
                     {g.first.slot ? `${formatDate(g.first.slot.date)} · ${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                {g.isInvoiced ? (
-                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.statusMark, { backgroundColor: g.dotColor }]} />
-                )}
               </Pressable>
               );
             })}
@@ -607,8 +601,6 @@ const styles = StyleSheet.create({
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
-  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
-  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
   filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
   filterSheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, padding: 18, gap: 4 },
   filterTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
@@ -622,7 +614,6 @@ const styles = StyleSheet.create({
   bookingTime: { fontSize: 12 },
   bookingSub: { fontSize: 13 },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
   venueBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 36, marginLeft: 12 },
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
