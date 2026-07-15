@@ -8,13 +8,27 @@ import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
-import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
+
+// The booking row's date tile — mirrors the calendar Day-view badge (weekDayBadge),
+// but filled with the booking's status colour (gold pending / green confirmed /
+// blue completed) instead of coral. Shows the weekday short + day number of the set.
+function DateBadge({ dateStr, color }: { dateStr?: string | null; color: string }) {
+  if (!dateStr) return <View style={[styles.dateBadge, { backgroundColor: color }]} />;
+  const d = new Date(dateStr + 'T00:00:00');
+  const wk = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  return (
+    <View style={[styles.dateBadge, { backgroundColor: color }]}>
+      <Text style={styles.dateBadgeShort}>{wk}</Text>
+      <Text style={styles.dateBadgeNum}>{d.getDate()}</Text>
+    </View>
+  );
+}
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -134,7 +148,7 @@ export default function ManagerDashboard() {
     }
     const rank: Record<string, number> = { pending: 0, confirmed: 1, completed: 2 };
     const dotFor: Record<string, string> = { pending: '#D4A017', confirmed: '#22C55E', completed: '#2563EB' };
-    return order.slice(0, 6).map((key) => {
+    return order.map((key) => {
       const items = groups.get(key)!;
       const first = items[0];
       const statusKey = items.reduce((acc, it) => (rank[it.statusKey] < rank[acc] ? it.statusKey : acc), first.statusKey);
@@ -366,8 +380,7 @@ export default function ManagerDashboard() {
         <View style={styles.section}>
           <SectionHeader
             title="Bookings"
-            actionLabel="See all"
-            onAction={() => router.push('/(manager)/all-bookings' as Href)}
+            actionLabel={groupedBookingsPreview.length > 0 ? String(groupedBookingsPreview.length) : undefined}
             leftAccessory={
               <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
                 <MaterialIcons name="tune" size={18} color={colors.muted} />
@@ -380,7 +393,12 @@ export default function ManagerDashboard() {
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            groupedBookingsPreview.map((g) => {
+            <ScrollView
+              style={{ maxHeight: 330 }}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+            {groupedBookingsPreview.map((g) => {
               const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
               const title = g.count === 1
                 ? names[0]
@@ -391,17 +409,7 @@ export default function ManagerDashboard() {
                 style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
               >
-                {g.count === 1 ? (
-                  <AvatarImage uri={g.djs[0]?.profilePhotoUrl} avatarId={(g.djs[0] as any)?.avatarId} seed={(g.djs[0] as any)?.id} size={48} variant="artist" />
-                ) : (
-                  <View style={styles.avatarStack}>
-                    {g.djs.slice(0, 3).map((d, i) => (
-                      <View key={i} style={[styles.stackedAvatar, { marginLeft: i === 0 ? 0 : -16, zIndex: 3 - i, borderColor: colors.background }]}>
-                        <AvatarImage uri={d?.profilePhotoUrl} avatarId={(d as any)?.avatarId} seed={(d as any)?.id} name={d?.fullName} size={44} variant="artist" />
-                      </View>
-                    ))}
-                  </View>
-                )}
+                <DateBadge dateStr={g.first.slot?.date ?? g.first.slotDate} color={g.dotColor} />
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -422,7 +430,8 @@ export default function ManagerDashboard() {
                 )}
               </Pressable>
               );
-            })
+            })}
+            </ScrollView>
           )}
         </View>
 
@@ -604,8 +613,9 @@ const styles = StyleSheet.create({
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
-  avatarStack: { flexDirection: 'row', alignItems: 'center' },
-  stackedAvatar: { borderRadius: 999, borderWidth: 2 },
+  dateBadge: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  dateBadgeShort: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', color: '#fff', letterSpacing: 0.5 },
+  dateBadgeNum: { fontSize: 18, fontFamily: fonts.bodySemibold, color: '#fff' },
   gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
