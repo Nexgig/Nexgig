@@ -90,6 +90,7 @@ export default function CalendarScreen() {
   const defaultViewApplied = useRef(false);
   // Venue filter: 'all' or a specific venueId
   const [venueFilter, setVenueFilter] = useState<VenueFilter>('all');
+  const [venueMenuOpen, setVenueMenuOpen] = useState(false);
   const allSlots = useSlotStore((s) => s.slots);
   const addSlot = useSlotStore((s) => s.addSlot);
   const bulkAddSlots = useSlotStore((s) => s.bulkAddSlots);
@@ -1624,30 +1625,6 @@ export default function CalendarScreen() {
   };
 
   // ─── Lineup Balance Panel ──────────────────────────────────────────────────────────────────────────
-  // Venue filter chips — rendered UNDER the calendar in each view (not over it).
-  const renderVenueFilter = () => {
-    if (venues.length <= 1) return null;
-    return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled style={styles.venueScroll} contentContainerStyle={styles.venueScrollContent}>
-        <Pressable
-          style={[styles.venueTab, { borderColor: venueFilter === 'all' ? colors.foreground : colors.border, backgroundColor: venueFilter === 'all' ? colors.foreground : 'transparent' }]}
-          onPress={() => setVenueFilter('all')}
-        >
-          <Text style={[styles.venueTabText, { color: venueFilter === 'all' ? colors.background : colors.foreground }]}>All</Text>
-        </Pressable>
-        {venues.map((v) => (
-          <Pressable
-            key={v.id}
-            style={[styles.venueTab, { borderColor: venueFilter === v.id ? colors.foreground : colors.border, backgroundColor: venueFilter === v.id ? colors.foreground : 'transparent' }]}
-            onPress={() => setVenueFilter(v.id)}
-          >
-            <Text style={[styles.venueTabText, { color: venueFilter === v.id ? colors.background : colors.foreground }]}>{v.name}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-    );
-  };
-
   const renderLineupBalance = () => {
     if (!showLineupBalance) return null;
     // Always show panel in month/venue view (empty state message shown when no bookings).
@@ -1726,6 +1703,16 @@ export default function CalendarScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+            {venues.length > 1 && (
+              <Pressable
+                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+                onPress={() => setVenueMenuOpen(true)}
+                hitSlop={8}
+              >
+                <MaterialIcons name="tune" size={24} color={venueFilter === 'all' ? colors.foreground : colors.primary} />
+              </Pressable>
+            )}
             <Pressable
               style={({ pressed }) => [styles.headerSendBtn, { opacity: pressed ? 0.6 : 1 }]}
               onPress={() => {
@@ -1741,6 +1728,7 @@ export default function CalendarScreen() {
                 </View>
               )}
             </Pressable>
+            </View>
           </View>
 
           {/* Mode Toggle — ordered so the default view is always first */}
@@ -1842,7 +1830,6 @@ export default function CalendarScreen() {
                       )}
                     </View>
                   </View>
-                  {renderVenueFilter()}
                   {renderLineupBalance()}
                 </>
               );
@@ -1906,7 +1893,6 @@ export default function CalendarScreen() {
                   );
                 })}
               </View>
-              {renderVenueFilter()}
               {renderLineupBalance()}
             </>
           ) : (
@@ -2006,9 +1992,6 @@ export default function CalendarScreen() {
                   );
                 })}
               </View>
-
-              {/* Venue filter — under the calendar, filling the old legend gap */}
-              {renderVenueFilter()}
 
               {/* Selected Date Slots */}
               {!selectedDate ? (
@@ -2462,9 +2445,39 @@ export default function CalendarScreen() {
 
           </View>
       </Modal>
+
+      {/* Venue filter — dashboard-style popup listing the venue names */}
+      <Modal visible={venueMenuOpen} transparent animationType="fade" onRequestClose={() => setVenueMenuOpen(false)}>
+        <Pressable style={venueFilterStyles.overlay} onPress={() => setVenueMenuOpen(false)}>
+          <Pressable style={[venueFilterStyles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
+            <Text style={[venueFilterStyles.title, { color: colors.foreground }]}>Filter by venue</Text>
+            {[{ id: 'all' as VenueFilter, name: 'All venues' }, ...venues.map((v) => ({ id: v.id as VenueFilter, name: v.name }))].map((v) => {
+              const active = venueFilter === v.id;
+              return (
+                <Pressable
+                  key={v.id}
+                  style={({ pressed }) => [venueFilterStyles.row, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => { setVenueFilter(v.id); setVenueMenuOpen(false); }}
+                >
+                  <Text style={[venueFilterStyles.rowLabel, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
+
+const venueFilterStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  sheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 8, paddingHorizontal: 6 },
+  title: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 6, opacity: 0.6 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  rowLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
+});
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
@@ -2509,10 +2522,6 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 12, fontWeight: '600' },
   // Venue tabs
-  venueScroll: { marginTop: 10, flexGrow: 0 },
-  venueScrollContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 4, paddingTop: 4, alignItems: 'center' },
-  venueTab: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  venueTabText: { fontSize: 13, fontWeight: '700', flexShrink: 0 },
   // Month view
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   monthNavBtn: { padding: 4 },
