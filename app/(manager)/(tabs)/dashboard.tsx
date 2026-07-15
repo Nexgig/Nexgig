@@ -8,7 +8,7 @@ import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -123,28 +123,18 @@ export default function ManagerDashboard() {
     [bookings, slots, artistUsers, allVenues, invoicedBookingIds]
   );
 
-  const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
-
-  // Status filter for the Bookings section (persisted per user, default all on).
-  const bookingFilter = useBookingFilterStore((s) => s.getFilter(currentUser?.id ?? ''));
-  const setBookingFilter = useBookingFilterStore((s) => s.setFilter);
+  // Venue filter for the Bookings section (local, resets on nav — a quick lens).
   const [filterOpen, setFilterOpen] = useState(false);
-  // Venue filter for the Bookings section (local, resets on nav — a quick lens, not a saved preference).
   const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
-  const filteredDashboardBookings = useMemo(
-    () => dashboardBookings.filter((b) => bookingFilter[b.statusKey as 'pending' | 'confirmed' | 'completed']),
-    [dashboardBookings, bookingFilter]
-  );
-  const dashboardBookingsPreviewFiltered = useMemo(() => filteredDashboardBookings.slice(0, 6), [filteredDashboardBookings]);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
   // status among the slot's artists: pending > confirmed > completed.
   const groupedBookingsPreview = useMemo(() => {
     const venueScoped = bookingVenueId
-      ? filteredDashboardBookings.filter((b) => b.venueId === bookingVenueId)
-      : filteredDashboardBookings;
-    const groups = new Map<string, typeof filteredDashboardBookings>();
+      ? dashboardBookings.filter((b) => b.venueId === bookingVenueId)
+      : dashboardBookings;
+    const groups = new Map<string, typeof dashboardBookings>();
     const order: string[] = [];
     for (const b of venueScoped) {
       const key = b.slotId ?? b.id;
@@ -166,7 +156,7 @@ export default function ManagerDashboard() {
         count: items.length,
       };
     });
-  }, [filteredDashboardBookings, bookingVenueId]);
+  }, [dashboardBookings, bookingVenueId]);
 
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
@@ -440,32 +430,6 @@ export default function ManagerDashboard() {
           )}
         </View>
 
-        {/* Venue filter for the Bookings list above — only when the manager has 2+ venues */}
-        {venues.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.venueChipRow}
-            style={{ marginBottom: 20 }}
-          >
-            <Pressable
-              style={[styles.venueChip, !bookingVenueId && { backgroundColor: colors.foreground }]}
-              onPress={() => setBookingVenueId(null)}
-            >
-              <Text style={[styles.venueChipText, { color: !bookingVenueId ? colors.background : colors.foreground }]}>All</Text>
-            </Pressable>
-            {venues.map((v) => (
-              <Pressable
-                key={v.id}
-                style={[styles.venueChip, bookingVenueId === v.id && { backgroundColor: colors.foreground }]}
-                onPress={() => setBookingVenueId(v.id)}
-              >
-                <Text style={[styles.venueChipText, { color: bookingVenueId === v.id ? colors.background : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-
         {/* Nexgig */}
         <View style={styles.section}>
           <Pressable
@@ -578,24 +542,17 @@ export default function ManagerDashboard() {
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
           <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Show in Bookings</Text>
-            {([
-              { key: 'pending' as const, label: 'Pending', dot: '#D4A017' },
-              { key: 'confirmed' as const, label: 'Confirmed', dot: '#22C55E' },
-              { key: 'completed' as const, label: 'Completed', dot: '#2563EB' },
-            ]).map((opt) => {
-              const checked = bookingFilter[opt.key];
+            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Filter by venue</Text>
+            {[{ id: null as string | null, name: 'All venues' }, ...venues].map((v) => {
+              const active = bookingVenueId === v.id;
               return (
                 <Pressable
-                  key={opt.key}
+                  key={v.id ?? 'all'}
                   style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={() => currentUser && setBookingFilter(currentUser.id, opt.key, !checked)}
+                  onPress={() => { setBookingVenueId(v.id); setFilterOpen(false); }}
                 >
-                  <View style={[styles.filterRowMark, { backgroundColor: opt.dot }]} />
-                  <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>{opt.label}</Text>
-                  <View style={[styles.filterCheck, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : 'transparent' }]}>
-                    {checked && <MaterialIcons name="check" size={14} color="#fff" />}
-                  </View>
+                  <Text style={[styles.filterRowLabel, { color: colors.foreground, flex: 1 }]} numberOfLines={1}>{v.name}</Text>
+                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
                 </Pressable>
               );
             })}
