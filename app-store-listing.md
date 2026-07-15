@@ -135,21 +135,31 @@ reviewer comparing them is the single most likely way to get flagged.
 
 ## Demo accounts (App Review Information)
 
-Password for all: `NexgigDemo2026`
+Passwords are NOT recorded here — type them directly into App Store Connect.
+Keep them in your password manager.
 
 | Role | Email | Name |
 |---|---|---|
-| Manager | review.manager@nexgigapp.com | Omar Haddad — Marina Hospitality Group |
-| Artist | review.artist@nexgigapp.com | Layla Rae (Layla Rahman), House |
-| Artist (extra) | sam.reyes@nexgigapp.com | Sam Reyes, Tech House |
-| Artist (extra) | nadia.k@nexgigapp.com | Nadia K, R&B / Soul |
+| Manager | review.manager@nexgigapp.com | Azure Group |
+| Artist | review.artist@nexgigapp.com | (demo artist — hand this one to App Review) |
+| Artist | layla…@nexgigapp.com | Layla Rae — House |
+| Artist | sam.reyes@nexgigapp.com | Sam Reyes — Tech House |
+| Artist | nadia.k@nexgigapp.com | Nadia K — R&B / Soul |
 
-Venues on the manager account: **Azure Beach Club** (Beach Club, cap. 800) and
-**Neon Room** (Dance Club, cap. 400).
+Venues on the manager account: **Azure Beach Club** (Beach Club) and
+**Lady Bird** (Cocktail Bar, cap. 200).
 
-These must exist with real seeded data — venues, sets, at least one confirmed booking,
-one completed booking, one invoice. A reviewer who lands in an empty app cannot exercise
-the features, and will reject it.
+Seeded and verified in the 14 July screenshots: confirmed, pending, completed and
+invoiced bookings across both venues, sets on the July calendar, and a sent invoice
+(INV-20260714-003, AED 9,000).
+
+Both review accounts exist and are seeded (confirmed 14 July). Put the MANAGER
+credentials in App Review Information → **Sign-In Required** (username + password
+fields), and substitute the real password for `<password>` in the notes below.
+
+Before submitting, sign in as **review.artist** once and check there is a **pending
+booking waiting on it**. Accepting a request is the first thing a reviewer will try; an
+artist account with an empty Requests tab gives them nothing to do.
 
 ### Reviewer notes (paste into App Review Information → Notes)
 
@@ -157,10 +167,10 @@ the features, and will reject it.
 >
 > The app is two-sided, so please use BOTH demo accounts to see the full flow:
 >
-> MANAGER — review.manager@nexgigapp.com / NexgigDemo2026
+> MANAGER — review.manager@nexgigapp.com / <password>
 > The manager has two venues with sets on the calendar. From a venue you can add a set, assign an artist from the lineup, and send a booking request. Invoices received from artists appear in the profile tab.
 >
-> ARTIST — review.artist@nexgigapp.com / NexgigDemo2026
+> ARTIST — review.artist@nexgigapp.com / <password>
 > The artist receives booking requests and can confirm or decline them, set availability, and send an invoice for a completed gig.
 >
 > Sign in with Apple and Sign in with Google are also supported, but the email/password accounts above cover the entire feature set.

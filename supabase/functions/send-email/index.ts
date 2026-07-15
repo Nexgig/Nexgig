@@ -23,29 +23,57 @@ const FROM = 'Nexgig <notifications@nexgigapp.com>';
 const ADMIN_EMAIL = 'admin@nexgigapp.com';
 
 // ─── Shared HTML shell ───────────────────────────────────────────────────────
-// Wraps body content in a consistent Nexgig-branded layout.
+// Brand palette (matches the app's light theme in theme.config.js).
+const BRAND = {
+  coral: '#E2674A',
+  dot: '#FFFFFF',       // the wordmark's accent dot — white on the coral header
+  tagline: '#FBE4DC',   // soft cream, sits under the wordmark
+  ink: '#1A1A1A',       // headings (app foreground is #000; softened for email)
+  body: '#57534E',      // warm grey body text
+  surface: '#F6F2EC',   // app surface — cards inside the email
+  hairline: '#EDE7DE',  // soft divider
+  muted: '#8E8E93',     // app muted — footer
+};
+// Font stacks. Clash Display (logo) + General Sans (everything) render in Apple Mail,
+// which loads the @import; other clients fall back to the system stack below.
+const LOGO_FONT = "'Clash Display','Arial Black','Helvetica Neue',Arial,sans-serif";
+const BODY_FONT = "'General Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+// Wraps body content in a consistent Nexgig-branded layout. Returns a full HTML doc so
+// the <head> can pull the brand fonts from Fontshare (where they're hosted).
 function shell(innerHtml: string): string {
-  return `
-  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#F3F4F6; padding:24px;">
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    @import url('https://api.fontshare.com/v2/css?f[]=clash-display@600&f[]=general-sans@400,500,600&display=swap');
+  </style>
+</head>
+<body style="margin:0; padding:0; background:${BRAND.surface};">
+  <div style="font-family:${BODY_FONT}; background:${BRAND.surface}; padding:24px;">
     <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden;">
-      <div style="background:#2563EB; padding:24px 32px;">
-        <div style="color:#ffffff; font-size:22px; font-weight:800; letter-spacing:0.5px;">NEXGIG</div>
-        <div style="color:#DBEAFE; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:2px;">Every booking, verified.</div>
+      <div style="background:${BRAND.coral}; padding:26px 32px;">
+        <div style="font-family:${LOGO_FONT}; color:#ffffff; font-size:26px; font-weight:600; letter-spacing:0.5px;">NEXGIG<span style="color:${BRAND.dot};">.</span></div>
+        <div style="color:${BRAND.tagline}; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px;">Book. Play. Discover.</div>
       </div>
       <div style="padding:32px;">
         ${innerHtml}
       </div>
-      <div style="padding:16px 32px; border-top:1px solid #F3F4F6;">
-        <div style="color:#9CA3AF; font-size:12px;">Sent by Nexgig &middot; nexgigapp.com</div>
+      <div style="padding:16px 32px; border-top:1px solid ${BRAND.hairline};">
+        <div style="color:${BRAND.muted}; font-size:12px;">Sent by Nexgig &middot; nexgigapp.com</div>
       </div>
     </div>
-  </div>`;
+  </div>
+</body>
+</html>`;
 }
 
 const h1 = (text: string) =>
-  `<h1 style="font-size:22px; font-weight:800; color:#111827; margin:0 0 16px;">${text}</h1>`;
+  `<h1 style="font-family:${BODY_FONT}; font-size:22px; font-weight:600; color:${BRAND.ink}; margin:0 0 16px;">${text}</h1>`;
 const p = (text: string) =>
-  `<p style="color:#4B5563; font-size:15px; line-height:1.6; margin:0 0 14px;">${text}</p>`;
+  `<p style="color:${BRAND.body}; font-size:15px; line-height:1.6; margin:0 0 14px;">${text}</p>`;
 
 function escapeHtml(s: string): string {
   return String(s ?? '')
@@ -59,15 +87,15 @@ function venueBlock(name: string, rules: string | null): string {
   const trimmedRules = (rules ?? '').trim();
   if (trimmedRules) {
     return `
-      <div style="margin:0 0 18px;">
-        <div style="font-size:15px; font-weight:700; color:#111827; margin:0 0 4px;">${safeName}</div>
-        <div style="color:#4B5563; font-size:14px; line-height:1.55; white-space:pre-line;">${escapeHtml(trimmedRules)}</div>
+      <div style="background:${BRAND.surface}; border-radius:12px; padding:16px 18px; margin:0 0 12px;">
+        <div style="font-size:15px; font-weight:500; color:${BRAND.ink}; margin:0 0 4px;">${safeName}</div>
+        <div style="color:${BRAND.body}; font-size:14px; line-height:1.55; white-space:pre-line;">${escapeHtml(trimmedRules)}</div>
       </div>`;
   }
   return `
-      <div style="margin:0 0 18px;">
-        <div style="font-size:15px; font-weight:700; color:#111827; margin:0 0 4px;">${safeName}</div>
-        <div style="color:#9CA3AF; font-size:13px; font-style:italic;">(joined — no specific rules)</div>
+      <div style="background:${BRAND.surface}; border-radius:12px; padding:16px 18px; margin:0 0 12px;">
+        <div style="font-size:15px; font-weight:500; color:${BRAND.ink}; margin:0 0 4px;">${safeName}</div>
+        <div style="color:${BRAND.muted}; font-size:13px; font-style:italic;">(joined — no specific rules)</div>
       </div>`;
 }
 
@@ -97,7 +125,7 @@ async function buildVenuesHtml(
 
   if (!rows || rows.length === 0) return '';
 
-  const heading = `<p style="color:#111827; font-size:15px; font-weight:700; margin:6px 0 12px;">${rows.length > 1 ? 'Venues & rules' : 'Venue & rules'}</p>`;
+  const heading = `<p style="color:${BRAND.ink}; font-size:15px; font-weight:500; margin:6px 0 12px;">${rows.length > 1 ? 'Venues & rules' : 'Venue & rules'}</p>`;
   return heading + rows.map((r) => venueBlock(r.name, r.rules_template)).join('');
 }
 
@@ -106,7 +134,7 @@ type TemplateResult = { subject: string; html: string };
 
 // Renders a labelled row for the admin report/feedback emails.
 function adminRow(label: string, value: string): string {
-  return `<p style="margin:0 0 8px; font-size:14px; color:#4B5563;"><strong style="color:#111827;">${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
+  return `<p style="margin:0 0 8px; font-size:14px; color:${BRAND.body};"><strong style="color:${BRAND.ink}; font-weight:500;">${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`;
 }
 
 // Admin-notification templates (report / feedback). These render purely from
@@ -145,7 +173,7 @@ function renderAdminTemplate(
           adminRow('From', `${str(data.userName)} (${str(data.accountType)})`) +
           adminRow('User email', str(data.userEmail)) +
           adminRow('User id', str(data.userId)) +
-          `<div style="margin-top:14px; padding:14px; background:#F9FAFB; border-radius:10px; white-space:pre-line; color:#111827; font-size:15px; line-height:1.55;">${escapeHtml(str(data.message))}</div>`,
+          `<div style="margin-top:14px; padding:14px; background:${BRAND.surface}; border-radius:12px; white-space:pre-line; color:${BRAND.ink}; font-size:15px; line-height:1.55;">${escapeHtml(str(data.message))}</div>`,
         ),
       };
     }
@@ -181,10 +209,10 @@ function renderTemplate(
       return {
         subject: 'Welcome to Nexgig',
         html: shell(
-          h1('Welcome to Nexgig!') +
+          h1('Welcome to Nexgig') +
           p(`Hi ${name},`) +
           p('Your artist profile is live. Managers across the UAE can now discover you, add you to their lineups, and send you booking requests.') +
-          p('Keep your profile complete — profile photo, music genres, and links help venues find the right fit.'),
+          p('Round out your profile — pick your avatar, set your genres and instruments, and add your links so venues find the right fit.'),
         ),
       };
     }
@@ -194,7 +222,7 @@ function renderTemplate(
       return {
         subject: 'Welcome to Nexgig',
         html: shell(
-          h1('Welcome to Nexgig!') +
+          h1('Welcome to Nexgig') +
           p(`Hi ${name},`) +
           p('Your manager account is ready. Create your venues, build your artist lineup, and manage every booking in one place.') +
           p('Start by adding a venue, then browse the Network to connect with artists.'),
@@ -208,7 +236,7 @@ function renderTemplate(
       return {
         subject: `${managerName} added you to their lineup on Nexgig`,
         html: shell(
-          h1("You're on the lineup!") +
+          h1("You're on the lineup") +
           p(`Hi ${name},`) +
           p(`<strong>${managerName}</strong> has added you to their artist lineup on Nexgig.`) +
           (venuesHtml || p('Open the app to see the venues and details.')),
