@@ -71,7 +71,7 @@ export default function ConfirmedBookingsScreen() {
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
           >
-            <AvatarImage uri={booking.dj?.profilePhotoUrl} size={48} variant="artist" />
+            <AvatarImage uri={booking.dj?.profilePhotoUrl} avatarId={(booking.dj as any)?.avatarId} seed={(booking.dj as any)?.id} name={booking.dj?.fullName} size={48} variant="artist" />
             <View style={styles.info}>
               <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
                 {booking.dj?.fullName ?? 'Unknown Artist'}

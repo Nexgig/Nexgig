@@ -158,7 +158,7 @@ export default function ArtistBookingsScreen() {
               style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}
             >
-              <AvatarImage uri={artist?.profilePhotoUrl} size={48} variant="artist" />
+              <AvatarImage uri={artist?.profilePhotoUrl} avatarId={(artist as any)?.avatarId} seed={(artist as any)?.id} name={artist?.fullName} size={48} variant="artist" />
               <View style={styles.gigInfo}>
                 <View style={styles.titleRow}>
                   <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
