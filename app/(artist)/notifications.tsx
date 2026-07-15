@@ -85,7 +85,10 @@ export default function ArtistNotificationsScreen() {
     setFadingIds(unread);
     markAllAsRead(currentUser.id);
     fadeAnim.setValue(1);
-    const anim = Animated.timing(fadeAnim, { toValue: 0, duration: 3000, useNativeDriver: true });
+    // JS driver (not native): this fade shares one Animated.Value across recycling
+    // FlatList rows, and cycles on every focus/blur. The native animated driver throws
+    // an NSException (SIGABRT) when a node/view is dropped mid-animation under that churn.
+    const anim = Animated.timing(fadeAnim, { toValue: 0, duration: 3000, useNativeDriver: false });
     anim.start(({ finished }) => { if (finished) setFadingIds(new Set()); });
     return () => anim.stop();
   }, [currentUser?.id]));
