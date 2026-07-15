@@ -90,8 +90,6 @@ export default function CalendarScreen() {
   const defaultViewApplied = useRef(false);
   // Venue filter: 'all' or a specific venueId
   const [venueFilter, setVenueFilter] = useState<VenueFilter>('all');
-  // Keep selectedVenueId as alias for backward compat with slot CRUD helpers
-  const selectedVenueId = venueFilter === 'all' ? (venues[0]?.id ?? '') : venueFilter;
   const allSlots = useSlotStore((s) => s.slots);
   const addSlot = useSlotStore((s) => s.addSlot);
   const bulkAddSlots = useSlotStore((s) => s.bulkAddSlots);
@@ -658,7 +656,7 @@ export default function CalendarScreen() {
       if (venueFilter !== 'all') return slot.venueId === venueFilter;
       return true;
     }).map((d) => d.slotId);
-  }, [currentUser, allDrafts, allSlots, calendarMode, weekDays, selectedVenueId, standardMonthBounds, nowDT, viewedDayStr]);
+  }, [currentUser, allDrafts, allSlots, calendarMode, weekDays, venueFilter, standardMonthBounds, nowDT, viewedDayStr]);
   const managerDraftCount = periodDraftSlotIds.length;
 
   // Total draft count across ALL venues in the period (ignores venue filter) — used for FAB visibility
@@ -1964,6 +1962,7 @@ export default function CalendarScreen() {
                   // Also include past bookings that still have pending status (slotDate snapshot)
                   const pastPendingOnDay = allBookings.filter(
                     (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
+                      (venueFilter === 'all' || b.venueId === venueFilter) &&
                       (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
                   );
                   if (daySlots.length > 0 || pastPendingOnDay.length > 0) {
