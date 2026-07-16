@@ -6,6 +6,7 @@ import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, us
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import type { Booking } from '@/lib/types';
+import { isPastStart } from '@/lib/utils';
 
 export default function DJLayout() {
   const colors = useColors();
@@ -143,15 +144,50 @@ export default function DJLayout() {
         useAvailabilityStore.getState().resetBlocksForArtist(currentUser.id, []);
         return;
       }
-      const freshBlocks = data.map((b: any) => ({
+      // A private_event row is really an artist-created BOOKING (a named green card),
+      // NOT an availability block. renderBlockCard hardcodes "Unavailable/Blocked", so
+      // if we rebuilt a private event as a block it would come back nameless and red
+      // after a restart. Split the two: private events → bookings, real blocks → blocks.
+      const privateRows = data.filter((b: any) => b.block_type === 'private_event');
+      const blockRows = data.filter((b: any) => b.block_type !== 'private_event');
+
+      const bookingStore = useBookingStore.getState();
+      privateRows.forEach((b: any) => {
+        const start = b.is_full_day ? '00:00' : b.start_time;
+        const end = b.is_full_day ? '23:59' : b.end_time;
+        const nowISO = new Date().toISOString();
+        // Same id as the availability_blocks row (that's how add-block links them), so
+        // addBooking's upsert dedupes against any persisted copy instead of duplicating.
+        bookingStore.addBooking({
+          id: b.id,
+          slotId: 'private-slot-' + b.id,
+          venueId: '',
+          artistId: currentUser.id,
+          managerId: '',
+          status: 'confirmed',
+          isCompleted: isPastStart(b.date, start),
+          isArtistCreated: true,
+          createdAt: nowISO,
+          updatedAt: nowISO,
+          confirmedAt: nowISO,
+          slotDate: b.date,
+          slotStartTime: start,
+          slotEndTime: end,
+          slotName: b.event_name ?? 'Private Event',
+          venueName: b.event_name ?? 'Private Event',
+          privateEventLocation: b.location ?? undefined,
+        } as Booking);
+      });
+
+      const freshBlocks = blockRows.map((b: any) => ({
         id: b.id,
         artistId: currentUser.id,
         date: b.date,
         startTime: b.start_time,
         endTime: b.end_time,
         fullDay: b.is_full_day ?? false,
-        label: b.block_type === 'private_event' ? 'Private Event' : 'Unavailable',
-        blockType: b.block_type ?? 'block',
+        label: 'Unavailable' as const,
+        blockType: 'block' as const,
         createdAt: new Date().toISOString(),
       }));
       useAvailabilityStore.getState().resetBlocksForArtist(currentUser.id, freshBlocks);
