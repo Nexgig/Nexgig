@@ -247,7 +247,16 @@ export default function DJAvailabilityScreen() {
   const handleCalRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
     setCalRefreshing(true);
-    const { data } = await supabase.from('bookings').select('*').eq('artist_id', currentUser.id);
+    const [bookingsRes, blocksRes] = await Promise.all([
+      supabase.from('bookings').select('*').eq('artist_id', currentUser.id),
+      // Private events live in availability_blocks (NOT in the bookings table), so a
+      // bookings-only refresh would wipe them. Re-fetch and rebuild them too, exactly
+      // like the cold-start loader — otherwise pull-to-refresh drops the private event.
+      supabase.from('availability_blocks')
+        .select('id, date, start_time, end_time, is_full_day, block_type, event_name, location')
+        .eq('artist_id', currentUser.id).eq('block_type', 'private_event'),
+    ]);
+    const data = bookingsRes.data;
     if (data) {
       clearBookings();
       data.forEach((b: any) => addBookingFn({
@@ -264,6 +273,20 @@ export default function DJAvailabilityScreen() {
         venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
+    (blocksRes.data ?? []).forEach((b: any) => {
+      const start = b.is_full_day ? '00:00' : b.start_time;
+      const end = b.is_full_day ? '23:59' : b.end_time;
+      const nowISO = new Date().toISOString();
+      addBookingFn({
+        id: b.id, slotId: 'private-slot-' + b.id, venueId: '',
+        artistId: currentUser.id, managerId: '', status: 'confirmed',
+        isCompleted: isPastStart(b.date, start), isArtistCreated: true,
+        createdAt: nowISO, updatedAt: nowISO, confirmedAt: nowISO,
+        slotDate: b.date, slotStartTime: start, slotEndTime: end,
+        slotName: b.event_name ?? 'Private Event', venueName: b.event_name ?? 'Private Event',
+        privateEventLocation: b.location ?? undefined,
+      } as any);
+    });
     setCalRefreshing(false);
   }, [currentUser?.id]);
 
