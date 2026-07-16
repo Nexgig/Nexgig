@@ -24,6 +24,11 @@ import * as Notifications from "expo-notifications";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { FONT_ASSETS } from "@/lib/fonts";
+import { initObservability, wrapRoot } from "@/lib/observability";
+
+// Crash + error reporting. No-op until @sentry/react-native is installed AND
+// EXPO_PUBLIC_SENTRY_DSN is set, so the app is identical with or without it.
+initObservability();
 
 // Silence React Native's internal SafeAreaView deprecation warning.
 // It originates from RN's own Button/InputAccessoryView components, not our code.
@@ -49,7 +54,7 @@ function ThemedStatusBar() {
   return <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
   const router = useRouter();
@@ -259,3 +264,7 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+// Sentry error boundary + perf instrumentation around the root. Passthrough when
+// Sentry isn't installed/initialised, so this is always safe.
+export default wrapRoot(RootLayout);

@@ -38,6 +38,23 @@ const env = {
   androidPackage: bundleId,
 };
 
+// Sentry config plugin — only added once `@sentry/react-native` is installed, so the
+// config still resolves (eas update / prebuild) before the package exists. Org/project
+// come from env; the source-map upload token is SENTRY_AUTH_TOKEN (an EAS secret).
+let sentryPlugin: [string, Record<string, string>] | null = null;
+try {
+  require.resolve("@sentry/react-native/expo");
+  sentryPlugin = [
+    "@sentry/react-native/expo",
+    {
+      organization: process.env.SENTRY_ORG ?? "nexgig",
+      project: process.env.SENTRY_PROJECT ?? "nexgig",
+    },
+  ];
+} catch {
+  sentryPlugin = null;
+}
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
@@ -145,6 +162,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    ...(sentryPlugin ? [sentryPlugin] : []),
   ],
   experiments: {
     typedRoutes: true,

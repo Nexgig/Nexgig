@@ -8,37 +8,66 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-The design pass is CLOSED. Ship first, then email, then dual-role.
+Updated 14 July 2026. Only open items live here. Done work is deleted, not archived.
 
-**1 · App Store submission — the priority.** A native build with the rebuilt icon is on TestFlight. Remaining:
-- Create a demo/review MANAGER account with sample data (a venue or two, a few lineup artists, a couple of gigs) — **needs Tuts in the app**, then give Claude the creds for the review notes.
-- Fill App Store Connect metadata: 6.7" iPhone screenshots, description/subtitle/keywords/promo (all drafted — ready to paste), App Privacy questionnaire, age rating, App Review notes (note managers AND artists share one app).
-- Then Submit for Review. Icon FINAL/locked = send-arrow.
-- **App Privacy just got simpler:** the app no longer uploads any photos (avatars + venue-type images are all bundled), so there is no user-generated image content to declare and the `avatars` Storage bucket has no writers.
+**1 · App Store submission — final stretch (Tuts, in App Store Connect).**
+Build 14 is on TestFlight; email, screenshots, listing copy, demo accounts all done.
+Left: finish the App Store Connect form (paste metadata, upload the 10 shots in
+`appstore-final/`, App Privacy questionnaire, age rating, reviewer notes) and hit
+Submit. Beta App Review for the TestFlight external group runs in parallel.
 
-**2 · Transactional email** — wire SES/Resend to app events.
-- **Point Supabase Auth at Resend's SMTP.** Auth emails (password reset, signup confirmation) are sent by Supabase Auth itself, not by our Edge Function — so they still go out from `noreply@mail.app.supabase.io` instead of our domain. The app's own emails already run through Resend from `notifications@nexgigapp.com`, so the domain is verified and the API key exists; it just needs to be plugged into Supabase.
-  Supabase → Project Settings → Authentication → SMTP Settings → enable Custom SMTP:
-  host `smtp.resend.com`, port `465`, user `resend`, password = the Resend API key, sender `admin@nexgigapp.com` (must be on the verified domain).
-  **Not just cosmetic:** Supabase's built-in email service is explicitly not for production and is rate-limited to a few messages an hour — if several users request a password reset in the same hour, the rest silently receive nothing.
+**2 · Sentry crash/error reporting — do this the moment the current review clears.**
+The build-14 SIGABRT (native NativeAnimated NSException on the notifications screen) was
+found by hand from a device `.ips` because there was no telemetry. Wire Sentry so the
+next one is pinpointed in seconds. Code was drafted then reverted 14 Jul — steps:
+`npx expo install @sentry/react-native`; add the `@sentry/react-native/expo` config plugin
+(org/project via `SENTRY_ORG`/`SENTRY_PROJECT`); init in `app/_layout.tsx` guarded on
+`EXPO_PUBLIC_SENTRY_DSN` (`enabled: !__DEV__`, `sendDefaultPii: false`); wrap the root with
+`Sentry.wrap`; source maps need `SENTRY_AUTH_TOKEN` as an EAS secret. NEEDS A NATIVE
+REBUILD (does not OTA) + a new App Store submission. ⚠️ Adds "Diagnostics" data → flip the
+App Privacy questionnaire's Diagnostics answer to YES.
 
-**3 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
+**3 · Artist avatar swap.** New illustrated set (24 characters × 4 hair colours) is in
+hand. Waiting on Tuts's final character picks — recommended #04, 05, 06, 08, 12, 16 × 4
+colours = 24. Then: rename to `avatar-1..N.png` in `assets/images/avatars/`, rewrite
+`lib/avatars.ts`, and re-pick avatars on the demo accounts (pre-launch data is wiped, so
+no migration — only the seeded demo artists carry an `avatarId`). Ships via `eas update`.
 
-The DB already supports it: `artists.id` and `managers.id` are both the `auth.users.id`, so one account can have a row in *both* tables. Three app-level things block it:
+**4 · Artist-side booking polish (mirror the manager changes).** Two small items:
+  - **Drop the status dots** from the artist's booking lists (dashboard + any list rows),
+    same as we did on the manager side. Maybe replace with the calendar-style date badge
+    (`WED / 15`, status-coloured) like the manager dashboard now uses.
+  - **Reword the "Added to Lineup" notification** — manager-initiated add currently shows
+    the manager's name and implies a manager profile the artist can't open. Reframe it
+    around the venues (tap already routes to My Venues), e.g. body "You've been added to
+    <Manager>'s venues". (Decision pending: Tuts to confirm reword vs. building an
+    artist-facing manager profile.) Ships via `eas update`.
+
+**5 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
+
+The DB already supports it: `artists.id` and `managers.id` are both `auth.users.id`, so
+one account can have a row in *both* tables. Three app-level things block it:
   1. `users.account_type` is a single value.
-  2. `sign-in` checks `managers` first and returns — a dual user would always land as manager and never see their artist side.
+  2. `sign-in` checks `managers` first and returns — a dual user always lands as manager.
   3. Signup forces one choice and never offers the other.
 
-**Model:** one auth user, optionally both profiles. An **active role** held client-side (persisted), not a new DB column; `account_type` becomes the default. Switching = set active role → re-hydrate `currentUser` from the other table → `router.replace` into the other route group (each group's `_layout` already fetches its own data on mount, so a switch is re-entering as the other persona without re-authenticating). Creating the second profile = run the existing setup wizard with `hasSession` — **that machinery already exists**, built for the abandoned-signup fix.
+**Model:** one auth user, optionally both profiles. An **active role** held client-side
+(persisted); `account_type` is the default. Switching = set active role → re-hydrate
+`currentUser` from the other table → `router.replace` into the other route group. Creating
+the second profile = run the existing setup wizard with `hasSession` (that machinery
+already exists, built for the abandoned-signup fix).
 
-**Five things that will bite. Two need a product decision BEFORE starting:**
-  - ⚠️ **Self-booking** — a dual user could add themselves to their own lineup, book themselves, and invoice themselves. Conflict detection would flag them against their own gigs. DECIDE: forbid (filter own id out of network/lineup) or allow.
-  - ⚠️ **Notifications** — push registers per user id, and the in-app list filters by `userId`, not role. In artist mode you'd see manager notifications. DECIDE: tag notifications with a role and filter, or accept the mixing.
-  - **RLS** — some policies may key off `account_type`; a dual user could get locked out of one side. Needs a policy audit (Tuts, in Supabase).
-  - **Sign-in routing** must change from "manager wins" to "last used role, or ask".
-  - **Persisted stores aren't namespaced by role** — switching must clear/refetch role-specific stores or an artist will see a manager's cached venues.
+**Two product decisions needed BEFORE starting:**
+  - ⚠️ **Self-booking** — a dual user could add themselves to their own lineup and invoice
+    themselves. DECIDE: forbid (filter own id out of network/lineup) or allow.
+  - ⚠️ **Notifications** — push registers per user id; the in-app list filters by `userId`,
+    not role. In artist mode you'd see manager notifications. DECIDE: tag by role and
+    filter, or accept the mixing.
 
-**Timing:** touches auth, routing, notifications and RLS — the areas where a bug locks a user out. Do it AFTER the submission.
+**Also:** RLS policy audit (some policies may key off `account_type`), sign-in routing
+must change from "manager wins" to "last used role", and persisted stores need clearing
+on switch or an artist sees a manager's cached venues. Do this AFTER submission — it
+touches auth, routing, notifications and RLS, where a bug locks a user out.
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
