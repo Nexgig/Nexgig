@@ -21,11 +21,14 @@ export default function ArtistCompletedGigsScreen() {
   const allVenues = useVenueStore((s) => s.venues);
 
   const allInvoices = useInvoiceStore((s) => s.invoices);
-  const invoicedBookingIds = useMemo(() => new Set(
+  // bookingId -> invoiceId, so the "Invoiced" chip can open the actual invoice.
+  const invoiceByBooking = useMemo(() => {
+    const m = new Map<string, string>();
     allInvoices
       .filter((inv) => inv.artistId === currentUser?.id && inv.status !== 'cancelled')
-      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
-  ), [allInvoices, currentUser?.id]);
+      .forEach((inv) => inv.gigs.forEach((g) => m.set(g.bookingId, inv.id)));
+    return m;
+  }, [allInvoices, currentUser?.id]);
 
   // Completed gigs — with slot/venue snapshot fallback. The artist's local store may not
   // hold the manager's slots, so fall back to the slotDate/slotName/... fields stored on
@@ -45,10 +48,10 @@ export default function ArtistCompletedGigsScreen() {
         createdAt: b.createdAt,
       } : undefined);
       const resolvedVenueName = venue?.name ?? b.venueName ?? 'Unknown Venue';
-      return { ...b, slot: resolvedSlot, resolvedVenueName, venue, isInvoiced: invoicedBookingIds.has(b.id) };
+      return { ...b, slot: resolvedSlot, resolvedVenueName, venue, isInvoiced: invoiceByBooking.has(b.id), invoiceId: invoiceByBooking.get(b.id) };
     })
     .sort((a, b) => ((a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1)),
-    [bookings, currentUser?.id, slots, allVenues, invoicedBookingIds]
+    [bookings, currentUser?.id, slots, allVenues, invoiceByBooking]
   );
 
   return (
@@ -105,12 +108,14 @@ export default function ArtistCompletedGigsScreen() {
                   : ''}
               </Text>
             </View>
-            {booking.isInvoiced ? (
-              <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+            {booking.isInvoiced && (
+              <Pressable
+                onPress={() => booking.invoiceId && router.push((`/(artist)/invoice-preview?invoiceId=${booking.invoiceId}&readOnly=1`) as Href)}
+                hitSlop={8}
+                style={({ pressed }) => [styles.invoicedChip, { backgroundColor: colors.primary + '1A', opacity: pressed ? 0.6 : 1 }]}
+              >
                 <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-              </View>
-            ) : (
-              <View style={[styles.statusMark, { backgroundColor: '#2563EB' }]} />
+              </Pressable>
             )}
           </Pressable>
           );

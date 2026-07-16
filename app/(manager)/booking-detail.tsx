@@ -126,6 +126,22 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
+  const handleCancel = () => {
+    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, Cancel', style: 'destructive', onPress: () => {
+          updateBookingStatus(booking.id, 'cancelled', {
+            cancelledAt: new Date().toISOString(),
+            cancellationAcknowledged: true,
+            cancelledAsRequest: true,
+          });
+          router.back();
+        }
+      },
+    ]);
+  };
+
 
 
   return (
@@ -302,6 +318,10 @@ export default function DJBookingDetailScreen() {
                 </Pressable>
                 <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
               </>
+            )}
+
+            {booking.status === 'confirmed' && (
+              <SoftButton tone="danger" icon="cancel" label="Cancel Booking" onPress={handleCancel} />
             )}
 
           </View>

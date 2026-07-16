@@ -92,7 +92,6 @@ export default function ArtistConfirmedGigsScreen() {
                 {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
-            <View style={[styles.statusMark, { backgroundColor: '#22C55E' }]} />
           </Pressable>
           );
         }}

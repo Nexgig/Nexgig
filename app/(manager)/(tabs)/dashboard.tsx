@@ -8,27 +8,13 @@ import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
+import { DateBadge } from '@/components/ui/date-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
-
-// The booking row's date tile — mirrors the calendar Day-view badge (weekDayBadge),
-// but filled with the booking's status colour (gold pending / green confirmed /
-// blue completed) instead of coral. Shows the weekday short + day number of the set.
-function DateBadge({ dateStr, color }: { dateStr?: string | null; color: string }) {
-  if (!dateStr) return <View style={[styles.dateBadge, { backgroundColor: color }]} />;
-  const d = new Date(dateStr + 'T00:00:00');
-  const wk = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-  return (
-    <View style={[styles.dateBadge, { backgroundColor: color }]}>
-      <Text style={styles.dateBadgeShort}>{wk}</Text>
-      <Text style={styles.dateBadgeNum}>{d.getDate()}</Text>
-    </View>
-  );
-}
 
 export default function ManagerDashboard() {
   const router = useRouter();

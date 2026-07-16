@@ -124,12 +124,10 @@ export default function AllBookingsScreen() {
                       : booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                {booking.isInvoiced ? (
+                {booking.isInvoiced && (
                   <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
                     <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
                   </View>
-                ) : (
-                  <View style={[styles.statusMark, { backgroundColor: booking.dotColor }]} />
                 )}
               </Pressable>
             );

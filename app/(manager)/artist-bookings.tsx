@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { AvatarImage } from '@/components/ui/avatar-image';
+import { DateBadge } from '@/components/ui/date-badge';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
@@ -158,7 +158,7 @@ export default function ArtistBookingsScreen() {
               style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}
             >
-              <AvatarImage uri={artist?.profilePhotoUrl} avatarId={(artist as any)?.avatarId} seed={(artist as any)?.id} name={artist?.fullName} size={48} variant="artist" />
+              <DateBadge dateStr={item.slot?.date ?? item.slotDate} color={dotColor} />
               <View style={styles.gigInfo}>
                 <View style={styles.titleRow}>
                   <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -177,8 +177,6 @@ export default function ArtistBookingsScreen() {
                     : ''}
                 </Text>
               </View>
-              {/* Status dot — Clash Display period, like the Nexgig "." */}
-              <View style={[styles.statusMark, { backgroundColor: dotColor }]} />
             </Pressable>
           );
         }}

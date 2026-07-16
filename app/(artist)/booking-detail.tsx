@@ -252,6 +252,25 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
+  const handleCancel = () => {
+    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, Cancel', style: 'destructive', onPress: () => {
+          updateBookingStatus(booking.id, 'cancelled', {
+            cancelledAt: new Date().toISOString(),
+            cancelledByArtist: true,
+            artistRespondedFromRequests: true,
+          });
+          markRelatedNotificationsRead(booking.id);
+          notifyManager('booking_cancelled');
+          if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
+          router.back();
+        }
+      },
+    ]);
+  };
+
 
   return (
     <ScreenContainer>
@@ -372,6 +391,13 @@ export default function DJBookingDetailScreen() {
                 <Text style={styles.acceptBtnText}>Confirm</Text>
               </Pressable>
               <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
+            </View>
+          )}
+
+          {/* Cancel — for confirmed bookings (not private events) */}
+          {!booking.isArtistCreated && booking.status === 'confirmed' && (
+            <View style={styles.actions}>
+              <SoftButton tone="danger" icon="cancel" label="Cancel Booking" onPress={handleCancel} />
             </View>
           )}
 

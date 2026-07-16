@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, Modal } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -8,9 +8,9 @@ import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore, useBookingFilterStore } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
+import { DateBadge } from '@/components/ui/date-badge';
 import { supabase } from '@/lib/supabase';
-import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
@@ -157,17 +157,25 @@ export default function DJHomeScreen() {
     });
   }, [bookings, slots, allVenues, allInvoices, currentUser?.id]);
 
-  const dashboardBookingsPreview = useMemo(() => dashboardBookings.slice(0, 6), [dashboardBookings]);
-
-  // Status filter for the Bookings section (persisted per user, default all on).
-  const bookingFilter = useBookingFilterStore((s) => s.getFilter(currentUser?.id ?? ''));
-  const setBookingFilter = useBookingFilterStore((s) => s.setFilter);
+  // Venue filter for the Bookings section, mirroring the manager dashboard.
+  const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const filteredDashboardBookings = useMemo(
-    () => dashboardBookings.filter((b) => bookingFilter[b.statusKey as 'pending' | 'confirmed' | 'completed']),
-    [dashboardBookings, bookingFilter]
-  );
-  const dashboardBookingsPreviewFiltered = useMemo(() => filteredDashboardBookings.slice(0, 6), [filteredDashboardBookings]);
+
+  // Distinct venues present in the artist's (non-private) bookings, for the filter popup.
+  const bookingVenues = useMemo(() => {
+    const seen = new Map<string, string>();
+    dashboardBookings.forEach((b) => {
+      if (b.venueId && !b.isArtistCreated) seen.set(b.venueId, b.venue?.name ?? b.venueName ?? 'Unknown Venue');
+    });
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  }, [dashboardBookings]);
+
+  // Hide completed bookings from the dashboard list; apply the venue filter.
+  const dashboardBookingsPreviewFiltered = useMemo(() => {
+    const active = dashboardBookings.filter((b) => !b.isDone);
+    const scoped = bookingVenueId ? active.filter((b) => b.venueId === bookingVenueId) : active;
+    return scoped.slice(0, 6);
+  }, [dashboardBookings, bookingVenueId]);
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
@@ -242,11 +250,9 @@ export default function DJHomeScreen() {
         <View style={styles.section}>
           <SectionHeader
             title="Bookings"
-            actionLabel="See all"
-            onAction={() => router.push('/(artist)/all-bookings' as Href)}
-            leftAccessory={
+            rightAccessory={
               <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <MaterialIcons name="tune" size={18} color={colors.muted} />
+                <MaterialIcons name="tune" size={20} color={colors.muted} />
               </Pressable>
             }
           />
@@ -257,20 +263,13 @@ export default function DJHomeScreen() {
             </View>
           ) : (
             dashboardBookingsPreviewFiltered.map((booking) => {
-              const venueImg = venueImageFor(booking.venue, booking.venueType);
               return (
               <Pressable
                 key={booking.id}
                 style={({ pressed }) => [styles.gigCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
               >
-                {booking.isArtistCreated ? (
-                  <View style={[styles.gigPhoto, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                    <MaterialIcons name="event" size={20} color={colors.muted} />
-                  </View>
-                ) : (
-                  <Image source={venueImg} style={styles.gigPhoto} resizeMode="cover" />
-                )}
+                <DateBadge dateStr={booking.slot?.date ?? booking.slotDate} color={booking.dotColor} />
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -283,13 +282,10 @@ export default function DJHomeScreen() {
                       : booking.slot ? `${formatDate(booking.slot.date)} · ${fmtTime(booking.slot.startTime)}–${fmtTime(booking.slot.endTime)}` : ''}
                   </Text>
                 </View>
-                {/* Status dot — Clash Display period, like the manager dashboard */}
-                {booking.isInvoiced ? (
+                {booking.isInvoiced && (
                   <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
                     <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
                   </View>
-                ) : (
-                  <View style={[styles.statusMark, { backgroundColor: booking.dotColor }]} />
                 )}
               </Pressable>
               );
@@ -299,28 +295,21 @@ export default function DJHomeScreen() {
 
       </ScrollView>
 
-      {/* Bookings status filter popup */}
+      {/* Bookings venue filter popup */}
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
           <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Show in Bookings</Text>
-            {([
-              { key: 'pending' as const, label: 'Pending', dot: '#D4A017' },
-              { key: 'confirmed' as const, label: 'Confirmed', dot: '#22C55E' },
-              { key: 'completed' as const, label: 'Completed', dot: '#2563EB' },
-            ]).map((opt) => {
-              const checked = bookingFilter[opt.key];
+            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Filter by venue</Text>
+            {[{ id: null as string | null, name: 'All venues' }, ...bookingVenues].map((v) => {
+              const active = bookingVenueId === v.id;
               return (
                 <Pressable
-                  key={opt.key}
+                  key={v.id ?? 'all'}
                   style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={() => currentUser && setBookingFilter(currentUser.id, opt.key, !checked)}
+                  onPress={() => { setBookingVenueId(v.id); setFilterOpen(false); }}
                 >
-                  <View style={[styles.filterRowMark, { backgroundColor: opt.dot }]} />
-                  <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>{opt.label}</Text>
-                  <View style={[styles.filterCheck, { borderColor: checked ? colors.primary : colors.border, backgroundColor: checked ? colors.primary : 'transparent' }]}>
-                    {checked && <MaterialIcons name="check" size={14} color="#fff" />}
-                  </View>
+                  <Text style={[styles.filterRowLabel, { color: colors.foreground, flex: 1 }]} numberOfLines={1}>{v.name}</Text>
+                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
                 </Pressable>
               );
             })}

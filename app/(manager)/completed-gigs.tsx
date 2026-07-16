@@ -28,11 +28,14 @@ export default function CompletedGigsScreen() {
   const artistUsers = useLineupStore((s) => s.artistUsers);
 
   const allInvoices = useInvoiceStore((s) => s.invoices);
-  const invoicedBookingIds = useMemo(() => new Set(
+  // bookingId -> invoiceId, so the "Invoiced" chip can open the actual invoice.
+  const invoiceByBooking = useMemo(() => {
+    const m = new Map<string, string>();
     allInvoices
       .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
-      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
-  ), [allInvoices, currentUser?.id]);
+      .forEach((inv) => inv.gigs.forEach((g) => m.set(g.bookingId, inv.id)));
+    return m;
+  }, [allInvoices, currentUser?.id]);
 
   const completedGigs = useMemo(() => {
     return allBookings
@@ -44,10 +47,10 @@ export default function CompletedGigsScreen() {
           ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
           : artistUsers.find((u) => u.id === b.artistId);
         const venue = allVenues.find((v) => v.id === b.venueId);
-        return { ...b, slot, dj, venue, isInvoiced: invoicedBookingIds.has(b.id) };
+        return { ...b, slot, dj, venue, isInvoiced: invoiceByBooking.has(b.id), invoiceId: invoiceByBooking.get(b.id) };
       })
       .sort((a, b) => (a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1);
-  }, [allBookings, currentUser?.id, slots, artistUsers, allVenues, invoicedBookingIds]);
+  }, [allBookings, currentUser?.id, slots, artistUsers, allVenues, invoiceByBooking]);
 
   return (
     <ScreenContainer>
@@ -103,9 +106,13 @@ export default function CompletedGigsScreen() {
               </Text>
             </View>
             {booking.isInvoiced ? (
-              <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+              <Pressable
+                onPress={() => booking.invoiceId && router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: booking.invoiceId } })}
+                hitSlop={8}
+                style={({ pressed }) => [styles.invoicedChip, { backgroundColor: colors.primary + '1A', opacity: pressed ? 0.6 : 1 }]}
+              >
                 <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-              </View>
+              </Pressable>
             ) : null}
           </Pressable>
           );

@@ -377,6 +377,7 @@ export default function VenueDetailScreen() {
               <>
                 <Section label="Location">
                   <View style={styles.locationSectionRow}>
+                    <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
                     <MapsBadge
                       onPress={() => {
                         const loc = venue.googleMapsLocation;
@@ -386,7 +387,6 @@ export default function VenueDetailScreen() {
                         Linking.openURL(url);
                       }}
                     />
-                    <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
                   </View>
                 </Section>
               </>
@@ -417,9 +417,6 @@ export default function VenueDetailScreen() {
               {slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot, i, arr) => {
                 const booking = getBookingBySlot(slot.id);
                 const dj = booking ? getArtistUser(booking.artistId) : undefined;
-                const isDone = booking && (booking.status === 'completed' || booking.isCompleted);
-                const isPending = booking && (booking.status === 'requested' || booking.status === 'past_confirmation');
-                const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
                 return (
                   <Pressable
                     key={slot.id}
@@ -445,9 +442,7 @@ export default function VenueDetailScreen() {
                         {formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
                       </Text>
                     </View>
-                    {booking ? (
-                      <View style={[styles.slotStatusMark, { backgroundColor: dotColor }]} />
-                    ) : (
+                    {!booking && (
                       <Text style={[styles.unassigned, { color: colors.warning }]}>Unassigned</Text>
                     )}
                   </Pressable>
