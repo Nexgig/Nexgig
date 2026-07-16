@@ -69,6 +69,25 @@ must change from "manager wins" to "last used role", and persisted stores need c
 on switch or an artist sees a manager's cached venues. Do this AFTER submission — it
 touches auth, routing, notifications and RLS, where a bug locks a user out.
 
+### POLISHING  (batch added 16 July 2026 — all JS-only → OTA unless noted)
+  1. **Signup wizard copy pass.** Review + fix the texts and questions across the sign-up
+     process (manager + artist wizards) — wording, clarity, question phrasing.
+  2. **Notifications copy pass.** Review + rewrite the text of ALL in-app notifications AND
+     push notifications (titles + bodies). Make them consistent and clear.
+  3. **Artist dashboard venue filter — add "Private gigs".** In the Bookings venue-filter
+     popup, add a "Private gigs" option that filters the list to show ONLY the artist's
+     private events (`isArtistCreated`). (They're currently excluded from the venue list
+     since they have no venueId.)
+  4. **Remove redundant date from booking-detail.** Now that the date badge shows the date,
+     drop the duplicate date line inside the booking detail row/details.
+  5. **Private gig avatar.** Give private gigs a proper avatar/visual in the date-badge slot
+     (instead of the generic event icon) so they read as private events.
+  6. **Fix invoice-preview white badge.** The badge on the invoice preview renders white
+     (invisible/wrong) — fix its colour.
+  7. **Cancel Request in booking detail (requested status).** When a booking's status is
+     `requested`, show a "Cancel Request" action in the booking detail page (currently the
+     Cancel Booking button only shows for `confirmed`).
+
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
 - **Tap Payments** integration.
