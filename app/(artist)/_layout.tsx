@@ -263,6 +263,28 @@ export default function DJLayout() {
               )
             );
           }
+          // Full disconnect: the manager deleted the roster link + ALL venue rows. This
+          // notification carries no related_id, so re-pull the authoritative assignment
+          // set from the DB and reset local — otherwise the artist keeps seeing the
+          // venue(s) until the next background re-fetch (the ~5-minute lag).
+          if (n.type === 'lineup_removed') {
+            (async () => {
+              const { data } = await supabase
+                .from('venue_assignments')
+                .select('id, manager_id, venue_id, created_at')
+                .eq('artist_id', currentUser.id)
+                .eq('status', 'active');
+              const fresh = (data ?? []).map((a: any) => ({
+                id: a.id,
+                globalLineupId: `${a.manager_id}-${currentUser.id}`,
+                venueId: a.venue_id,
+                artistId: currentUser.id,
+                assignedAt: a.created_at,
+                status: 'active' as const,
+              }));
+              useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, fresh);
+            })();
+          }
           useNotificationStore.setState((state) => ({
             notifications: [{
               id: n.id, userId: n.user_id, type: n.type,

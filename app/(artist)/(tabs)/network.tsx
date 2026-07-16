@@ -195,7 +195,7 @@ export default function ArtistNetworkScreen() {
             userId: venue.manager_id,
             type: 'lineup_request',
             title: 'New Join Request',
-            body: `${currentUser.fullName ?? 'An artist'} · ${venue.name}`,
+            body: `${currentUser.fullName ?? 'An artist'} wants to join your lineup`,
             isRead: false,
             relatedId: venue.id,
             relatedType: 'venue',

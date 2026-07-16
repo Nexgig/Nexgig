@@ -226,10 +226,16 @@ export default function NetworkScreen() {
             { manager_id: currentUser.id, artist_id: app.artist_id, status: 'active' },
             { onConflict: 'manager_id,artist_id' }
           );
-          await supabase.from('venue_assignments').upsert(
-            { manager_id: currentUser.id, artist_id: app.artist_id, venue_id: app.venue_id, status: 'active' },
-            { onConflict: 'venue_id,artist_id' }
-          );
+          // All-or-nothing model: accepting a join request adds the artist to the
+          // manager's whole lineup — i.e. EVERY current venue — not just the one they
+          // happened to apply from. Mirrors handleAddToRoster.
+          const acceptVenues = allVenues.filter((v) => v.managerId === currentUser.id && !v.isHidden);
+          if (acceptVenues.length > 0) {
+            const rows = acceptVenues.map((v) => ({
+              manager_id: currentUser.id, artist_id: app.artist_id, venue_id: v.id, status: 'active',
+            }));
+            await supabase.from('venue_assignments').upsert(rows, { onConflict: 'venue_id,artist_id' });
+          }
           const lineupStore = useLineupStore.getState();
           lineupStore.addArtistUser({
             id: app.artist_id, email: '', phone: '', accountType: 'artist' as const,
@@ -241,11 +247,13 @@ export default function NetworkScreen() {
             id: `${currentUser.id}-${app.artist_id}`, managerId: currentUser.id,
             artistId: app.artist_id, status: 'active' as const, addedAt: new Date().toISOString(),
           });
-          lineupStore.assignToVenue({
-            id: `va-${app.venue_id}-${app.artist_id}`,
-            globalLineupId: `${currentUser.id}-${app.artist_id}`,
-            venueId: app.venue_id, artistId: app.artist_id,
-            assignedAt: new Date().toISOString(), status: 'active' as const,
+          acceptVenues.forEach((v) => {
+            lineupStore.assignToVenue({
+              id: `va-${v.id}-${app.artist_id}`,
+              globalLineupId: `${currentUser.id}-${app.artist_id}`,
+              venueId: v.id, artistId: app.artist_id,
+              assignedAt: new Date().toISOString(), status: 'active' as const,
+            });
           });
           setProcessingId(null);
           setApplications((prev) => prev.filter((a) => a.id !== app.id));
@@ -253,18 +261,17 @@ export default function NetworkScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: app.artist_id,
             type: 'lineup_added' as any,
-            title: 'Application Accepted',
-            body: `${app.venue?.name ?? 'the venue'}`,
+            title: 'Added to Lineup',
+            body: `${currentUser.fullName ?? 'A manager'}`,
             isRead: false,
-            relatedId: app.venue_id,
-            relatedType: 'venue',
+            relatedId: currentUser.id,
+            relatedType: 'manager',
             createdAt: new Date().toISOString(),
           });
-          // Lineup-add email for this specific venue (server fetches its rules).
+          // Lineup-add email listing all the manager's venues + rules (server-side).
           sendEmail(app.artist_id, 'lineup_added', {
             managerName: currentUser.fullName ?? 'A manager',
             managerId: currentUser.id,
-            venueId: app.venue_id,
           });
         },
       },
@@ -478,7 +485,7 @@ export default function NetworkScreen() {
                         )}
                       </View>
                       <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {pendingApp ? `Wants to join ${pendingApp.venue?.name ?? 'a venue'}` : genreLabel(profile?.primaryGenre, profile?.instruments)}
+                        {pendingApp ? 'Wants to join your lineup' : genreLabel(profile?.primaryGenre, profile?.instruments)}
                       </Text>
                     </View>
                   </View>
