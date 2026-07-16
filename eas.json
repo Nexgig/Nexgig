@@ -20,7 +20,12 @@
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SENTRY_DSN": "https://e46a8c1f0665a2d47e007032e3586ab3@o4511743708037120.ingest.de.sentry.io/4511743723569232",
+        "SENTRY_ORG": "nexgig",
+        "SENTRY_PROJECT": "react-native"
+      }
     }
   },
   "submit": {

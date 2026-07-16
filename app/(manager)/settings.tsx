@@ -8,6 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useThemeContext } from '@/lib/theme-provider';
 import { useTimeFormatStore, type TimeFormat } from '@/lib/conflict-detection';
 import { DeleteAccountModal } from '@/components/delete-account-modal';
+import { reportError, reportWarning } from '@/lib/observability';
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 export const STORAGE_KEY_MONTH_START_DAY = 'nexgig:monthStartDay';
@@ -548,6 +549,26 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </View>
+
+        {/* Version footer. TEMP: long-press fires a Sentry smoke-test (a warning +
+            a caught exception — does NOT crash the app). Remove the onLongPress
+            before public release; the version label itself can stay. */}
+        <Pressable
+          delayLongPress={800}
+          onLongPress={() => {
+            reportWarning('sentry-smoke-test: warning from settings long-press', { at: 'manager-settings' });
+            try {
+              throw new Error('Sentry smoke-test: manual test from manager settings long-press');
+            } catch (e) {
+              reportError(e, { at: 'manager-settings', intentional: true });
+            }
+            Alert.alert('Diagnostics', 'Test event sent. Check the Sentry dashboard.');
+          }}
+        >
+          <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 12, paddingVertical: 24 }}>
+            Nexgig v1.0.0
+          </Text>
+        </Pressable>
 
       </ScrollView>
 

@@ -48,7 +48,7 @@ try {
     "@sentry/react-native/expo",
     {
       organization: process.env.SENTRY_ORG ?? "nexgig",
-      project: process.env.SENTRY_PROJECT ?? "nexgig",
+      project: process.env.SENTRY_PROJECT ?? "react-native",
     },
   ];
 } catch {
