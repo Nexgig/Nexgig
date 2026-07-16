@@ -1,11 +1,13 @@
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, Linking, Image } from '@/lib/rn';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useReviewStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
+import { reportWarning } from '@/lib/observability';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -73,7 +75,46 @@ export default function DJBookingDetailScreen() {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === id));
+  const addBooking = useBookingStore((s) => s.addBooking);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+
+  // Fallback: a notification (e.g. a past-gig request) can route here for a booking that
+  // isn't in the local store yet — the list may be stale, or the realtime fetch missed it.
+  // Fetch the row from Supabase and add it locally so we show the booking instead of
+  // "Booking not found". Local-only add — never writes back.
+  useEffect(() => {
+    if (booking || !id) return;
+    let cancelled = false;
+    // We opened a booking that wasn't in the local store — worth knowing how often
+    // this happens (stale list / a realtime fetch that missed a notification type).
+    reportWarning('booking-detail opened without a local booking', { bookingId: id });
+    (async () => {
+      const { data: b } = await supabase.from('bookings').select('*').eq('id', id).maybeSingle();
+      if (cancelled) return;
+      if (!b) {
+        reportWarning('booking-detail fallback fetch found nothing', { bookingId: id });
+        return;
+      }
+      if (useBookingStore.getState().bookings.some((x) => x.id === b.id)) return;
+      addBooking({
+        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+        managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
+        confirmedAt: b.confirmed_at ?? undefined, cancelledAt: b.cancelled_at ?? undefined,
+        cancellationReason: b.cancellation_reason ?? undefined,
+        cancellationAcknowledged: b.cancellation_acknowledged ?? false,
+        cancelledAsRequest: b.cancelled_as_request ?? false,
+        hiddenFromCalendar: b.hidden_from_calendar ?? false,
+        hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
+        slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined,
+        venuePhotoUrl: b.venue_photo_url ?? undefined,
+        createdAt: b.created_at, updatedAt: b.updated_at,
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [booking, id, addBooking]);
+
   const hideFromCalendar = useBookingStore((s) => s.hideFromCalendar);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);

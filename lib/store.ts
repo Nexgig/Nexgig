@@ -395,6 +395,7 @@ interface BookingState {
   bookings: Booking[];
   addBooking: (booking: Booking) => void;
   updateBookingStatus: (id: string, status: BookingStatus, extra?: Partial<Booking>) => void;
+  updateBookingStatusLocal: (id: string, status: BookingStatus, extra?: Partial<Booking>) => void;
   getBookingsByDJ: (artistId: string) => Booking[];
   getBookingsByVenue: (venueId: string) => Booking[];
   getBookingBySlot: (slotId: string) => Booking | undefined;
@@ -412,7 +413,10 @@ export const useBookingStore = create<BookingState>()(
     (set, get) => ({
   bookings: [],
   addBooking: (booking) => set((state) => ({ bookings: [...state.bookings, booking] })),
-  updateBookingStatus: (id, status, extra = {}) => {
+  // LOCAL-ONLY status patch. Does NOT write to Supabase. Realtime handlers MUST use
+  // this (they are applying a change that already came FROM the DB) — writing back
+  // would echo into an infinite realtime->write->realtime loop.
+  updateBookingStatusLocal: (id, status, extra = {}) => {
     set((state) => ({
       bookings: state.bookings.map((b) =>
         b.id === id
@@ -427,11 +431,12 @@ export const useBookingStore = create<BookingState>()(
           : b
       ),
     }));
-    // Persist to Supabase from the store action itself so callers can never
-    // forget to sync (e.g. the deleteSlot cancel cascade above). Fire-and-forget;
-    // syncBookingStatus does a PARTIAL update (only the columns it builds, never
-    // nulls others), so any screen that also calls it directly just double-writes
+  },
+  updateBookingStatus: (id, status, extra = {}) => {
+    // Local first, then persist. syncBookingStatus does a PARTIAL update (only the
+    // columns it builds), so a screen that also calls it directly just double-writes
     // the same values harmlessly.
+    get().updateBookingStatusLocal(id, status, extra);
     void syncBookingStatus(id, status, extra as Record<string, any>);
   },
   getBookingsByDJ: (artistId) => get().bookings.filter((b) => b.artistId === artistId),

@@ -49,7 +49,8 @@ export default function DJLayout() {
           // Only update existing bookings, don't wipe artist-created private events
           const existing = bookingStore.bookings.find((bk) => bk.id === booking.id);
           if (existing) {
-            bookingStore.updateBookingStatus(booking.id, booking.status, {
+            // DB->local sync on load. Local only — never write back.
+            bookingStore.updateBookingStatusLocal(booking.id, booking.status, {
               confirmedAt: booking.confirmedAt,
               cancelledAt: booking.cancelledAt,
               isCompleted: booking.isCompleted,
@@ -248,7 +249,8 @@ export default function DJLayout() {
             (n.type === 'booking_cancelled' ||
               n.type === 'booking_request_cancelled' ||
               n.type === 'booking_confirmed' ||
-              n.type === 'booking_request') &&
+              n.type === 'booking_request' ||
+              n.type === 'past_confirmation_request') &&
             n.related_id && n.related_type === 'booking'
           ) {
             (async () => {
@@ -261,7 +263,9 @@ export default function DJLayout() {
                 const bookingStore = useBookingStore.getState();
                 const existing = bookingStore.bookings.find((bk) => bk.id === b.id);
                 if (existing) {
-                  bookingStore.updateBookingStatus(b.id, b.status, {
+                  // LOCAL only — this booking row came FROM the DB (we just fetched it
+                  // in response to a realtime notification). Writing it back would echo.
+                  bookingStore.updateBookingStatusLocal(b.id, b.status, {
                     confirmedAt: b.confirmed_at ?? undefined,
                     cancelledAt: b.cancelled_at ?? undefined,
                     isCompleted: b.is_completed ?? false,

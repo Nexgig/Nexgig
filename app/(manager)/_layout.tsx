@@ -246,7 +246,10 @@ if (!lineupError && lineupData) {
         (payload) => {
   const b = payload.new as any;
   const bookingStore = useBookingStore.getState();
-  bookingStore.updateBookingStatus(b.id, b.status, {
+  // LOCAL only — this update CAME FROM the DB via realtime. Writing back would
+  // echo into an infinite realtime->write->realtime loop (the confirmed<->cancelled
+  // flicker). Apply to local state and stop.
+  bookingStore.updateBookingStatusLocal(b.id, b.status, {
             confirmedAt: b.confirmed_at ?? undefined,
             cancelledAt: b.cancelled_at ?? undefined,
             cancellationReason: b.cancellation_reason ?? undefined,
