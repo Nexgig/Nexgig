@@ -412,7 +412,23 @@ export const useBookingStore = create<BookingState>()(
   persist(
     (set, get) => ({
   bookings: [],
-  addBooking: (booking) => set((state) => ({ bookings: [...state.bookings, booking] })),
+  // Upsert by id — NEVER append a duplicate. Two copies of the same booking id
+  // (e.g. the dashboard fetch re-adding a booking the layout already loaded) produce
+  // duplicate list keys and a stale-vs-fresh render flicker (the confirmed<->cancelled
+  // "shake"). If the booking already exists we merge, but only when the incoming row is
+  // at least as new as what we hold — so a lagging re-fetch can't revert a fresh local
+  // status change (e.g. an artist's just-applied cancel).
+  addBooking: (booking) => set((state) => {
+    const idx = state.bookings.findIndex((b) => b.id === booking.id);
+    if (idx === -1) return { bookings: [...state.bookings, booking] };
+    const existing = state.bookings[idx];
+    const incomingIsNewer =
+      !existing.updatedAt || (!!booking.updatedAt && booking.updatedAt >= existing.updatedAt);
+    if (!incomingIsNewer) return state;
+    const next = state.bookings.slice();
+    next[idx] = { ...existing, ...booking };
+    return { bookings: next };
+  }),
   // LOCAL-ONLY status patch. Does NOT write to Supabase. Realtime handlers MUST use
   // this (they are applying a change that already came FROM the DB) — writing back
   // would echo into an infinite realtime->write->realtime loop.
