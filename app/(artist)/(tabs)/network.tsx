@@ -13,6 +13,7 @@ import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { genreLabel } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { reportError } from '@/lib/observability';
 
 type NetworkTab = 'venues' | 'artists';
 
@@ -183,7 +184,8 @@ export default function ArtistNetworkScreen() {
           });
           if (error) {
             setApplyingId(null);
-            Alert.alert('Error', error.message);
+            reportError(error, { at: 'artist-join-venue', venueId: venue.id, managerId: venue.manager_id });
+            Alert.alert('Could not send request', 'Something went wrong sending your join request. Please try again in a moment.');
             return;
           }
           // Notify manager
@@ -218,7 +220,11 @@ export default function ArtistNetworkScreen() {
             .delete({ count: 'exact' })
             .eq('artist_id', currentUser.id)
             .eq('venue_id', venue.id);
-          if (error) { Alert.alert('Error', error.message); return; }
+          if (error) {
+            reportError(error, { at: 'artist-leave-venue', venueId: venue.id });
+            Alert.alert('Could not leave', 'Something went wrong. Please try again in a moment.');
+            return;
+          }
           if (!count) { Alert.alert('Could not leave', 'You were not removed — please try again.'); return; }
           removeFromVenue(venue.id, currentUser.id);
           const notifId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
