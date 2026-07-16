@@ -131,11 +131,14 @@ export default function DJBookingDetailScreen() {
       { text: 'No', style: 'cancel' },
       {
         text: 'Yes, Cancel', style: 'destructive', onPress: () => {
-          updateBookingStatus(booking.id, 'cancelled', {
+          const extra = {
             cancelledAt: new Date().toISOString(),
             cancellationAcknowledged: true,
             cancelledAsRequest: true,
-          });
+          };
+          // A set can hold multiple artists — cancel this booking AND every co-artist
+          // on the same slot, so the whole set is cancelled, not just one artist.
+          [booking, ...coBookings].forEach((b) => updateBookingStatus(b.id, 'cancelled', extra));
           router.back();
         }
       },
