@@ -8,7 +8,6 @@ import { useColors } from '@/hooks/use-colors';
 import { useThemeContext } from '@/lib/theme-provider';
 import { useTimeFormatStore, type TimeFormat } from '@/lib/conflict-detection';
 import { DeleteAccountModal } from '@/components/delete-account-modal';
-import { reportError, reportWarning, getObservabilityStatus } from '@/lib/observability';
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 export const STORAGE_KEY_MONTH_START_DAY = 'nexgig:monthStartDay';
@@ -550,35 +549,10 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Version footer. TEMP: long-press fires a Sentry smoke-test (a warning +
-            a caught exception — does NOT crash the app). Remove the onLongPress
-            before public release; the version label itself can stay. */}
-        <Pressable
-          delayLongPress={800}
-          onLongPress={() => {
-            const s = getObservabilityStatus();
-            reportWarning('sentry-smoke-test: warning from settings long-press', { at: 'manager-settings' });
-            try {
-              throw new Error('Sentry smoke-test: manual test from manager settings long-press');
-            } catch (e) {
-              reportError(e, { at: 'manager-settings', intentional: true });
-            }
-            Alert.alert(
-              'Sentry diagnostics',
-              `SDK in build: ${s.sdkPresent ? 'YES' : 'NO'}\n` +
-              `DSN present: ${s.dsnSet ? 'YES' : 'NO'}\n` +
-              `Initialized: ${s.initialized ? 'YES' : 'NO'}\n` +
-              `Dev mode: ${s.dev ? 'YES (won\'t send)' : 'no'}\n\n` +
-              (s.sdkPresent
-                ? 'Test event sent — check the Sentry dashboard.'
-                : 'Sentry SDK is NOT in this build. Install a fresh native build via TestFlight (OTA can\'t add it).'),
-            );
-          }}
-        >
-          <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 12, paddingVertical: 24 }}>
-            Nexgig v1.0.0
-          </Text>
-        </Pressable>
+        {/* Version footer */}
+        <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 12, paddingVertical: 24 }}>
+          Nexgig v1.0.0
+        </Text>
 
       </ScrollView>
 
