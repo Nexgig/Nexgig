@@ -68,6 +68,21 @@ export function reportError(e: unknown, extra?: Record<string, unknown>): void {
   }
 }
 
+/**
+ * Diagnostic snapshot — is Sentry actually wired up in THIS running build?
+ * `sdkPresent` is false when the native @sentry/react-native module isn't in the
+ * binary (e.g. an OTA update layered on a build that predates the Sentry install) —
+ * the single most common reason "events aren't showing up in Sentry".
+ */
+export function getObservabilityStatus() {
+  return {
+    sdkPresent: !!sentry.init,
+    dsnSet: !!process.env.EXPO_PUBLIC_SENTRY_DSN,
+    initialized: started,
+    dev: __DEV__,
+  };
+}
+
 /** Nothing threw, but this state shouldn't happen. "Tell me it occurred." */
 export function reportWarning(message: string, extra?: Record<string, unknown>): void {
   try {
