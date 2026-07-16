@@ -6,7 +6,7 @@ import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, us
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import type { Booking } from '@/lib/types';
-import { isPastStart } from '@/lib/utils';
+import { fetchPrivateEventBookings } from '@/lib/private-events';
 
 export default function DJLayout() {
   const colors = useColors();
@@ -133,53 +133,16 @@ export default function DJLayout() {
     };
     fetchVenueAssignments();
 
-    // Load availability blocks from Supabase (blocks + private events)
+    // Load availability blocks from Supabase. Plain blocks → availability store;
+    // private events → reconstructed as bookings (a private_event row is really an
+    // artist-created booking, NOT an "Unavailable" block). See lib/private-events.ts.
     const fetchBlocks = async () => {
-      const { data } = await supabase
+      const { data: blockData } = await supabase
         .from('availability_blocks')
-        .select('id, date, start_time, end_time, is_full_day, block_type, event_name, location')
-        .eq('artist_id', currentUser.id);
-      if (!data || data.length === 0) {
-        // Clear any stale persisted blocks for this artist
-        useAvailabilityStore.getState().resetBlocksForArtist(currentUser.id, []);
-        return;
-      }
-      // A private_event row is really an artist-created BOOKING (a named green card),
-      // NOT an availability block. renderBlockCard hardcodes "Unavailable/Blocked", so
-      // if we rebuilt a private event as a block it would come back nameless and red
-      // after a restart. Split the two: private events → bookings, real blocks → blocks.
-      const privateRows = data.filter((b: any) => b.block_type === 'private_event');
-      const blockRows = data.filter((b: any) => b.block_type !== 'private_event');
-
-      const bookingStore = useBookingStore.getState();
-      privateRows.forEach((b: any) => {
-        const start = b.is_full_day ? '00:00' : b.start_time;
-        const end = b.is_full_day ? '23:59' : b.end_time;
-        const nowISO = new Date().toISOString();
-        // Same id as the availability_blocks row (that's how add-block links them), so
-        // addBooking's upsert dedupes against any persisted copy instead of duplicating.
-        bookingStore.addBooking({
-          id: b.id,
-          slotId: 'private-slot-' + b.id,
-          venueId: '',
-          artistId: currentUser.id,
-          managerId: '',
-          status: 'confirmed',
-          isCompleted: isPastStart(b.date, start),
-          isArtistCreated: true,
-          createdAt: nowISO,
-          updatedAt: nowISO,
-          confirmedAt: nowISO,
-          slotDate: b.date,
-          slotStartTime: start,
-          slotEndTime: end,
-          slotName: b.event_name ?? 'Private Event',
-          venueName: b.event_name ?? 'Private Event',
-          privateEventLocation: b.location ?? undefined,
-        } as Booking);
-      });
-
-      const freshBlocks = blockRows.map((b: any) => ({
+        .select('id, date, start_time, end_time, is_full_day')
+        .eq('artist_id', currentUser.id)
+        .eq('block_type', 'block');
+      const freshBlocks = (blockData ?? []).map((b: any) => ({
         id: b.id,
         artistId: currentUser.id,
         date: b.date,
@@ -191,6 +154,11 @@ export default function DJLayout() {
         createdAt: new Date().toISOString(),
       }));
       useAvailabilityStore.getState().resetBlocksForArtist(currentUser.id, freshBlocks);
+
+      // Private events (also in availability_blocks) → bookings, deduped by id.
+      const privateBookings = await fetchPrivateEventBookings(currentUser.id);
+      const bookingStore = useBookingStore.getState();
+      privateBookings.forEach((bk) => bookingStore.addBooking(bk));
     };
     fetchBlocks();
 
