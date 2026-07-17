@@ -9,6 +9,7 @@ import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
 import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
 import { SHOW_ARTIST_HISTORY } from '@/lib/features';
+import { ArtistBookingsList } from '@/components/artist-bookings-list';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
@@ -66,6 +67,10 @@ export default function ArtistProfileViewScreen() {
     () => globalLineup.some((r) => r.artistId === artistId && r.managerId === currentUser?.id && r.status === 'active'),
     [globalLineup, artistId, currentUser?.id]
   );
+
+  // Bookings lives here rather than on its own screen (the old artist-bookings route).
+  // Only meaningful for a connected artist — see the tab bar's isConnected gate.
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings'>('overview');
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const myVenues = useMemo(
@@ -374,6 +379,31 @@ export default function ArtistProfileViewScreen() {
 
         {contentReady ? (
         <>
+        {/* Tab Bar — Bookings only for artists in this manager's lineup. Mirrors
+            venue-detail, which gates its tabs behind isOwner: an artist you're not
+            connected to has no bookings with you, so the tab would always be empty. */}
+        {isConnected && (
+          <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+            {(['overview', 'bookings'] as const).map((tab) => (
+              <Pressable
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+              >
+                <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
+                  {tab === 'overview' ? 'Overview' : 'Bookings'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {activeTab === 'bookings' && isConnected && (
+          <ArtistBookingsList artistId={artistId ?? ''} />
+        )}
+
+        {(activeTab === 'overview' || !isConnected) && (
+        <>
         {/* 2. Stats: Monthly Plays + Completed Gigs */}
         <StatRow
           items={[
@@ -538,6 +568,8 @@ export default function ArtistProfileViewScreen() {
           </Section>
         </View>
         </>
+        )}
+        </>
         ) : (
         <View style={styles.content}>
           {/* Shimmer skeletons while the artist's data loads */}
@@ -678,6 +710,10 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 28, fontWeight: '800' },
   statLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
   content: {},
+  // Copied verbatim from venue-detail so the two detail screens' tab bars match.
+  tabBar: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16, marginHorizontal: 20 },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  tabText: { fontSize: 14, fontWeight: '600' },
   card: { padding: 14, gap: 10 },
   cardLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   cardText: { fontSize: 14, lineHeight: 21 },

@@ -17,8 +17,8 @@ export const STATUS_COLORS = {
 /**
  * The booking row's date tile — a rounded square filled with the booking's status
  * colour (gold pending / green confirmed / blue completed), showing the weekday short
- * (WED) over the day number. Shared by the manager dashboard, artist dashboard, and the
- * manager artist-bookings list so they stay visually identical.
+ * (WED) over the day number. Shared by both dashboards, the confirmed/pending/completed
+ * list pages, and the artist-bookings list, so they stay visually identical.
  */
 export function DateBadge({ dateStr, color }: { dateStr?: string | null; color: string }) {
   if (!dateStr) return <View style={[styles.dateBadge, { backgroundColor: color }]} />;

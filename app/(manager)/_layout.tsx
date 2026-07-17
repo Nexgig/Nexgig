@@ -392,7 +392,6 @@ if (!lineupError && lineupData) {
       />
       <Stack.Screen name="create-venue" options={{ gestureEnabled: false }} />
       <Stack.Screen name="artist-profile-view" />
-      <Stack.Screen name="artist-bookings" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="pending-requests" />
       <Stack.Screen name="confirmed-bookings" />

@@ -219,13 +219,9 @@ export default function RosterScreen() {
             </Text>
           </View>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.bookingsBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
-          onPress={(e) => { e.stopPropagation?.(); router.push(('/(manager)/artist-bookings?artistId=' + item.user!.id) as Href); }}
-          hitSlop={10}
-        >
-          <MaterialIcons name="event-note" size={18} color={colors.primary} />
-        </Pressable>
+        {/* The bookings shortcut is gone — the row opens artist-profile-view, which now
+            has a Bookings tab. The old artist-bookings screen was deleted with it. */}
+        <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
       </Pressable>
     );
   };
@@ -388,7 +384,6 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 13 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 8 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  bookingsBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
   // ─── Inline action buttons ─────────────────────────────────────────────────
   actionRow: {

@@ -444,9 +444,19 @@ export default function NetworkScreen() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
-      {/* Header */}
+      {/* Header — the + creates a venue. It lives here (not on my-venues, which this
+          screen is replacing) and only on the Venues tab, where it means something. */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
+        {activeTab === 'venues' && (
+          <Pressable
+            style={({ pressed }) => [styles.headerAddBtn, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => router.push('/(manager)/create-venue' as Href)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
+          </Pressable>
+        )}
       </View>
 
       {/* Sub-tabs */}
@@ -652,7 +662,8 @@ export default function NetworkScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
+  headerAddBtn: { alignItems: 'flex-end' },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   subtitle: { fontSize: 12, marginTop: 2 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
