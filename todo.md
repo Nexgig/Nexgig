@@ -80,15 +80,6 @@ user out of their account entirely. Not an OTA-and-see change.
        implies a manager profile the artist can't open. Reframe around the venues (the tap
        already routes to My Venues), e.g. "You've been added to <Manager>'s venues".
        ⚠️ Decision still open: reword, or build an artist-facing manager profile?
-  3. **Artist dashboard venue filter — add "Private gigs".** In the Bookings venue-filter
-     popup, add a "Private gigs" option that filters the list to show ONLY the artist's
-     private events (`isArtistCreated`). (They're currently excluded from the venue list
-     since they have no venueId.)
-  4. **Fix invoice-preview white badge.** The badge on the invoice preview renders white
-     (invisible/wrong) — fix its colour.
-  5. **Cancel Request in booking detail (requested status).** When a booking's status is
-     `requested`, show a "Cancel Request" action in the booking detail page (currently the
-     Cancel Booking button only shows for `confirmed`).
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
