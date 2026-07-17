@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
-import { Divider } from '@/components/ui/card-free';
+import { Divider, Chip } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -38,7 +38,10 @@ function venueTypeLabel(t?: string | null): string {
 export default function NetworkScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { tab: initialTab } = useLocalSearchParams<{ tab?: NetworkTab }>();
+  // `mine=1` pre-arms the "My lineup" / "My venues" filter, so Profile (and anything
+  // else) can deep-link straight to a scoped list — the intended replacement for the
+  // separate my-venues / artists screens.
+  const { tab: initialTab, mine: initialMine } = useLocalSearchParams<{ tab?: NetworkTab; mine?: string }>();
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
   const addNotification = useNotificationStore((s) => s.addNotification);
@@ -51,12 +54,17 @@ export default function NetworkScreen() {
   // here with ?tab=artists while the screen is already alive (e.g. from the Profile
   // tab's Artists card when there are no artists yet, mimicking the Discover button)
   // would otherwise show whatever sub-tab was last open. This forces the requested tab.
+  // Scope the list to the manager's own lineup / venues. Same reason as activeTab: this
+  // is a persistent tab, so the ?mine=1 param is applied on focus, not just at mount.
+  const [mineOnly, setMineOnly] = useState(initialMine === '1');
+
   useFocusEffect(
     useCallback(() => {
       if (initialTab === 'artists' || initialTab === 'venues') {
         setActiveTab(initialTab);
       }
-    }, [initialTab])
+      if (initialMine === '1') setMineOnly(true);
+    }, [initialTab, initialMine])
   );
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -212,22 +220,33 @@ export default function NetworkScreen() {
 
   const [search, setSearch] = useState('');
 
+  /** In this manager's active lineup. Single source of truth — the filter below and the
+   *  row's Connected state both use it, so they can never disagree. */
+  const isInMyLineup = useCallback(
+    (artistId: string) => globalLineup.some(
+      (r) => r.artistId === artistId && r.managerId === currentUser?.id && r.status === 'active'
+    ),
+    [globalLineup, currentUser?.id]
+  );
+
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbArtists.filter((u) => u.id !== currentUser?.id)]
+      .filter((u) => !mineOnly || isInMyLineup(u.id))
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
       .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
-  }, [sbArtists, currentUser?.id, search]);
+  }, [sbArtists, currentUser?.id, search, mineOnly, isInMyLineup]);
 
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbVenues]
+      .filter((v) => !mineOnly || v.managerId === currentUser?.id)
       .filter((v) => !q
         || v.name.toLowerCase().includes(q)
         || (v.venueType ?? '').toLowerCase().includes(q)
         || (v.googleMapsLocation?.address ?? '').toLowerCase().includes(q))
       .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  }, [sbVenues, search]);
+  }, [sbVenues, search, mineOnly, currentUser?.id]);
 
   // ── Accept / Decline handlers ─────────────────────────────────────────────
   const handleAccept = async (app: Application) => {
@@ -464,6 +483,17 @@ export default function NetworkScreen() {
         )}
       </View>
 
+      {/* Scope toggle. A binary, so a chip rather than the dashboards' tune-icon popup —
+          that popup is for picking one of many venues. Deep-linkable via ?mine=1. */}
+      <View style={styles.scopeRow}>
+        <Pressable onPress={() => setMineOnly((v) => !v)} hitSlop={6}>
+          <Chip
+            label={activeTab === 'venues' ? 'My venues' : 'My lineup'}
+            selected={mineOnly}
+          />
+        </Pressable>
+      </View>
+
       {/* Artists tab */}
       {activeTab === 'artists' && (
         artistsLoading ? (
@@ -477,18 +507,24 @@ export default function NetworkScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
+              // "No artists have signed up yet" is a lie when the list is empty because
+              // of a filter, not because the network is empty. Say which.
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="people" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>No artists have signed up yet</Text>
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                  {mineOnly ? 'No Artists in Your Lineup' : 'No Artists Found'}
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
+                  {mineOnly ? 'Turn off My lineup to browse every artist'
+                    : search ? 'Try a different search term'
+                    : 'No artists have signed up yet'}
+                </Text>
               </View>
             }
             renderItem={({ item: user }) => {
               const profile = getProfile(user.id);
               const pendingApp = appByArtistId.get(user.id);
-              const isConnected = globalLineup.some(
-                (r) => r.artistId === user.id && r.managerId === currentUser?.id && r.status === 'active'
-              );
+              const isConnected = isInMyLineup(user.id);
               const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: pendingApp ? colors.primary + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
@@ -574,8 +610,14 @@ export default function NetworkScreen() {
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="place" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Venues Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>No venues available yet</Text>
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                  {mineOnly ? 'No Venues Yet' : 'No Venues Found'}
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
+                  {mineOnly ? "You haven't created any venues yet"
+                    : search ? 'Try a different search term'
+                    : 'No venues available yet'}
+                </Text>
               </View>
             }
             renderItem={({ item: venue }) => (
@@ -649,6 +691,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },
+  // Aligned to searchWrap's marginHorizontal so the chip sits flush under the search box.
+  scopeRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 6, marginBottom: 2 },
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
