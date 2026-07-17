@@ -73,6 +73,7 @@ export default function DJBookingDetailScreen() {
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const allDrafts = useDraftStore((s) => s.drafts);
+  const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
 
   // ── Slot-only mode: an empty set (no bookings) opened from the calendar ──────
   if (!booking) {
@@ -217,6 +218,55 @@ export default function DJBookingDetailScreen() {
   // rather than a cancellation the artist has to acknowledge.
   const isRequest = booking.status === 'requested' || booking.status === 'past_confirmation';
 
+  // Per-artist cancel (X next to each status) — cancels ONE artist, leaving the rest of
+  // the set. The bottom button still cancels the whole set.
+  const cancellableStatus = (s: string) => s === 'requested' || s === 'past_confirmation' || s === 'confirmed';
+  const cancelOneBooking = (targetId: string) => {
+    const target = allBookings.find((b) => b.id === targetId);
+    const req = target?.status === 'requested' || target?.status === 'past_confirmation';
+    Alert.alert(
+      req ? 'Cancel Request' : 'Cancel Booking',
+      req ? "Withdraw this artist's request? The rest of the set stays."
+          : "Cancel this artist's booking? The rest of the set stays.",
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: req ? 'Withdraw' : 'Cancel', style: 'destructive',
+          onPress: () => {
+            updateBookingStatus(targetId, 'cancelled', {
+              cancelledAt: new Date().toISOString(),
+              cancellationAcknowledged: true,
+              cancelledAsRequest: true,
+            });
+            // Cancelling the artist this screen is keyed on: switch to a remaining
+            // co-artist, or leave if that was the last one.
+            if (targetId === booking.id) {
+              const others = coBookings.filter((b) => b.id !== targetId);
+              if (others.length > 0) router.replace(('/(manager)/booking-detail?id=' + others[0].id) as Href);
+              else router.back();
+            }
+          },
+        },
+      ]
+    );
+  };
+  const removeOneDraft = (artistId: string) => {
+    Alert.alert('Remove Draft', 'Remove this drafted artist from the set?', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeDraftByDJ(booking.slotId, artistId) },
+    ]);
+  };
+  const StatusWithX = ({ status, onX }: { status: any; onX?: () => void }) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <StatusBadge status={status} />
+      {onX ? (
+        <Pressable onPress={onX} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+          <MaterialIcons name="close" size={18} color={colors.muted} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+
   const handleCancel = () => {
     Alert.alert(
       isRequest ? 'Cancel Request' : 'Cancel Booking',
@@ -264,7 +314,7 @@ export default function DJBookingDetailScreen() {
                   leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
-                  trailing={<StatusBadge status={booking.status} />}
+                  trailing={<StatusWithX status={booking.status} onX={cancellableStatus(booking.status) ? () => cancelOneBooking(booking.id) : undefined} />}
                   divider={coBookings.length > 0 || draftArtists.length > 0}
                 />
                 {coBookings.map((cb, i) => {
@@ -275,7 +325,7 @@ export default function DJBookingDetailScreen() {
                       leading={<AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={44} />}
                       title={coArtist?.fullName ?? 'Former Artist'}
                       subtitle="Artist"
-                      trailing={<StatusBadge status={cb.status} />}
+                      trailing={<StatusWithX status={cb.status} onX={cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
                       onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}
                       divider={i < coBookings.length - 1 || draftArtists.length > 0}
                     />
@@ -289,7 +339,7 @@ export default function DJBookingDetailScreen() {
                       leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                       title={dArtist?.fullName ?? 'Artist'}
                       subtitle="Not sent yet"
-                      trailing={<StatusBadge status="draft" />}
+                      trailing={<StatusWithX status="draft" onX={() => removeOneDraft(d.artistId)} />}
                       divider={i < draftArtists.length - 1}
                     />
                   );
