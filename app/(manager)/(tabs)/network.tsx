@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
-import { Divider, Chip } from '@/components/ui/card-free';
+import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -49,21 +49,23 @@ export default function NetworkScreen() {
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'venues' ? 'venues' : 'artists');
-  // Apply the `tab` route param whenever the screen gains focus. Because this is a
-  // persistent tab, useState's initializer only runs on first mount — so navigating
-  // here with ?tab=artists while the screen is already alive (e.g. from the Profile
-  // tab's Artists card when there are no artists yet, mimicking the Discover button)
-  // would otherwise show whatever sub-tab was last open. This forces the requested tab.
-  // Scope the list to the manager's own lineup / venues. Same reason as activeTab: this
-  // is a persistent tab, so the ?mine=1 param is applied on focus, not just at mount.
+  // Scope the list to the manager's own lineup / venues.
   const [mineOnly, setMineOnly] = useState(initialMine === '1');
 
+  // Apply `tab` / `mine` on focus, because this is a persistent tab: useState's
+  // initializer only runs on first mount, so deep-linking here while the screen is
+  // already alive would otherwise be ignored.
+  //
+  // CONSUME THEN CLEAR. The params must be wiped once applied, or every re-focus
+  // re-applies them — walk into a venue and back and the screen would silently re-arm
+  // "My venues" and snap the sub-tab back, stomping whatever the manager just chose.
+  // Clearing also means a fresh deep-link still works: it sets the param again.
   useFocusEffect(
     useCallback(() => {
-      if (initialTab === 'artists' || initialTab === 'venues') {
-        setActiveTab(initialTab);
-      }
+      if (!initialTab && !initialMine) return;
+      if (initialTab === 'artists' || initialTab === 'venues') setActiveTab(initialTab);
       if (initialMine === '1') setMineOnly(true);
+      router.setParams({ tab: undefined, mine: undefined });
     }, [initialTab, initialMine])
   );
   // ── Applications state ────────────────────────────────────────────────────
@@ -474,33 +476,43 @@ export default function NetworkScreen() {
         ))}
       </View>
 
-      {/* Search + scope chip share a row: the search box flexes, the chip sits right.
-          The chip is a binary toggle, so a Chip rather than the dashboards' tune-icon
-          popup (that's for picking one of many venues). Deep-linkable via ?mine=1. */}
-      <View style={styles.searchRow}>
-        <View style={[styles.searchWrap, { borderColor: colors.border }]}>
-          <MaterialIcons name="search" size={18} color={colors.muted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
-            placeholderTextColor={colors.muted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-            autoCapitalize="none"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch('')} hitSlop={8}>
-              <MaterialIcons name="close" size={16} color={colors.muted} />
+      {/* Scope: a real mode, not a filter — so a segmented control rather than a chip.
+          Deliberately NOT another underline bar like the one above; two identical bars
+          stacked read as a mistake. Deep-linkable via ?mine=1. */}
+      <View style={[styles.segment, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {([false, true] as const).map((scoped) => {
+          const on = mineOnly === scoped;
+          return (
+            <Pressable
+              key={String(scoped)}
+              onPress={() => setMineOnly(scoped)}
+              style={[styles.segmentItem, on && { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.segmentText, { color: on ? '#FFFFFF' : colors.muted }]}>
+                {!scoped ? 'All' : activeTab === 'venues' ? 'My venues' : 'My lineup'}
+              </Text>
             </Pressable>
-          )}
-        </View>
-        <Pressable onPress={() => setMineOnly((v) => !v)} hitSlop={6}>
-          <Chip
-            label={activeTab === 'venues' ? 'My venues' : 'My lineup'}
-            selected={mineOnly}
-          />
-        </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Search — artists and venues */}
+      <View style={[styles.searchWrap, { borderColor: colors.border }]}>
+        <MaterialIcons name="search" size={18} color={colors.muted} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.foreground }]}
+          placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
+          placeholderTextColor={colors.muted}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+          autoCapitalize="none"
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch('')} hitSlop={8}>
+            <MaterialIcons name="close" size={16} color={colors.muted} />
+          </Pressable>
+        )}
       </View>
 
       {/* Artists tab */}
@@ -718,15 +730,17 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   connectedWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   disconnectIconBtn: { padding: 7, borderRadius: 6 },
-  // The row owns the horizontal margin; searchWrap flexes so the chip keeps its
-  // intrinsic width on the right and the search box takes whatever's left.
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 12, marginBottom: 4,
+  // Pill-shaped segmented control — deliberately unlike the underline tab bar above it.
+  segment: {
+    flexDirection: 'row', gap: 4,
+    marginHorizontal: 16, marginTop: 12,
+    borderWidth: 1, borderRadius: 10, padding: 3,
   },
+  segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8 },
+  segmentText: { fontSize: 13, fontWeight: '600' },
   searchWrap: {
-    flex: 1,
     flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 10, marginBottom: 4,
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },

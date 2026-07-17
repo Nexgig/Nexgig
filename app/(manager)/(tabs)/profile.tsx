@@ -141,9 +141,15 @@ export default function ManagerProfileScreen() {
               color: venues.length === 0 ? colors.primary : colors.foreground,
               // my-venues is gone — Network's Venues tab with ?mine=1 IS that list, and
               // it carries the + too. Empty still shortcuts straight to create-venue.
-              onPress: () => router.push((venues.length === 0
-                ? '/(manager)/create-venue'
-                : '/(manager)/(tabs)/network?tab=venues&mine=1') as Href),
+              //
+              // navigate(), not push(), for the Network hop: Network is a sibling TAB,
+              // and push() stacks a second copy of the whole tab navigator and slides it
+              // in from the right — a screen-push animation for what is really a tab
+              // switch. navigate() reuses the live tab. create-venue IS a push (it's a
+              // stack screen), so it keeps its slide.
+              onPress: () => venues.length === 0
+                ? router.push('/(manager)/create-venue' as Href)
+                : router.navigate('/(manager)/(tabs)/network?tab=venues&mine=1' as Href),
             },
             {
               value: djCount === 0 ? '+' : djCount,
@@ -151,7 +157,8 @@ export default function ManagerProfileScreen() {
               color: djCount === 0 ? colors.primary : colors.foreground,
               // artists (My Artists) is gone — same Network tab, scoped with ?mine=1.
               // With none connected, drop into the unscoped list to go find some.
-              onPress: () => router.push((djCount === 0
+              // navigate() not push() — see the Venues card above.
+              onPress: () => router.navigate((djCount === 0
                 ? '/(manager)/(tabs)/network?tab=artists'
                 : '/(manager)/(tabs)/network?tab=artists&mine=1') as Href),
             },
