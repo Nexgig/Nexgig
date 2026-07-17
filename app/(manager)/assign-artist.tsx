@@ -424,12 +424,15 @@ export default function AssignDJScreen() {
       return;
     }
     if (!currentUser) return;
-    // Toggle: if already drafted, remove; otherwise add
+    // M7: tapping an already-drafted artist toggles them off (stays open). Tapping a NEW
+    // artist saves the draft and closes immediately — to add another, reopen assign from
+    // the set card's "+ Assign artist" row.
     if (assignedDJIds.has(artistId)) {
       removeDraftByDJ(slot!.id, artistId);
-    } else {
-      setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
+      return;
     }
+    setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
+    router.back();
   };
 
   // Add a roster artist to THIS venue's lineup from the slot screen. No draft is

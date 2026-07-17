@@ -59,7 +59,10 @@ export default function DJBookingDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const { formatTime: fmtTime } = useFormatTime();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `slotId` (no `id`) opens this screen for an EMPTY set — a slot with no bookings
+  // yet. The calendar now routes every set tap here, so a 0-artist set lands in the
+  // slot-only branch below (set info + "Assign Artist", no artist rows).
+  const { id, slotId: slotIdParam } = useLocalSearchParams<{ id?: string; slotId?: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
   const getReviewByBooking = useReviewStore((s) => s.getReviewByBooking);
 
@@ -70,7 +73,64 @@ export default function DJBookingDetailScreen() {
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
 
+  // ── Slot-only mode: an empty set (no bookings) opened from the calendar ──────
   if (!booking) {
+    const emptySlot = getSlotById(slotIdParam ?? '');
+    if (emptySlot) {
+      const emptyVenue = getVenueById(emptySlot.venueId);
+      const loc = emptyVenue?.googleMapsLocation;
+      return (
+        <ScreenContainer>
+          <View style={styles.header}>
+            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+              <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
+            </Pressable>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
+          </View>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <Section label="Artist">
+              <Text style={{ color: colors.muted, fontSize: 14, paddingVertical: 6 }}>No artist assigned yet.</Text>
+              <SoftButton
+                tone="primary"
+                icon="add"
+                label="Assign Artist"
+                onPress={() => router.push(('/(manager)/assign-artist?slotId=' + emptySlot.id) as Href)}
+              />
+            </Section>
+
+            {emptyVenue ? (
+              <Section label="Venue">
+                <ListRow
+                  leading={<VenueThumb venue={emptyVenue} />}
+                  title={emptyVenue.name}
+                  subtitle={[emptyVenue.venueType, loc?.address ? cityFromAddress(loc.address) : undefined].filter(Boolean).join('\n') || undefined}
+                  divider={false}
+                />
+              </Section>
+            ) : null}
+
+            <Section label="Details">
+              <DetailRow label="DATE" value={formatDate(emptySlot.date)} />
+              <DetailRow label="TIME" value={`${fmtTime(emptySlot.startTime)} – ${fmtTime(emptySlot.endTime)}`} />
+              <DetailRow label="VENUE TYPE" value={emptyVenue?.venueType} />
+              <DetailRow
+                label="LOCATION"
+                value={loc?.address}
+                last
+                trailing={loc?.address ? (
+                  <MapsBadge onPress={() => {
+                    const url = (loc?.lat && loc?.lng)
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || emptyVenue?.name || '')}`;
+                    Linking.openURL(url);
+                  }} />
+                ) : undefined}
+              />
+            </Section>
+          </ScrollView>
+        </ScreenContainer>
+      );
+    }
     return (
       <ScreenContainer>
         <View style={styles.center}>

@@ -969,16 +969,11 @@ export default function CalendarScreen() {
   const renderSlotActionButton = (slot: Slot) => {
     const bookingsForSlot = getBookingsBySlot(slot.id);
     const draftsForSlot = getDraftsBySlot(slot.id).filter((d) => !bookingsForSlot.find((b) => b.artistId === d.artistId));
-    if (bookingsForSlot.length > 0) {
-      return (
-        <Pressable
-          style={({ pressed }) => [{ padding: 6, borderRadius: 14, backgroundColor: colors.primary + '15', opacity: pressed ? 0.6 : 1 }]}
-          onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
-          hitSlop={8}
-        >
-          <MaterialIcons name="add" size={18} color={colors.primary} />
-        </Pressable>
-      );
+    // Coral + removed (M2): assigning another artist now happens via the greyed
+    // "+ Assign artist" row at the bottom of the card. When a set has bookings and no
+    // pending drafts, the header shows no action button.
+    if (bookingsForSlot.length > 0 && draftsForSlot.length === 0) {
+      return null;
     }
     if (draftsForSlot.length > 0) {
       return (
@@ -998,6 +993,23 @@ export default function CalendarScreen() {
         hitSlop={8}
       >
         <MaterialIcons name="delete-outline" size={18} color={colors.error} />
+      </Pressable>
+    );
+  };
+
+  // Greyed "+ Assign artist" row at the bottom of a set card (M2). Opens assign-artist.
+  // Only shown for sets that already have an artist/draft — an empty set is assigned via
+  // its booking-detail (tapping the card). Not for past slots.
+  const renderAssignRow = (slot: Slot) => {
+    const hasAny = getBookingsBySlot(slot.id).length > 0 || getDraftsBySlot(slot.id).length > 0;
+    if (!hasAny || isPastStart(slot.date, slot.startTime)) return null;
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.assignRow, { borderTopColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+        onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
+      >
+        <MaterialIcons name="add" size={16} color={colors.muted} />
+        <Text style={[styles.assignRowText, { color: colors.muted }]}>Assign artist</Text>
       </Pressable>
     );
   };
@@ -1225,12 +1237,11 @@ export default function CalendarScreen() {
           <Pressable
             style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', opacity: pressed ? 0.85 : 1 }]}
             onPress={() => {
+              // M5: every set tap opens booking-detail. Empty set -> slotId (slot-only view).
               const firstBooking = getBookingsBySlot(slot.id)[0];
-              if (firstBooking) {
-                router.push(('/(manager)/booking-detail?id=' + firstBooking.id) as Href);
-              } else {
-                router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href);
-              }
+              router.push((firstBooking
+                ? '/(manager)/booking-detail?id=' + firstBooking.id
+                : '/(manager)/booking-detail?slotId=' + slot.id) as Href);
             }}
           >
             <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
@@ -1248,8 +1259,6 @@ export default function CalendarScreen() {
             if (!djUser) return null;
             const isDeclined = booking.status === 'declined';
             const isCancelled = booking.status === 'cancelled';
-            const isConfirmed = booking.status === 'confirmed';
-            const isRequested = booking.status === 'requested' || booking.status === 'past_confirmation';
             return (
               <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
                 <Pressable
@@ -1260,76 +1269,8 @@ export default function CalendarScreen() {
                   <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
                   <StatusBadge status={booking.status} />
                 </Pressable>
-                {/* × for requested — cancels request entirely from artist side */}
-                {isRequested && (
-                  <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={styles.removeDJBtn}
-                    onPress={() => {
-                      Alert.alert('Cancel Request', `Cancel the gig request sent to ${djUser.fullName}?`, [
-                        { text: 'Keep', style: 'cancel' },
-                        { text: 'Cancel Request', style: 'destructive', onPress: () => {
-                          updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
-                          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledAsRequest: true, cancellationAcknowledged: true });
-                          addNotification({
-                            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                            userId: booking.artistId,
-                            type: 'booking_request_cancelled',
-                            title: 'Request Cancelled',
-                            body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
-                            isRead: false,
-                            relatedId: booking.id,
-                            relatedType: 'booking',
-                            createdAt: new Date().toISOString(),
-                          });
-                        }},
-                      ]);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                )}
-                {/* × for confirmed — cancels confirmed booking, notifies artist */}
-                {isConfirmed && (
-                  <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={styles.removeDJBtn}
-                    onPress={() => {
-                      const slotForBooking = getSlotById(booking.slotId);
-                      const venueForBooking = getVenueById(booking.venueId ?? slot.venueId);
-                      Alert.alert('Cancel Booking', `Cancel the confirmed booking for ${djUser.fullName}? They will be notified.`, [
-                        { text: 'Keep', style: 'cancel' },
-                        {
-                          text: 'Cancel Booking', style: 'destructive',
-                          onPress: () => {
-                            updateBookingStatus(booking.id, 'cancelled', {
-                              cancelledAt: new Date().toISOString(),
-                              slotDate: slotForBooking?.date,
-                              slotName: slotForBooking?.name,
-                              slotStartTime: slotForBooking?.startTime,
-                              slotEndTime: slotForBooking?.endTime,
-                              venueName: venueForBooking?.name,
-                            });
-                            syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
-                            addNotification({
-                              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                              userId: booking.artistId,
-                              type: 'booking_cancelled',
-                              title: 'Booking Cancelled',
-                              body: `${venueForBooking?.name ?? 'a venue'} — ${slotForBooking?.date ? formatDate(slotForBooking.date) : ''}`,
-                              isRead: false,
-                              relatedId: booking.id,
-                              relatedType: 'booking',
-                              createdAt: new Date().toISOString(),
-                            });
-                          },
-                        },
-                      ]);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                )}
+                {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
+                {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
                 {/* × for declined/cancelled — hides from manager; if artist-cancelled, also hides from artist */}
                 {(isDeclined || isCancelled) && (
                   <TouchableOpacity
@@ -1407,6 +1348,7 @@ export default function CalendarScreen() {
             );
           })}
 
+        {renderAssignRow(slot)}
       </View>
     );
 
@@ -1433,12 +1375,11 @@ export default function CalendarScreen() {
           <Pressable
             style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', opacity: pressed ? 0.85 : 1 }]}
             onPress={() => {
+              // M5: every set tap opens booking-detail. Empty set -> slotId (slot-only view).
               const firstBooking = getBookingsBySlot(slot.id)[0];
-              if (firstBooking) {
-                router.push(('/(manager)/booking-detail?id=' + firstBooking.id) as Href);
-              } else {
-                router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href);
-              }
+              router.push((firstBooking
+                ? '/(manager)/booking-detail?id=' + firstBooking.id
+                : '/(manager)/booking-detail?slotId=' + slot.id) as Href);
             }}
           >
             <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
@@ -1456,8 +1397,6 @@ export default function CalendarScreen() {
             if (!djUser) return null;
             const isDeclined = booking.status === 'declined';
             const isCancelled = booking.status === 'cancelled';
-            const isConfirmed = booking.status === 'confirmed';
-            const isRequested = booking.status === 'requested' || booking.status === 'past_confirmation';
             return (
               <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
                 <Pressable
@@ -1468,76 +1407,8 @@ export default function CalendarScreen() {
                   <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
                   <StatusBadge status={booking.status} />
                 </Pressable>
-                {/* × for requested — cancels request entirely from artist side */}
-                {isRequested && (
-                  <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={styles.removeDJBtn}
-                    onPress={() => {
-                      Alert.alert('Cancel Request', `Cancel the gig request sent to ${djUser.fullName}?`, [
-                        { text: 'Keep', style: 'cancel' },
-                        { text: 'Cancel Request', style: 'destructive', onPress: () => {
-                          updateBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancellationAcknowledged: true, cancelledAsRequest: true });
-                          syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledAsRequest: true, cancellationAcknowledged: true });
-                          addNotification({
-                            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                            userId: booking.artistId,
-                            type: 'booking_request_cancelled',
-                            title: 'Request Cancelled',
-                            body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
-                            isRead: false,
-                            relatedId: booking.id,
-                            relatedType: 'booking',
-                            createdAt: new Date().toISOString(),
-                          });
-                        }},
-                      ]);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                )}
-                {/* × for confirmed — cancels confirmed booking, notifies artist */}
-                {isConfirmed && (
-                  <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={styles.removeDJBtn}
-                    onPress={() => {
-                      const slotForBooking = getSlotById(booking.slotId);
-                      const venueForBooking = getVenueById(booking.venueId ?? slot.venueId);
-                      Alert.alert('Cancel Booking', `Cancel the confirmed booking for ${djUser.fullName}? They will be notified.`, [
-                        { text: 'Keep', style: 'cancel' },
-                        {
-                          text: 'Cancel Booking', style: 'destructive',
-                          onPress: () => {
-                            updateBookingStatus(booking.id, 'cancelled', {
-                              cancelledAt: new Date().toISOString(),
-                              slotDate: slotForBooking?.date,
-                              slotName: slotForBooking?.name,
-                              slotStartTime: slotForBooking?.startTime,
-                              slotEndTime: slotForBooking?.endTime,
-                              venueName: venueForBooking?.name,
-                            });
-                            syncBookingStatus(booking.id, 'cancelled', { cancelledAt: new Date().toISOString() });
-                            addNotification({
-                              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                              userId: booking.artistId,
-                              type: 'booking_cancelled',
-                              title: 'Booking Cancelled',
-                              body: `${venueForBooking?.name ?? 'a venue'} — ${slotForBooking?.date ? formatDate(slotForBooking.date) : ''}`,
-                              isRead: false,
-                              relatedId: booking.id,
-                              relatedType: 'booking',
-                              createdAt: new Date().toISOString(),
-                            });
-                          },
-                        },
-                      ]);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                )}
+                {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
+                {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
                 {/* × for declined/cancelled — hides from manager; if artist-cancelled, also hides from artist */}
                 {(isDeclined || isCancelled) && (
                   <TouchableOpacity
@@ -1614,6 +1485,7 @@ export default function CalendarScreen() {
             );
           })}
 
+        {renderAssignRow(slot)}
       </View>
     );
 
@@ -2646,6 +2518,8 @@ const styles = StyleSheet.create({
   djAssignmentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
   djAssignmentName: { flex: 1, fontSize: 13, fontWeight: '600' },
   removeDJBtn: { padding: 8, margin: -4 },
+  assignRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, marginTop: 4, borderTopWidth: StyleSheet.hairlineWidth },
+  assignRowText: { fontSize: 13, fontWeight: '600' },
   sendDraftBtn: { padding: 4 },
   addAnotherDJBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
   addAnotherDJText: { fontSize: 12 },
