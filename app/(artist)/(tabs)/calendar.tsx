@@ -354,17 +354,6 @@ export default function DJAvailabilityScreen() {
   };
 
   // Export a single gig to device calendar
-  const exportGigToCalendar = async (gig: typeof confirmedGigs[number]) => {
-    try {
-      const calendarId = await getWritableCalendarId();
-      if (!calendarId) return;
-      await createCalendarEvent(calendarId, gig);
-      await markGigExported(gig.id);
-      Alert.alert('Added to Calendar', `${gig.resolvedVenueName}'s Gig has been added to your phone calendar.`);
-    } catch {
-      Alert.alert('Error', 'Failed to export gig to calendar.');
-    }
-  };
 
   const exportAllGigs = async () => {
     const gigsToExport = unexportedGigs.filter((g) => selectedGigIds.has(g.id));
@@ -752,49 +741,10 @@ export default function DJAvailabilityScreen() {
         );
       }
       if (isConfirmed) {
-        // Calendar export icon + X icon for confirmed bookings
-        const isExported = exportedGigIds.has(b.id);
-        return (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {!isExported && Platform.OS !== 'web' && (
-              <Pressable
-                style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  exportGigToCalendar(b);
-                }}
-              >
-                <MaterialIcons name="event" size={20} color={colors.primary} />
-              </Pressable>
-            )}
-            <Pressable
-              style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                Alert.alert(
-                  'Cancel Booking',
-                  `Cancel your confirmed booking at ${b.resolvedVenueName}? The manager will be notified.`,
-                  [
-                    { text: 'Keep', style: 'cancel' },
-                    {
-                      text: 'Cancel Booking', style: 'destructive', onPress: () => {
-                        updateBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString(), cancelledByArtist: true, artistRespondedFromRequests: true });
-                        hideFromCalendar(b.id);
-                        syncBookingStatus(b.id, 'cancelled', { cancelledAt: new Date().toISOString(), hiddenFromCalendar: true });
-                        markRelatedNotificationsRead(b.id);
-                        if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
-                        const booking = allBookings.find((x) => x.id === b.id);
-                        if (booking) { notifyManager('booking_cancelled', { ...b, managerId: booking.managerId }); }
-                      }
-                    },
-                  ]
-                );
-              }}
-            >
-              <MaterialIcons name="close" size={20} color={colors.error} />
-            </Pressable>
-          </View>
-        );
+        // No inline actions on a confirmed booking card. The export and cancel buttons
+        // were removed from here — tapping the card opens booking-detail, which has both
+        // Cancel Booking and (via the header) calendar sync. Keeps the card tap-only.
+        return null;
       }
       if (isCompleted) {
         // No action button for completed bookings
@@ -886,7 +836,7 @@ export default function DJAvailabilityScreen() {
               style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
               onPress={() => router.push('/(artist)/invoices' as Href)}
             >
-              <MaterialIcons name="receipt-long" size={22} color={colors.foreground} />
+              <MaterialIcons name="receipt-long" size={22} color={colors.primary} />
               {hasOverdueInvoice && (
                 <View style={[styles.badge, { borderColor: colors.surface }]} />
               )}
@@ -1086,7 +1036,7 @@ export default function DJAvailabilityScreen() {
                   }}
                   style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                 >
-                  <MaterialIcons name="event-available" size={24} color={colors.primary} />
+                  <MaterialIcons name="event-available" size={24} color={colors.foreground} />
                 </Pressable>
                 <Pressable onPress={nextMonth} style={styles.monthNavBtn}>
                   <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />

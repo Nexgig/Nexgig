@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, Alert } from '@/lib/rn';
+import { VenueFilterRow } from '@/components/venue-filter-row';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -72,6 +73,18 @@ export default function ArtistPendingRequestsScreen() {
       })
       .sort((a, b) => (a.resolvedDate ?? '') < (b.resolvedDate ?? '') ? -1 : 1);
   }, [rawBookings, currentUser?.id, slots, allVenues]);
+
+  const [venueFilter, setVenueFilter] = useState<string | null>(null);
+  const venueChips = useMemo(() => {
+    const m = new Map<string, string>();
+    // Private-event / cancelled rows can lack a venueId; skip those from the chips.
+    pendingRequests.forEach((b) => { if (b.venueId) m.set(b.venueId, b.resolvedVenueName); });
+    return [...m].map(([id, name]) => ({ id, name }));
+  }, [pendingRequests]);
+  const shownRequests = useMemo(
+    () => venueFilter ? pendingRequests.filter((b) => b.venueId === venueFilter) : pendingRequests,
+    [pendingRequests, venueFilter]
+  );
 
   // ── Confirm a booking request ──
   const handleConfirm = (item: typeof pendingRequests[number]) => {
@@ -225,9 +238,11 @@ export default function ArtistPendingRequestsScreen() {
         <View style={styles.backBtn} />
       </View>
 
+      <VenueFilterRow venues={venueChips} selectedId={venueFilter} onSelect={setVenueFilter} />
+
       <FlatList
         ItemSeparatorComponent={() => <Divider full />}
-        data={pendingRequests}
+        data={shownRequests}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}

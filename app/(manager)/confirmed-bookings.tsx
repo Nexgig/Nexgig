@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from '@/lib/rn';
+import { VenueFilterRow } from '@/components/venue-filter-row';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -37,6 +38,18 @@ export default function ConfirmedBookingsScreen() {
       .sort((a, b) => (a.slot?.date ?? '') < (b.slot?.date ?? '') ? -1 : 1);
   }, [allBookings, currentUser?.id, slots, artistUsers, allVenues, nowDT]);
 
+  // Venue filter — chips derived from the venues actually present in this list.
+  const [venueFilter, setVenueFilter] = useState<string | null>(null);
+  const venueChips = useMemo(() => {
+    const m = new Map<string, string>();
+    confirmedBookings.forEach((b) => { if (b.venueId) m.set(b.venueId, b.venue?.name ?? b.venueName ?? 'Venue'); });
+    return [...m].map(([id, name]) => ({ id, name }));
+  }, [confirmedBookings]);
+  const shownBookings = useMemo(
+    () => venueFilter ? confirmedBookings.filter((b) => b.venueId === venueFilter) : confirmedBookings,
+    [confirmedBookings, venueFilter]
+  );
+
   return (
     <ScreenContainer>
       {/* Header */}
@@ -52,9 +65,11 @@ export default function ConfirmedBookingsScreen() {
         <View style={styles.backBtn} />
       </View>
 
+      <VenueFilterRow venues={venueChips} selectedId={venueFilter} onSelect={setVenueFilter} />
+
       <FlatList
         ItemSeparatorComponent={() => <Divider full />}
-        data={confirmedBookings}
+        data={shownBookings}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
