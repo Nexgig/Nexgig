@@ -22,10 +22,13 @@ Updated 17 July 2026. Only open items live here. Done work is deleted, not archi
 Build 17 is uploaded and through Beta App Review. The App Store Connect form is **done** —
 metadata, the 10 screenshots from `appstore-final/`, App Privacy questionnaire (Diagnostics
 = YES, for Sentry), age rating, reviewer notes, demo accounts. **All that's left is hitting
-Submit for Review.**
-⚠️ **Ship any pending OTA BEFORE pressing Submit.** TestFlight build 17 and the reviewers'
-build both pull from the `production` channel, so an `eas update` during review changes the
-app under the reviewer mid-look. Get the JS where you want it, then submit.
+Submit for Review.** Nothing is pending on the JS side: end-time completion and the overnight
+conflict fix are both OTA'd and live on `production` as of 17 Jul. The runway is clear.
+
+⚠️ **Once you press Submit, do NOT `eas update` until the verdict.** TestFlight build 17 and
+the reviewers' build pull JS from the same `production` channel, so an OTA mid-review changes
+the app under the reviewer. Keep building during review — just don't ship. Stack the updates
+and push them once approved.
 
 **2 · Artist avatar swap.** New illustrated set (24 characters × 4 hair colours) is in
 hand. Waiting on Tuts's final character picks — recommended #04, 05, 06, 08, 12, 16 × 4
