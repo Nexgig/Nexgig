@@ -126,11 +126,21 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
+  // A booking the artist hasn't answered yet is a *request*, not a booking — the copy
+  // says so. The write is identical: cancelledAsRequest already marks it as withdrawn
+  // rather than a cancellation the artist has to acknowledge.
+  const isRequest = booking.status === 'requested' || booking.status === 'past_confirmation';
+
   const handleCancel = () => {
-    Alert.alert('Cancel Booking', 'Are you sure you want to cancel this booking?', [
+    Alert.alert(
+      isRequest ? 'Cancel Request' : 'Cancel Booking',
+      isRequest
+        ? 'Withdraw this booking request? The artist will no longer see it.'
+        : 'Are you sure you want to cancel this booking?',
+      [
       { text: 'No', style: 'cancel' },
       {
-        text: 'Yes, Cancel', style: 'destructive', onPress: () => {
+        text: isRequest ? 'Yes, Withdraw' : 'Yes, Cancel', style: 'destructive', onPress: () => {
           const extra = {
             cancelledAt: new Date().toISOString(),
             cancellationAcknowledged: true,
@@ -142,7 +152,8 @@ export default function DJBookingDetailScreen() {
           router.back();
         }
       },
-    ]);
+      ]
+    );
   };
 
 
@@ -321,6 +332,12 @@ export default function DJBookingDetailScreen() {
                 </Pressable>
                 <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
               </>
+            )}
+
+            {/* Without this a manager had NO action on a pending request — the block
+                above is artist-only, so a request could be sent but never withdrawn. */}
+            {isRequest && isManager && (
+              <SoftButton tone="danger" icon="cancel" label="Cancel Request" onPress={handleCancel} />
             )}
 
             {booking.status === 'confirmed' && (

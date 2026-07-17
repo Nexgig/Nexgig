@@ -17,6 +17,13 @@ import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel } from '@/lib/utils';
 import { MonthSeparator } from '@/components/ui/month-separator';
 
+/**
+ * Sentinel for the Bookings venue filter. Private events live in availability_blocks
+ * and are reconstructed with an empty venueId, so they match no venue row — they need
+ * their own option rather than a venue id. Not a real venue id; never persisted.
+ */
+const PRIVATE_GIGS_FILTER = '__private_gigs__';
+
 export default function DJHomeScreen() {
   const router = useRouter();
   const colors = useColors();
@@ -186,9 +193,19 @@ export default function DJHomeScreen() {
   // Hide completed bookings from the dashboard list; apply the venue filter.
   const dashboardBookingsPreviewFiltered = useMemo(() => {
     const active = dashboardBookings.filter((b) => !b.isDone);
-    const scoped = bookingVenueId ? active.filter((b) => b.venueId === bookingVenueId) : active;
+    const scoped =
+      bookingVenueId === PRIVATE_GIGS_FILTER ? active.filter((b) => b.isArtistCreated)
+      : bookingVenueId ? active.filter((b) => b.venueId === bookingVenueId)
+      : active;
     return scoped.slice(0, 6);
   }, [dashboardBookings, bookingVenueId]);
+
+  // Private events carry no venueId, so they can never match a venue row — without
+  // their own option they're reachable only via "All venues".
+  const hasPrivateGigs = useMemo(
+    () => dashboardBookings.some((b) => b.isArtistCreated),
+    [dashboardBookings]
+  );
 
   // Month headers for the Bookings window. The DateBadge shows weekday + day but no
   // month, so a list crossing months is ambiguous without them — and a lone "June"
@@ -337,7 +354,11 @@ export default function DJHomeScreen() {
         <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
           <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
             <Text style={[styles.filterTitle, { color: colors.foreground }]}>Filter by venue</Text>
-            {[{ id: null as string | null, name: 'All venues' }, ...bookingVenues].map((v) => {
+            {[
+              { id: null as string | null, name: 'All venues' },
+              ...bookingVenues,
+              ...(hasPrivateGigs ? [{ id: PRIVATE_GIGS_FILTER as string | null, name: 'Private gigs' }] : []),
+            ].map((v) => {
               const active = bookingVenueId === v.id;
               return (
                 <Pressable
