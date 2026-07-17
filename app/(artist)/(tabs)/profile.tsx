@@ -8,6 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip, SoftButton } from '@/components/ui/card-free';
 import { useAuthStore, useLineupStore, useNotificationStore, useBookingStore, useSlotStore, useVenueStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import { fetchPrivateEventBookings } from '@/lib/private-events';
 import * as Haptics from 'expo-haptics';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
@@ -116,7 +117,13 @@ export default function ArtistProfileScreen() {
   const handleRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
     setRefreshing(true);
-    const { data } = await supabase.from('bookings').select('*').eq('artist_id', currentUser.id);
+    // clearBookings() wipes private events too — they live in availability_blocks, NOT
+    // the bookings table, so this fetch can't bring them back. Rebuild them alongside.
+    const [bookingsRes, privateBookings] = await Promise.all([
+      supabase.from('bookings').select('*').eq('artist_id', currentUser.id),
+      fetchPrivateEventBookings(currentUser.id),
+    ]);
+    const data = bookingsRes.data;
     if (data) {
       clearBookings();
       data.forEach((b: any) => addBooking({
@@ -129,6 +136,7 @@ export default function ArtistProfileScreen() {
         venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
+    privateBookings.forEach((bk) => addBooking(bk));
     setRefreshing(false);
   }, [currentUser?.id]);
 
