@@ -654,7 +654,6 @@ export default function NetworkScreen() {
                     )}
                   </View>
                 </View>
-                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
               </Pressable>
             )}
           />

@@ -282,13 +282,12 @@ export default function ArtistNetworkScreen() {
           v.address?.toLowerCase().includes(q)
         )
       : venues;
-    // The artist's own venues first, then everyone else — alphabetical within each group.
-    return [...results].sort((a, b) => {
-      const aMine = assignedVenueIds.has(a.id);
-      const bMine = assignedVenueIds.has(b.id);
-      if (aMine !== bMine) return aMine ? -1 : 1;
-      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    });
+    // Only the venues the artist is connected to. Connection is manager-controlled now,
+    // so browsing venues they're not on has no purpose — this tab is effectively their
+    // "my venues". Alphabetical.
+    return [...results]
+      .filter((v) => assignedVenueIds.has(v.id))
+      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   }, [venues, search, assignedVenueIds]);
 
   const filteredArtists = useMemo(() => {
@@ -375,9 +374,6 @@ export default function ArtistNetworkScreen() {
               </View>
             }
             renderItem={({ item: venue }) => {
-              const isConnected = assignedVenueIds.has(venue.id);
-              const hasApplied = appliedVenueIds.has(venue.id);
-              const isApplying = applyingId === venue.id;
               const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, {
@@ -403,36 +399,8 @@ export default function ArtistNetworkScreen() {
                       ) : null}
                     </View>
                   </View>
-                  {isConnected ? (
-                    <Pressable
-                      style={({ pressed }) => [styles.applyBtn, { borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
-                      onPress={(e) => { e.stopPropagation(); handleLeaveVenue(venue); }}
-                    >
-                      <Text style={[styles.applyBtnText, { color: colors.foreground }]}>Connected</Text>
-                    </Pressable>
-                  ) : ALLOW_ARTIST_VENUE_APPLICATIONS ? (
-                    <Pressable
-                      style={[
-                        styles.applyBtn,
-                        hasApplied
-                          ? { backgroundColor: colors.border }
-                          : { backgroundColor: colors.primary },
-                      ]}
-                      onPress={(e) => { e.stopPropagation(); !hasApplied && handleJoin(venue); }}
-                      disabled={hasApplied || isApplying}
-                    >
-                      {isApplying ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : hasApplied ? (
-                        <Text style={[styles.applyBtnText, { color: colors.muted }]}>Sent</Text>
-                      ) : (
-                        <>
-                          <MaterialIcons name="link" size={14} color="#fff" />
-                          <Text style={[styles.applyBtnText, { color: '#fff' }]}>Connect</Text>
-                        </>
-                      )}
-                    </Pressable>
-                  ) : null}
+                  {/* No trailing button: the list is connected-only now, and connection
+                      is manager-controlled — the artist can't self-leave or apply. */}
                 </Pressable>
               );
               return rowContent;

@@ -31,7 +31,7 @@ function CalendarTabIcon({ color, focused }: { color: string; focused: boolean }
     <View style={styles.iconWrap}>
       <IconSymbol size={26} name="calendar" color={color} />
       {calendarActionableCount > 0 && (
-        <View style={[styles.badgeWrap, { backgroundColor: colors.error }]}>
+        <View style={[styles.badgeWrap, { backgroundColor: colors.primary }]}>
           <Text style={styles.badgeText}>{calendarActionableCount > 99 ? '99+' : calendarActionableCount}</Text>
         </View>
       )}
@@ -61,7 +61,7 @@ function NetworkTabIcon({ color }: { color: string; focused: boolean }) {
   return (
     <View style={styles.iconWrap}>
       <IconSymbol size={26} name="person.2.fill" color={color} />
-      {hasNew && <View style={[styles.dot, { backgroundColor: colors.error }]} />}
+      {hasNew && <View style={[styles.dot, { backgroundColor: colors.primary }]} />}
     </View>
   );
 }

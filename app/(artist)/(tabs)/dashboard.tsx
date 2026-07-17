@@ -299,7 +299,7 @@ export default function DJHomeScreen() {
             title="Bookings"
             rightAccessory={
               <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <MaterialIcons name="tune" size={20} color={colors.muted} />
+                <MaterialIcons name="tune" size={20} color={bookingVenueId ? colors.primary : colors.muted} />
               </Pressable>
             }
           />
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: '800' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 16, alignItems: 'center', gap: 4 },
