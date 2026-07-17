@@ -253,7 +253,9 @@ export default function ArtistVenueDetailScreen() {
             {venue.googleMapsLocation?.address ? (
               <>
                 <Section label="Location">
+                  {/* Address first, badge right — matches the manager's venue-detail. */}
                   <View style={styles.locationSectionRow}>
+                    <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
                     <MapsBadge
                       onPress={() => {
                         const loc = venue.googleMapsLocation;
@@ -263,7 +265,6 @@ export default function ArtistVenueDetailScreen() {
                         Linking.openURL(url);
                       }}
                     />
-                    <Text style={[styles.locationAddress, { color: colors.foreground }]}>{venue.googleMapsLocation.address}</Text>
                   </View>
                 </Section>
               </>
