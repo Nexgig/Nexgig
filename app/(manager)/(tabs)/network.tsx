@@ -228,12 +228,7 @@ export default function NetworkScreen() {
     const q = search.trim().toLowerCase();
     return [...sbArtists.filter((u) => u.id !== currentUser?.id)]
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
-      .sort((a, b) => {
-        const aMine = isInMyLineup(a.id);
-        const bMine = isInMyLineup(b.id);
-        if (aMine !== bMine) return aMine ? -1 : 1;
-        return (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase());
-      });
+      .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
   }, [sbArtists, currentUser?.id, search, isInMyLineup]);
 
   const filteredVenues = useMemo(() => {
@@ -243,12 +238,7 @@ export default function NetworkScreen() {
         || v.name.toLowerCase().includes(q)
         || (v.venueType ?? '').toLowerCase().includes(q)
         || (v.googleMapsLocation?.address ?? '').toLowerCase().includes(q))
-      .sort((a, b) => {
-        const aMine = a.managerId === currentUser?.id;
-        const bMine = b.managerId === currentUser?.id;
-        if (aMine !== bMine) return aMine ? -1 : 1;
-        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-      });
+      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   }, [sbVenues, search, currentUser?.id]);
 
   // ── Accept / Decline handlers ─────────────────────────────────────────────

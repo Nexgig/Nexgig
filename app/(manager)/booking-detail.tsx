@@ -80,6 +80,10 @@ export default function DJBookingDetailScreen() {
     if (emptySlot) {
       const emptyVenue = getVenueById(emptySlot.venueId);
       const loc = emptyVenue?.googleMapsLocation;
+      // Drafted-but-not-sent artists on this slot. This is the common case for M7:
+      // drafting stages an artist without creating a booking, so the set has 0 bookings
+      // and lands here — the drafts must show, or the manager sees "nothing assigned".
+      const slotDrafts = allDrafts.filter((d) => d.slotId === emptySlot.id);
       return (
         <ScreenContainer>
           <View style={styles.header}>
@@ -89,8 +93,24 @@ export default function DJBookingDetailScreen() {
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
           </View>
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <Section label="Artist">
-              <Text style={{ color: colors.muted, fontSize: 14, paddingVertical: 6 }}>No artist assigned yet.</Text>
+            <Section label={slotDrafts.length > 0 ? 'Artists' : 'Artist'}>
+              {slotDrafts.length === 0 ? (
+                <Text style={{ color: colors.muted, fontSize: 14, paddingVertical: 6 }}>No artist assigned yet.</Text>
+              ) : (
+                slotDrafts.map((d, i) => {
+                  const dArtist = getArtistUser(d.artistId);
+                  return (
+                    <ListRow
+                      key={'draft-' + d.artistId}
+                      leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
+                      title={dArtist?.fullName ?? 'Artist'}
+                      subtitle="Not sent yet"
+                      trailing={<StatusBadge status="draft" />}
+                      divider={i < slotDrafts.length - 1}
+                    />
+                  );
+                })
+              )}
               <SoftButton
                 tone="primary"
                 icon="add"

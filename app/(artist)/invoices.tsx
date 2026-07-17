@@ -32,7 +32,7 @@ export default function InvoicesScreen() {
 
   const [tab, setTab] = useState<Tab>('new');
   const [reminderVenueId, setReminderVenueId] = useState<string | null>(null);
-  const [reminderDay, setReminderDay] = useState(1);
+  const [reminderDay, setReminderDay] = useState(28);
 
   const today = new Date();
   const currentDay = today.getDate();
@@ -83,7 +83,7 @@ export default function InvoicesScreen() {
     if (!currentUser) return 'none';
     // Read reactively from reminders array so badge updates when reminder changes
     const reminderEntry = reminders.find((r) => r.venueId === venueId && r.artistId === currentUser.id);
-    const reminder = reminderEntry?.reminderDay ?? 1;
+    const reminder = reminderEntry?.reminderDay ?? 28;
     // Check if invoice was already sent this month for this venue
     const sentThisMonth = sentInvoices.some((inv) => {
       const d = new Date(inv.sentAt);
@@ -99,7 +99,7 @@ export default function InvoicesScreen() {
     if (!item.venue || !currentUser) return null;
     // Read reactively from reminders array so card re-renders when reminder changes
     const reminderEntry = reminders.find((r) => r.venueId === item.venueId && r.artistId === currentUser.id);
-    const reminder = reminderEntry?.reminderDay ?? 1;
+    const reminder = reminderEntry?.reminderDay ?? 28;
     const badge = getVenueBadge(item.venueId);
     return (
       <Pressable

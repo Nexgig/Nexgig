@@ -2079,6 +2079,11 @@ export default function CalendarScreen() {
                     : new Date((calendarMode === 'week' || calendarMode === 'today' || editingSlot ? createSlotDate : selectedDate) + 'T00:00:00')
                         .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </Text>
+                {slotSheetMode === 'multiple' && !bulkIsWeekMode && (
+                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
+                    Create sets in bulk for the month of {MONTHS[currentMonth]}
+                  </Text>
+                )}
               </View>
               <Pressable
                 style={[slotModalStyles.closeBtn, { borderWidth: 1, borderColor: colors.border }]}

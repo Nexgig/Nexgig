@@ -1154,7 +1154,7 @@ export const useInvoiceReminderStore = create<InvoiceReminderState>()(
       }),
       getReminder: (venueId, artistId) => {
         const entry = get().reminders.find((r) => r.venueId === venueId && r.artistId === artistId);
-        return entry?.reminderDay ?? 1; // default to 1st of month
+        return entry?.reminderDay ?? 28; // default to the 28th (max safe day — every month has it)
       },
     }),
     {
