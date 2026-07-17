@@ -15,7 +15,6 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1957,14 +1956,16 @@ export default function CalendarScreen() {
                     const hasRequested = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation')
                       || pastPendingOnDay.length > 0;
                     const hasDeclined = allDayBookings.some((b) => b.status === 'declined' || b.status === 'cancelled');
-                    const hasCompleted = allDayBookings.some((b) => b.status === 'completed');
                     const hasDraft = daySlots.some((s) => allDrafts.find((d) => d.slotId === s.id));
                     const allConfirmed = allDayBookings.length > 0 && allDayBookings.every((b) => b.status === 'confirmed') && !hasDraft && pastPendingOnDay.length === 0;
+                    // No completed dot: the calendar is for PLANNING, and a completed gig is
+                    // done — not actionable, and still in Dashboard History / Completed Gigs /
+                    // the venue page. A day that's only completed gets no dot; a cancellation
+                    // on it still shows red below.
                     if (hasRequested && hasDraft) dots = [colors.muted, colors.warning]; // grey + orange
                     else if (hasRequested) dots = [colors.warning];                       // orange only
                     else if (hasDraft) dots = [colors.muted];                             // grey only
                     else if (allConfirmed) dots = [colors.success];                       // green only
-                    else if (hasCompleted) dots = [STATUS_COLORS.completed];              // completed
                     else dots = [];
                     if (hasDeclined) dots = [...dots.filter((d) => d !== colors.error), colors.error]; // red for declined/cancelled
                   } else {

@@ -1116,7 +1116,11 @@ export default function DJAvailabilityScreen() {
                 const isFuture = date >= todayStr;
                 const dots: string[] = dayBookings
                   .filter((b) => isFuture || b.status === 'past_confirmation' || b.status === 'cancelled' || b.status !== 'declined')
-                  .map((b) => getBookingStatusColor(b));
+                  .map((b) => getBookingStatusColor(b))
+                  // No completed dot — matches the manager calendar. Both real completed
+                  // bookings and past private events resolve to the completed colour; a
+                  // finished gig isn't actionable and still lives in Completed Gigs.
+                  .filter((c) => c !== STATUS_COLORS.completed);
                 if (isBlocked && isFuture && !dots.includes(STATUS_COLORS.cancelled)) dots.push(STATUS_COLORS.cancelled);
 
                 return (
