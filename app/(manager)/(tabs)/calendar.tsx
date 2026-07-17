@@ -2450,7 +2450,7 @@ const styles = StyleSheet.create({
   djAssignmentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
   djAssignmentName: { flex: 1, fontSize: 13, fontWeight: '600' },
   removeDJBtn: { padding: 8, margin: -4 },
-  assignRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, marginTop: 4, borderTopWidth: StyleSheet.hairlineWidth },
+  assignRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 5, marginTop: 2, borderTopWidth: StyleSheet.hairlineWidth },
   assignRowText: { fontSize: 13, fontWeight: '600' },
   sendDraftBtn: { padding: 4 },
   addAnotherDJBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
