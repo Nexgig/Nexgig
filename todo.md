@@ -36,17 +36,7 @@ colours = 24. Then: rename to `avatar-1..N.png` in `assets/images/avatars/`, rew
 `lib/avatars.ts`, and re-pick avatars on the demo accounts (pre-launch data is wiped, so
 no migration — only the seeded demo artists carry an `avatarId`). Ships via `eas update`.
 
-**3 · Artist-side booking polish (mirror the manager changes).** Two small items:
-  - **Drop the status dots** from the artist's booking lists (dashboard + any list rows),
-    same as we did on the manager side. Maybe replace with the calendar-style date badge
-    (`WED / 15`, status-coloured) like the manager dashboard now uses.
-  - **Reword the "Added to Lineup" notification** — manager-initiated add currently shows
-    the manager's name and implies a manager profile the artist can't open. Reframe it
-    around the venues (tap already routes to My Venues), e.g. body "You've been added to
-    <Manager>'s venues". (Decision pending: Tuts to confirm reword vs. building an
-    artist-facing manager profile.) Ships via `eas update`.
-
-**4 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
+**3 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
 
 The DB already supports it: `artists.id` and `managers.id` are both `auth.users.id`, so
 one account can have a row in *both* tables. Three app-level things block it:
@@ -69,16 +59,19 @@ already exists, built for the abandoned-signup fix).
 
 **Also:** RLS policy audit (some policies may key off `account_type`), sign-in routing
 must change from "manager wins" to "last used role", and persisted stores need clearing
-on switch or an artist sees a manager's cached venues. **The app is now live**, so the old
-"do this after submission" caveat is moot but the risk is higher, not lower: this touches
-auth, routing, notifications and RLS, and a bug here locks real users out of their account.
-Not an OTA-and-see change.
+on switch or an artist sees a manager's cached venues. **Do this AFTER the App Store
+submission clears** — it touches auth, routing, notifications and RLS, and a bug here locks a
+user out of their account entirely. Not an OTA-and-see change.
 
 ### POLISHING  (batch added 16 July 2026 — all JS-only → OTA unless noted)
   1. **Signup wizard copy pass.** Review + fix the texts and questions across the sign-up
      process (manager + artist wizards) — wording, clarity, question phrasing.
   2. **Notifications copy pass.** Review + rewrite the text of ALL in-app notifications AND
      push notifications (titles + bodies). Make them consistent and clear.
+     - Includes **"Added to Lineup"**: a manager-initiated add shows the manager's name and
+       implies a manager profile the artist can't open. Reframe around the venues (the tap
+       already routes to My Venues), e.g. "You've been added to <Manager>'s venues".
+       ⚠️ Decision still open: reword, or build an artist-facing manager profile?
   3. **Artist dashboard venue filter — add "Private gigs".** In the Bookings venue-filter
      popup, add a "Private gigs" option that filters the list to show ONLY the artist's
      private events (`isArtistCreated`). (They're currently excluded from the venue list
@@ -92,6 +85,10 @@ Not an OTA-and-see change.
   7. **Cancel Request in booking detail (requested status).** When a booking's status is
      `requested`, show a "Cancel Request" action in the booking detail page (currently the
      Cancel Booking button only shows for `confirmed`).
+  8. **Drop the status dots from the ARTIST booking lists** (dashboard + any list rows),
+     mirroring the manager side. Replace with the shared status-coloured date badge
+     (`WED / 15`) — `components/ui/date-badge.tsx`, already used by both dashboards and
+     artist-bookings, so this is reuse, not new UI.
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
