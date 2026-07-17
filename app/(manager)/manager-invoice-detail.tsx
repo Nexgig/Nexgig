@@ -274,8 +274,10 @@ export default function ManagerInvoiceDetailScreen() {
             </View>
           </View>
 
-          {/* Table Header */}
-          <View style={[styles.tableHeader, { backgroundColor: colors.background }]}>
+          {/* Table Header — no fill. It used colors.background, which is WHITE in light
+              mode, so it painted a white block across the cream (colors.surface) invoice
+              card. The PDF has no such block; the labels alone read fine. */}
+          <View style={styles.tableHeader}>
             <Text style={[styles.thGig, { color: colors.muted }]}>GIG</Text>
             <Text style={[styles.thTime, { color: colors.muted }]}>TIME</Text>
             <Text style={[styles.thAmount, { color: colors.muted }]}>AMOUNT (AED)</Text>

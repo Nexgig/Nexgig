@@ -307,8 +307,10 @@ export default function InvoicePreviewScreen() {
             </View>
           </View>
 
-          {/* Gigs Table */}
-          <View style={[styles.tableHeader, { backgroundColor: colors.background }]}>
+          {/* Gigs Table — header has no fill. colors.background is WHITE in light mode,
+              so it painted a white block across the cream (colors.surface) invoice card.
+              Same bug as the manager's manager-invoice-detail. */}
+          <View style={styles.tableHeader}>
             <Text style={[styles.thDate, { color: colors.muted }]}>GIG</Text>
             <Text style={[styles.thTime, { color: colors.muted }]}>TIME</Text>
             <Text style={[styles.thPrice, { color: colors.muted }]}>AMOUNT (AED)</Text>
