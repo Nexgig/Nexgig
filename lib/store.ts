@@ -907,13 +907,43 @@ interface VenueDirectoryState {
   venues: Record<string, Venue>;
   setVenues: (list: Venue[]) => void;
   getVenue: (id: string) => Venue | undefined;
+  listVenues: () => Venue[];
 }
 
-export const useVenueDirectoryStore = create<VenueDirectoryState>((set, get) => ({
-  venues: {},
-  setVenues: (list) => set((state) => ({ venues: { ...state.venues, ...Object.fromEntries(list.map((v) => [v.id, v])) } })),
-  getVenue: (id) => get().venues[id],
-}));
+/**
+ * The public venue directory — every non-deleted venue, used by both Network tabs.
+ *
+ * PERSISTED on purpose. This used to be the one store in this file created without
+ * `persist`, so it started empty every launch and Network had nothing to show while it
+ * waited on the network — a blank spinner for however long the request took (reported
+ * at ~30s). The directory is tiny (a handful of venues), so it belongs on disk: render
+ * what we had instantly, refresh underneath. See the Network screens' `venuesLoading`,
+ * which now only blocks when the cache is genuinely empty (first ever launch).
+ */
+export const useVenueDirectoryStore = create<VenueDirectoryState>()(
+  persist(
+    (set, get) => ({
+      venues: {},
+      /**
+       * REPLACES the directory — pass the complete visible-venue list, not a subset.
+       *
+       * This used to merge (`{...state.venues, ...new}`), which was harmless while the
+       * store was memory-only. Persisted, merging leaks: deleting a venue just stops it
+       * coming back from the fetch, so a merge would keep the stale copy on disk forever
+       * and it would keep appearing in Network. Both callers (the two Network fetches)
+       * pass the full list, so replacing is correct.
+       */
+      setVenues: (list) => set({ venues: Object.fromEntries(list.map((v) => [v.id, v])) }),
+      getVenue: (id) => get().venues[id],
+      listVenues: () => Object.values(get().venues),
+    }),
+    {
+      name: 'nexgig:venue-directory',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ venues: state.venues }) as any,
+    }
+  )
+);
 
 // ─── Calendar Jump Store ──────────────────────────────────────────────────────
 // Used by booking detail screens to tell the Calendar tab to jump to a specific date.

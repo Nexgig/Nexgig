@@ -76,8 +76,16 @@ export default function NetworkScreen() {
   const [artistsLoading, setArtistsLoading] = useState(false);
 
   // ── Venues state ──────────────────────────────────────────────────────────
-  const [sbVenues, setSbVenues] = useState<Venue[]>([]);
+  // Seeded from the PERSISTED venue directory so the list paints on first frame
+  // instead of sitting on a spinner until the network answers (~30s when slow).
+  // Refreshed below by fetchVenues; the directory is tiny, so never worth waiting for.
+  const [sbVenues, setSbVenues] = useState<Venue[]>(() =>
+    useVenueDirectoryStore.getState().listVenues()
+  );
   const [venuesLoading, setVenuesLoading] = useState(false);
+  // Tracks "fetched this mount", NOT "have any data" — sbVenues now starts warm from
+  // the cache, so guarding the fetch on sbVenues.length would mean never refreshing.
+  const [venuesFetched, setVenuesFetched] = useState(false);
 
   // ── Fetch applications + artists on mount (Artists is the default tab) ─────
   useEffect(() => { fetchApplications(); }, []);
@@ -91,7 +99,7 @@ export default function NetworkScreen() {
   // ── Fetch artists/venues when switching to that tab and data is empty ──────
   useEffect(() => {
     if (activeTab === 'artists' && sbArtists.length === 0) fetchArtists();
-    if (activeTab === 'venues' && sbVenues.length === 0) fetchVenues();
+    if (activeTab === 'venues' && !venuesFetched) fetchVenues();
   }, [activeTab]);
 
   const fetchApplications = async () => {
@@ -172,13 +180,18 @@ export default function NetworkScreen() {
   };
 
   const fetchVenues = async () => {
-    setVenuesLoading(true);
+    // Only block on the spinner when there's nothing cached to show (first ever
+    // launch). Otherwise the stale list stays up and swaps when the fetch lands.
+    if (sbVenues.length === 0) setVenuesLoading(true);
     const { data } = await supabase.from('venues').select('*').neq('is_hidden', true);
     if (data) {
-      setSbVenues(data.map((v: any) => mapVenueRow(v)));
-      // Cache full venue data so tapping a venue opens its detail complete (no fetch-on-open).
-      useVenueDirectoryStore.getState().setVenues(data.map((v: any) => mapVenueRow(v)));
+      const mapped = data.map((v: any) => mapVenueRow(v));
+      setSbVenues(mapped);
+      // Cache full venue data so tapping a venue opens its detail complete (no
+      // fetch-on-open) AND so the next launch paints instantly — the store is persisted.
+      useVenueDirectoryStore.getState().setVenues(mapped);
     }
+    setVenuesFetched(true);
     setVenuesLoading(false);
   };
 

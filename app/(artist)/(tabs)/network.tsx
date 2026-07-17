@@ -7,6 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import type { Venue } from '@/lib/types';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -28,6 +29,22 @@ type VenueItem = {
   manager_id: string;
   verification_status: string | null;
 };
+
+/** Venue (camelCase, as cached in the directory store) -> the raw-ish row shape this
+ *  screen renders. Lets the cached list seed the UI without a round trip. */
+function venueToItem(v: Venue): VenueItem {
+  return {
+    id: v.id,
+    name: v.name,
+    venue_type: v.venueType,
+    address: v.googleMapsLocation?.address ?? null,
+    genre_preferences: v.genrePreferences ?? [],
+    photo_urls: v.photoUrls ?? null,
+    admin_photo_url: v.adminPhotoUrl ?? null,
+    manager_id: v.managerId,
+    verification_status: v.verificationStatus ?? null,
+  };
+}
 
 type ArtistItem = {
   id: string;
@@ -72,7 +89,13 @@ export default function ArtistNetworkScreen() {
   const [search, setSearch] = useState('');
 
   // ── Venues state ───────────────────────────────────────────────────────────
-  const [venues, setVenues] = useState<VenueItem[]>([]);
+  // Seeded from the PERSISTED venue directory so the list paints on first frame.
+  // Without this the screen sat on a spinner until the network answered — reported
+  // at ~30s. The DB holds a handful of venues, so it's never worth waiting for:
+  // show what we had, refresh underneath (fetchVenues still runs below).
+  const [venues, setVenues] = useState<VenueItem[]>(() =>
+    useVenueDirectoryStore.getState().listVenues().map(venueToItem)
+  );
   const [appliedVenueIds, setAppliedVenueIds] = useState<Set<string>>(new Set());
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -110,7 +133,9 @@ export default function ArtistNetworkScreen() {
 
   const fetchVenues = async () => {
     if (!currentUser) return;
-    setVenuesLoading(true);
+    // Only block on the spinner when there's nothing cached to show (first ever
+    // launch). Otherwise the stale list stays up and swaps when the fetch lands.
+    if (venues.length === 0) setVenuesLoading(true);
     const [venuesRes, appsRes] = await Promise.all([
       supabase.from('venues').select('*').neq('is_hidden', true),
       supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'pending'),
