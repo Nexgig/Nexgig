@@ -46,6 +46,10 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         location: managerProfile.based_in ?? undefined,
         companyName: managerProfile.company_name ?? undefined,
         profilePhotoUrl: managerProfile.profile_photo_url ?? undefined,
+        // Without this the chosen avatar is dropped on every OAuth sign-in and
+        // AvatarImage falls back to defaultAvatarId(user.id) — which is a hash, so it's
+        // the SAME wrong avatar every time and reads like the app overwrote your choice.
+        avatarId: managerProfile.avatar_id ?? undefined,
         isPhoneVerified: false,
         isEmailVerified: true,
         createdAt: user.created_at,
@@ -80,6 +84,8 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         location: artistProfile.based_in ?? undefined,
         yearsOfExperience: artistProfile.years_of_experience ?? undefined,
         profilePhotoUrl: artistProfile.profile_photo_url ?? undefined,
+        // Same gap as the manager branch above — see the comment there.
+        avatarId: artistProfile.avatar_id ?? undefined,
         isPhoneVerified: artistUserRow?.is_phone_verified ?? false,
         isEmailVerified: true,
         createdAt: user.created_at,
