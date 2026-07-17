@@ -331,7 +331,7 @@ export default function DJHomeScreen() {
                   </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
                     {booking.slotStartTime || booking.slot?.startTime
-                      ? `Time: ${fmtTime(booking.slot?.startTime ?? booking.slotStartTime ?? '')}–${fmtTime(booking.slot?.endTime ?? booking.slotEndTime ?? '')}`
+                      ? `${fmtTime(booking.slot?.startTime ?? booking.slotStartTime ?? '')}–${fmtTime(booking.slot?.endTime ?? booking.slotEndTime ?? '')}`
                       : ''}
                   </Text>
                 </View>

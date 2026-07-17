@@ -427,7 +427,7 @@ export default function ManagerDashboard() {
                     </Text>
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
-                    {g.first.slot ? `Time: ${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
+                    {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
                   </Text>
                 </View>
               </Pressable>
