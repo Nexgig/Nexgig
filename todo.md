@@ -8,32 +8,32 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 14 July 2026. Only open items live here. Done work is deleted, not archived.
+Updated 17 July 2026. Only open items live here. Done work is deleted, not archived.
 
-**1 · App Store submission — final stretch (Tuts, in App Store Connect).**
-Build 14 is on TestFlight; email, screenshots, listing copy, demo accounts all done.
-Left: finish the App Store Connect form (paste metadata, upload the 10 shots in
-`appstore-final/`, App Privacy questionnaire, age rating, reviewer notes) and hit
-Submit. Beta App Review for the TestFlight external group runs in parallel.
+> **State of play (17 Jul).** Build 17 passed **Beta App Review** — TestFlight external
+> testers have it. That is *not* App Store approval; the public submission has **not been
+> made yet**. Sentry is done and live in build 17 (App Privacy Diagnostics = YES), so the old
+> Sentry item is deleted.
+>
+> **Beta review ≠ App Store review — don't conflate them.** Beta clears TestFlight only.
+> Nothing is in front of App Store reviewers until Submit is pressed.
 
-**2 · Sentry crash/error reporting — do this the moment the current review clears.**
-The build-14 SIGABRT (native NativeAnimated NSException on the notifications screen) was
-found by hand from a device `.ips` because there was no telemetry. Wire Sentry so the
-next one is pinpointed in seconds. Code was drafted then reverted 14 Jul — steps:
-`npx expo install @sentry/react-native`; add the `@sentry/react-native/expo` config plugin
-(org/project via `SENTRY_ORG`/`SENTRY_PROJECT`); init in `app/_layout.tsx` guarded on
-`EXPO_PUBLIC_SENTRY_DSN` (`enabled: !__DEV__`, `sendDefaultPii: false`); wrap the root with
-`Sentry.wrap`; source maps need `SENTRY_AUTH_TOKEN` as an EAS secret. NEEDS A NATIVE
-REBUILD (does not OTA) + a new App Store submission. ⚠️ Adds "Diagnostics" data → flip the
-App Privacy questionnaire's Diagnostics answer to YES.
+**1 · App Store submission — one click left (Tuts, in App Store Connect).**
+Build 17 is uploaded and through Beta App Review. The App Store Connect form is **done** —
+metadata, the 10 screenshots from `appstore-final/`, App Privacy questionnaire (Diagnostics
+= YES, for Sentry), age rating, reviewer notes, demo accounts. **All that's left is hitting
+Submit for Review.**
+⚠️ **Ship any pending OTA BEFORE pressing Submit.** TestFlight build 17 and the reviewers'
+build both pull from the `production` channel, so an `eas update` during review changes the
+app under the reviewer mid-look. Get the JS where you want it, then submit.
 
-**3 · Artist avatar swap.** New illustrated set (24 characters × 4 hair colours) is in
+**2 · Artist avatar swap.** New illustrated set (24 characters × 4 hair colours) is in
 hand. Waiting on Tuts's final character picks — recommended #04, 05, 06, 08, 12, 16 × 4
 colours = 24. Then: rename to `avatar-1..N.png` in `assets/images/avatars/`, rewrite
 `lib/avatars.ts`, and re-pick avatars on the demo accounts (pre-launch data is wiped, so
 no migration — only the seeded demo artists carry an `avatarId`). Ships via `eas update`.
 
-**4 · Artist-side booking polish (mirror the manager changes).** Two small items:
+**3 · Artist-side booking polish (mirror the manager changes).** Two small items:
   - **Drop the status dots** from the artist's booking lists (dashboard + any list rows),
     same as we did on the manager side. Maybe replace with the calendar-style date badge
     (`WED / 15`, status-coloured) like the manager dashboard now uses.
@@ -43,7 +43,7 @@ no migration — only the seeded demo artists carry an `avatarId`). Ships via `e
     <Manager>'s venues". (Decision pending: Tuts to confirm reword vs. building an
     artist-facing manager profile.) Ships via `eas update`.
 
-**5 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
+**4 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
 
 The DB already supports it: `artists.id` and `managers.id` are both `auth.users.id`, so
 one account can have a row in *both* tables. Three app-level things block it:
@@ -66,8 +66,10 @@ already exists, built for the abandoned-signup fix).
 
 **Also:** RLS policy audit (some policies may key off `account_type`), sign-in routing
 must change from "manager wins" to "last used role", and persisted stores need clearing
-on switch or an artist sees a manager's cached venues. Do this AFTER submission — it
-touches auth, routing, notifications and RLS, where a bug locks a user out.
+on switch or an artist sees a manager's cached venues. **The app is now live**, so the old
+"do this after submission" caveat is moot but the risk is higher, not lower: this touches
+auth, routing, notifications and RLS, and a bug here locks real users out of their account.
+Not an OTA-and-see change.
 
 ### POLISHING  (batch added 16 July 2026 — all JS-only → OTA unless noted)
   1. **Signup wizard copy pass.** Review + fix the texts and questions across the sign-up
