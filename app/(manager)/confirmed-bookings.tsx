@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Image } from '@/lib/rn';
+import { View, Text, FlatList, Pressable, StyleSheet } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { AvatarImage } from '@/components/ui/avatar-image';
+import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
@@ -71,7 +71,7 @@ export default function ConfirmedBookingsScreen() {
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
           >
-            <AvatarImage uri={booking.dj?.profilePhotoUrl} avatarId={(booking.dj as any)?.avatarId} seed={(booking.dj as any)?.id} name={booking.dj?.fullName} size={48} variant="artist" />
+            <DateBadge dateStr={booking.slot?.date ?? booking.slotDate} color={STATUS_COLORS.confirmed} />
             <View style={styles.info}>
               <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
                 {booking.dj?.fullName ?? 'Unknown Artist'}
@@ -95,7 +95,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700' },
   list: { paddingHorizontal: 20, paddingVertical: 8, flexGrow: 1 },
   card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
-  photo: { width: 48, height: 48, borderRadius: 24 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   info: { flex: 1 },
   djName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },

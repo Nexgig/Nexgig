@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Image } from '@/lib/rn';
+import { View, Text, FlatList, Pressable, StyleSheet } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useInvoiceStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
-import { venueImageFor } from '@/lib/venue-images';
+import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -83,19 +83,12 @@ export default function ArtistCompletedGigsScreen() {
           </View>
         }
         renderItem={({ item: booking }) => {
-          const venueImg = venueImageFor(booking.venue, booking.venueType);
           return (
           <Pressable
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
           >
-            {booking.isArtistCreated ? (
-              <View style={[styles.photo, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }]}>
-                <MaterialIcons name="event" size={20} color={colors.muted} />
-              </View>
-            ) : (
-              <Image source={venueImg} style={styles.photo} resizeMode="cover" />
-            )}
+            <DateBadge dateStr={booking.slot?.date ?? booking.slotDate} color={STATUS_COLORS.completed} />
             <View style={styles.info}>
               <View style={styles.titleRow}>
                 <Text style={[styles.venueName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -131,7 +124,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700' },
   list: { paddingHorizontal: 20, paddingVertical: 8, flexGrow: 1 },
   card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
-  photo: { width: 48, height: 48, borderRadius: 24 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },

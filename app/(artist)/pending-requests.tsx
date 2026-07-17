@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, Alert, Image } from '@/lib/rn';
+import { View, Text, FlatList, Pressable, StyleSheet, Alert } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useNotificationStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { Divider } from '@/components/ui/card-free';
-import { venueImageFor } from '@/lib/venue-images';
+import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 
@@ -144,7 +144,6 @@ export default function ArtistPendingRequestsScreen() {
 
   const renderCard = ({ item }: { item: typeof pendingRequests[number] }) => {
     const isManagerCancelled = item.status === 'cancelled';
-    const venueImg = venueImageFor(item.venue, item.venueType);
     const dateLine = item.resolvedDate
       ? `${formatDate(item.resolvedDate)}${item.resolvedStart ? ` · ${formatTime(item.resolvedStart)}–${formatTime(item.resolvedEnd ?? '')}` : ''}`
       : '';
@@ -155,8 +154,12 @@ export default function ArtistPendingRequestsScreen() {
         style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
         onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}
       >
-        {/* Venue photo */}
-        <Image source={venueImg} style={styles.photo} resizeMode="cover" />
+        {/* This list isn't single-status: it also carries manager-cancelled bookings the
+            artist hasn't acknowledged, so the badge can't just be gold. */}
+        <DateBadge
+          dateStr={item.resolvedDate}
+          color={isManagerCancelled ? STATUS_COLORS.cancelled : STATUS_COLORS.pending}
+        />
 
         {/* Info */}
         <View style={styles.info}>
@@ -249,7 +252,6 @@ const styles = StyleSheet.create({
 
   // Flat IG row
   card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
-  photo: { width: 48, height: 48, borderRadius: 24 },
   info: { flex: 1 },
   venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   time: { fontSize: 13 },

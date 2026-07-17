@@ -20,6 +20,7 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastEnd, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
+import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 
 // Monday-first day labels (matching manager calendar)
@@ -36,12 +37,6 @@ for (let h = 0; h < 24; h++) {
 }
 
 // Status colors
-const STATUS_COLORS = {
-  pending: '#D4A017',   // Orange
-  confirmed: '#22C55E', // Green  (also used for Private Event)
-  completed: '#2563EB', // Blue
-  cancelled: '#EF4444', // Red    (also used for Block/Unavailable)
-};
 
 type ViewMode = 'week' | 'month' | 'today';
 

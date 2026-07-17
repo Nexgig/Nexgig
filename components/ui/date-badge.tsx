@@ -2,6 +2,19 @@ import { View, Text, StyleSheet } from '@/lib/rn';
 import { fonts } from '@/lib/fonts';
 
 /**
+ * The booking status palette. Lives next to DateBadge because the badge is what most
+ * of it colours. Import this rather than re-typing the hexes — they were duplicated
+ * across the dashboards, the list screens and the artist calendar, which is how you
+ * end up with two shades of "pending".
+ */
+export const STATUS_COLORS = {
+  pending: '#D4A017',   // gold  — requested / past_confirmation
+  confirmed: '#22C55E', // green — also Private Event
+  completed: '#2563EB', // blue
+  cancelled: '#EF4444', // red   — also declined, and Block/Unavailable
+} as const;
+
+/**
  * The booking row's date tile — a rounded square filled with the booking's status
  * colour (gold pending / green confirmed / blue completed), showing the weekday short
  * (WED) over the day number. Shared by the manager dashboard, artist dashboard, and the
