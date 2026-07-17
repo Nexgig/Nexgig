@@ -5,7 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
-import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore, useDraftStore } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -47,10 +47,10 @@ function MapsBadge({ onPress }: { onPress: () => void }) {
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
     >
-      <MaterialIcons name="directions" size={15} color={colors.foreground} />
-      <Text style={[styles.mapsBadgeText, { color: colors.foreground }]}>Maps</Text>
+      <MaterialIcons name="directions" size={15} color={colors.primary} />
+      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
     </Pressable>
   );
 }
@@ -72,6 +72,7 @@ export default function DJBookingDetailScreen() {
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
+  const allDrafts = useDraftStore((s) => s.drafts);
 
   // ── Slot-only mode: an empty set (no bookings) opened from the calendar ──────
   if (!booking) {
@@ -159,6 +160,11 @@ export default function DJBookingDetailScreen() {
       b.status !== 'declined'
   );
 
+  // Drafted artists on this slot (staged, not yet sent). Exclude anyone who already
+  // has a booking here. Shown with a "Draft" status so the manager sees who's staged.
+  const bookedArtistIds = new Set([booking, ...coBookings].map((b) => b.artistId));
+  const draftArtists = allDrafts.filter((d) => d.slotId === booking.slotId && !bookedArtistIds.has(d.artistId));
+
   const isManager = currentUser?.accountType === 'manager';
   const isDJ = currentUser?.accountType === 'artist';
 
@@ -233,13 +239,13 @@ export default function DJBookingDetailScreen() {
           {/* Artist(s) on this booking's slot. Manager-only. */}
           {isManager && (
             <>
-              <Section label={coBookings.length > 0 ? 'Artists' : 'Artist'}>
+              <Section label={(coBookings.length + draftArtists.length) > 0 ? 'Artists' : 'Artist'}>
                 <ListRow
                   leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
                   trailing={<StatusBadge status={booking.status} />}
-                  divider={coBookings.length > 0}
+                  divider={coBookings.length > 0 || draftArtists.length > 0}
                 />
                 {coBookings.map((cb, i) => {
                   const coArtist = getArtistUser(cb.artistId);
@@ -251,7 +257,20 @@ export default function DJBookingDetailScreen() {
                       subtitle="Also on this slot"
                       trailing={<StatusBadge status={cb.status} />}
                       onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}
-                      divider={i < coBookings.length - 1}
+                      divider={i < coBookings.length - 1 || draftArtists.length > 0}
+                    />
+                  );
+                })}
+                {draftArtists.map((d, i) => {
+                  const dArtist = getArtistUser(d.artistId);
+                  return (
+                    <ListRow
+                      key={'draft-' + d.artistId}
+                      leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
+                      title={dArtist?.fullName ?? 'Artist'}
+                      subtitle="Not sent yet"
+                      trailing={<StatusBadge status="draft" />}
+                      divider={i < draftArtists.length - 1}
                     />
                   );
                 })}

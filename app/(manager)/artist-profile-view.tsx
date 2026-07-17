@@ -213,7 +213,19 @@ export default function ArtistProfileViewScreen() {
   // ── Handlers ──────────────────────────────────────────────────────────────
   // Connect this artist to the manager's roster + all current venues. Mirrors the
   // handleAddToRoster that used to live on the Network row (the ± button replaces it).
-  const handleConnect = async () => {
+  const handleConnect = () => {
+    if (!currentUser || !artistId || !dj) return;
+    Alert.alert(
+      'Add Artist',
+      `Add ${dj.fullName || 'this artist'} to your lineup and all your venues?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Add', onPress: () => { void doConnect(); } },
+      ]
+    );
+  };
+
+  const doConnect = async () => {
     if (!currentUser || !artistId || !dj) return;
     const { error: lineupError } = await supabase.from('global_lineup').upsert(
       { manager_id: currentUser.id, artist_id: artistId, status: 'active' },
@@ -398,7 +410,7 @@ export default function ArtistProfileViewScreen() {
           >
             <MaterialIcons
               name={isConnected ? 'remove' : 'add'}
-              size={20}
+              size={16}
               color={isConnected ? colors.muted : colors.primary}
             />
           </Pressable>
@@ -748,7 +760,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', flex: 1 },
   reportBtn: { padding: 4 },
-  connectBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  connectBtn: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 4 },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },

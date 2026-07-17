@@ -52,10 +52,10 @@ function MapsBadge({ onPress }: { onPress: () => void }) {
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => [styles.mapsBadge, { backgroundColor: colors.primary + '20', opacity: pressed ? 0.7 : 1 }]}
     >
-      <MaterialIcons name="directions" size={15} color={colors.foreground} />
-      <Text style={[styles.mapsBadgeText, { color: colors.foreground }]}>Maps</Text>
+      <MaterialIcons name="directions" size={15} color={colors.primary} />
+      <Text style={[styles.mapsBadgeText, { color: colors.primary }]}>Maps</Text>
     </Pressable>
   );
 }
