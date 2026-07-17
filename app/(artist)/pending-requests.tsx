@@ -11,6 +11,7 @@ import { Divider } from '@/components/ui/card-free';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
+import { isPastEnd } from '@/lib/utils';
 
 export default function ArtistPendingRequestsScreen() {
   const router = useRouter();
@@ -88,8 +89,12 @@ export default function ArtistPendingRequestsScreen() {
 
   // ── Confirm a booking request ──
   const handleConfirm = (item: typeof pendingRequests[number]) => {
+    // "Past gig" = the gig has actually FINISHED (isPastEnd), not just "its date is
+    // today". The old check compared the date at midnight to now, so accepting a gig on
+    // its own day — hours before it started — marked it COMPLETED instead of confirmed.
+    // That produced two artists on one slot with contradictory statuses.
     const isPastConfirmation = item.status === 'past_confirmation' ||
-      (item.status === 'requested' && !!item.resolvedDate && new Date(item.resolvedDate + 'T00:00:00') <= new Date());
+      (item.status === 'requested' && !!item.resolvedDate && isPastEnd(item.resolvedDate, item.resolvedStart, item.resolvedEnd));
     Alert.alert(
       isPastConfirmation ? 'Confirm Completed Gig' : 'Confirm Booking',
       isPastConfirmation
@@ -121,8 +126,11 @@ export default function ArtistPendingRequestsScreen() {
 
   // ── Decline a booking request ──
   const handleDecline = (item: typeof pendingRequests[number]) => {
+    // Same fix as handleConfirm: "past" means the gig has finished (isPastEnd), not
+    // "dated today". Keeps the decline copy ("did NOT play" vs "decline") correct for a
+    // same-day gig that hasn't started yet.
     const isPastConfirmation = item.status === 'past_confirmation' ||
-      (item.status === 'requested' && !!item.resolvedDate && new Date(item.resolvedDate + 'T00:00:00') <= new Date());
+      (item.status === 'requested' && !!item.resolvedDate && isPastEnd(item.resolvedDate, item.resolvedStart, item.resolvedEnd));
     Alert.alert(
       isPastConfirmation ? 'Decline Completed Gig' : 'Decline Booking',
       isPastConfirmation
