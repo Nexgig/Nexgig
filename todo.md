@@ -84,19 +84,16 @@ user out of their account entirely. Not an OTA-and-see change.
      popup, add a "Private gigs" option that filters the list to show ONLY the artist's
      private events (`isArtistCreated`). (They're currently excluded from the venue list
      since they have no venueId.)
-  4. **Remove redundant date from booking-detail.** Now that the date badge shows the date,
-     drop the duplicate date line inside the booking detail row/details.
-  5. **Private gig avatar.** Give private gigs a proper avatar/visual in the date-badge slot
+  4. **Private gig avatar.** Give private gigs a proper avatar/visual in the date-badge slot
      (instead of the generic event icon) so they read as private events.
-  6. **Fix invoice-preview white badge.** The badge on the invoice preview renders white
+     ⚠️ Re-check scope: the DateBadge now occupies that slot on the artist dashboard and the
+     confirmed/completed pages, and the generic event icon went with it. Confirm where the
+     icon still shows before starting — this may already be moot.
+  5. **Fix invoice-preview white badge.** The badge on the invoice preview renders white
      (invisible/wrong) — fix its colour.
-  7. **Cancel Request in booking detail (requested status).** When a booking's status is
+  6. **Cancel Request in booking detail (requested status).** When a booking's status is
      `requested`, show a "Cancel Request" action in the booking detail page (currently the
      Cancel Booking button only shows for `confirmed`).
-  8. **Drop the status dots from the ARTIST booking lists** (dashboard + any list rows),
-     mirroring the manager side. Replace with the shared status-coloured date badge
-     (`WED / 15`) — `components/ui/date-badge.tsx`, already used by both dashboards and
-     artist-bookings, so this is reuse, not new UI.
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
