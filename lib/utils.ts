@@ -70,6 +70,28 @@ export function isPastStart(date: string, startTime?: string): boolean {
 }
 
 /**
+ * "2026-06-15" → "2026-06". A sortable/comparable month bucket, for deciding when a
+ * list crosses into a new month.
+ */
+export function monthKey(dateStr: string): string {
+  return dateStr.slice(0, 7);
+}
+
+/**
+ * "2026-06-15" → "June" (or "January 2027" when it isn't the current year).
+ *
+ * The DateBadge shows weekday + day but NOT the month, so a list spanning months is
+ * ambiguous without this. The year is dropped in the common case because it's noise —
+ * and kept when it isn't, since "January" alone across a Dec→Jan boundary is a coin flip.
+ */
+export function monthLabel(dateStr: string): string {
+  const [y, mo] = dateStr.split('-').map(Number);
+  const d = new Date(y, mo - 1, 1);
+  const month = d.toLocaleString('en-US', { month: 'long' });
+  return y === new Date().getFullYear() ? month : `${month} ${y}`;
+}
+
+/**
  * Normalises a time to "HH:MM". Times are stored as text and are normally already
  * 'HH:MM', but anything arriving as 'HH:MM:SS' would break the string comparisons
  * every datetime helper here relies on ('22:00:00' > '22:00').

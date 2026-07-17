@@ -14,7 +14,8 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel } from '@/lib/utils';
+import { MonthSeparator } from '@/components/ui/month-separator';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -145,6 +146,21 @@ export default function ManagerDashboard() {
       };
     });
   }, [dashboardBookings, bookingVenueId]);
+
+  // Month headers for the Bookings window. The DateBadge shows weekday + day but no
+  // month, so a list crossing months is ambiguous without them — and a lone "June"
+  // header on an all-June list is just noise. Computed on the VISIBLE rows (after the
+  // venue filter and slot grouping), not the raw data, or we'd show a header for a
+  // month the user can't actually see.
+  const bookingsSpanMonths = useMemo(() => {
+    const months = new Set(
+      groupedBookingsPreview
+        .map((g) => g.first.slot?.date ?? g.first.slotDate)
+        .filter(Boolean)
+        .map((d) => monthKey(d as string))
+    );
+    return months.size > 1;
+  }, [groupedBookingsPreview]);
 
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
@@ -383,18 +399,26 @@ export default function ManagerDashboard() {
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
             >
-            {groupedBookingsPreview.map((g) => {
+            {groupedBookingsPreview.map((g, idx) => {
               const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
               const title = g.count === 1
                 ? names[0]
                 : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
+              const gDate = g.first.slot?.date ?? g.first.slotDate;
+              const prev = idx > 0 ? groupedBookingsPreview[idx - 1] : undefined;
+              const prevDate = prev ? (prev.first.slot?.date ?? prev.first.slotDate) : undefined;
+              const showMonth = bookingsSpanMonths && !!gDate &&
+                (!prevDate || monthKey(gDate) !== monthKey(prevDate));
               return (
+              <View key={g.key}>
+              {showMonth && (
+                <MonthSeparator label={monthLabel(gDate!)} color={colors.muted} borderColor={colors.border} />
+              )}
               <Pressable
-                key={g.key}
                 style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
               >
-                <DateBadge dateStr={g.first.slot?.date ?? g.first.slotDate} color={g.dotColor} />
+                <DateBadge dateStr={gDate} color={g.dotColor} />
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -403,10 +427,11 @@ export default function ManagerDashboard() {
                     </Text>
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
-                    {g.first.slot ? `${formatDate(g.first.slot.date)} · ${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
+                    {g.first.slot ? `Time: ${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
                   </Text>
                 </View>
               </Pressable>
+              </View>
               );
             })}
             </ScrollView>

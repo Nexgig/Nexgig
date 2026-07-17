@@ -345,6 +345,19 @@ describe('Smoke: time utils', () => {
     expect(utils.slotEndDateTimeStr('2026-06-01', '21:00', undefined)).toBe('2026-06-01T21:00');
   });
 
+  it('monthKey buckets by year-month', () => {
+    expect(utils.monthKey('2026-06-15')).toBe('2026-06');
+    // Same day number, different month — the DateBadge can't tell these apart, which
+    // is the whole reason the dashboard needs a month separator.
+    expect(utils.monthKey('2026-07-15')).not.toBe(utils.monthKey('2026-06-15'));
+  });
+
+  it('monthLabel drops the year in the current year and keeps it otherwise', () => {
+    const thisYear = new Date().getFullYear();
+    expect(utils.monthLabel(`${thisYear}-06-15`)).toBe('June');
+    expect(utils.monthLabel(`${thisYear + 1}-01-03`)).toBe(`January ${thisYear + 1}`);
+  });
+
   it('isPastEnd completes on end, not start', () => {
     expect(utils.isPastEnd('2020-01-01', '22:00', '03:00')).toBe(true);
     expect(utils.isPastEnd('2999-01-01', '22:00', '03:00')).toBe(false);

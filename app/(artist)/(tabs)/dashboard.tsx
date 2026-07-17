@@ -14,7 +14,8 @@ import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel } from '@/lib/utils';
+import { MonthSeparator } from '@/components/ui/month-separator';
 
 export default function DJHomeScreen() {
   const router = useRouter();
@@ -189,6 +190,21 @@ export default function DJHomeScreen() {
     return scoped.slice(0, 6);
   }, [dashboardBookings, bookingVenueId]);
 
+  // Month headers for the Bookings window. The DateBadge shows weekday + day but no
+  // month, so a list crossing months is ambiguous without them — and a lone "June"
+  // header on an all-June list is just noise. Computed on the VISIBLE rows (after the
+  // venue filter AND the slice(0, 6)), not the raw data: a July gig below the cut must
+  // not put a "June" header on a list the user sees as all-June.
+  const bookingsSpanMonths = useMemo(() => {
+    const months = new Set(
+      dashboardBookingsPreviewFiltered
+        .map((b) => b.slot?.date ?? b.slotDate)
+        .filter(Boolean)
+        .map((d) => monthKey(d as string))
+    );
+    return months.size > 1;
+  }, [dashboardBookingsPreviewFiltered]);
+
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
   const venueCount = useMemo(() => {
@@ -274,14 +290,22 @@ export default function DJHomeScreen() {
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            dashboardBookingsPreviewFiltered.map((booking) => {
+            dashboardBookingsPreviewFiltered.map((booking, idx) => {
+              const bDate = booking.slot?.date ?? booking.slotDate;
+              const prev = idx > 0 ? dashboardBookingsPreviewFiltered[idx - 1] : undefined;
+              const prevDate = prev ? (prev.slot?.date ?? prev.slotDate) : undefined;
+              const showMonth = bookingsSpanMonths && !!bDate &&
+                (!prevDate || monthKey(bDate) !== monthKey(prevDate));
               return (
+              <View key={booking.id}>
+              {showMonth && (
+                <MonthSeparator label={monthLabel(bDate!)} color={colors.muted} borderColor={colors.border} />
+              )}
               <Pressable
-                key={booking.id}
                 style={({ pressed }) => [styles.gigCard, { opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
               >
-                <DateBadge dateStr={booking.slot?.date ?? booking.slotDate} color={booking.dotColor} />
+                <DateBadge dateStr={bDate} color={booking.dotColor} />
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
@@ -289,9 +313,9 @@ export default function DJHomeScreen() {
                     </Text>
                   </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
-                    {booking.isArtistCreated && booking.slotDate
-                      ? `${formatDate(booking.slotDate)}${booking.slotStartTime ? ` · ${fmtTime(booking.slotStartTime)}–${fmtTime(booking.slotEndTime ?? '')}` : ''}`
-                      : booking.slot ? `${formatDate(booking.slot.date)} · ${fmtTime(booking.slot.startTime)}–${fmtTime(booking.slot.endTime)}` : ''}
+                    {booking.slotStartTime || booking.slot?.startTime
+                      ? `Time: ${fmtTime(booking.slot?.startTime ?? booking.slotStartTime ?? '')}–${fmtTime(booking.slot?.endTime ?? booking.slotEndTime ?? '')}`
+                      : ''}
                   </Text>
                 </View>
                 {booking.isInvoiced && (
@@ -300,6 +324,7 @@ export default function DJHomeScreen() {
                   </View>
                 )}
               </Pressable>
+              </View>
               );
             })
           )}
