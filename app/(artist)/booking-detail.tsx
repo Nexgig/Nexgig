@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { AvatarImage } from '@/components/ui/avatar-image';
 import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useNotificationStore, useReviewStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { reportWarning } from '@/lib/observability';
@@ -113,6 +114,22 @@ export default function DJBookingDetailScreen() {
     })();
     return () => { cancelled = true; };
   }, [booking, id, addBooking]);
+
+  // Co-artists on this set. RLS blocks an artist from reading another artist's booking,
+  // so this comes from a SECURITY DEFINER RPC (supabase/slot-co-artists.sql) that returns
+  // the other artists' name + status — and only when the caller is on the slot.
+  const [coArtists, setCoArtists] = useState<{ artist_id: string; full_name: string; status: string }[]>([]);
+  const slotIdForCoArtists = booking?.slotId;
+  const isPrivate = booking?.isArtistCreated;
+  useEffect(() => {
+    if (!slotIdForCoArtists || isPrivate) { setCoArtists([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc('get_slot_co_artists', { p_slot_id: slotIdForCoArtists });
+      if (!cancelled && Array.isArray(data)) setCoArtists(data as any);
+    })();
+    return () => { cancelled = true; };
+  }, [slotIdForCoArtists, isPrivate]);
 
   const hideFromCalendar = useBookingStore((s) => s.hideFromCalendar);
   const getSlotById = useSlotStore((s) => s.getSlotById);
@@ -288,6 +305,22 @@ export default function DJBookingDetailScreen() {
         </View>
 
         <View style={styles.content}>
+          {/* Other artists on this same set (from the co-artists RPC). */}
+          {coArtists.length > 0 && (
+            <Section label="Also on this set">
+              {coArtists.map((c, i) => (
+                <ListRow
+                  key={c.artist_id}
+                  leading={<AvatarImage seed={c.artist_id} name={c.full_name} size={44} variant="artist" />}
+                  title={c.full_name}
+                  subtitle="Artist"
+                  trailing={<StatusBadge status={c.status as any} />}
+                  divider={i < coArtists.length - 1}
+                />
+              ))}
+            </Section>
+          )}
+
           {/* Venue Card — the Maps button lives INSIDE the card (below the venue info),
               matching the manager booking-detail. */}
           {venue ? (
