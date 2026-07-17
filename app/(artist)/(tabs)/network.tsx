@@ -8,6 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import type { Venue } from '@/lib/types';
+import { SHOW_ARTIST_DIRECTORY, ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -124,7 +125,7 @@ export default function ArtistNetworkScreen() {
   // ── Lazy-fetch venues/artists on first tab open ────────────────────────────
   useEffect(() => {
     if (activeTab === 'venues' && !venuesFetched) fetchVenues();
-    if (activeTab === 'artists' && !artistsFetched) fetchArtists();
+    if (SHOW_ARTIST_DIRECTORY && activeTab === 'artists' && !artistsFetched) fetchArtists();
   }, [activeTab]);
 
   const fetchVenues = async () => {
@@ -229,7 +230,15 @@ export default function ArtistNetworkScreen() {
 
   const handleLeaveVenue = (venue: VenueItem) => {
     if (!currentUser) return;
-    Alert.alert('Leave Venue', `Leave the lineup at ${venue.name}? You can request to join again later.`, [
+    // The warning changes with ALLOW_ARTIST_VENUE_APPLICATIONS: with applying off,
+    // leaving is a ONE-WAY DOOR — the artist can't re-apply, so only the manager can
+    // add them back. Saying "you can request to join again later" would be a lie.
+    Alert.alert(
+      'Leave Venue',
+      ALLOW_ARTIST_VENUE_APPLICATIONS
+        ? `Leave the lineup at ${venue.name}? You can request to join again later.`
+        : `Leave the lineup at ${venue.name}? You won't be able to rejoin yourself — only ${venue.name} can add you back.`,
+      [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Leave', style: 'destructive',
@@ -260,7 +269,8 @@ export default function ArtistNetworkScreen() {
           });
         },
       },
-    ]);
+      ]
+    );
   };
 
   const filteredVenues = useMemo(() => {
@@ -291,23 +301,30 @@ export default function ArtistNetworkScreen() {
     <ScreenContainer edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
+        {/* "Venues", not "Network" — the artists sub-tab is gone (SHOW_ARTIST_DIRECTORY),
+            so this screen only lists venues. Restore "Network" if that flag goes back on. */}
+        <Text style={[styles.title, { color: colors.foreground }]}>
+          {SHOW_ARTIST_DIRECTORY ? 'Network' : 'Venues'}
+        </Text>
       </View>
 
-      {/* Sub-tabs */}
-      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {(['venues', 'artists'] as NetworkTab[]).map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-            onPress={() => { setActiveTab(tab); setSearch(''); }}
-          >
-            <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* Sub-tabs — hidden entirely when the artist directory is off, since venues
+          would be the only tab and a one-tab bar is just a label. */}
+      {SHOW_ARTIST_DIRECTORY && (
+        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+          {(['venues', 'artists'] as NetworkTab[]).map((tab) => (
+            <Pressable
+              key={tab}
+              style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+              onPress={() => { setActiveTab(tab); setSearch(''); }}
+            >
+              <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {/* Search bar for venues and artists */}
       {(activeTab === 'venues' || activeTab === 'artists') && (
@@ -387,7 +404,7 @@ export default function ArtistNetworkScreen() {
                     >
                       <Text style={[styles.applyBtnText, { color: colors.foreground }]}>Connected</Text>
                     </Pressable>
-                  ) : (
+                  ) : ALLOW_ARTIST_VENUE_APPLICATIONS ? (
                     <Pressable
                       style={[
                         styles.applyBtn,
@@ -409,7 +426,7 @@ export default function ArtistNetworkScreen() {
                         </>
                       )}
                     </Pressable>
-                  )}
+                  ) : null}
                 </Pressable>
               );
               return rowContent;
@@ -419,7 +436,7 @@ export default function ArtistNetworkScreen() {
       )}
 
       {/* Artists tab */}
-      {activeTab === 'artists' && (
+      {SHOW_ARTIST_DIRECTORY && activeTab === 'artists' && (
         artistsLoading ? (
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (

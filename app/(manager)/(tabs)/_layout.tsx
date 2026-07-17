@@ -4,6 +4,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 
 export default function ManagerTabsLayout() {
   const colors = useColors();
@@ -12,6 +13,10 @@ export default function ManagerTabsLayout() {
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const fetchPendingCount = useCallback(async () => {
+    // Artists can't apply any more, and the Accept/Decline inbox is hidden with them —
+    // a badge would point at a screen with nothing to act on. Existing pending rows are
+    // left in the DB; flipping the flag back brings both the badge and the inbox back.
+    if (!ALLOW_ARTIST_VENUE_APPLICATIONS) { setPendingCount(0); return; }
     if (!currentUser?.id) return;
     const { count } = await supabase
       .from('applications')
@@ -27,6 +32,8 @@ export default function ManagerTabsLayout() {
 
   // Realtime: update badge instantly when an application changes
   useEffect(() => {
+    // No new applications can ever arrive — don't hold a channel open for them.
+    if (!ALLOW_ARTIST_VENUE_APPLICATIONS) return;
     if (!currentUser?.id) return;
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;

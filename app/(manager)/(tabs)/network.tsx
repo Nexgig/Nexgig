@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -103,6 +104,11 @@ export default function NetworkScreen() {
   }, [activeTab]);
 
   const fetchApplications = async () => {
+    // Artists can no longer apply, so nothing new can arrive. Leaving `applications`
+    // empty hides the whole inbox in one place: the inline Accept/Decline rows read
+    // from appByArtistId, and the tab badge from applications.length. Existing rows
+    // stay in the DB untouched — flip the flag back and they reappear.
+    if (!ALLOW_ARTIST_VENUE_APPLICATIONS) { setApplications([]); setAppsLoading(false); return; }
     if (!currentUser) return;
     setAppsLoading(true);
     const { data, error } = await supabase

@@ -5,6 +5,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Platform, View, Text, StyleSheet } from '@/lib/rn';
 import { useColors } from '@/hooks/use-colors';
 import { useAuthStore, useBookingStore, useNotificationStore, useNetworkSeenStore } from '@/lib/store';
+import { SHOW_ARTIST_DIRECTORY } from '@/lib/features';
 import { useMemo } from 'react';
 
 function CalendarTabIcon({ color, focused }: { color: string; focused: boolean }) {
@@ -104,7 +105,9 @@ export default function DJTabLayout() {
       <Tabs.Screen
         name="network"
         options={{
-          title: 'Network',
+          // The route file stays `network.tsx` (renaming it would break every push
+          // deep-link and router.push in the app); only the label changes.
+          title: SHOW_ARTIST_DIRECTORY ? 'Network' : 'Venues',
           tabBarIcon: ({ color, focused }) => <NetworkTabIcon color={color} focused={focused} />,
         }}
       />
