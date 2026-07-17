@@ -139,23 +139,21 @@ export default function ManagerProfileScreen() {
               value: venues.length === 0 ? '+' : venues.length,
               label: 'Venues',
               color: venues.length === 0 ? colors.primary : colors.foreground,
-              // my-venues is gone — Network's Venues tab IS that list (the manager's own
-              // venues sort first), and it carries the + too. Empty shortcuts to create.
-              //
-              // navigate(), not push(): Network is a sibling TAB — push() stacks a second
-              // copy of the tab navigator and slides it in like a page. create-venue IS a
-              // push (a stack screen), so it keeps its slide.
-              onPress: () => venues.length === 0
-                ? router.push('/(manager)/create-venue' as Href)
-                : router.navigate('/(manager)/(tabs)/network?tab=venues' as Href),
+              // Dedicated My Venues page (Network is for browsing/connecting). Empty
+              // still shortcuts straight to create-venue.
+              onPress: () => router.push((venues.length === 0
+                ? '/(manager)/create-venue'
+                : '/(manager)/my-venues') as Href),
             },
             {
               value: djCount === 0 ? '+' : djCount,
               label: 'Artists',
               color: djCount === 0 ? colors.primary : colors.foreground,
-              // artists (My Artists) is gone — same Network tab; the manager's lineup
-              // sorts first. navigate() not push() — see the Venues card above.
-              onPress: () => router.navigate('/(manager)/(tabs)/network?tab=artists' as Href),
+              // Dedicated My Artists page. With none connected, drop into Network to
+              // go find some.
+              onPress: () => router.push((djCount === 0
+                ? '/(manager)/(tabs)/network?tab=artists'
+                : '/(manager)/my-artists') as Href),
             },
           ]}
         />
