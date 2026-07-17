@@ -1,4 +1,5 @@
 import type { Booking, AvailabilityBlock, Slot, ConflictInfo, ArtistWithConflict, User, Lineup, ArtistProfile } from './types';
+import { hhmm, slotDateTimeStr, slotEndDateTimeStr } from './utils';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -43,22 +44,24 @@ export function formatTimeValue(timeStr: string, fmt: TimeFormat): string {
 
 /**
  * Check if two time ranges overlap.
+ *
+ * Each range is resolved to a real start/end datetime first, so ranges on
+ * DIFFERENT dates are compared properly: a gig on 1 Jun 22:00–03:00 clashes with
+ * one on 2 Jun 01:00–04:00, because the first actually runs until 03:00 on 2 Jun.
+ * Touching ranges (one ends exactly when the next starts) do not overlap.
  */
 export function timesOverlap(
   startA: string, endA: string,
   startB: string, endB: string,
   dateA: string, dateB: string
 ): boolean {
-  if (dateA !== dateB) return false;
-  const toMinutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  };
-  const startAMin = toMinutes(startA);
-  const endAMin = toMinutes(endA) <= toMinutes(startA) ? toMinutes(endA) + 24 * 60 : toMinutes(endA);
-  const startBMin = toMinutes(startB);
-  const endBMin = toMinutes(endB) <= toMinutes(startB) ? toMinutes(endB) + 24 * 60 : toMinutes(endB);
-  return startAMin < endBMin && endAMin > startBMin;
+  const aStart = slotDateTimeStr(dateA, hhmm(startA));
+  const aEnd = slotEndDateTimeStr(dateA, startA, endA);
+  const bStart = slotDateTimeStr(dateB, hhmm(startB));
+  const bEnd = slotEndDateTimeStr(dateB, startB, endB);
+  // A zero-length range covers no time at all, so it can't clash with anything.
+  if (aStart === aEnd || bStart === bEnd) return false;
+  return aStart < bEnd && aEnd > bStart;
 }
 
 /**

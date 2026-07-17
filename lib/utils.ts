@@ -70,11 +70,24 @@ export function isPastStart(date: string, startTime?: string): boolean {
 }
 
 /**
+ * Normalises a time to "HH:MM". Times are stored as text and are normally already
+ * 'HH:MM', but anything arriving as 'HH:MM:SS' would break the string comparisons
+ * every datetime helper here relies on ('22:00:00' > '22:00').
+ */
+export function hhmm(time: string): string {
+  const [h, m] = time.split(':');
+  const hNum = Number(h);
+  const mNum = Number(m);
+  if (Number.isNaN(hNum) || Number.isNaN(mNum)) return time;
+  return `${String(hNum).padStart(2, '0')}:${String(mNum).padStart(2, '0')}`;
+}
+
+/**
  * Adds `days` to a "YYYY-MM-DD" string and returns the same format.
  * Built from local Y/M/D components on purpose — `new Date("2026-07-17")` parses as
  * UTC midnight, which is the previous day in Dubai (UTC+4).
  */
-function addDaysStr(date: string, days: number): string {
+export function addDaysStr(date: string, days: number): string {
   const [y, mo, d] = date.split('-').map(Number);
   const dt = new Date(y, mo - 1, d);
   dt.setDate(dt.getDate() + days);
@@ -88,18 +101,22 @@ function addDaysStr(date: string, days: number): string {
  * Comparable end datetime "YYYY-MM-DDTHH:MM" for a slot/booking.
  *
  * Nightlife gigs cross midnight: the defaults are 20:00–00:00 and 21:00–01:00, so
- * endTime <= startTime means the gig ENDS THE NEXT DAY. Without the roll-forward a
- * 22:00–03:00 gig computes an end five hours BEFORE its own start and is instantly
- * "finished". Same wrap rule as timesOverlap() in lib/conflict-detection.ts.
+ * end < start means the gig ENDS THE NEXT DAY. Without the roll-forward a 22:00–03:00
+ * gig computes an end five hours BEFORE its own start and is instantly "finished".
+ *
+ * A zero-length slot (end === start) does NOT roll — it ends the moment it starts
+ * rather than covering a full 24h. timesOverlap() depends on that to treat such a
+ * range as covering no time at all. **The SQL in supabase/complete-past-bookings.sql
+ * mirrors this exact rule (`et < st`) — change one, change both.**
  *
  * No endTime (legacy bookings — Booking.slotEndTime is optional) falls back to the
  * start datetime, i.e. the old start-based behaviour.
  */
 export function slotEndDateTimeStr(date: string, startTime?: string, endTime?: string): string {
   if (!endTime) return slotDateTimeStr(date, startTime);
-  const start = startTime ?? '00:00';
-  const endDate = endTime <= start ? addDaysStr(date, 1) : date;
-  return `${endDate}T${endTime}`;
+  const start = hhmm(startTime ?? '00:00');
+  const end = hhmm(endTime);
+  return `${end < start ? addDaysStr(date, 1) : date}T${end}`;
 }
 
 /**

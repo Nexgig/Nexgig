@@ -17,9 +17,11 @@
 --   1. confirmed + END datetime (Dubai wall-clock) in the past → completed.
 --      END, not start: completion is what triggers the gig review, so it must not
 --      fire mid-set.
---   2. OVERNIGHT ROLL: end_time <= start_time means the gig ends the NEXT DAY.
+--   2. OVERNIGHT ROLL: end_time < start_time means the gig ends the NEXT DAY.
 --      The defaults are 20:00–00:00 and 21:00–01:00, so this is the common case,
 --      not an edge case. Without it a 22:00–03:00 gig "ends" 19h before it starts.
+--      STRICTLY `<`, not `<=`: a zero-length slot (end = start) ends the moment it
+--      starts, it does not run 24h. Matches slotEndDateTimeStr() and timesOverlap().
 --   3. No end_time (legacy rows) falls back to the start datetime — the old
 --      behaviour, so nothing regresses.
 --   4. Re-stamp the booking's snapshot columns from the live slot/venue. This half
@@ -75,17 +77,17 @@ with resolved as (
 )
 select
   id, status, d as gig_date, st as starts, et as ends,
-  (et is not null and et <= st)                     as overnight_roll,
+  (et is not null and et < st)                      as overnight_roll,
   snapshot_venue, live_venue,
   case
     when et is null then (d + st)
-    when et <= st   then (d + et + interval '1 day')
+    when et < st    then (d + et + interval '1 day')
     else (d + et)
   end                                               as ends_at_dubai
 from resolved
 where case
         when et is null then (d + st)
-        when et <= st   then (d + et + interval '1 day')
+        when et < st    then (d + et + interval '1 day')
         else (d + et)
       end < (now() at time zone 'Asia/Dubai')
 order by ends_at_dubai desc;
@@ -138,8 +140,8 @@ begin
     from resolved
     where case
             when et is null then (d + st)                    -- legacy: no end time, fall back to start
-            when et <= st   then (d + et + interval '1 day') -- overnight gig: ends next day
-            else (d + et)
+            when et < st    then (d + et + interval '1 day') -- overnight gig: ends next day
+            else (d + et)                                    -- incl. et = st: zero-length, ends instantly
           end < (now() at time zone 'Asia/Dubai')
   )
   update public.bookings b

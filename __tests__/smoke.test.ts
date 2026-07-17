@@ -235,6 +235,39 @@ describe('Smoke: conflict detection', () => {
     expect(conflict.timesOverlap('22:00', '02:00', '23:00', '23:30', '2026-06-01', '2026-06-01')).toBe(true); // overnight
   });
 
+  it('timesOverlap catches an overnight set clashing with the NEXT day', () => {
+    // 1 Jun 22:00–03:00 runs until 03:00 on 2 Jun, so it collides with a 2 Jun
+    // 01:00–04:00 gig between 01:00 and 03:00 — the double-booking case.
+    expect(conflict.timesOverlap('22:00', '03:00', '01:00', '04:00', '2026-06-01', '2026-06-02')).toBe(true);
+    // Same pair, arguments swapped — overlap is symmetric.
+    expect(conflict.timesOverlap('01:00', '04:00', '22:00', '03:00', '2026-06-02', '2026-06-01')).toBe(true);
+    // The 20:00–00:00 default ends exactly at midnight: touches, does not overlap.
+    expect(conflict.timesOverlap('20:00', '00:00', '00:00', '04:00', '2026-06-01', '2026-06-02')).toBe(false);
+    // An overnight set does NOT reach a gig two days out.
+    expect(conflict.timesOverlap('22:00', '03:00', '01:00', '04:00', '2026-06-01', '2026-06-03')).toBe(false);
+    // Times arriving as HH:MM:SS must compare the same as HH:MM.
+    expect(conflict.timesOverlap('22:00:00', '03:00:00', '01:00', '04:00', '2026-06-01', '2026-06-02')).toBe(true);
+  });
+
+  it('timesOverlap treats a zero-length slot as empty, not a 24h wrap', () => {
+    expect(conflict.timesOverlap('21:00', '21:00', '20:00', '23:00', '2026-06-01', '2026-06-01')).toBe(false);
+  });
+
+  it('detectConflicts flags a booking on the previous day that runs past midnight', () => {
+    const slot = makeSlot('s1', 'v1', '2026-06-02', '01:00', '04:00');
+    const overnight = {
+      ...makeBooking('b-prev', 's2', 'v1', 'art-1', 'confirmed'),
+      slotDate: '2026-06-01', slotStartTime: '22:00', slotEndTime: '03:00',
+    };
+
+    const conflicts = conflict.detectConflicts(
+      'art-1', slot, [overnight], [],
+      () => 'Yubi', () => undefined
+    );
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].type).toBe('booking');
+  });
+
   it('detectConflicts flags an overlapping booking but skips the same slot (no self-conflict)', () => {
     const slot = makeSlot('s1', 'v1', '2026-06-01', '21:00', '01:00');
     const overlapping = { ...makeBooking('b-other', 's2', 'v1', 'art-1', 'confirmed'), slotDate: '2026-06-01', slotStartTime: '22:00', slotEndTime: '23:00' };
@@ -274,6 +307,17 @@ describe('Smoke: time utils', () => {
   it('slotEndDateTimeStr leaves same-day gigs alone', () => {
     expect(utils.slotEndDateTimeStr('2026-06-01', '14:00', '18:00')).toBe('2026-06-01T18:00');
     expect(utils.slotEndDateTimeStr('2026-06-01', '00:00', '23:59')).toBe('2026-06-01T23:59'); // full-day private event
+  });
+
+  // end === start does NOT roll: a zero-length slot ends the moment it starts rather
+  // than running 24h. timesOverlap() relies on this to treat it as covering no time.
+  // supabase/complete-past-bookings.sql mirrors this (`et < st`) — keep them in step.
+  it('slotEndDateTimeStr does not roll a zero-length slot', () => {
+    expect(utils.slotEndDateTimeStr('2026-06-01', '20:00', '20:00')).toBe('2026-06-01T20:00');
+  });
+
+  it('slotEndDateTimeStr normalises HH:MM:SS times', () => {
+    expect(utils.slotEndDateTimeStr('2026-06-01', '22:00:00', '03:00:00')).toBe('2026-06-02T03:00');
   });
 
   it('slotEndDateTimeStr rolls across month and year boundaries', () => {

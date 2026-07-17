@@ -9,7 +9,7 @@ import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
-import { isPastStart, genreLabel } from '@/lib/utils';
+import { isPastStart, genreLabel, addDaysStr } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
@@ -82,20 +82,31 @@ export default function AssignDJScreen() {
     if (artistIds.length === 0) { setCrossConflicts(new Map()); return; }
 
     let cancelled = false;
+    // Overnight sets span two calendar days, so a clash can sit on the day either
+    // side of this slot's date: 1 Jun 22:00–03:00 collides with 2 Jun 01:00–04:00.
+    // Fetch both neighbours and let timesOverlap decide what actually clashes.
+    const dates = [addDaysStr(slot.date, -1), slot.date, addDaysStr(slot.date, 1)];
     Promise.all([
       // Other managers' CONFIRMED bookings are not readable directly under RLS
       // (managers can only see their own bookings). This SECURITY DEFINER RPC
       // returns ONLY busy time-ranges — no venue, no manager — so we can flag the
       // artist as unavailable without leaking where/with whom they're booked.
-      supabase.rpc('get_artist_busy_times', { p_artist_ids: artistIds, p_date: slot.date }),
+      // It takes one date and its rows carry none, so call it per day and tag them.
+      Promise.all(
+        dates.map((d) =>
+          supabase
+            .rpc('get_artist_busy_times', { p_artist_ids: artistIds, p_date: d })
+            .then((res: any) => ((res.data ?? []) as any[]).map((row) => ({ ...row, date: d })))
+        )
+      ).then((perDay) => perDay.flat()),
       // availability_blocks is world-readable to authenticated users, so this
       // direct query works cross-manager and stays as-is.
       supabase
         .from('availability_blocks')
-        .select('id, artist_id, start_time, end_time, is_full_day, block_type, event_name')
+        .select('id, artist_id, date, start_time, end_time, is_full_day, block_type, event_name')
         .in('artist_id', artistIds)
-        .eq('date', slot.date),
-    ]).then(([busyRes, blocksRes]) => {
+        .in('date', dates),
+    ]).then(([busyRows, blocksRes]) => {
       if (cancelled) return;
       const map = new Map<string, ConflictInfo[]>();
       const add = (artistId: string, c: ConflictInfo) => {
@@ -110,15 +121,18 @@ export default function AssignDJScreen() {
           .filter((b) => b.status !== 'cancelled' && b.status !== 'declined')
           .map((b) => b.artistId)
       );
-      (busyRes.data ?? []).forEach((b: any) => {
+      busyRows.forEach((b: any) => {
         if (!b.start_time || !b.end_time) return;
         // This exact set, for an artist who's already on it — not a conflict.
+        // The date must match too: the same times on a neighbouring day are a
+        // different gig elsewhere, and that one IS a conflict.
         if (
           onThisSlot.has(b.artist_id) &&
+          b.date === slot.date &&
           hhmm(b.start_time) === hhmm(slot.startTime) &&
           hhmm(b.end_time) === hhmm(slot.endTime)
         ) return;
-        if (timesOverlap(b.start_time, b.end_time, slot.startTime, slot.endTime, slot.date, slot.date)) {
+        if (timesOverlap(b.start_time, b.end_time, slot.startTime, slot.endTime, b.date, slot.date)) {
           add(b.artist_id, {
             // Venue intentionally omitted — another manager's venue is private.
             type: 'booking',
@@ -131,7 +145,7 @@ export default function AssignDJScreen() {
       (blocksRes.data ?? []).forEach((bl: any) => {
         const bStart = bl.is_full_day ? '00:00' : bl.start_time;
         const bEnd = bl.is_full_day ? '23:59' : bl.end_time;
-        if (timesOverlap(bStart, bEnd, slot.startTime, slot.endTime, slot.date, slot.date)) {
+        if (timesOverlap(bStart, bEnd, slot.startTime, slot.endTime, bl.date, slot.date)) {
           add(bl.artist_id, {
             type: 'availability_block',
             description: `Unavailable ${bStart}–${bEnd}`,

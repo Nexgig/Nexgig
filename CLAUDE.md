@@ -15,6 +15,10 @@ Two route groups mirror the two sides: `app/(manager)/…` and `app/(artist)/…
   into, execute in, or navigate around the SQL editor — it's the production database. Reading
   the rendered result is the whole job. Give him **one self-contained statement at a time**:
   the editor shows a single result set, so a multi-statement paste hides the answer you need.
+- **ALWAYS paste the SQL in full in the chat, in a ```sql block, ready to copy.** Never say
+  "it's in `supabase/foo.sql`" or "the STEP 1 block" and expect him to go find it — he can't see
+  the file from where he's reading, and it's the single thing he needs. The .sql file is the
+  record; the chat is the delivery. Same for any command he has to run.
 - **Never handle passwords/credentials.** Demo-account passwords are not in the repo by design.
   The Sentry DSN and Supabase anon key are NOT secret (they ship in the app); the Sentry
   **auth token** IS (EAS secret).
@@ -73,17 +77,24 @@ produce duplicate list keys → a stale-vs-fresh render flicker.
 **Timestamps are UTC in Supabase**; Dubai is UTC+4. Cross-timezone bugs hide here.
 
 **Gigs cross midnight — `isPastStart` ≠ "finished".** Defaults are 20:00–00:00 (`add-slot`)
-and 21:00–01:00 (manager calendar), so `endTime <= startTime` (the gig ends the *next day*)
+and 21:00–01:00 (manager calendar), so `endTime < startTime` (the gig ends the *next day*)
 is the **common case, not an edge case**. Completion runs off **`isPastEnd(date, start, end)`**
 (`lib/utils.ts`), which rolls the date forward for the overnight wrap; `isPastStart` is for
 *upcoming/filtering only*. Never compute an end as `` `${date}T${endTime}` `` — a 22:00–03:00
-gig then "ends" 19h before it starts and completes the instant it's created. The same wrap
-rule lives in `timesOverlap` (`lib/conflict-detection.ts`). **Any new completion rule must be
-changed in three places at once**: the two dashboard sweeps, the private-event pair
-(`lib/private-events.ts` + `add-block.tsx` write `isCompleted`, while the artist calendar's
-`getBookingStatusColor`/`getBookingStatusLabel` *re-derive* it at render — drift there and a
-private event stores one thing and displays another), and `supabase/complete-past-bookings.sql`
-(the hourly pg_cron backstop, which mirrors `isPastEnd` in SQL).
+gig then "ends" 19h before it starts and completes the instant it's created.
+
+**One rule, four places — change one, change all four.** `slotEndDateTimeStr` (`lib/utils.ts`)
+is the source of truth: roll on `end < start`, **strictly** (a zero-length slot ends instantly;
+`timesOverlap` depends on that to treat it as covering no time). The four:
+1. the two dashboard sweeps (`app/(manager|artist)/(tabs)/dashboard.tsx`);
+2. the private-event pair — `lib/private-events.ts` + `add-block.tsx` *write* `isCompleted`,
+   while the artist calendar's `getBookingStatusColor`/`getBookingStatusLabel` *re-derive* it at
+   render; drift and a private event stores one thing but displays another;
+3. `timesOverlap` (`lib/conflict-detection.ts`), which resolves both ranges to real datetimes so
+   overnight sets clash across days — it must never re-add a same-date guard;
+4. `supabase/complete-past-bookings.sql` — the hourly pg_cron backstop (jobid 1, **live**),
+   mirroring the rule in SQL as `et < st`. It's deployed: changing the JS without re-running that
+   function's `create or replace` puts the phones and the DB out of step, silently.
 
 **`MaterialIcons` are font glyphs** — `size` sets font size, not advance width, so different
 glyphs have different widths. Pin them to a fixed-width box to align rows.

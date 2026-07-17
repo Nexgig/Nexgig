@@ -10,7 +10,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { isPastStart, genreLabel } from '@/lib/utils';
+import { isPastStart, genreLabel, addDaysStr } from '@/lib/utils';
 import { formatDate, detectConflicts, timesOverlap } from '@/lib/conflict-detection';
 import type { Slot, Booking, ConflictInfo, VenueAssignment } from '@/lib/types';
 
@@ -128,25 +128,36 @@ export default function AddSlotScreen() {
       .map((a) => a.artistId);
     if (artistIds.length === 0) { setCrossConflicts(new Map()); return; }
     let cancelled = false;
+    // Overnight sets span two calendar days, so a clash can sit on the day either
+    // side of targetDate: 1 Jun 22:00–03:00 collides with 2 Jun 01:00–04:00.
+    // Fetch both neighbours and let timesOverlap decide what actually clashes.
+    const dates = [addDaysStr(targetDate, -1), targetDate, addDaysStr(targetDate, 1)];
     Promise.all([
-      supabase.rpc('get_artist_busy_times', { p_artist_ids: artistIds, p_date: targetDate }),
+      // The RPC takes one date and its rows carry none — call it per day and tag them.
+      Promise.all(
+        dates.map((d) =>
+          supabase
+            .rpc('get_artist_busy_times', { p_artist_ids: artistIds, p_date: d })
+            .then((res: any) => ((res.data ?? []) as any[]).map((row) => ({ ...row, date: d })))
+        )
+      ).then((perDay) => perDay.flat()),
       supabase.from('availability_blocks')
-        .select('id, artist_id, start_time, end_time, is_full_day, block_type, event_name')
-        .in('artist_id', artistIds).eq('date', targetDate),
-    ]).then(([busyRes, blocksRes]) => {
+        .select('id, artist_id, date, start_time, end_time, is_full_day, block_type, event_name')
+        .in('artist_id', artistIds).in('date', dates),
+    ]).then(([busyRows, blocksRes]) => {
       if (cancelled) return;
       const map = new Map<string, ConflictInfo[]>();
       const add = (artistId: string, c: ConflictInfo) => { map.set(artistId, [...(map.get(artistId) ?? []), c]); };
-      (busyRes.data ?? []).forEach((b: any) => {
+      busyRows.forEach((b: any) => {
         if (!b.start_time || !b.end_time) return;
-        if (timesOverlap(b.start_time, b.end_time, slotForm.startTime, slotForm.endTime, targetDate, targetDate)) {
+        if (timesOverlap(b.start_time, b.end_time, slotForm.startTime, slotForm.endTime, b.date, targetDate)) {
           add(b.artist_id, { type: 'booking', description: `Booked elsewhere ${b.start_time}–${b.end_time}`, startTime: b.start_time, endTime: b.end_time });
         }
       });
       (blocksRes.data ?? []).forEach((bl: any) => {
         const bStart = bl.is_full_day ? '00:00' : bl.start_time;
         const bEnd = bl.is_full_day ? '23:59' : bl.end_time;
-        if (timesOverlap(bStart, bEnd, slotForm.startTime, slotForm.endTime, targetDate, targetDate)) {
+        if (timesOverlap(bStart, bEnd, slotForm.startTime, slotForm.endTime, bl.date, targetDate)) {
           add(bl.artist_id, { type: 'availability_block', description: `Unavailable ${bStart}–${bEnd}`, startTime: bStart, endTime: bEnd });
         }
       });
