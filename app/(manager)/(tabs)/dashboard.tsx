@@ -14,7 +14,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -174,7 +174,9 @@ export default function ManagerDashboard() {
     setRefreshing(false);
   }, [currentUser?.id]);
 
-  // Auto-complete confirmed bookings whose slot start time has passed
+  // Auto-complete confirmed bookings whose slot END time has passed.
+  // End, not start: a gig isn't done when it begins, and completion is what triggers
+  // the review flow. isPastEnd handles the midnight cross (20:00–00:00 ends next day).
   useEffect(() => {
     bookings
       .filter((b) => b.status === 'confirmed' && !b.isCompleted)
@@ -183,7 +185,8 @@ export default function ManagerDashboard() {
         // Use live slot first, fall back to booking's own snapshot
         const slotDate = slot?.date ?? b.slotDate;
         const slotStart = slot?.startTime ?? b.slotStartTime;
-        if (slotDate && slotStart && isPastStart(slotDate, slotStart)) {
+        const slotEnd = slot?.endTime ?? b.slotEndTime;
+        if (slotDate && slotStart && isPastEnd(slotDate, slotStart, slotEnd)) {
           const venue = allVenues.find((v) => v.id === b.venueId);
           updateBookingStatus(b.id, 'completed', {
             isCompleted: true,

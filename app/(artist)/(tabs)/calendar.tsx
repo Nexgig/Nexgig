@@ -19,7 +19,7 @@ import { DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(artist)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
+import { isPastEnd, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 
 // Monday-first day labels (matching manager calendar)
@@ -70,9 +70,12 @@ function formatDateLabel(dateStr: string) {
   return d.toLocaleDateString('en-AE', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-function getBookingStatusColor(b: { status: string; isArtistCreated?: boolean; slotDate?: string; slotStartTime?: string }): string {
+// isPastEnd here must match how isCompleted is written in lib/private-events.ts and
+// add-block.tsx — these re-derive "is it over?" at render instead of reading the flag,
+// so if the two rules drift a private event shows one thing and stores another.
+function getBookingStatusColor(b: { status: string; isArtistCreated?: boolean; slotDate?: string; slotStartTime?: string; slotEndTime?: string }): string {
   if (b.isArtistCreated) {
-    const isPast = isPastStart(b.slotDate ?? '', b.slotStartTime);
+    const isPast = isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime);
     return isPast ? STATUS_COLORS.completed : STATUS_COLORS.confirmed;
   }
   if (b.status === 'requested' || b.status === 'past_confirmation') return STATUS_COLORS.pending;
@@ -82,9 +85,9 @@ function getBookingStatusColor(b: { status: string; isArtistCreated?: boolean; s
   return '#9BA1A6';
 }
 
-function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; slotDate?: string; slotStartTime?: string }): string {
+function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; slotDate?: string; slotStartTime?: string; slotEndTime?: string }): string {
   if (b.isArtistCreated) {
-    const isPast = isPastStart(b.slotDate ?? '', b.slotStartTime);
+    const isPast = isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime);
     return isPast ? 'Completed' : 'Private Event';
   }
   if (b.status === 'requested' || b.status === 'past_confirmation') return 'Pending';
@@ -688,7 +691,7 @@ export default function DJAvailabilityScreen() {
               onPress={(e) => {
                 e.stopPropagation?.();
                 const bookingDate = b.resolvedDate ?? '';
-                const isPast = bookingDate !== '' && isPastStart(bookingDate, b.resolvedStart ?? '23:59');
+                const isPast = bookingDate !== '' && isPastEnd(bookingDate, b.resolvedStart ?? '23:59', b.resolvedEnd);
                 if (isPast) {
                   Alert.alert(
                     'Confirm Past Gig',

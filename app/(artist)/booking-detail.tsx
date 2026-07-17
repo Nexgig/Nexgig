@@ -13,7 +13,7 @@ import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
-import { isPastStart } from '@/lib/utils';
+import { isPastEnd } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -185,7 +185,11 @@ export default function DJBookingDetailScreen() {
 
   const handleAccept = () => {
     const bookingDate = slot?.date ?? booking.slotDate ?? '';
-    const isPast = bookingDate !== '' && isPastStart(bookingDate, slot?.startTime ?? booking.slotStartTime ?? '23:59');
+    const isPast = bookingDate !== '' && isPastEnd(
+      bookingDate,
+      slot?.startTime ?? booking.slotStartTime ?? '23:59',
+      slot?.endTime ?? booking.slotEndTime
+    );
 
     if (isPast) {
       // Past booking — confirm goes directly to completed

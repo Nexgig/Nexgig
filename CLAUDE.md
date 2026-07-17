@@ -1,0 +1,111 @@
+# Nexgig
+
+React Native / Expo (SDK 54, New Architecture / Fabric) gig-booking app for UAE nightlife:
+venue **managers** book **artists** (DJs / live performers). Supabase backend. iPhone only
+(`supportsTablet: false`). Ships OTA via `eas update`.
+
+Two route groups mirror the two sides: `app/(manager)/…` and `app/(artist)/…`.
+
+## Working agreement
+
+- **Tuts runs all `git`, `eas`, and SQL commands himself.** Write the code, then hand him the
+  exact command to paste. Don't run them for him unless he asks.
+- **SQL specifically — Supabase dashboard is READ-ONLY for you.** Hand Tuts the query; he runs
+  it and says "Done"; you then *read* the result from the browser and interpret it. Never type
+  into, execute in, or navigate around the SQL editor — it's the production database. Reading
+  the rendered result is the whole job. Give him **one self-contained statement at a time**:
+  the editor shows a single result set, so a multi-statement paste hides the answer you need.
+- **Never handle passwords/credentials.** Demo-account passwords are not in the repo by design.
+  The Sentry DSN and Supabase anon key are NOT secret (they ship in the app); the Sentry
+  **auth token** IS (EAS secret).
+- `todo.md` → the **OPEN WORK** block at the top is the authoritative "what's left". Read it
+  first when asked. Done work is deleted from it, not archived.
+
+## Commands
+
+```bash
+npx tsc --noEmit                                  # typecheck — run before every ship
+eas update --branch production --message "..."    # JS-only changes → OTA, no rebuild
+eas build --platform ios --profile production     # native changes only (see below)
+eas submit --platform ios --profile production
+```
+
+**OTA vs native rebuild** — get this wrong and you ship nothing:
+- **OTA (`eas update`)**: any `.ts`/`.tsx`, styles, images/assets, copy. Most work.
+- **Native rebuild (`eas build`)**: new npm packages with native code, `app.config.ts` native
+  changes, permissions, icons/splash, config plugins. **An OTA can never add a native module.**
+  If a native SDK isn't in the installed binary, its JS calls silently no-op.
+
+## Hard-won traps — read before touching these areas
+
+**Fonts.** `lib/fonts.ts` `familyForWeight()` maps 800/900 → **ClashDisplay-Semibold**, 700 →
+GeneralSans-Bold, 600 → GeneralSans-Semibold. So `fontWeight: '800'` **silently renders Clash
+Display** (display font) instead of a bold body font. This has bitten us more than once.
+
+**`lib/rn`** re-exports React Native but swaps `Text` for `app-text`. Import RN primitives from
+`@/lib/rn`, not `react-native`. (`TextInput` and `Animated` are raw RN.)
+
+**`.env` never reaches the EAS build server.** It's gitignored; builds do a clean git clone. Any
+var the *build* needs (incl. `EXPO_PUBLIC_*`, which are inlined at build time) must live in
+`eas.json` → `build.production.env`. Only true secrets go in EAS secrets. Symptom of getting
+this wrong: build fails at source-map upload, or the app builds but the SDK never initialises.
+
+**Realtime echo loop.** A realtime handler that writes back to the DB creates an infinite
+realtime→write→realtime loop (symptom: a row visibly flickering between two statuses several
+times a second). **Any handler applying a change that came FROM the DB must use
+`updateBookingStatusLocal` (local-only), never `updateBookingStatus`** (which also writes).
+
+**Private events live in `availability_blocks`, NOT `bookings`.** They're stored as
+`block_type='private_event'` rows but *rendered* as artist-created bookings (the named green
+card). Every code path that loads the artist calendar must reconstruct them via
+`fetchPrivateEventBookings()` (`lib/private-events.ts` — the single source of truth), or they
+silently vanish. Current call sites: artist `_layout` cold start + the pull-to-refresh in artist
+`dashboard`, `calendar`, and `profile`. **If you add another loader, call the helper.**
+
+**`clearBookings()` wipes private events too.** Anything that calls it must rebuild them (see
+above). When fixing a "X gets wiped by Y" bug, **grep for every caller of Y** — don't assume the
+screen you found it on is the only one. That exact assumption caused a repeat of this bug.
+
+**`addBooking` is an upsert**, not an append: it dedupes by `id` and refuses to overwrite a
+newer record with a staler one (compares `updatedAt`). Duplicate bookings with the same id
+produce duplicate list keys → a stale-vs-fresh render flicker.
+
+**Timestamps are UTC in Supabase**; Dubai is UTC+4. Cross-timezone bugs hide here.
+
+**Gigs cross midnight — `isPastStart` ≠ "finished".** Defaults are 20:00–00:00 (`add-slot`)
+and 21:00–01:00 (manager calendar), so `endTime <= startTime` (the gig ends the *next day*)
+is the **common case, not an edge case**. Completion runs off **`isPastEnd(date, start, end)`**
+(`lib/utils.ts`), which rolls the date forward for the overnight wrap; `isPastStart` is for
+*upcoming/filtering only*. Never compute an end as `` `${date}T${endTime}` `` — a 22:00–03:00
+gig then "ends" 19h before it starts and completes the instant it's created. The same wrap
+rule lives in `timesOverlap` (`lib/conflict-detection.ts`). **Any new completion rule must be
+changed in three places at once**: the two dashboard sweeps, the private-event pair
+(`lib/private-events.ts` + `add-block.tsx` write `isCompleted`, while the artist calendar's
+`getBookingStatusColor`/`getBookingStatusLabel` *re-derive* it at render — drift there and a
+private event stores one thing and displays another), and `supabase/complete-past-bookings.sql`
+(the hourly pg_cron backstop, which mirrors `isPastEnd` in SQL).
+
+**`MaterialIcons` are font glyphs** — `size` sets font size, not advance width, so different
+glyphs have different widths. Pin them to a fixed-width box to align rows.
+
+## Conventions
+
+- **Theme**: `useColors()` + tokens — primary `#E2674A` (coral), surface `#F6F2EC`, muted
+  `#8E8E93`, success `#22C55E`, warning `#D4A017`, error `#EF4444`. Don't hardcode hex.
+- **Status colours** (booking lists): pending gold `#D4A017`, confirmed green `#22C55E`,
+  completed blue `#2563EB`. Shared `DateBadge` (`components/ui/date-badge.tsx`) renders the
+  status-coloured WED/15 tile used by the dashboards + artist-bookings.
+- **State**: Zustand stores in `lib/store.ts`, persisted. Errors/telemetry go through
+  `lib/observability.ts` (`reportError` for thrown/caught errors, `reportWarning` for
+  "this shouldn't happen" silent-failure tripwires) — never import Sentry directly.
+- **Supabase RLS** is permissive on bookings (`auth.uid() = artist_id` / `= manager_id`, no
+  status restriction). Writes that touch 0 rows fail silently — `syncBookingStatus` reports
+  those to Sentry.
+- Legal pages are served from a **separate `Nexgig/legal` GitHub repo**. The `legal/` folder in
+  this repo is a stale copy — editing it does nothing to the live site.
+
+## Before shipping
+
+1. `npx tsc --noEmit` → must exit 0.
+2. Decide OTA vs native rebuild (above).
+3. Hand Tuts the git + eas commands.

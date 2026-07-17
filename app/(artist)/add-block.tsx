@@ -7,7 +7,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { isPastStart } from '@/lib/utils';
+import { isPastEnd } from '@/lib/utils';
 import type { AvailabilityBlock, Booking } from '@/lib/types';
 
 const TIME_OPTIONS: string[] = [];
@@ -178,7 +178,7 @@ export default function AddBlockScreen() {
           location: location.trim() || null,
         }).eq('id', editBookingId).then(({ error }) => { if (error) console.warn('pe update error:', error.message); });
       } else {
-        const isPast = isPastStart(targetDate, fullDay ? '00:00' : startTime);
+        const isPast = isPastEnd(targetDate, fullDay ? '00:00' : startTime, fullDay ? '23:59' : endTime);
         const newId = genUUID();
         const newBooking: Booking = {
           id: newId, slotId: 'private-slot-' + Date.now(), venueId: '',

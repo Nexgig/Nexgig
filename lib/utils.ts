@@ -61,10 +61,53 @@ export function isUpcoming(date: string, startTime?: string): boolean {
 }
 
 /**
- * Returns true if the slot/booking has already started (i.e. it's past/completed).
+ * Returns true if the slot/booking has already started.
+ * NOTE: "started" is not "finished" — for completion use isPastEnd(). This is for
+ * upcoming/filtering decisions only.
  */
 export function isPastStart(date: string, startTime?: string): boolean {
   return slotDateTimeStr(date, startTime) < nowLocalDateTimeStr();
+}
+
+/**
+ * Adds `days` to a "YYYY-MM-DD" string and returns the same format.
+ * Built from local Y/M/D components on purpose — `new Date("2026-07-17")` parses as
+ * UTC midnight, which is the previous day in Dubai (UTC+4).
+ */
+function addDaysStr(date: string, days: number): string {
+  const [y, mo, d] = date.split('-').map(Number);
+  const dt = new Date(y, mo - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * Comparable end datetime "YYYY-MM-DDTHH:MM" for a slot/booking.
+ *
+ * Nightlife gigs cross midnight: the defaults are 20:00–00:00 and 21:00–01:00, so
+ * endTime <= startTime means the gig ENDS THE NEXT DAY. Without the roll-forward a
+ * 22:00–03:00 gig computes an end five hours BEFORE its own start and is instantly
+ * "finished". Same wrap rule as timesOverlap() in lib/conflict-detection.ts.
+ *
+ * No endTime (legacy bookings — Booking.slotEndTime is optional) falls back to the
+ * start datetime, i.e. the old start-based behaviour.
+ */
+export function slotEndDateTimeStr(date: string, startTime?: string, endTime?: string): string {
+  if (!endTime) return slotDateTimeStr(date, startTime);
+  const start = startTime ?? '00:00';
+  const endDate = endTime <= start ? addDaysStr(date, 1) : date;
+  return `${endDate}T${endTime}`;
+}
+
+/**
+ * Returns true if the slot/booking has FINISHED. This is what drives completion —
+ * a gig is done when its end time has passed, not when it started.
+ */
+export function isPastEnd(date: string, startTime?: string, endTime?: string): boolean {
+  return slotEndDateTimeStr(date, startTime, endTime) < nowLocalDateTimeStr();
 }
 
 /**

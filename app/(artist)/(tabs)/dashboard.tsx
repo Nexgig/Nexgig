@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 
 export default function DJHomeScreen() {
   const router = useRouter();
@@ -72,12 +72,15 @@ export default function DJHomeScreen() {
 
   const nowDT = nowLocalDateTimeStr();
 
-  // Auto-complete confirmed bookings whose start time has passed.
+  // Auto-complete confirmed bookings whose END time has passed.
+  // End, not start: a gig isn't done when it begins, and completion is what triggers
+  // the review flow. isPastEnd handles the midnight cross (20:00–00:00 ends next day).
+  //
   // The artist's store does NOT hold the manager's slots, so we fall back to the
-  // snapshot fields saved on the booking itself (slotDate/slotStartTime, written at
-  // creation). Without this fallback the slot lookup always failed on the artist side,
-  // so a past confirmed gig never flipped to completed — it disappeared from the
-  // dashboard COMPLETED count, the Completed Gigs screen, and profile History.
+  // snapshot fields saved on the booking itself (slotDate/slotStartTime/slotEndTime,
+  // written at creation). Without this fallback the slot lookup always failed on the
+  // artist side, so a past confirmed gig never flipped to completed — it disappeared
+  // from the dashboard COMPLETED count, Completed Gigs, and profile History.
   useEffect(() => {
     bookings
       .filter((b) => b.status === 'confirmed' && !b.isCompleted && !b.isArtistCreated)
@@ -85,7 +88,8 @@ export default function DJHomeScreen() {
         const slot = slots.find((s) => s.id === b.slotId);
         const date = slot?.date ?? b.slotDate;
         const startTime = slot?.startTime ?? b.slotStartTime;
-        if (date && startTime && isPastStart(date, startTime)) {
+        const endTime = slot?.endTime ?? b.slotEndTime;
+        if (date && startTime && isPastEnd(date, startTime, endTime)) {
           const venue = allVenues.find((v) => v.id === b.venueId);
           updateBookingStatus(b.id, 'completed', {
             isCompleted: true,

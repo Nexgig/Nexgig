@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { isPastStart } from './utils';
+import { isPastEnd } from './utils';
 import type { Booking } from './types';
 
 /**
@@ -30,7 +30,7 @@ export async function fetchPrivateEventBookings(artistId: string): Promise<Booki
       artistId,
       managerId: '',
       status: 'confirmed',
-      isCompleted: isPastStart(b.date, start),
+      isCompleted: isPastEnd(b.date, start, end),
       isArtistCreated: true,
       createdAt: nowISO,
       updatedAt: nowISO,

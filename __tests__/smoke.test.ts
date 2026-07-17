@@ -261,6 +261,37 @@ describe('Smoke: time utils', () => {
     expect(utils.isPastStart('2020-01-01', '10:00')).toBe(true);
     expect(utils.isUpcoming('2999-01-01', '10:00')).toBe(true);
   });
+
+  // Nightlife gigs cross midnight and the app's own defaults (20:00–00:00, 21:00–01:00)
+  // do. Without the day roll a 22:00–03:00 gig ends BEFORE it starts and completes
+  // instantly on creation — which would fire the gig review mid-set.
+  it('slotEndDateTimeStr rolls the date forward for overnight gigs', () => {
+    expect(utils.slotEndDateTimeStr('2026-06-01', '22:00', '03:00')).toBe('2026-06-02T03:00');
+    expect(utils.slotEndDateTimeStr('2026-06-01', '20:00', '00:00')).toBe('2026-06-02T00:00'); // the add-slot default
+    expect(utils.slotEndDateTimeStr('2026-06-01', '21:00', '01:00')).toBe('2026-06-02T01:00'); // the calendar default
+  });
+
+  it('slotEndDateTimeStr leaves same-day gigs alone', () => {
+    expect(utils.slotEndDateTimeStr('2026-06-01', '14:00', '18:00')).toBe('2026-06-01T18:00');
+    expect(utils.slotEndDateTimeStr('2026-06-01', '00:00', '23:59')).toBe('2026-06-01T23:59'); // full-day private event
+  });
+
+  it('slotEndDateTimeStr rolls across month and year boundaries', () => {
+    expect(utils.slotEndDateTimeStr('2026-06-30', '22:00', '03:00')).toBe('2026-07-01T03:00');
+    expect(utils.slotEndDateTimeStr('2026-12-31', '22:00', '03:00')).toBe('2027-01-01T03:00');
+  });
+
+  it('slotEndDateTimeStr falls back to the start datetime when no end time is known', () => {
+    // Booking.slotEndTime is optional — legacy rows keep the old start-based behaviour.
+    expect(utils.slotEndDateTimeStr('2026-06-01', '21:00', undefined)).toBe('2026-06-01T21:00');
+  });
+
+  it('isPastEnd completes on end, not start', () => {
+    expect(utils.isPastEnd('2020-01-01', '22:00', '03:00')).toBe(true);
+    expect(utils.isPastEnd('2999-01-01', '22:00', '03:00')).toBe(false);
+    // an overnight gig is NOT finished just because its start time has passed
+    expect(utils.isPastStart('2999-01-01', '22:00')).toBe(false);
+  });
 });
 
 describe('Smoke: resetAllStores', () => {
