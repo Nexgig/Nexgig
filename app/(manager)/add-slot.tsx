@@ -275,13 +275,18 @@ export default function AddSlotScreen() {
       );
       return;
     }
-    // Toggle, and stay open so the manager can draft several artists onto the slot.
+    // M7: tapping an already-drafted artist toggles off (stays open). Tapping a NEW
+    // artist saves the draft and closes immediately — matches assign-artist. To add
+    // another, reopen from the set card's "+ Assign artist" row.
     if (draftedIds.has(artistId)) {
       removeDraftByDJ(createdSlotId, artistId);
-    } else {
-      setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
+      Keyboard.dismiss();
+      return;
     }
+    assignedRef.current = true;   // the unmount cleanup must not delete the just-created slot
+    setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
     Keyboard.dismiss();
+    router.back();
   };
 
   // Add a roster artist to this venue's lineup (stays open; they move into the assignable list).
