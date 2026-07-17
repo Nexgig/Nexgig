@@ -116,31 +116,7 @@ export default function DJAvailabilityScreen() {
   const allNotifications = useNotificationStore((s) => s.notifications);
   const markNotifAsRead = useNotificationStore((s) => s.markAsRead);
   const addNotification = useNotificationStore((s) => s.addNotification);
-  const allInvoices = useInvoiceStore((s) => s.invoices);
-  const getReminder = useInvoiceReminderStore((s) => s.getReminder);
-
-  // Overdue-invoice indicator (mirrors the artist dashboard FAB badge logic):
-  // red dot when a venue with completed gigs has passed its invoice reminder day
-  // this month without an invoice having been sent.
-  const hasOverdueInvoice = useMemo(() => {
-    if (!currentUser) return false;
-    const today = new Date();
-    const currentDay = today.getDate();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    const completedBookings = allBookings.filter(
-      (b) => b.artistId === currentUser.id && b.isCompleted && b.status === 'completed'
-    );
-    const venueIds = [...new Set(completedBookings.map((b) => b.venueId))];
-    return venueIds.some((vid) => {
-      const reminder = getReminder(vid, currentUser.id);
-      const sentThisMonth = allInvoices.some((inv) => {
-        const d = new Date(inv.sentAt);
-        return inv.venueId === vid && inv.artistId === currentUser.id && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      });
-      return !sentThisMonth && currentDay > reminder;
-    });
-  }, [allBookings, allInvoices, currentUser, getReminder]);
+  // (Overdue-invoice indicator + invoice button moved to the Completed Gigs page.)
 
   // Helper: send a notification to the manager
   const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled', b: { id: string; managerId: string; resolvedVenueName?: string; resolvedDate?: string }) => {
@@ -832,14 +808,16 @@ export default function DJAvailabilityScreen() {
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
           <View style={styles.headerRight}>
+            {/* Sync-to-calendar moved here from the month-nav row. Invoices moved to the
+                Completed Gigs page. */}
             <Pressable
               style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => router.push('/(artist)/invoices' as Href)}
+              onPress={() => {
+                setSelectedGigIds(new Set(unexportedGigs.map((g) => g.id)));
+                setShowSyncModal(true);
+              }}
             >
-              <MaterialIcons name="receipt-long" size={22} color={colors.primary} />
-              {hasOverdueInvoice && (
-                <View style={[styles.badge, { borderColor: colors.surface }]} />
-              )}
+              <MaterialIcons name="event-available" size={22} color={colors.foreground} />
             </Pressable>
           </View>
         </View>
@@ -1029,15 +1007,7 @@ export default function DJAvailabilityScreen() {
               </View>
               <Text style={[styles.monthTitle, { color: colors.foreground, flex: 1, textAlign: 'center' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
-                <Pressable
-                  onPress={() => {
-                    setSelectedGigIds(new Set(unexportedGigs.map((g) => g.id)));
-                    setShowSyncModal(true);
-                  }}
-                  style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
-                >
-                  <MaterialIcons name="event-available" size={24} color={colors.foreground} />
-                </Pressable>
+                {/* Sync moved to the header. */}
                 <Pressable onPress={nextMonth} style={styles.monthNavBtn}>
                   <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
                 </Pressable>

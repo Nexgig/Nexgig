@@ -6,7 +6,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useColors } from '@/hooks/use-colors';
@@ -22,6 +22,29 @@ export default function ArtistCompletedGigsScreen() {
   const allVenues = useVenueStore((s) => s.venues);
 
   const allInvoices = useInvoiceStore((s) => s.invoices);
+  const getReminder = useInvoiceReminderStore((s) => s.getReminder);
+
+  // Overdue-invoice red dot on the invoice button. Moved here with the button from the
+  // calendar header: a venue has completed gigs, its monthly reminder day has passed,
+  // and no invoice was sent this month.
+  const hasOverdueInvoice = useMemo(() => {
+    if (!currentUser) return false;
+    const today = new Date();
+    const currentDay = today.getDate();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    const completed = bookings.filter((b) => b.artistId === currentUser.id && b.isCompleted && b.status === 'completed');
+    const venueIds = [...new Set(completed.map((b) => b.venueId))];
+    return venueIds.some((vid) => {
+      const reminder = getReminder(vid, currentUser.id);
+      const sentThisMonth = allInvoices.some((inv) => {
+        const d = new Date(inv.sentAt);
+        return inv.venueId === vid && inv.artistId === currentUser.id && d.getMonth() === month && d.getFullYear() === year;
+      });
+      return !sentThisMonth && currentDay > reminder;
+    });
+  }, [bookings, allInvoices, currentUser, getReminder]);
+
   // bookingId -> invoiceId, so the "Invoiced" chip can open the actual invoice.
   const invoiceByBooking = useMemo(() => {
     const m = new Map<string, string>();
@@ -78,7 +101,17 @@ export default function ArtistCompletedGigsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>Completed Gigs</Text>
-        <View style={styles.backBtn} />
+        {/* Invoices — moved here from the calendar header. */}
+        <Pressable
+          style={({ pressed }) => [styles.invoiceBtn, { opacity: pressed ? 0.7 : 1 }]}
+          onPress={() => router.push('/(artist)/invoices' as Href)}
+          hitSlop={8}
+        >
+          <MaterialIcons name="receipt-long" size={22} color={colors.primary} />
+          {hasOverdueInvoice && (
+            <View style={[styles.invoiceBadge, { borderColor: colors.background }]} />
+          )}
+        </Pressable>
       </View>
 
       <VenueFilterRow venues={venueChips} selectedId={venueFilter} onSelect={setVenueFilter} />
@@ -135,6 +168,8 @@ export default function ArtistCompletedGigsScreen() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
   backBtn: { width: 36, alignItems: 'flex-start' },
+  invoiceBtn: { width: 36, height: 36, alignItems: 'flex-end', justifyContent: 'center' },
+  invoiceBadge: { position: 'absolute', top: 2, right: 0, width: 11, height: 11, borderRadius: 6, backgroundColor: '#E2674A', borderWidth: 2 },
   title: { fontSize: 17, fontWeight: '700' },
   list: { paddingHorizontal: 20, paddingVertical: 8, flexGrow: 1 },
   card: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
