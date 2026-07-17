@@ -412,7 +412,6 @@ function generateInvoiceHTML(data: {
       .total-value { font-size: 22px; font-weight: 800; color: #E2674A; }
       .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
       .footer-text { font-size: 11px; color: #666; }
-      .sent-badge { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.5px; }
     </style>
   </head>
   <body>
@@ -490,8 +489,6 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
   invoiceFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 0.5 },
   footerText: { fontSize: 11 },
-  sentBadge: { backgroundColor: '#dcfce7', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  sentBadgeText: { color: '#16a34a', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   bottomBar: { paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5 },
   sendBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16 },
   sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

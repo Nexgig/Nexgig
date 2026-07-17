@@ -114,6 +114,13 @@ glyphs have different widths. Pin them to a fixed-width box to align rows.
   those to Sentry.
 - Legal pages are served from a **separate `Nexgig/legal` GitHub repo**. The `legal/` folder in
   this repo is a stale copy — editing it does nothing to the live site.
+- **`all-bookings.tsx` (both sides) is DEAD — nothing opens it.** Verified 17 Jul 2026: the only
+  references are the `<Stack.Screen name="all-bookings" />` registrations in the two `_layout`s.
+  No `router.push`, no link, no push deep-link. The dashboard stat tiles go to
+  `confirmed-bookings` / `pending-requests` / `completed-gigs` instead. **Kept on purpose, so
+  don't delete it — but don't restyle it either**, and don't treat it as drift when it doesn't
+  match the other lists (it still has venue images / avatars / `statusMark` dots that were
+  removed everywhere else). If you wire it back up, it needs the `DateBadge` pass first.
 
 ## Before shipping
 
