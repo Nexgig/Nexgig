@@ -564,26 +564,7 @@ export default function NetworkScreen() {
                         </Pressable>
                       </View>
                     )
-                  ) : isConnected ? (
-                    <Pressable
-                      style={({ pressed }) => [styles.addBtn, { borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
-                      onPress={(e) => { e.stopPropagation?.(); handleDisconnect(user); }}
-                      hitSlop={6}
-                    >
-                      <Text style={[styles.addBtnText, { color: colors.foreground }]}>Connected</Text>
-                    </Pressable>
-                  ) : (
-                    <Pressable
-                      style={({ pressed }) => [styles.addBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-                      onPress={(e) => { e.stopPropagation?.(); handleAddToRoster(user); }}
-                      disabled={processingId === user.id}
-                      hitSlop={6}
-                    >
-                      {processingId === user.id
-                        ? <ActivityIndicator size="small" color="#fff" />
-                        : <><MaterialIcons name="link" size={14} color="#fff" /><Text style={styles.addBtnText}>Connect</Text></>}
-                    </Pressable>
-                  )}
+                  ) : null /* Connect / Connected moved to the artist profile header (± button). */}
                 </Pressable>
               );
               return rowContent;

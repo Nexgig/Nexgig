@@ -211,6 +211,44 @@ export default function ArtistProfileViewScreen() {
   }, [publicGigs]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  // Connect this artist to the manager's roster + all current venues. Mirrors the
+  // handleAddToRoster that used to live on the Network row (the ± button replaces it).
+  const handleConnect = async () => {
+    if (!currentUser || !artistId || !dj) return;
+    const { error: lineupError } = await supabase.from('global_lineup').upsert(
+      { manager_id: currentUser.id, artist_id: artistId, status: 'active' },
+      { onConflict: 'manager_id,artist_id' }
+    );
+    if (lineupError) { Alert.alert('Error', lineupError.message); return; }
+    if (myVenues.length > 0) {
+      await supabase.from('venue_assignments').upsert(
+        myVenues.map((v) => ({ manager_id: currentUser.id, artist_id: artistId, venue_id: v.id, status: 'active' })),
+        { onConflict: 'venue_id,artist_id' }
+      );
+    }
+    const ls = useLineupStore.getState();
+    ls.addArtistUser({
+      id: artistId, email: dj.email ?? '', phone: '', accountType: 'artist' as const,
+      fullName: dj.fullName ?? '', profilePhotoUrl: dj.profilePhotoUrl ?? undefined,
+      isPhoneVerified: false, isEmailVerified: true,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    });
+    ls.addToGlobalLineup({
+      id: `${currentUser.id}-${artistId}`, managerId: currentUser.id,
+      artistId, status: 'active' as const, addedAt: new Date().toISOString(),
+    });
+    myVenues.forEach((v) => ls.assignToVenue({
+      id: `va-${v.id}-${artistId}`, globalLineupId: `${currentUser.id}-${artistId}`,
+      venueId: v.id, artistId, assignedAt: new Date().toISOString(), status: 'active' as const,
+    }));
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: artistId, type: 'lineup_added',
+      title: 'Added to Lineup', body: `${currentUser.fullName ?? 'A manager'}`,
+      isRead: false, createdAt: new Date().toISOString(),
+    });
+  };
+
   const handleRemove = () => {
     if (!dj) return;
     const completedCount = completedBookings.length;
@@ -240,7 +278,7 @@ export default function ArtistProfileViewScreen() {
             isRead: false,
             createdAt: new Date().toISOString(),
           });
-          router.back();
+          // Stay on the profile — the header button just flips back to +.
         },
       },
     ]);
@@ -348,8 +386,21 @@ export default function ArtistProfileViewScreen() {
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Artist Profile</Text>
-          <Pressable onPress={() => setShowReport(true)} style={styles.reportBtn} hitSlop={8}>
-            <MaterialIcons name="flag" size={20} color={colors.muted} />
+          {/* Connect / disconnect, moved here from the Network row. + coral to connect,
+              − muted (circled) when connected. Report flag hidden for now. */}
+          <Pressable
+            onPress={isConnected ? handleRemove : handleConnect}
+            style={({ pressed }) => [
+              styles.connectBtn,
+              { borderColor: isConnected ? colors.muted : colors.primary, opacity: pressed ? 0.6 : 1 },
+            ]}
+            hitSlop={8}
+          >
+            <MaterialIcons
+              name={isConnected ? 'remove' : 'add'}
+              size={20}
+              color={isConnected ? colors.muted : colors.primary}
+            />
           </Pressable>
         </View>
 
@@ -697,6 +748,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', flex: 1 },
   reportBtn: { padding: 4 },
+  connectBtn: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 4 },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
