@@ -8,9 +8,18 @@ import { fonts } from '@/lib/fonts';
  * end up with two shades of "pending".
  */
 export const STATUS_COLORS = {
-  pending: '#D4A017',   // gold  — requested / past_confirmation
+  // Amber, deliberately in coral's family: coral is #E2674A, this is #E29A4A — same red,
+  // same blue, only green moves. The old gold #D4A017 shared nothing with the brand and
+  // read as bolted on. Amber (not coral) because pending means "waiting on you" and coral
+  // is the ACTION colour — buttons, links, the Invoiced chip. Coral must mean one thing.
+  pending: '#E29A4A',   // amber — requested / past_confirmation
   confirmed: '#22C55E', // green — also Private Event
-  completed: '#2563EB', // blue
+  // Slate, not blue: completed is terminal and the most numerous status over time (History
+  // only grows), so it should recede rather than shout. NOT #8E8E93 — that's the `muted`
+  // token (theme.config.js), used for draft dots on the calendar and Draft/Removed pills;
+  // reusing it would make a completed gig indistinguishable from a draft. This slate is
+  // clearly cooler/darker than muted, so the two never collide.
+  completed: '#64748B',
   cancelled: '#EF4444', // red   — also declined, and Block/Unavailable
 } as const;
 

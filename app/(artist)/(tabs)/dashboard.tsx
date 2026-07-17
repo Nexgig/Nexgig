@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
-import { DateBadge } from '@/components/ui/date-badge';
+import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
 import { useColors } from '@/hooks/use-colors';
@@ -165,7 +165,7 @@ export default function DJHomeScreen() {
         const isDone = b.status === 'completed' || b.isCompleted;
         const isPending = b.status === 'requested' || b.status === 'past_confirmation';
         const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
-        const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
+        const dotColor = isDone ? STATUS_COLORS.completed : isPending ? STATUS_COLORS.pending : STATUS_COLORS.confirmed;
         return { ...b, slot: resolvedSlot, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced: invoicedIds.has(b.id) };
       });
     return mapped.sort((a, b) => {
@@ -281,12 +281,14 @@ export default function DJHomeScreen() {
           </View>
         </View>
 
-        {/* Summary — inline stat row, no boxes */}
+        {/* Summary — inline stat row, no boxes.
+            STATUS_COLORS, not theme tokens: these tiles label the same statuses as the
+            badges below them, so they must move together. */}
         <StatRow
           items={[
-            { value: confirmedCount, label: 'Confirmed', color: colors.success, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
-            { value: pendingCount, label: 'Pending', color: colors.warning, onPress: () => router.push('/(artist)/pending-requests' as Href) },
-            { value: completedBookings.length, label: 'Completed', color: '#2563EB', onPress: () => router.push('/(artist)/completed-gigs' as Href) },
+            { value: confirmedCount, label: 'Confirmed', color: STATUS_COLORS.confirmed, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
+            { value: pendingCount, label: 'Pending', color: STATUS_COLORS.pending, onPress: () => router.push('/(artist)/pending-requests' as Href) },
+            { value: completedBookings.length, label: 'Completed', color: STATUS_COLORS.completed, onPress: () => router.push('/(artist)/completed-gigs' as Href) },
           ]}
         />
         <Divider full />

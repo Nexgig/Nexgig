@@ -26,7 +26,10 @@ const BADGE_MAP: Record<string, { tone: Tone; label: string }> = {
   hidden:            { tone: 'muted',     label: 'Hidden' },
 };
 
-const COMPLETED_BLUE = '#2563EB';
+// Booking-status tones come from STATUS_COLORS so this pill and the DateBadge can never
+// disagree — they label the same thing. `success`/`error` stay on theme tokens: those
+// tones also cover non-booking states (active, accepted, available).
+import { STATUS_COLORS } from './date-badge';
 
 interface StatusBadgeProps {
   status: BadgeVariant;
@@ -45,9 +48,9 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
 
   const color =
     entry.tone === 'success' ? colors.success :
-    entry.tone === 'warning' ? colors.warning :
+    entry.tone === 'warning' ? STATUS_COLORS.pending :
     entry.tone === 'error' ? colors.error :
-    entry.tone === 'completed' ? COMPLETED_BLUE :
+    entry.tone === 'completed' ? STATUS_COLORS.completed :
     colors.muted;
 
   return (

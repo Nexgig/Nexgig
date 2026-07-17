@@ -15,6 +15,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
+import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1963,7 +1964,7 @@ export default function CalendarScreen() {
                     else if (hasRequested) dots = [colors.warning];                       // orange only
                     else if (hasDraft) dots = [colors.muted];                             // grey only
                     else if (allConfirmed) dots = [colors.success];                       // green only
-                    else if (hasCompleted) dots = ['#2563EB'];                       // blue for completed
+                    else if (hasCompleted) dots = [STATUS_COLORS.completed];              // completed
                     else dots = [];
                     if (hasDeclined) dots = [...dots.filter((d) => d !== colors.error), colors.error]; // red for declined/cancelled
                   } else {

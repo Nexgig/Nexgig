@@ -8,7 +8,7 @@ import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
-import { DateBadge } from '@/components/ui/date-badge';
+import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
@@ -94,7 +94,7 @@ export default function ManagerDashboard() {
       const isDone = b.status === 'completed' || b.isCompleted;
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
       const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
-      const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';
+      const dotColor = isDone ? STATUS_COLORS.completed : isPending ? STATUS_COLORS.pending : STATUS_COLORS.confirmed;
       const isInvoiced = invoicedBookingIds.has(b.id);
       return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced };
     })
@@ -131,7 +131,7 @@ export default function ManagerDashboard() {
       groups.get(key)!.push(b);
     }
     const rank: Record<string, number> = { pending: 0, confirmed: 1, completed: 2 };
-    const dotFor: Record<string, string> = { pending: '#D4A017', confirmed: '#22C55E', completed: '#2563EB' };
+    const dotFor: Record<string, string> = { pending: STATUS_COLORS.pending, confirmed: STATUS_COLORS.confirmed, completed: STATUS_COLORS.completed };
     return order.map((key) => {
       const items = groups.get(key)!;
       const first = items[0];
@@ -353,25 +353,27 @@ export default function ManagerDashboard() {
           </View>
         </View>
 
-        {/* Summary — inline stat row, no boxes */}
+        {/* Summary — inline stat row, no boxes.
+            STATUS_COLORS, not theme tokens: these tiles label the same statuses as the
+            badges below them, so they must move together. */}
         <StatRow
           items={[
             {
               value: upcomingBookings.filter((b) => b.status === 'confirmed').length,
               label: 'Confirmed',
-              color: colors.success,
+              color: STATUS_COLORS.confirmed,
               onPress: () => router.push('/(manager)/confirmed-bookings' as Href),
             },
             {
               value: pendingCount,
               label: 'Pending',
-              color: colors.warning,
+              color: STATUS_COLORS.pending,
               onPress: () => router.push('/(manager)/pending-requests' as Href),
             },
             {
               value: completedCount,
               label: 'Completed',
-              color: '#2563EB',
+              color: STATUS_COLORS.completed,
               onPress: () => router.push('/(manager)/completed-gigs' as Href),
             },
           ]}
