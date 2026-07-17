@@ -17,18 +17,26 @@ Updated 17 July 2026. Only open items live here. Done work is deleted, not archi
 >
 > **Beta review ≠ App Store review — don't conflate them.** Beta clears TestFlight only.
 > Nothing is in front of App Store reviewers until Submit is pressed.
+>
+> **The current phase is TESTFLIGHT POLISH (1–2 weeks), not launch.** Testing with friends,
+> fixing what they hit, shipping via `eas update` in seconds. The active work is the POLISHING
+> batch + avatars. **Submission is on hold on purpose — see item 1. Don't push for it.**
 
-**1 · App Store submission — one click left (Tuts, in App Store Connect).**
-Build 17 is uploaded and through Beta App Review. The App Store Connect form is **done** —
-metadata, the 10 screenshots from `appstore-final/`, App Privacy questionnaire (Diagnostics
-= YES, for Sentry), age rating, reviewer notes, demo accounts. **All that's left is hitting
-Submit for Review.** Nothing is pending on the JS side: end-time completion and the overnight
-conflict fix are both OTA'd and live on `production` as of 17 Jul. The runway is clear.
+**1 · App Store submission — DELIBERATELY ON HOLD. Do not submit yet. Do not suggest it.**
+Everything is ready: build 17 is uploaded and through Beta App Review, and the App Store
+Connect form is done (metadata, the 10 shots from `appstore-final/`, App Privacy with
+Diagnostics = YES, age rating, reviewer notes, demo accounts). It is one click — and that
+click is **deliberately not being made yet**.
 
-⚠️ **Once you press Submit, do NOT `eas update` until the verdict.** TestFlight build 17 and
-the reviewers' build pull JS from the same `production` channel, so an OTA mid-review changes
-the app under the reviewer. Keep building during review — just don't ship. Stack the updates
-and push them once approved.
+**Why (this is the plan, not an oversight):** Tuts is testing with friends on TestFlight for
+**1–2 weeks** and working through the POLISHING batch below. Right now a bug found by a tester
+is fixed and shipped in seconds via `eas update`. **The moment Submit is pressed that stops** —
+TestFlight build 17 and the reviewers' build pull JS from the same `production` channel, so an
+OTA during review changes the app under the reviewer. Submitting early trades the fast feedback
+loop for a queue slot that buys nothing.
+
+**Submit only when:** real-world testing has settled, the POLISHING batch is done, and Tuts
+says so. Until then the active work is POLISHING + avatars, and OTA freely.
 
 **2 · Artist avatar swap.** New illustrated set (24 characters × 4 hair colours) is in
 hand. Waiting on Tuts's final character picks — recommended #04, 05, 06, 08, 12, 16 × 4
