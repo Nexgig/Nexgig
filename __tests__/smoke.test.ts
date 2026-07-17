@@ -281,10 +281,25 @@ describe('Smoke: conflict detection', () => {
     expect(conflicts[0].type).toBe('booking');
   });
 
-  it('formats dates and times', () => {
-    expect(conflict.formatTime('21:30')).toBe('9:30 PM');
-    expect(conflict.formatTime('00:15')).toBe('12:15 AM');
+  it('formats dates, and times in both formats', () => {
+    // formatTimeValue is the pure formatter — assert each format explicitly rather
+    // than depending on whatever the store happens to hold.
+    expect(conflict.formatTimeValue('21:30', '24h')).toBe('21:30');
+    expect(conflict.formatTimeValue('21:30', '12h')).toBe('9:30 PM');
+    expect(conflict.formatTimeValue('00:15', '12h')).toBe('12:15 AM');
+    expect(conflict.formatTimeValue('00:15', '24h')).toBe('00:15');
     expect(conflict.formatDate('2026-06-01')).toContain('Jun');
+  });
+
+  it('formatTime follows the time-format setting (defaults to 24h)', () => {
+    // Times are always STORED as 24h 'HH:MM'; this is display only, and the artist
+    // can flip it in settings. The old test asserted 12h output against the 24h
+    // default and had been failing on main.
+    expect(conflict.formatTime('21:30')).toBe('21:30');
+    conflict.useTimeFormatStore.getState().setFormat('12h');
+    expect(conflict.formatTime('21:30')).toBe('9:30 PM');
+    expect(conflict.formatTimeRange('21:30', '02:00')).toBe('9:30 PM – 2:00 AM');
+    conflict.useTimeFormatStore.getState().setFormat('24h'); // restore — the store is module-level
   });
 });
 
