@@ -360,6 +360,8 @@ function InvoicesSection({ colors, currentUserId, router }: {
       </Pressable>
       {expanded && (
         <View style={invStyles.content}>
+          {/* Select All stays OUTSIDE the scroll box — it's a control for the whole
+              list, so it shouldn't scroll away from it. */}
           {selectMode && (
             <Pressable
               onPress={() => setSelectedIds(allSelected ? new Set() : new Set(sortedInvoices.map((i) => i.id)))}
@@ -369,6 +371,15 @@ function InvoicesSection({ colors, currentUserId, router }: {
               <Text style={[invStyles.selectCountText, { color: colors.muted }]}>{selectedIds.size} selected</Text>
             </Pressable>
           )}
+          {/* Bounded scroll area, same as the dashboard's Bookings section: the list
+              scrolls inside a fixed box instead of pushing Account Info and Sign Out
+              off the bottom. nestedScrollEnabled is what lets it scroll inside the
+              profile's own ScrollView. */}
+          <ScrollView
+            style={{ maxHeight: 330 }}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
           {sortedInvoices.map((inv, idx) => {
             const isLast = idx === sortedInvoices.length - 1;
             const isUnread = !inv.isReadByManager;
@@ -426,6 +437,7 @@ function InvoicesSection({ colors, currentUserId, router }: {
               </Pressable>
             );
           })}
+          </ScrollView>
         </View>
       )}
     </View>
