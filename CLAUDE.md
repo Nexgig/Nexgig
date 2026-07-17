@@ -8,8 +8,18 @@ Two route groups mirror the two sides: `app/(manager)/…` and `app/(artist)/…
 
 ## Working agreement
 
-- **Tuts runs all `git`, `eas`, and SQL commands himself.** Write the code, then hand him the
-  exact command to paste. Don't run them for him unless he asks.
+- **You run `git` and `eas` yourself — but ASK FIRST, every time.** (Changed 17 Jul 2026; it
+  used to be "hand Tuts the command to paste".) State exactly what you're about to run and why,
+  wait for a yes, then run it. Ask per action, not once per session — a yes to `git push` is not
+  a yes to `eas update`. **`eas update` reaches real users' phones within minutes and there is
+  no review gate**, so it always gets its own explicit confirmation, never bundled into "and
+  then I'll ship it".
+  - Read-only checks (`git log`, `git status`, `eas update:list`) need no permission — just run
+    them. **Prefer them to asking**: never claim something is committed/shipped when you could
+    have checked in one command. That mistake was made repeatedly on 17 Jul.
+  - You CANNOT see Tuts's terminal — only your own shell, the filesystem, and git. If he runs
+    something himself, you learn the result from git, from `eas update:list`, or from him
+    saying so. **Never infer it from silence.**
 - **SQL specifically — Supabase dashboard is READ-ONLY for you.** Hand Tuts the query; he runs
   it and says "Done"; you then *read* the result from the browser and interpret it. Never type
   into, execute in, or navigate around the SQL editor — it's the production database. Reading
