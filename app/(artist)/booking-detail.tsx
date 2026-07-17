@@ -301,13 +301,22 @@ export default function DJBookingDetailScreen() {
             <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
-          <StatusBadge status={booking.status} />
+          {/* When there are co-artists the status shows in the Artists list below (mirrors
+              the manager), so the header badge is only shown for a solo booking. */}
+          {coArtists.length === 0 && <StatusBadge status={booking.status} />}
         </View>
 
         <View style={styles.content}>
-          {/* Other artists on this same set (from the co-artists RPC). */}
+          {/* Artists on this set — self + co-artists, mirroring the manager's view. */}
           {coArtists.length > 0 && (
-            <Section label="Also on this set">
+            <Section label="Artists">
+              <ListRow
+                leading={<AvatarImage uri={currentUser?.profilePhotoUrl} avatarId={(currentUser as any)?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={44} variant="artist" />}
+                title={currentUser?.fullName ?? 'You'}
+                subtitle="You"
+                trailing={<StatusBadge status={booking.status} />}
+                divider
+              />
               {coArtists.map((c, i) => (
                 <ListRow
                   key={c.artist_id}

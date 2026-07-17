@@ -274,7 +274,7 @@ export default function DJBookingDetailScreen() {
                       key={cb.id}
                       leading={<AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={44} />}
                       title={coArtist?.fullName ?? 'Former Artist'}
-                      subtitle="Also on this slot"
+                      subtitle="Artist"
                       trailing={<StatusBadge status={cb.status} />}
                       onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}
                       divider={i < coBookings.length - 1 || draftArtists.length > 0}
