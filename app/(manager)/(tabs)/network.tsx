@@ -474,28 +474,27 @@ export default function NetworkScreen() {
         ))}
       </View>
 
-      {/* Search — artists and venues */}
-      <View style={[styles.searchWrap, { borderColor: colors.border }]}>
-        <MaterialIcons name="search" size={18} color={colors.muted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
-          placeholderTextColor={colors.muted}
-          value={search}
-          onChangeText={setSearch}
-          returnKeyType="search"
-          autoCapitalize="none"
-        />
-        {search.length > 0 && (
-          <Pressable onPress={() => setSearch('')} hitSlop={8}>
-            <MaterialIcons name="close" size={16} color={colors.muted} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* Scope toggle. A binary, so a chip rather than the dashboards' tune-icon popup —
-          that popup is for picking one of many venues. Deep-linkable via ?mine=1. */}
-      <View style={styles.scopeRow}>
+      {/* Search + scope chip share a row: the search box flexes, the chip sits right.
+          The chip is a binary toggle, so a Chip rather than the dashboards' tune-icon
+          popup (that's for picking one of many venues). Deep-linkable via ?mine=1. */}
+      <View style={styles.searchRow}>
+        <View style={[styles.searchWrap, { borderColor: colors.border }]}>
+          <MaterialIcons name="search" size={18} color={colors.muted} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
+            placeholderTextColor={colors.muted}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+              <MaterialIcons name="close" size={16} color={colors.muted} />
+            </Pressable>
+          )}
+        </View>
         <Pressable onPress={() => setMineOnly((v) => !v)} hitSlop={6}>
           <Chip
             label={activeTab === 'venues' ? 'My venues' : 'My lineup'}
@@ -649,6 +648,26 @@ export default function NetworkScreen() {
                         {venueTypeLabel(venue.venueType)}
                       </Text>
                     ) : null}
+                    {/* Ported from the old my-venues screen, which this list replaced —
+                        it was the only place a manager learned their venue wasn't
+                        approved yet. Own venues only: another manager's verification
+                        state isn't yours to see. */}
+                    {venue.managerId === currentUser?.id && venue.verificationStatus !== 'verified' && (
+                      <View style={[styles.verifyPill, {
+                        backgroundColor: (venue.verificationStatus === 'rejected' ? colors.error : colors.warning) + '15',
+                      }]}>
+                        <MaterialIcons
+                          name={venue.verificationStatus === 'rejected' ? 'cancel' : 'schedule'}
+                          size={11}
+                          color={venue.verificationStatus === 'rejected' ? colors.error : colors.warning}
+                        />
+                        <Text style={[styles.verifyPillText, {
+                          color: venue.verificationStatus === 'rejected' ? colors.error : colors.warning,
+                        }]}>
+                          {venue.verificationStatus === 'rejected' ? 'Not approved' : 'Pending verification'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
@@ -679,6 +698,9 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
   verifiedPillText: { fontSize: 10, fontWeight: '700' },
+  // Copied from the old my-venues so the pending/rejected pill looks the same as it did.
+  verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
+  verifyPillText: { fontSize: 10, fontWeight: '700' },
   cardSub: { fontSize: 13, marginBottom: 0 },
   cardMeta: { fontSize: 12 },
   cardVenue: { fontSize: 13, fontWeight: '600' },
@@ -696,14 +718,18 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   connectedWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   disconnectIconBtn: { padding: 7, borderRadius: 6 },
-  searchWrap: {
+  // The row owns the horizontal margin; searchWrap flexes so the chip keeps its
+  // intrinsic width on the right and the search box takes whatever's left.
+  searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 12, marginBottom: 4,
+  },
+  searchWrap: {
+    flex: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },
-  // Aligned to searchWrap's marginHorizontal so the chip sits flush under the search box.
-  scopeRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 6, marginBottom: 2 },
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   respondRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

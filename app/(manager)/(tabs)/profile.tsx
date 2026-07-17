@@ -139,13 +139,21 @@ export default function ManagerProfileScreen() {
               value: venues.length === 0 ? '+' : venues.length,
               label: 'Venues',
               color: venues.length === 0 ? colors.primary : colors.foreground,
-              onPress: () => router.push((venues.length === 0 ? '/(manager)/create-venue' : '/(manager)/my-venues') as Href),
+              // my-venues is gone — Network's Venues tab with ?mine=1 IS that list, and
+              // it carries the + too. Empty still shortcuts straight to create-venue.
+              onPress: () => router.push((venues.length === 0
+                ? '/(manager)/create-venue'
+                : '/(manager)/(tabs)/network?tab=venues&mine=1') as Href),
             },
             {
               value: djCount === 0 ? '+' : djCount,
               label: 'Artists',
               color: djCount === 0 ? colors.primary : colors.foreground,
-              onPress: () => router.push((djCount === 0 ? '/(manager)/(tabs)/network?tab=artists' : '/(manager)/artists') as Href),
+              // artists (My Artists) is gone — same Network tab, scoped with ?mine=1.
+              // With none connected, drop into the unscoped list to go find some.
+              onPress: () => router.push((djCount === 0
+                ? '/(manager)/(tabs)/network?tab=artists'
+                : '/(manager)/(tabs)/network?tab=artists&mine=1') as Href),
             },
           ]}
         />

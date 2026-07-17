@@ -396,8 +396,6 @@ if (!lineupError && lineupData) {
       <Stack.Screen name="pending-requests" />
       <Stack.Screen name="confirmed-bookings" />
       <Stack.Screen name="all-bookings" />
-      <Stack.Screen name="my-venues" />
-      <Stack.Screen name="artists" />
       <Stack.Screen name="completed-gigs" />
       <Stack.Screen name="edit-profile" options={{ gestureEnabled: false }} />
       <Stack.Screen name="edit-venue" options={{ gestureEnabled: false }} />
