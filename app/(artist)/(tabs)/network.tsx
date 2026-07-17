@@ -282,8 +282,14 @@ export default function ArtistNetworkScreen() {
           v.address?.toLowerCase().includes(q)
         )
       : venues;
-    return [...results].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  }, [venues, search]);
+    // The artist's own venues first, then everyone else — alphabetical within each group.
+    return [...results].sort((a, b) => {
+      const aMine = assignedVenueIds.has(a.id);
+      const bMine = assignedVenueIds.has(b.id);
+      if (aMine !== bMine) return aMine ? -1 : 1;
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+  }, [venues, search, assignedVenueIds]);
 
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();

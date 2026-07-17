@@ -38,10 +38,7 @@ function venueTypeLabel(t?: string | null): string {
 export default function NetworkScreen() {
   const router = useRouter();
   const colors = useColors();
-  // `mine=1` pre-arms the "My lineup" / "My venues" filter, so Profile (and anything
-  // else) can deep-link straight to a scoped list — the intended replacement for the
-  // separate my-venues / artists screens.
-  const { tab: initialTab, mine: initialMine } = useLocalSearchParams<{ tab?: NetworkTab; mine?: string }>();
+  const { tab: initialTab } = useLocalSearchParams<{ tab?: NetworkTab }>();
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
   const addNotification = useNotificationStore((s) => s.addNotification);
@@ -49,24 +46,17 @@ export default function NetworkScreen() {
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'venues' ? 'venues' : 'artists');
-  // Scope the list to the manager's own lineup / venues.
-  const [mineOnly, setMineOnly] = useState(initialMine === '1');
 
-  // Apply `tab` / `mine` on focus, because this is a persistent tab: useState's
+  // Apply the `tab` param on focus, because this is a persistent tab: useState's
   // initializer only runs on first mount, so deep-linking here while the screen is
-  // already alive would otherwise be ignored.
-  //
-  // CONSUME THEN CLEAR. The params must be wiped once applied, or every re-focus
-  // re-applies them — walk into a venue and back and the screen would silently re-arm
-  // "My venues" and snap the sub-tab back, stomping whatever the manager just chose.
-  // Clearing also means a fresh deep-link still works: it sets the param again.
+  // already alive would otherwise be ignored. Consume-then-clear so returning from a
+  // pushed screen doesn't re-snap the tab.
   useFocusEffect(
     useCallback(() => {
-      if (!initialTab && !initialMine) return;
+      if (!initialTab) return;
       if (initialTab === 'artists' || initialTab === 'venues') setActiveTab(initialTab);
-      if (initialMine === '1') setMineOnly(true);
-      router.setParams({ tab: undefined, mine: undefined });
-    }, [initialTab, initialMine])
+      router.setParams({ tab: undefined });
+    }, [initialTab])
   );
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -231,24 +221,35 @@ export default function NetworkScreen() {
     [globalLineup, currentUser?.id]
   );
 
+  // No All/Mine toggle any more — instead the manager's own always sort FIRST, then
+  // everyone else, alphabetical within each group. Minimal: no chrome, "mine" is just
+  // the top of the list.
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbArtists.filter((u) => u.id !== currentUser?.id)]
-      .filter((u) => !mineOnly || isInMyLineup(u.id))
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
-      .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
-  }, [sbArtists, currentUser?.id, search, mineOnly, isInMyLineup]);
+      .sort((a, b) => {
+        const aMine = isInMyLineup(a.id);
+        const bMine = isInMyLineup(b.id);
+        if (aMine !== bMine) return aMine ? -1 : 1;
+        return (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase());
+      });
+  }, [sbArtists, currentUser?.id, search, isInMyLineup]);
 
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbVenues]
-      .filter((v) => !mineOnly || v.managerId === currentUser?.id)
       .filter((v) => !q
         || v.name.toLowerCase().includes(q)
         || (v.venueType ?? '').toLowerCase().includes(q)
         || (v.googleMapsLocation?.address ?? '').toLowerCase().includes(q))
-      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  }, [sbVenues, search, mineOnly, currentUser?.id]);
+      .sort((a, b) => {
+        const aMine = a.managerId === currentUser?.id;
+        const bMine = b.managerId === currentUser?.id;
+        if (aMine !== bMine) return aMine ? -1 : 1;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      });
+  }, [sbVenues, search, currentUser?.id]);
 
   // ── Accept / Decline handlers ─────────────────────────────────────────────
   const handleAccept = async (app: Application) => {
@@ -476,26 +477,6 @@ export default function NetworkScreen() {
         ))}
       </View>
 
-      {/* Scope: a real mode, not a filter — so a segmented control rather than a chip.
-          Deliberately NOT another underline bar like the one above; two identical bars
-          stacked read as a mistake. Deep-linkable via ?mine=1. */}
-      <View style={[styles.segment, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {([false, true] as const).map((scoped) => {
-          const on = mineOnly === scoped;
-          return (
-            <Pressable
-              key={String(scoped)}
-              onPress={() => setMineOnly(scoped)}
-              style={[styles.segmentItem, on && { backgroundColor: colors.primary }]}
-            >
-              <Text style={[styles.segmentText, { color: on ? '#FFFFFF' : colors.muted }]}>
-                {!scoped ? 'All' : activeTab === 'venues' ? 'My venues' : 'My lineup'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       {/* Search — artists and venues */}
       <View style={[styles.searchWrap, { borderColor: colors.border }]}>
         <MaterialIcons name="search" size={18} color={colors.muted} />
@@ -529,16 +510,11 @@ export default function NetworkScreen() {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               // "No artists have signed up yet" is a lie when the list is empty because
-              // of a filter, not because the network is empty. Say which.
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="people" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {mineOnly ? 'No Artists in Your Lineup' : 'No Artists Found'}
-                </Text>
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
                 <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  {mineOnly ? 'Turn off My lineup to browse every artist'
-                    : search ? 'Try a different search term'
-                    : 'No artists have signed up yet'}
+                  {search ? 'Try a different search term' : 'No artists have signed up yet'}
                 </Text>
               </View>
             }
@@ -631,13 +607,9 @@ export default function NetworkScreen() {
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="place" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {mineOnly ? 'No Venues Yet' : 'No Venues Found'}
-                </Text>
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Venues Found</Text>
                 <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  {mineOnly ? "You haven't created any venues yet"
-                    : search ? 'Try a different search term'
-                    : 'No venues available yet'}
+                  {search ? 'Try a different search term' : 'No venues available yet'}
                 </Text>
               </View>
             }
@@ -730,14 +702,6 @@ const styles = StyleSheet.create({
   connectedText: { fontSize: 11, fontWeight: '700' },
   connectedWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   disconnectIconBtn: { padding: 7, borderRadius: 6 },
-  // Pill-shaped segmented control — deliberately unlike the underline tab bar above it.
-  segment: {
-    flexDirection: 'row', gap: 4,
-    marginHorizontal: 16, marginTop: 12,
-    borderWidth: 1, borderRadius: 10, padding: 3,
-  },
-  segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8 },
-  segmentText: { fontSize: 13, fontWeight: '600' },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: 16, marginTop: 10, marginBottom: 4,

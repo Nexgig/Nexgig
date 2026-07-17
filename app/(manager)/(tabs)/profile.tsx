@@ -139,28 +139,23 @@ export default function ManagerProfileScreen() {
               value: venues.length === 0 ? '+' : venues.length,
               label: 'Venues',
               color: venues.length === 0 ? colors.primary : colors.foreground,
-              // my-venues is gone — Network's Venues tab with ?mine=1 IS that list, and
-              // it carries the + too. Empty still shortcuts straight to create-venue.
+              // my-venues is gone — Network's Venues tab IS that list (the manager's own
+              // venues sort first), and it carries the + too. Empty shortcuts to create.
               //
-              // navigate(), not push(), for the Network hop: Network is a sibling TAB,
-              // and push() stacks a second copy of the whole tab navigator and slides it
-              // in from the right — a screen-push animation for what is really a tab
-              // switch. navigate() reuses the live tab. create-venue IS a push (it's a
-              // stack screen), so it keeps its slide.
+              // navigate(), not push(): Network is a sibling TAB — push() stacks a second
+              // copy of the tab navigator and slides it in like a page. create-venue IS a
+              // push (a stack screen), so it keeps its slide.
               onPress: () => venues.length === 0
                 ? router.push('/(manager)/create-venue' as Href)
-                : router.navigate('/(manager)/(tabs)/network?tab=venues&mine=1' as Href),
+                : router.navigate('/(manager)/(tabs)/network?tab=venues' as Href),
             },
             {
               value: djCount === 0 ? '+' : djCount,
               label: 'Artists',
               color: djCount === 0 ? colors.primary : colors.foreground,
-              // artists (My Artists) is gone — same Network tab, scoped with ?mine=1.
-              // With none connected, drop into the unscoped list to go find some.
-              // navigate() not push() — see the Venues card above.
-              onPress: () => router.navigate((djCount === 0
-                ? '/(manager)/(tabs)/network?tab=artists'
-                : '/(manager)/(tabs)/network?tab=artists&mine=1') as Href),
+              // artists (My Artists) is gone — same Network tab; the manager's lineup
+              // sorts first. navigate() not push() — see the Venues card above.
+              onPress: () => router.navigate('/(manager)/(tabs)/network?tab=artists' as Href),
             },
           ]}
         />
