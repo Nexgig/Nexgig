@@ -55,8 +55,8 @@ interface VenueState {
   venues: Venue[];
   addVenue: (venue: Venue) => void;
   updateVenue: (id: string, updates: Partial<Venue>) => void;
+  /** Soft-delete — see the impl. There is no user-facing "hide venue" feature. */
   hideVenue: (id: string) => void;
-  unhideVenue: (id: string) => void;
   deleteVenue: (id: string) => void;
   reorderVenues: (orderedIds: string[]) => void;
   getVenueById: (id: string) => Venue | undefined;
@@ -73,11 +73,12 @@ export const useVenueStore = create<VenueState>()(
   updateVenue: (id, updates) => set((state) => ({
     venues: state.venues.map((v) => v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v),
   })),
+  // This is the SOFT-DELETE, not a hide feature (that was removed — the toggle in
+  // venue-detail was dead code). Delete Venue sets isHidden so the row + slots stay
+  // alive and completed gigs keep resolving the real venue name. There is no unhide:
+  // a deleted venue stays deleted.
   hideVenue: (id) => set((state) => ({
     venues: state.venues.map((v) => v.id === id ? { ...v, isHidden: true, updatedAt: new Date().toISOString() } : v),
-  })),
-  unhideVenue: (id) => set((state) => ({
-    venues: state.venues.map((v) => v.id === id ? { ...v, isHidden: false, updatedAt: new Date().toISOString() } : v),
   })),
   deleteVenue: (id) => set((state) => ({
     venues: state.venues.filter((v) => v.id !== id),
@@ -865,9 +866,11 @@ export const useArtistDirectoryStore = create<ArtistDirectoryState>((set, get) =
 }));
 
 // ─── Venue Directory Store ────────────────────────────────────────────────────
-// In-memory cache of full Venue objects, populated when venue lists load (Network
-// venues tab, etc.). Lets venue-detail open COMPLETE on the first frame (no fetch-on-
-// open second pass) for any venue the user has browsed. Not persisted: session cache.
+// Cache of full Venue objects, populated when venue lists load (Network venues tab,
+// etc.). Lets venue-detail open COMPLETE on the first frame (no fetch-on-open second
+// pass), and lets Network paint instantly instead of blocking on the fetch.
+// PERSISTED (see the store below) — it used to be a session-only cache, which is why
+// Network sat on a spinner every cold start.
 
 // Maps a raw Supabase `venues` row to a full Venue. Shared by venue-detail (artist +
 // manager) and the list screens that seed the directory, so the mapping never diverges.
@@ -877,8 +880,6 @@ export function mapVenueRow(data: any): Venue {
     managerId: data.manager_id,
     name: data.name,
     venueType: data.venue_type,
-    photoUrls: Array.isArray(data.photo_urls) ? data.photo_urls : [],
-    adminPhotoUrl: data.admin_photo_url ?? undefined,
     googleMapsLocation: { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0, placeId: data.place_id ?? undefined },
     capacity: data.capacity ?? undefined,
     vibeDescription: data.vibe_description ?? undefined,

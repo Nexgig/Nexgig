@@ -253,7 +253,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       companyAddress: form.billingCompanyAddress.trim(),
       trnNumber: form.billingTrnNumber.trim(),
     } : undefined,
-    photoUrls: [],
     color: form.color,
     isHidden: false,
     isComplete: true,

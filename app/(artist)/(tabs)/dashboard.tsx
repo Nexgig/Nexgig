@@ -66,7 +66,7 @@ export default function DJHomeScreen() {
         isArtistCreated: b.is_artist_created ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
         slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
-        venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+        venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
     privateBookings.forEach((bk) => addBooking(bk));
@@ -123,7 +123,7 @@ export default function DJHomeScreen() {
           name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
           endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
         } : undefined);
-        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as any : undefined);
+        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
         return { ...b, slot: resolvedSlot, venue: resolvedVenue };
       })
       .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime));
@@ -161,7 +161,7 @@ export default function DJHomeScreen() {
           name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
           endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
         } : undefined);
-        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as any : undefined);
+        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
         const isDone = b.status === 'completed' || b.isCompleted;
         const isPending = b.status === 'requested' || b.status === 'past_confirmation';
         const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
@@ -251,7 +251,7 @@ export default function DJHomeScreen() {
         endTime: b.slotEndTime ?? '',
         createdAt: b.createdAt,
       } : undefined);
-      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as unknown as typeof venue : undefined);
+      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as unknown as typeof venue : undefined);
       return { ...b, slot: resolvedSlot, venue: resolvedVenue };
     })
     .sort((a, b) => (a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1),

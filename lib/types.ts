@@ -173,8 +173,9 @@ export interface Venue {
   preferredEnergy: EnergyType[];
   genrePreferences: GenreType[];
   vibeDescription?: string;
-  photoUrls: string[];
-  adminPhotoUrl?: string; // admin-curated fallback photo; shown only when the manager hasn't uploaded one
+  // NOTE: no photo fields. Venue images are derived from `venueType` — see
+  // lib/venue-images.ts. `photo_urls` / `admin_photo_url` still exist in Postgres but
+  // nothing reads them; they predate the type-derived images.
   instagramUrl?: string;
   musicLink?: string;
   audienceType?: AudienceType[];
@@ -264,10 +265,10 @@ export interface Booking {
   slotEndTime?: string;   // HH:MM
   venueName?: string;
   /** Snapshot of the venue's type. The venue row can become unreadable (artist
-   *  disconnected, venue hidden), and the venue IMAGE is derived from the type —
-   *  so we stamp it on the booking, the way venuePhotoUrl used to work. */
-  venueType?: VenueType;     // snapshot of venue name
-  venuePhotoUrl?: string; // snapshot of venue photo — persists even if venue is hidden/disconnected
+   *  disconnected, venue soft-deleted), and the venue IMAGE is derived from the type
+   *  (lib/venue-images.ts) — so we stamp the type on the booking. This REPLACED the old
+   *  venuePhotoUrl snapshot, which is why there's no photo field here. */
+  venueType?: VenueType;
   hiddenFromCalendar?: boolean; // artist dismissed past booking from calendar view
   hiddenFromManagerCalendar?: boolean; // manager dismissed declined/cancelled booking from their calendar view
   cancellationAcknowledged?: boolean; // artist dismissed the cancellation from New tab — moves to Cancelled tab

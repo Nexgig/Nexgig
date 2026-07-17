@@ -24,8 +24,6 @@ type VenueItem = {
   venue_type: string;
   address: string | null;
   genre_preferences: string[];
-  photo_urls: string[] | null;
-  admin_photo_url: string | null;
   manager_id: string;
   verification_status: string | null;
 };
@@ -39,8 +37,6 @@ function venueToItem(v: Venue): VenueItem {
     venue_type: v.venueType,
     address: v.googleMapsLocation?.address ?? null,
     genre_preferences: v.genrePreferences ?? [],
-    photo_urls: v.photoUrls ?? null,
-    admin_photo_url: v.adminPhotoUrl ?? null,
     manager_id: v.managerId,
     verification_status: v.verificationStatus ?? null,
   };
@@ -147,8 +143,6 @@ export default function ArtistNetworkScreen() {
         venue_type: v.venue_type,
         address: v.google_maps_location?.address ?? v.address ?? null,
         genre_preferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
-        photo_urls: Array.isArray(v.photo_urls) ? v.photo_urls : null,
-        admin_photo_url: v.admin_photo_url ?? null,
         manager_id: v.manager_id,
         verification_status: v.verification_status ?? null,
       })) as VenueItem[]);

@@ -46,7 +46,7 @@ export default function AllBookingsScreen() {
         name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
         endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
       } : undefined);
-      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as any : undefined);
+      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
       const isDone = b.status === 'completed' || b.isCompleted;
       const isPending = b.status === 'requested' || b.status === 'past_confirmation';
       const dotColor = isDone ? '#2563EB' : isPending ? '#D4A017' : '#22C55E';

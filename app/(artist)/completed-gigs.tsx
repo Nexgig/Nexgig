@@ -37,7 +37,7 @@ export default function ArtistCompletedGigsScreen() {
     .filter((b) => b.artistId === currentUser?.id && (b.status === 'completed' || b.isCompleted))
     .map((b) => {
       const slot = slots.find((s) => s.id === b.slotId);
-      const venue = allVenues.find((v) => v.id === b.venueId) ?? (b.venueName ? { id: b.venueId, name: b.venueName, photoUrls: b.venuePhotoUrl ? [b.venuePhotoUrl] : [] } as any : undefined);
+      const venue = allVenues.find((v) => v.id === b.venueId) ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
       const resolvedSlot = slot ?? (b.slotDate ? {
         id: b.slotId,
         venueId: b.venueId,

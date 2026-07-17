@@ -45,8 +45,6 @@ export default function ArtistMyVenuesScreen() {
         venuesData.forEach((v: any) => {
           useVenueStore.getState().addVenue({
             id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
-            photoUrls: v.photo_urls ?? [],
-            adminPhotoUrl: v.admin_photo_url ?? undefined,
             genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
             googleMapsLocation: { address: v.address ?? '', lat: v.lat ?? 0, lng: v.lng ?? 0, placeId: v.place_id ?? undefined }, color: v.color ?? '#2563EB',
             isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,

@@ -43,7 +43,7 @@ export default function DJLayout() {
             slotName: b.slot_name ?? undefined,
             slotStartTime: b.slot_start_time ?? undefined,
             slotEndTime: b.slot_end_time ?? undefined,
-            venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined,
+            venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined,
             createdAt: b.created_at,
             updatedAt: b.updated_at,
           };
@@ -100,7 +100,6 @@ export default function DJLayout() {
             venueStore.addVenue({
               id: v.id, managerId: v.manager_id, name: v.name,
               venueType: v.venue_type,
-              photoUrls: Array.isArray(v.photo_urls) ? v.photo_urls : [],
               genrePreferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
               preferredEnergy: Array.isArray(v.preferred_energy) ? v.preferred_energy : [],
               audienceType: Array.isArray(v.audience_type) ? v.audience_type : [],
@@ -308,7 +307,7 @@ export default function DJLayout() {
                     hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
                     slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
                     slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
-                    venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, venuePhotoUrl: b.venue_photo_url ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
+                    venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
                   });
                 }
               }

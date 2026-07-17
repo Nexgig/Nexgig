@@ -65,7 +65,6 @@ function makeVenue(id: string, overrides: Partial<Venue> = {}): Venue {
     googleMapsLocation: { lat: 0, lng: 0, address: 'Dubai' },
     preferredEnergy: [],
     genrePreferences: [],
-    photoUrls: [],
     color: '#2563EB',
     isHidden: false,
     isComplete: true,
@@ -125,10 +124,11 @@ describe('Smoke: venue store', () => {
     v.updateVenue('v1', { name: 'Lucias' });
     expect(store.useVenueStore.getState().getVenueName('v1')).toBe('Lucias');
 
+    // hideVenue is the SOFT-DELETE behind "Delete Venue" — it keeps the row alive so
+    // completed gigs still resolve the venue name. There's no unhide: deleted stays
+    // deleted, and the old hide/unhide toggle was dead code.
     v.hideVenue('v1');
     expect(store.useVenueStore.getState().getVenueById('v1')?.isHidden).toBe(true);
-    v.unhideVenue('v1');
-    expect(store.useVenueStore.getState().getVenueById('v1')?.isHidden).toBe(false);
 
     v.deleteVenue('v1');
     expect(store.useVenueStore.getState().venues).toHaveLength(0);

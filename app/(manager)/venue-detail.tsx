@@ -45,8 +45,9 @@ export default function VenueDetailScreen() {
   const [fetchedVenue, setFetchedVenue] = useState<Venue | null>(null);
   const [venueLoading, setVenueLoading] = useState(false);
   const venue = storeVenue ?? dirVenue ?? fetchedVenue;
+  // hideVenue is NOT the (removed) hide feature — it's the soft-delete used by
+  // handleDelete below. Keep.
   const hideVenue = useVenueStore((s) => s.hideVenue);
-  const unhideVenue = useVenueStore((s) => s.unhideVenue);
   const isOwner = venue?.managerId === currentUser?.id;
   const getSlotsByVenue = useSlotStore((s) => s.getSlotsByVenue);
   const getSlotById = useSlotStore((s) => s.getSlotById);
@@ -109,35 +110,6 @@ export default function VenueDetailScreen() {
       </ScreenContainer>
     );
   }
-
-  const handleToggleHideVenue = () => {
-    if (venue.isHidden) {
-      Alert.alert(
-        'Unhide Venue',
-        `Are you sure you want to unhide "${venue.name}"? It will appear in your Venues tab again.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Unhide', onPress: async () => {
-            unhideVenue(venue.id);
-            await supabase.from('venues').update({ is_hidden: false }).eq('id', venue.id);
-          }},
-        ]
-      );
-    } else {
-      Alert.alert(
-        'Hide Venue',
-        'This venue will be hidden from your active list. You can unhide it from your Profile tab.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Hide', style: 'destructive', onPress: async () => {
-            hideVenue(venue.id);
-            await supabase.from('venues').update({ is_hidden: true }).eq('id', venue.id);
-            router.back();
-          }},
-        ]
-      );
-    }
-  };
 
   // ── Delete Venue ──────────────────────────────────────────────────────────
   // Moved here from edit-venue's Danger Zone. Cancels active bookings + notifies

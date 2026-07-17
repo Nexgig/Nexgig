@@ -61,8 +61,6 @@ async function fetchVenues(managerId: string): Promise<Venue[] | null> {
     preferredEnergy: v.preferred_energy ?? [],
     genrePreferences: v.genres ?? [],
     vibeDescription: v.vibe_description ?? undefined,
-    photoUrls: v.photo_urls ?? [],
-    adminPhotoUrl: v.admin_photo_url ?? undefined,
     instagramUrl: v.instagram_url ?? undefined,
     musicLink: v.music_link ?? undefined,
     audienceType: v.audience_type ?? [],
