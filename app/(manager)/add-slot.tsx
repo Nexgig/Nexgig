@@ -31,6 +31,10 @@ export default function AddSlotScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  // Measured so the ScrollView gets a concrete height (sheet − header) and scrolls in
+  // place inside the formSheet, rather than overflowing.
+  const [sheetH, setSheetH] = useState(0);
+  const [headerH, setHeaderH] = useState(0);
   const { date, venueId } = useLocalSearchParams<{ date?: string; venueId?: string }>();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -353,8 +357,11 @@ export default function AddSlotScreen() {
   };
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
-      <View style={styles.header}>
+    <View
+      style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}
+      onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}
+    >
+      <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         <Pressable
           style={[styles.closeBtn, { borderWidth: 1, borderColor: colors.border }]}
@@ -365,9 +372,13 @@ export default function AddSlotScreen() {
         </Pressable>
       </View>
 
+      {/* Concrete height = sheet minus header, measured from the sheet itself. flex:1
+          alone doesn't reliably bound a ScrollView inside a native formSheet — it grows
+          to content and overflows (clipped by the sheet's overflow:hidden) instead of
+          scrolling. An explicit maxHeight makes it scroll in place, like the dashboard. */}
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+        style={[{ backgroundColor: colors.background }, sheetH && headerH ? { maxHeight: sheetH - headerH } : { flex: 1 }]}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
