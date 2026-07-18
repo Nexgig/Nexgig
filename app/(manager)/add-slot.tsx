@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '@/lib/rn';
+import { Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -361,6 +362,10 @@ export default function AddSlotScreen() {
       style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}
       onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}
     >
+      {/* TEMP DEBUG — remove after diagnosing the scroll issue. */}
+      <Text style={{ color: colors.error, fontSize: 11, textAlign: 'center' }}>
+        sheet={Math.round(sheetH)} header={Math.round(headerH)} win={Math.round(Dimensions.get('window').height)} max={sheetH && headerH ? Math.round(sheetH - headerH) : 0}
+      </Text>
       <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         <Pressable
