@@ -32,9 +32,7 @@ export default function AddSlotScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  // Measured so the ScrollView gets a concrete height (sheet − header) and scrolls in
-  // place inside the formSheet, rather than overflowing.
-  const [sheetH, setSheetH] = useState(0);
+  // Header height is measured; the ScrollView's max height is window*0.78 − header.
   const [headerH, setHeaderH] = useState(0);
   const { date, venueId } = useLocalSearchParams<{ date?: string; venueId?: string }>();
 
@@ -358,14 +356,7 @@ export default function AddSlotScreen() {
   };
 
   return (
-    <View
-      style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}
-      onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}
-    >
-      {/* TEMP DEBUG — remove after diagnosing the scroll issue. */}
-      <Text style={{ color: colors.error, fontSize: 11, textAlign: 'center' }}>
-        sheet={Math.round(sheetH)} header={Math.round(headerH)} win={Math.round(Dimensions.get('window').height)} max={sheetH && headerH ? Math.round(sheetH - headerH) : 0}
-      </Text>
+    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
       <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         <Pressable
@@ -377,12 +368,12 @@ export default function AddSlotScreen() {
         </Pressable>
       </View>
 
-      {/* Concrete height = sheet minus header, measured from the sheet itself. flex:1
-          alone doesn't reliably bound a ScrollView inside a native formSheet — it grows
-          to content and overflows (clipped by the sheet's overflow:hidden) instead of
-          scrolling. An explicit maxHeight makes it scroll in place, like the dashboard. */}
+      {/* Concrete height so the ScrollView scrolls in place. flex:1 doesn't bound a
+          ScrollView inside a native formSheet — the sheet's own onLayout reports CONTENT
+          height (measured: 992 > window 874), so we compute from the window: the 0.78
+          detent is ~78% of the screen, minus the header and a grabber allowance. */}
       <ScrollView
-        style={[{ backgroundColor: colors.background }, sheetH && headerH ? { maxHeight: sheetH - headerH } : { flex: 1 }]}
+        style={[{ backgroundColor: colors.background }, headerH ? { maxHeight: Dimensions.get('window').height * 0.78 - headerH - 30 } : { flex: 1 }]}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
