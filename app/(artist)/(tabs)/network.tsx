@@ -409,11 +409,6 @@ export default function ArtistNetworkScreen() {
                       ) : null}
                     </View>
                   </View>
-                  {/* Grey tick marks the venues this artist is on. No action button —
-                      connection is manager-controlled; the artist can't join or leave. */}
-                  {isConnected && (
-                    <MaterialIcons name="check-circle" size={18} color={colors.muted} />
-                  )}
                 </Pressable>
               );
               return (

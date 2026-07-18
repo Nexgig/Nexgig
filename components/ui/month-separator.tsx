@@ -13,6 +13,7 @@ export function MonthSeparator({ label, color, borderColor, rule = true }: {
 }) {
   return (
     <View style={styles.wrap}>
+      {rule ? <View style={[styles.rule, { backgroundColor: borderColor }]} /> : null}
       <Text style={[styles.label, { color }]}>{label}</Text>
       {rule ? <View style={[styles.rule, { backgroundColor: borderColor }]} /> : null}
     </View>
@@ -21,8 +22,9 @@ export function MonthSeparator({ label, color, borderColor, rule = true }: {
 
 /** Same header under a different name, for non-month groupings (e.g. the manager's
  *  network tab splitting My Venues / Discover). Aliased rather than duplicated so the
- *  two never drift apart. Those lists pass rule={false}: their rows already carry
- *  dividers, so a trailing rule on the header read as a second line. */
+ *  two never drift apart. Those lists pass rule={false}, which also drops the centring:
+ *  with no rules the label sits left, and their rows already carry dividers, so a rule
+ *  on the header read as a second line. */
 export const SectionSeparator = MonthSeparator;
 
 const styles = StyleSheet.create({
