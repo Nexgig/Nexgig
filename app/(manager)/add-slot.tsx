@@ -33,7 +33,8 @@ export default function AddSlotScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   // Header + fixed-top heights measured; only the artist list scrolls, capped at
-  // window*0.78 − header − fixed top − grabber.
+  // window − header − fixed top − grabber. (window IS the sheet's height here, not the
+  // full screen — multiplying by the 0.78 detent was double-counting and left a gap.)
   const [headerH, setHeaderH] = useState(0);
   const [topH, setTopH] = useState(0);
   const { date, venueId } = useLocalSearchParams<{ date?: string; venueId?: string }>();
@@ -477,7 +478,7 @@ export default function AddSlotScreen() {
       {/* Only the artist list scrolls. Bounded height because flex:1 doesn't bound a
           ScrollView inside the native formSheet (its onLayout reports content height). */}
       <ScrollView
-        style={[{ backgroundColor: colors.background }, headerH && topH ? { maxHeight: Dimensions.get('window').height * 0.78 - headerH - topH - 30 } : { flex: 1 }]}
+        style={[{ backgroundColor: colors.background }, headerH && topH ? { maxHeight: Dimensions.get('window').height - headerH - topH - 30 } : { flex: 1 }]}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

@@ -589,7 +589,7 @@ export default function AssignDJScreen() {
       </View>
 
       <FlatList
-        style={[{ backgroundColor: colors.background }, topH ? { maxHeight: Dimensions.get('window').height * 0.78 - topH - 30 } : { flex: 1 }]}
+        style={[{ backgroundColor: colors.background }, topH ? { maxHeight: Dimensions.get('window').height - topH - 30 } : { flex: 1 }]}
         contentContainerStyle={{ flexGrow: 1 }}
         removeClippedSubviews={true}
         windowSize={5}
