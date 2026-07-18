@@ -14,7 +14,7 @@ import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
-import { isPastEnd } from '@/lib/utils';
+import { isPastEnd, displayStatus } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -303,7 +303,7 @@ export default function DJBookingDetailScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
           {/* When there are co-artists the status shows in the Artists list below (mirrors
               the manager), so the header badge is only shown for a solo booking. */}
-          {coArtists.length === 0 && <StatusBadge status={booking.status} />}
+          {coArtists.length === 0 && <StatusBadge status={displayStatus(booking.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />}
         </View>
 
         <View style={styles.content}>
@@ -314,7 +314,7 @@ export default function DJBookingDetailScreen() {
                 leading={<AvatarImage uri={currentUser?.profilePhotoUrl} avatarId={(currentUser as any)?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={44} variant="artist" />}
                 title={currentUser?.fullName ?? 'You'}
                 subtitle="You"
-                trailing={<StatusBadge status={booking.status} />}
+                trailing={<StatusBadge status={displayStatus(booking.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />}
                 divider
               />
               {coArtists.map((c, i) => (
@@ -323,7 +323,7 @@ export default function DJBookingDetailScreen() {
                   leading={<AvatarImage seed={c.artist_id} name={c.full_name} size={44} variant="artist" />}
                   title={c.full_name}
                   subtitle="Artist"
-                  trailing={<StatusBadge status={c.status as any} />}
+                  trailing={<StatusBadge status={displayStatus(c.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />}
                   divider={i < coArtists.length - 1}
                 />
               ))}

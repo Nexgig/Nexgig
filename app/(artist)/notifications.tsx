@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuthStore, useNotificationStore, loadNotificationsFromSupabase } from '@/lib/store';
+import { useAuthStore, useNotificationStore, useBookingStore, loadNotificationsFromSupabase } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import type { AppNotification } from '@/lib/types';
@@ -66,24 +66,33 @@ export default function ArtistNotificationsScreen() {
   // Subscribe to the raw array — stable reference, no infinite loop
   const allNotifications = useNotificationStore((s) => s.notifications);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
-  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const [refreshing, setRefreshing] = useState(false);
   const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // On open: refetch, then auto-dismiss unread — mark all read (clears the bell
-  // badge) and fade their unread highlight out over ~3s. They stay as history.
+  // On open: refetch, then auto-dismiss unread — mark read and fade the highlight out
+  // over ~3s. They stay as history.
+  // EXCEPT a gig request, which stays UNREAD until the artist actually responds — it's
+  // a to-do, not
+  // an FYI, so it must not fade away just because they opened the screen. Once the
+  // booking leaves requested/past_confirmation, it fades like any other notification.
+  const needsAction = useCallback((n: { type: string; relatedId?: string }) => {
+    if (n.type !== 'booking_request' && n.type !== 'past_confirmation_request') return false;
+    const b = useBookingStore.getState().bookings.find((x) => x.id === n.relatedId);
+    return !b || b.status === 'requested' || b.status === 'past_confirmation';
+  }, []);
+
   useFocusEffect(useCallback(() => {
     if (!currentUser?.id) return;
     loadNotificationsFromSupabase(currentUser.id);
     const unread = new Set(
       useNotificationStore.getState().notifications
-        .filter((n) => n.userId === currentUser.id && !n.isRead)
+        .filter((n) => n.userId === currentUser.id && !n.isRead && !needsAction(n))
         .map((n) => n.id)
     );
     if (unread.size === 0) return;
     setFadingIds(unread);
-    markAllAsRead(currentUser.id);
+    unread.forEach((id) => markAsRead(id));
     fadeAnim.setValue(1);
     // JS driver (not native): this fade shares one Animated.Value across recycling
     // FlatList rows, and cycles on every focus/blur. The native animated driver throws
@@ -110,7 +119,8 @@ export default function ArtistNotificationsScreen() {
   );
 
   const handlePress = (notif: AppNotification) => {
-    markAsRead(notif.id);
+    // Opening a pending gig request must NOT clear it — only responding does.
+    if (!needsAction(notif)) markAsRead(notif.id);
     // All booking-related notifications open the booking detail screen
     if (
       notif.relatedType === 'booking' &&

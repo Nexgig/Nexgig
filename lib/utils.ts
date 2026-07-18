@@ -150,6 +150,26 @@ export function isPastEnd(date: string, startTime?: string, endTime?: string): b
 }
 
 /**
+ * Days after a set ends during which an unanswered request still reads as "Pending".
+ * NOT dead time: a past-end request is the "did you play this gig?" prompt, and confirming
+ * it marks the gig completed. Only once nobody has answered for this long is it stale.
+ */
+export const REQUEST_EXPIRY_GRACE_DAYS = 7;
+
+/**
+ * An unanswered request goes grey `expired` once it's this stale — a gold "Pending" on a gig
+ * from last month implies someone still has to act, and nobody does.
+ * Display-only: the stored status is untouched, so history and the confirm/decline actions
+ * both still work.
+ */
+export function displayStatus(status: string, date?: string, startTime?: string, endTime?: string): string {
+  if (status !== 'requested' && status !== 'past_confirmation') return status;
+  if (!date) return status;
+  const deadline = addDaysStr(slotEndDateTimeStr(date, startTime, endTime).slice(0, 10), REQUEST_EXPIRY_GRACE_DAYS);
+  return `${deadline}T23:59` < nowLocalDateTimeStr() ? 'expired' : status;
+}
+
+/**
  * The label shown under an artist's name on every card / profile.
  * An artist picks their setup at signup (multi-select). If 'CDJ / Turntables'
  * is among their instruments they're a DJ; any other instrument makes them a

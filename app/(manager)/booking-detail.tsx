@@ -11,6 +11,7 @@ import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
+import { displayStatus } from '@/lib/utils';
 import type { } from '@/lib/types';
 
 /** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
@@ -258,7 +259,7 @@ export default function DJBookingDetailScreen() {
   };
   const StatusWithX = ({ status, onX }: { status: any; onX?: () => void }) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <StatusBadge status={status} />
+      <StatusBadge status={displayStatus(status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
       {onX ? (
         <Pressable onPress={onX} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
           <MaterialIcons name="close" size={18} color={colors.muted} />

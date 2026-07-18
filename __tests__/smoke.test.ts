@@ -310,6 +310,19 @@ describe('Smoke: time utils', () => {
     expect(utils.isUpcoming('2999-01-01', '10:00')).toBe(true);
   });
 
+  // A past-end request is still the "did you play this gig?" prompt, so it must keep
+  // reading as Pending for the grace window — greying it early hides a live action.
+  it('displayStatus expires stale requests but spares fresh ones', () => {
+    expect(utils.displayStatus('requested', '2020-01-01', '22:00', '03:00')).toBe('expired');
+    expect(utils.displayStatus('past_confirmation', '2020-01-01', '22:00', '03:00')).toBe('expired');
+    // Yesterday's unanswered gig is inside the window — still actionable.
+    const yesterday = utils.addDaysStr(utils.nowLocalDateTimeStr().slice(0, 10), -1);
+    expect(utils.displayStatus('requested', yesterday, '22:00', '03:00')).toBe('requested');
+    // Only requests expire — a confirmed or completed gig is never relabelled.
+    expect(utils.displayStatus('confirmed', '2020-01-01', '22:00', '03:00')).toBe('confirmed');
+    expect(utils.displayStatus('completed', '2020-01-01', '22:00', '03:00')).toBe('completed');
+  });
+
   // Nightlife gigs cross midnight and the app's own defaults (20:00–00:00, 21:00–01:00)
   // do. Without the day roll a 22:00–03:00 gig ends BEFORE it starts and completes
   // instantly on creation — which would fire the gig review mid-set.

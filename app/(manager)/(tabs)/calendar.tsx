@@ -15,7 +15,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr } from '@/lib/utils';
+import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus } from '@/lib/utils';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
@@ -1267,7 +1267,7 @@ export default function CalendarScreen() {
                 >
                   <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                   <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                  <StatusBadge status={booking.status} />
+                  <StatusBadge status={displayStatus(booking.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
                 </Pressable>
                 {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
                 {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
@@ -1368,7 +1368,7 @@ export default function CalendarScreen() {
                 >
                   <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                   <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                  <StatusBadge status={booking.status} />
+                  <StatusBadge status={displayStatus(booking.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
                 </Pressable>
                 {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
                 {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}

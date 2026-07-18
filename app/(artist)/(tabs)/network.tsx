@@ -282,12 +282,13 @@ export default function ArtistNetworkScreen() {
           v.address?.toLowerCase().includes(q)
         )
       : venues;
-    // Only the venues the artist is connected to. Connection is manager-controlled now,
-    // so browsing venues they're not on has no purpose — this tab is effectively their
-    // "my venues". Alphabetical.
-    return [...results]
-      .filter((v) => assignedVenueIds.has(v.id))
-      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    // All venues, connected ones first (they carry a grey "connected" tick in the row).
+    return [...results].sort((a, b) => {
+      const aMine = assignedVenueIds.has(a.id);
+      const bMine = assignedVenueIds.has(b.id);
+      if (aMine !== bMine) return aMine ? -1 : 1;
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
   }, [venues, search, assignedVenueIds]);
 
   const filteredArtists = useMemo(() => {
@@ -374,6 +375,7 @@ export default function ArtistNetworkScreen() {
               </View>
             }
             renderItem={({ item: venue }) => {
+              const isConnected = assignedVenueIds.has(venue.id);
               const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, {
@@ -399,8 +401,11 @@ export default function ArtistNetworkScreen() {
                       ) : null}
                     </View>
                   </View>
-                  {/* No trailing button: the list is connected-only now, and connection
-                      is manager-controlled — the artist can't self-leave or apply. */}
+                  {/* Grey tick marks the venues this artist is on. No action button —
+                      connection is manager-controlled; the artist can't join or leave. */}
+                  {isConnected && (
+                    <MaterialIcons name="check-circle" size={18} color={colors.muted} />
+                  )}
                 </Pressable>
               );
               return rowContent;
