@@ -410,8 +410,9 @@ export default function ArtistProfileViewScreen() {
           >
             <MaterialIcons
               name={isConnected ? 'remove' : 'add'}
-              size={16}
+              size={18}
               color={isConnected ? colors.muted : colors.primary}
+              style={{ fontWeight: 'bold' }}
             />
           </Pressable>
         </View>
@@ -760,7 +761,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '800', flex: 1 },
   reportBtn: { padding: 4 },
-  connectBtn: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  connectBtn: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 4 },
   heroCard: { margin: 20, borderRadius: 16, borderWidth: 1, padding: 20, gap: 14 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
