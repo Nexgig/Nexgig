@@ -12,7 +12,8 @@ import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
-import { displayStatus } from '@/lib/utils';
+import { displayStatus, isExpiredRequest } from '@/lib/utils';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchReviews } from '@/lib/reviews';
 import type { } from '@/lib/types';
 
@@ -80,6 +81,7 @@ export default function DJBookingDetailScreen() {
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === id));
   const allBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
@@ -261,6 +263,25 @@ export default function DJBookingDetailScreen() {
       ]
     );
   };
+  /**
+   * Clearing an EXPIRED request is not a cancellation. cancelOneBooking writes
+   * `cancelled` to the DB, which realtime delivers to the artist as a cancellation
+   * notification and pulls the gig out of their calendar — wrong for a request that
+   * simply went unanswered, and confusing for the artist, who did nothing.
+   * This only hides the row from the manager; the artist's copy is untouched.
+   */
+  const dismissExpiredBooking = (targetId: string) => {
+    // No confirmation — matches the draft X on the calendar, which removes on tap. Nothing
+    // is destroyed here either: the row is hidden from this manager, not cancelled.
+    const target = allBookings.find((b) => b.id === targetId);
+    hideFromManagerCalendar(targetId);
+    syncBookingStatus(targetId, (target?.status ?? 'requested') as any, { hiddenFromManagerCalendar: true });
+    if (targetId === booking.id) {
+      const others = coBookings.filter((b) => b.id !== targetId);
+      if (others.length > 0) router.replace(('/(manager)/booking-detail?id=' + others[0].id) as Href);
+      else router.back();
+    }
+  };
   const removeOneDraft = (artistId: string) => {
     Alert.alert('Remove Draft', 'Remove this drafted artist from the set?', [
       { text: 'No', style: 'cancel' },
@@ -325,7 +346,10 @@ export default function DJBookingDetailScreen() {
                   leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
-                  trailing={<StatusWithX status={booking.status} onX={cancellableStatus(booking.status) ? () => cancelOneBooking(booking.id) : undefined} />}
+                  trailing={<StatusWithX status={booking.status} onX={
+                    isExpiredRequest(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime)
+                      ? () => dismissExpiredBooking(booking.id)
+                      : cancellableStatus(booking.status) ? () => cancelOneBooking(booking.id) : undefined} />}
                   divider={coBookings.length > 0 || draftArtists.length > 0}
                 />
                 {coBookings.map((cb, i) => {
@@ -336,7 +360,10 @@ export default function DJBookingDetailScreen() {
                       leading={<AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={44} />}
                       title={coArtist?.fullName ?? 'Former Artist'}
                       subtitle="Artist"
-                      trailing={<StatusWithX status={cb.status} onX={cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
+                      trailing={<StatusWithX status={cb.status} onX={
+                        isExpiredRequest(cb.status, cb.createdAt, cb.slotDate, cb.slotStartTime, cb.slotEndTime)
+                          ? () => dismissExpiredBooking(cb.id)
+                          : cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
                       onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}
                       divider={i < coBookings.length - 1 || draftArtists.length > 0}
                     />
