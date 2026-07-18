@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -12,6 +13,7 @@ import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { displayStatus } from '@/lib/utils';
+import { fetchReviews } from '@/lib/reviews';
 import type { } from '@/lib/types';
 
 /** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
@@ -65,7 +67,15 @@ export default function DJBookingDetailScreen() {
   // slot-only branch below (set info + "Assign Artist", no artist rows).
   const { id, slotId: slotIdParam } = useLocalSearchParams<{ id?: string; slotId?: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
-  const getReviewByBooking = useReviewStore((s) => s.getReviewByBooking);
+  // Subscribe to the ARRAY, not to getReviewByBooking — that getter is a stable
+  // reference, so depending on it alone means the fetch below resolves, the store
+  // updates, and this screen never re-renders to show the review that just arrived.
+  const allReviews = useReviewStore((s) => s.reviews);
+  const setReviews = useReviewStore((s) => s.setReviews);
+  // Reviews are written by the ARTIST on their device, so this manager's cache has no
+  // copy until it is fetched. Without this the screen reads "No review yet" forever —
+  // which is exactly the bug the review notification pointed at.
+  useEffect(() => { fetchReviews().then(setReviews); }, []);
 
   const booking = useBookingStore((s) => s.bookings.find((b) => b.id === id));
   const allBookings = useBookingStore((s) => s.bookings);
@@ -437,7 +447,7 @@ export default function DJBookingDetailScreen() {
 
           {/* Artist Review — read-only for manager */}
           {booking.status === 'completed' && (() => {
-            const review = getReviewByBooking(booking.id);
+            const review = allReviews.find((r) => r.bookingId === booking.id);
             if (!review) return (
               <>
                 <Section label="Review">

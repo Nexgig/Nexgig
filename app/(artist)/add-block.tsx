@@ -376,8 +376,8 @@ export default function AddBlockScreen() {
               {/* Explain what each type does — these terms aren't self-evident. */}
               <Text style={[styles.helperText, { color: colors.muted, marginTop: 8 }]}>
                 {kind === 'block'
-                  ? 'Block: Marks you as unavailable for this period'
-                  : 'Private Event: save your own gigs here to keep track of them. The time is blocked so you can’t be double-booked.'}
+                  ? 'Block: marks you unavailable for this period. Managers will see you as unavailable but can still send you requests.'
+                  : 'Private Event: save your own gigs here to keep track of them. Managers will see you as unavailable but can still send you requests.'}
               </Text>
             </View>
 

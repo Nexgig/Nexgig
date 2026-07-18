@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from '@/lib/rn';
 import { VenueFilterRow } from '@/components/venue-filter-row';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
+import { fetchReviews } from '@/lib/reviews';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useInvoiceStore, useReviewStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
@@ -20,6 +21,9 @@ export default function CompletedGigsScreen() {
   const allVenues = useVenueStore((s) => s.venues);
   const allBookings = useBookingStore((s) => s.bookings);
   const reviews = useReviewStore((s) => s.reviews);
+  const setReviews = useReviewStore((s) => s.setReviews);
+  // Same reason as booking-detail: the ratings shown here are the artists' rows.
+  useEffect(() => { fetchReviews().then(setReviews); }, []);
   // bookingId -> rating, so a reviewed gig is visible at a glance in the list
   const reviewByBooking = useMemo(
     () => new Map(reviews.map((r) => [r.bookingId, r.rating])),

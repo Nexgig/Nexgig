@@ -14,6 +14,7 @@ import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
+import { submitReview, fetchReviews } from '@/lib/reviews';
 import { isPastEnd, displayStatus } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
@@ -69,8 +70,14 @@ export default function DJBookingDetailScreen() {
 
   // Review state
   const addReview = useReviewStore((s) => s.addReview);
-  const getReviewByBooking = useReviewStore((s) => s.getReviewByBooking);
-  const existingReview = id ? getReviewByBooking(id) : undefined;
+  // Subscribe to the array (see the manager screen) so a synced review re-renders.
+  const allReviews = useReviewStore((s) => s.reviews);
+  const setReviews = useReviewStore((s) => s.setReviews);
+  // The local store is a cache, not the record — without this a reinstall or a
+  // sign-out loses the artist's own reviews and the screen offers to write a
+  // second one, which the DB's unique constraint would then reject.
+  useEffect(() => { fetchReviews().then(setReviews); }, []);
+  const existingReview = id ? allReviews.find((r) => r.bookingId === id) : undefined;
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
@@ -514,14 +521,25 @@ export default function DJBookingDetailScreen() {
                         [
                           { text: 'Cancel', style: 'cancel' },
                           { text: 'Submit', onPress: () => {
-                      addReview({
+                      // Cache locally first so the UI flips to "submitted" immediately, then
+                      // persist. Without the DB write the review never leaves this phone and
+                      // the manager sees "No review yet" despite getting the notification.
+                      const localReview = {
                         id: `review-${Date.now()}`,
                         bookingId: booking.id,
                         artistId: currentUser?.id ?? '',
                         rating: reviewRating,
                         text: reviewText.trim() || undefined,
                         createdAt: new Date().toISOString(),
-                      });
+                      };
+                      addReview(localReview);
+                      submitReview({
+                        bookingId: booking.id,
+                        artistId: currentUser?.id ?? '',
+                        managerId: booking.managerId ?? '',
+                        rating: reviewRating,
+                        text: reviewText.trim() || undefined,
+                      }).then((saved) => { if (saved) addReview(saved); });
                       // Notify the manager
                       if (booking.managerId) {
                         addNotification({

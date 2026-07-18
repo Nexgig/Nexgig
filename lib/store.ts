@@ -966,6 +966,7 @@ import type { BookingReview } from './types';
 interface ReviewState {
   reviews: BookingReview[];
   addReview: (review: BookingReview) => void;
+  setReviews: (reviews: BookingReview[]) => void;
   getReviewByBooking: (bookingId: string) => BookingReview | undefined;
 }
 
@@ -973,7 +974,19 @@ export const useReviewStore = create<ReviewState>()(
   persist(
     (set, get) => ({
       reviews: [],
-      addReview: (review) => set((state) => ({ reviews: [...state.reviews, review] })),
+      // Upsert by bookingId — one review per booking (the DB enforces it too). A plain
+      // append would duplicate a review every time the server copy is merged back in.
+      addReview: (review) =>
+        set((state) => ({
+          reviews: [...state.reviews.filter((r) => r.bookingId !== review.bookingId), review],
+        })),
+      // Merge a server fetch over the cache. Server rows win; local-only reviews (submitted
+      // offline, or written before reviews synced at all) are kept rather than dropped.
+      setReviews: (incoming) =>
+        set((state) => {
+          const fetched = new Set(incoming.map((r) => r.bookingId));
+          return { reviews: [...state.reviews.filter((r) => !fetched.has(r.bookingId)), ...incoming] };
+        }),
       getReviewByBooking: (bookingId) => get().reviews.find((r) => r.bookingId === bookingId),
     }),
     {
