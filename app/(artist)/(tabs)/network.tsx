@@ -10,6 +10,7 @@ import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore
 import type { Venue } from '@/lib/types';
 import { SHOW_ARTIST_DIRECTORY, ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 import { Divider } from '@/components/ui/card-free';
+import { SectionSeparator } from '@/components/ui/month-separator';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -333,7 +334,10 @@ export default function ArtistNetworkScreen() {
       )}
 
       {/* Search bar for venues and artists */}
-      {(activeTab === 'venues' || activeTab === 'artists') && (
+      {/* Search hidden while the directory is small (same as the manager's network tab).
+          Gated on `false` rather than deleted: the state and filter stay wired up, so
+          restoring it is dropping the `false &&`. */}
+      {false && (activeTab === 'venues' || activeTab === 'artists') && (
         <View style={[styles.searchWrap, { borderColor: colors.border }]}>
           <MaterialIcons name="search" size={18} color={colors.muted} />
           <TextInput
@@ -359,7 +363,6 @@ export default function ArtistNetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
-        ItemSeparatorComponent={() => <Divider full />}
             data={filteredVenues}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -374,8 +377,13 @@ export default function ArtistNetworkScreen() {
                 </Text>
               </View>
             }
-            renderItem={({ item: venue }) => {
+            renderItem={({ item: venue, index }) => {
               const isConnected = assignedVenueIds.has(venue.id);
+              // Sorted connected-first, so the header goes above the first row and on the
+              // one boundary where the flag flips. A row opening a group draws the header
+              // INSTEAD of a divider, otherwise the two stack into a double line.
+              const prevMine = index > 0 ? assignedVenueIds.has(filteredVenues[index - 1].id) : null;
+              const showHeader = prevMine === null || prevMine !== isConnected;
               const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, {
@@ -408,7 +416,14 @@ export default function ArtistNetworkScreen() {
                   )}
                 </Pressable>
               );
-              return rowContent;
+              return (
+                <View>
+                  {showHeader
+                    ? <SectionSeparator label={isConnected ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} rule={false} />
+                    : <Divider full />}
+                  {rowContent}
+                </View>
+              );
             }}
           />
         )

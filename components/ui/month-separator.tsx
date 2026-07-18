@@ -8,18 +8,21 @@ import { View, Text, StyleSheet } from '@/lib/rn';
  * gig look identical. When everything is in one month the header is pure noise, so the
  * caller omits it. Shared by both dashboards so they read the same.
  */
-export function MonthSeparator({ label, color, borderColor }: { label: string; color: string; borderColor: string }) {
+export function MonthSeparator({ label, color, borderColor, rule = true }: {
+  label: string; color: string; borderColor: string; rule?: boolean;
+}) {
   return (
     <View style={styles.wrap}>
       <Text style={[styles.label, { color }]}>{label}</Text>
-      <View style={[styles.rule, { backgroundColor: borderColor }]} />
+      {rule ? <View style={[styles.rule, { backgroundColor: borderColor }]} /> : null}
     </View>
   );
 }
 
-/** Same rule under a different name, for non-month groupings (e.g. the manager's
+/** Same header under a different name, for non-month groupings (e.g. the manager's
  *  network tab splitting My Venues / Discover). Aliased rather than duplicated so the
- *  two never drift apart visually. */
+ *  two never drift apart. Those lists pass rule={false}: their rows already carry
+ *  dividers, so a trailing rule on the header read as a second line. */
 export const SectionSeparator = MonthSeparator;
 
 const styles = StyleSheet.create({
