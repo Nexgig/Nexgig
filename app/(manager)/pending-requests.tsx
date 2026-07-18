@@ -6,6 +6,8 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
+import { isExpiredRequest } from '@/lib/utils';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
@@ -20,11 +22,12 @@ export default function PendingRequestsScreen() {
   const allVenues = useVenueStore((s) => s.venues);
   const allBookings = useBookingStore((s) => s.bookings);
   const slots = useSlotStore((s) => s.slots);
+  const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
   const artistUsers = useLineupStore((s) => s.artistUsers);
 
   const pendingBookings = useMemo(() => {
     return allBookings
-      .filter((b) => b.managerId === currentUser?.id && (b.status === 'requested' || b.status === 'past_confirmation'))
+      .filter((b) => b.managerId === currentUser?.id && !b.hiddenFromManagerCalendar && (b.status === 'requested' || b.status === 'past_confirmation'))
       .map((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
         const dj = artistUsers.find((u) => u.id === b.artistId);
@@ -77,21 +80,33 @@ export default function PendingRequestsScreen() {
           </View>
         }
         renderItem={({ item: booking }) => {
+          // Nobody answered before the gig ended. Greyed and un-actionable; the X clears
+          // it from the manager's view without touching the artist's copy.
+          const isExpired = isExpiredRequest(booking.status, booking.createdAt, booking.slot?.date ?? booking.slotDate, booking.slot?.startTime ?? booking.slotStartTime, booking.slot?.endTime ?? booking.slotEndTime);
           return (
           <Pressable
             style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
           >
-            <DateBadge dateStr={booking.slot?.date ?? booking.slotDate} color={STATUS_COLORS.pending} />
+            <DateBadge dateStr={booking.slot?.date ?? booking.slotDate} color={isExpired ? colors.muted : STATUS_COLORS.pending} />
             <View style={styles.info}>
               <Text style={[styles.djName, { color: colors.foreground }]} numberOfLines={1}>
                 {booking.dj?.fullName ?? 'Unknown Artist'}
                 {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
               </Text>
               <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
-                {booking.slot ? `${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
+                {booking.slot ? `${isExpired ? 'Expired · ' : ''}${formatDate(booking.slot.date)} · ${formatTime(booking.slot.startTime)}–${formatTime(booking.slot.endTime)}` : ''}
               </Text>
             </View>
+            {isExpired ? (
+              <Pressable
+                onPress={(e) => { e.stopPropagation?.(); hideFromManagerCalendar(booking.id); syncBookingStatus(booking.id, booking.status as any, { hiddenFromManagerCalendar: true }); }}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+              >
+                <MaterialIcons name="close" size={20} color={colors.muted} />
+              </Pressable>
+            ) : null}
           </Pressable>
           );
         }}

@@ -310,17 +310,30 @@ describe('Smoke: time utils', () => {
     expect(utils.isUpcoming('2999-01-01', '10:00')).toBe(true);
   });
 
-  // A past-end request is still the "did you play this gig?" prompt, so it must keep
-  // reading as Pending for the grace window — greying it early hides a live action.
-  it('displayStatus expires stale requests but spares fresh ones', () => {
-    expect(utils.displayStatus('requested', '2020-01-01', '22:00', '03:00')).toBe('expired');
-    expect(utils.displayStatus('past_confirmation', '2020-01-01', '22:00', '03:00')).toBe('expired');
-    // Yesterday's unanswered gig is inside the window — still actionable.
-    const yesterday = utils.addDaysStr(utils.nowLocalDateTimeStr().slice(0, 10), -1);
-    expect(utils.displayStatus('requested', yesterday, '22:00', '03:00')).toBe('requested');
+  // A request that outlived its gig is dead — the artist can't accept it, and the manager
+  // sends a PAST BOOKING REQUEST instead. But a past request is itself stored as
+  // `requested` on a past date, so the rule keys off WHEN THE REQUEST WAS MADE. Get this
+  // wrong and every past request expires the instant it's created.
+  it('isExpiredRequest kills stale requests but spares manager past-requests', () => {
+    const madeBefore = '2019-12-30T10:00:00.000Z'; // asked before the gig, never answered
+    expect(utils.isExpiredRequest('requested', madeBefore, '2020-01-01', '22:00', '03:00')).toBe(true);
+
+    // Same dead gig, but the request was raised AFTER it ended — the manager's past
+    // booking request. Must stay actionable or the remedy is dead on arrival.
+    const madeAfter = '2020-01-05T10:00:00.000Z';
+    expect(utils.isExpiredRequest('requested', madeAfter, '2020-01-01', '22:00', '03:00')).toBe(false);
+
+    // A gig that hasn't finished yet is never expired, however old the request.
+    const tomorrow = utils.addDaysStr(utils.nowLocalDateTimeStr().slice(0, 10), 1);
+    expect(utils.isExpiredRequest('requested', madeBefore, tomorrow, '22:00', '03:00')).toBe(false);
+
+    // past_confirmation is only ever set deliberately, so it never expires.
+    expect(utils.isExpiredRequest('past_confirmation', madeBefore, '2020-01-01', '22:00', '03:00')).toBe(false);
+
     // Only requests expire — a confirmed or completed gig is never relabelled.
-    expect(utils.displayStatus('confirmed', '2020-01-01', '22:00', '03:00')).toBe('confirmed');
-    expect(utils.displayStatus('completed', '2020-01-01', '22:00', '03:00')).toBe('completed');
+    expect(utils.displayStatus('confirmed', madeBefore, '2020-01-01', '22:00', '03:00')).toBe('confirmed');
+    expect(utils.displayStatus('completed', madeBefore, '2020-01-01', '22:00', '03:00')).toBe('completed');
+    expect(utils.displayStatus('requested', madeBefore, '2020-01-01', '22:00', '03:00')).toBe('expired');
   });
 
   // Nightlife gigs cross midnight and the app's own defaults (20:00–00:00, 21:00–01:00)

@@ -11,7 +11,7 @@ import { Divider } from '@/components/ui/card-free';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
-import { isPastEnd } from '@/lib/utils';
+import { isPastEnd, isExpiredRequest } from '@/lib/utils';
 
 export default function ArtistPendingRequestsScreen() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function ArtistPendingRequestsScreen() {
 
   const pendingRequests = useMemo(() => {
     return rawBookings
-      .filter((b) => b.artistId === currentUser?.id && !b.isArtistCreated && (
+      .filter((b) => b.artistId === currentUser?.id && !b.isArtistCreated && !b.hiddenFromCalendar && (
         b.status === 'requested' ||
         b.status === 'past_confirmation' ||
         (b.status === 'cancelled' && !b.cancellationAcknowledged && !b.cancelledByArtist)
@@ -163,8 +163,17 @@ export default function ArtistPendingRequestsScreen() {
     markRelatedNotificationsRead(id);
   };
 
+  const handleDismissExpired = (id: string) => {
+    hideFromCalendar(id);
+    syncBookingStatus(id, 'requested', { hiddenFromCalendar: true });
+    markRelatedNotificationsRead(id);
+  };
+
   const renderCard = ({ item }: { item: typeof pendingRequests[number] }) => {
     const isManagerCancelled = item.status === 'cancelled';
+    // Nobody answered before the gig ended, so it can no longer be accepted. If the
+    // artist did play it, the manager sends a past booking request instead.
+    const isExpired = isExpiredRequest(item.status, item.createdAt, item.resolvedDate, item.resolvedStart, item.resolvedEnd);
     const dateLine = item.resolvedDate
       ? `${formatDate(item.resolvedDate)}${item.resolvedStart ? ` · ${formatTime(item.resolvedStart)}–${formatTime(item.resolvedEnd ?? '')}` : ''}`
       : '';
@@ -179,7 +188,7 @@ export default function ArtistPendingRequestsScreen() {
             artist hasn't acknowledged, so the badge can't just be gold. */}
         <DateBadge
           dateStr={item.resolvedDate}
-          color={isManagerCancelled ? STATUS_COLORS.cancelled : STATUS_COLORS.pending}
+          color={isManagerCancelled ? STATUS_COLORS.cancelled : isExpired ? colors.muted : STATUS_COLORS.pending}
         />
 
         {/* Info */}
@@ -193,7 +202,7 @@ export default function ArtistPendingRequestsScreen() {
             </Text>
           ) : (
             <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
-              {dateLine}
+              {isExpired ? `Expired · ${dateLine}` : dateLine}
             </Text>
           )}
         </View>
@@ -206,6 +215,14 @@ export default function ArtistPendingRequestsScreen() {
             hitSlop={6}
           >
             <Text style={[styles.dismissBtnText, { color: colors.error }]}>Dismiss</Text>
+          </Pressable>
+        ) : isExpired ? (
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); handleDismissExpired(item.id); }}
+            hitSlop={8}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+          >
+            <MaterialIcons name="close" size={20} color={colors.muted} />
           </Pressable>
         ) : (
           <View style={styles.respondRow}>

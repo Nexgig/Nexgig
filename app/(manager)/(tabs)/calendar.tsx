@@ -15,7 +15,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus } from '@/lib/utils';
+import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest } from '@/lib/utils';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
@@ -1259,6 +1259,9 @@ export default function CalendarScreen() {
             if (!djUser) return null;
             const isDeclined = booking.status === 'declined';
             const isCancelled = booking.status === 'cancelled';
+            // Expired: nobody answered before the gig ended, so it can be cleared away
+            // like a declined one. Clearing hides the row; it does not touch the slot.
+            const isExpiredReq = isExpiredRequest(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime);
             return (
               <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
                 <Pressable
@@ -1267,12 +1270,12 @@ export default function CalendarScreen() {
                 >
                   <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                   <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                  <StatusBadge status={displayStatus(booking.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
+                  <StatusBadge status={displayStatus(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
                 </Pressable>
                 {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
                 {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
-                {/* × for declined/cancelled — hides from manager; if artist-cancelled, also hides from artist */}
-                {(isDeclined || isCancelled) && (
+                {/* × for declined/cancelled/expired — hides from manager; if artist-cancelled, also hides from artist */}
+                {(isDeclined || isCancelled || isExpiredReq) && (
                   <TouchableOpacity
                     activeOpacity={0.6}
                     style={styles.removeDJBtn}
@@ -1360,6 +1363,9 @@ export default function CalendarScreen() {
             if (!djUser) return null;
             const isDeclined = booking.status === 'declined';
             const isCancelled = booking.status === 'cancelled';
+            // Expired: nobody answered before the gig ended, so it can be cleared away
+            // like a declined one. Clearing hides the row; it does not touch the slot.
+            const isExpiredReq = isExpiredRequest(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime);
             return (
               <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
                 <Pressable
@@ -1368,12 +1374,12 @@ export default function CalendarScreen() {
                 >
                   <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
                   <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                  <StatusBadge status={displayStatus(booking.status, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
+                  <StatusBadge status={displayStatus(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
                 </Pressable>
                 {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
                 {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
-                {/* × for declined/cancelled — hides from manager; if artist-cancelled, also hides from artist */}
-                {(isDeclined || isCancelled) && (
+                {/* × for declined/cancelled/expired — hides from manager; if artist-cancelled, also hides from artist */}
+                {(isDeclined || isCancelled || isExpiredReq) && (
                   <TouchableOpacity
                     activeOpacity={0.6}
                     style={styles.removeDJBtn}

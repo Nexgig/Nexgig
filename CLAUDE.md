@@ -106,6 +106,16 @@ is the source of truth: roll on `end < start`, **strictly** (a zero-length slot 
    mirroring the rule in SQL as `et < st`. It's deployed: changing the JS without re-running that
    function's `create or replace` puts the phones and the DB out of step, silently.
 
+**A manager's PAST BOOKING REQUEST is stored as `status: 'requested'`, not
+`'past_confirmation'`.** Both creation paths (`assign-artist.tsx`, `add-slot.tsx`) insert
+`requested`; only the *notification* is typed `past_confirmation_request`. So "a request whose
+gig has already ended" describes **two opposite things**: a dead request nobody answered, and a
+brand-new past request the artist still has to confirm. Telling them apart is
+`isExpiredRequest` (`lib/utils.ts`), which compares **`createdAt` against the gig's end** —
+made *before* the end = stale/expired, made *after* = deliberate. Expiring on "the gig ended"
+alone kills every past request the instant it's created. `past_confirmation` itself never
+expires.
+
 **`MaterialIcons` are font glyphs** — `size` sets font size, not advance width, so different
 glyphs have different widths. Pin them to a fixed-width box to align rows.
 

@@ -14,7 +14,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel, isExpiredRequest } from '@/lib/utils';
 import { MonthSeparator } from '@/components/ui/month-separator';
 
 export default function ManagerDashboard() {
@@ -224,9 +224,15 @@ export default function ManagerDashboard() {
       });
   }, [bookings, slots, nowDT, updateBookingStatus, allVenues]);
 
+  // Expired requests are excluded: nobody can act on them, so counting them leaves the
+  // tile permanently wrong. `nowDT` is in the deps so the count re-derives as gigs end.
   const pendingCount = useMemo(
-    () => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length,
-    [bookings]
+    () => bookings.filter((b) =>
+      (b.status === 'requested' || b.status === 'past_confirmation') &&
+      !b.hiddenFromManagerCalendar &&
+      !isExpiredRequest(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime)
+    ).length,
+    [bookings, nowDT]
   );
 
   const completedCount = useMemo(

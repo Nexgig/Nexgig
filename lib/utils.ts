@@ -150,23 +150,66 @@ export function isPastEnd(date: string, startTime?: string, endTime?: string): b
 }
 
 /**
- * Days after a set ends during which an unanswered request still reads as "Pending".
- * NOT dead time: a past-end request is the "did you play this gig?" prompt, and confirming
- * it marks the gig completed. Only once nobody has answered for this long is it stale.
+ * A UTC ISO timestamp (everything Supabase stores) as a comparable LOCAL "YYYY-MM-DDTHH:MM",
+ * so it can be compared against slot datetimes, which are local wall-clock. Dubai is UTC+4:
+ * comparing a raw ISO string to a slot string would be four hours out, which is enough to
+ * misjudge a request created in the hours right after a gig ended.
  */
-export const REQUEST_EXPIRY_GRACE_DAYS = 7;
+export function localDateTimeStrFromISO(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${mo}-${day}T${h}:${min}`;
+}
 
 /**
- * An unanswered request goes grey `expired` once it's this stale — a gold "Pending" on a gig
- * from last month implies someone still has to act, and nobody does.
- * Display-only: the stored status is untouched, so history and the confirm/decline actions
- * both still work.
+ * A request nobody answered before the gig ended is dead — the artist can no longer accept it.
+ * If they really played, the manager sends a PAST BOOKING REQUEST instead; that's what the
+ * past-request flow is for.
+ *
+ * The catch: a manager's past request is ALSO stored as `status: 'requested'` on a past date
+ * (assign-artist.tsx / add-slot.tsx insert it that way — only the notification is typed
+ * `past_confirmation_request`). Expiring purely on "gig has ended" would therefore kill every
+ * past request the instant it was created, killing the very remedy above.
+ *
+ * So the test is WHEN THE REQUEST WAS MADE, not just whether the gig is over:
+ *   - created BEFORE the gig ended, still unanswered → nobody responded in time → expired
+ *   - created AFTER the gig ended → a deliberate past request → stays actionable
+ *
+ * `past_confirmation` is never expired — that status is only ever set deliberately.
  */
-export function displayStatus(status: string, date?: string, startTime?: string, endTime?: string): string {
-  if (status !== 'requested' && status !== 'past_confirmation') return status;
-  if (!date) return status;
-  const deadline = addDaysStr(slotEndDateTimeStr(date, startTime, endTime).slice(0, 10), REQUEST_EXPIRY_GRACE_DAYS);
-  return `${deadline}T23:59` < nowLocalDateTimeStr() ? 'expired' : status;
+export function isExpiredRequest(
+  status: string,
+  createdAt?: string,
+  date?: string,
+  startTime?: string,
+  endTime?: string
+): boolean {
+  if (status !== 'requested' || !date) return false;
+  const end = slotEndDateTimeStr(date, startTime, endTime);
+  if (end >= nowLocalDateTimeStr()) return false; // gig hasn't finished yet
+  // No createdAt (legacy row): treat as stale, since a past request is always recent.
+  if (!createdAt) return true;
+  const made = localDateTimeStrFromISO(createdAt);
+  return made !== '' && made < end;
+}
+
+/**
+ * Badge label for a booking: `expired` in place of a gold "Pending" once the request is dead.
+ * See isExpiredRequest for why the rule isn't simply "the gig has ended".
+ */
+export function displayStatus(
+  status: string,
+  createdAt?: string,
+  date?: string,
+  startTime?: string,
+  endTime?: string
+): string {
+  return isExpiredRequest(status, createdAt, date, startTime, endTime) ? 'expired' : status;
 }
 
 /**
