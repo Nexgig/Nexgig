@@ -12,6 +12,7 @@ import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { genreLabel } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { SectionSeparator } from '@/components/ui/month-separator';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
@@ -221,14 +222,25 @@ export default function NetworkScreen() {
     [globalLineup, currentUser?.id]
   );
 
-  // No All/Mine toggle any more — instead the manager's own always sort FIRST, then
-  // everyone else, alphabetical within each group. Minimal: no chrome, "mine" is just
-  // the top of the list.
+  // No All/Mine toggle any more — the list is SPLIT into two labelled groups instead:
+  // the manager's own first, then everyone else, alphabetical within each. The sort keeps
+  // each group contiguous, which is what lets renderItem draw a header on the boundary
+  // (same MonthSeparator the dashboard uses between months).
+  const isMyVenue = useCallback(
+    (v: { managerId?: string }) => v.managerId === currentUser?.id,
+    [currentUser?.id]
+  );
+
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbArtists.filter((u) => u.id !== currentUser?.id)]
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
-      .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
+      .sort((a, b) => {
+        const aMine = isInMyLineup(a.id);
+        const bMine = isInMyLineup(b.id);
+        if (aMine !== bMine) return aMine ? -1 : 1;
+        return (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase());
+      });
   }, [sbArtists, currentUser?.id, search, isInMyLineup]);
 
   const filteredVenues = useMemo(() => {
@@ -238,8 +250,13 @@ export default function NetworkScreen() {
         || v.name.toLowerCase().includes(q)
         || (v.venueType ?? '').toLowerCase().includes(q)
         || (v.googleMapsLocation?.address ?? '').toLowerCase().includes(q))
-      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  }, [sbVenues, search, currentUser?.id]);
+      .sort((a, b) => {
+        const aMine = isMyVenue(a);
+        const bMine = isMyVenue(b);
+        if (aMine !== bMine) return aMine ? -1 : 1;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      });
+  }, [sbVenues, search, currentUser?.id, isMyVenue]);
 
   // ── Accept / Decline handlers ─────────────────────────────────────────────
   const handleAccept = async (app: Application) => {
@@ -508,10 +525,14 @@ export default function NetworkScreen() {
                 </Text>
               </View>
             }
-            renderItem={({ item: user }) => {
+            renderItem={({ item: user, index }) => {
               const profile = getProfile(user.id);
               const pendingApp = appByArtistId.get(user.id);
               const isConnected = isInMyLineup(user.id);
+              // The list is sorted mine-first, so a group header belongs above the first
+              // row and wherever the mine/not-mine flag flips — one boundary, at most.
+              const prevMine = index > 0 ? isInMyLineup(filteredArtists[index - 1].id) : null;
+              const showHeader = prevMine === null || prevMine !== isConnected;
               const rowContent = (
                 <Pressable
                   style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: pendingApp ? colors.primary + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
@@ -557,7 +578,14 @@ export default function NetworkScreen() {
                   ) : null /* Connect / Connected moved to the artist profile header (± button). */}
                 </Pressable>
               );
-              return rowContent;
+              return (
+                <View>
+                  {showHeader && (
+                    <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                  )}
+                  {rowContent}
+                </View>
+              );
             }}
           />
         )
@@ -584,7 +612,15 @@ export default function NetworkScreen() {
                 </Text>
               </View>
             }
-            renderItem={({ item: venue }) => (
+            renderItem={({ item: venue, index }) => {
+              const mine = isMyVenue(venue);
+              const prevMine = index > 0 ? isMyVenue(filteredVenues[index - 1]) : null;
+              const showHeader = prevMine === null || prevMine !== mine;
+              return (
+              <View>
+                {showHeader && (
+                  <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                )}
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
@@ -626,7 +662,9 @@ export default function NetworkScreen() {
                   </View>
                 </View>
               </Pressable>
-            )}
+              </View>
+              );
+            }}
           />
         )
       )}

@@ -17,6 +17,11 @@ export function MonthSeparator({ label, color, borderColor }: { label: string; c
   );
 }
 
+/** Same rule under a different name, for non-month groupings (e.g. the manager's
+ *  network tab splitting My Venues / Discover). Aliased rather than duplicated so the
+ *  two never drift apart visually. */
+export const SectionSeparator = MonthSeparator;
+
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 14, paddingBottom: 6 },
   label: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
