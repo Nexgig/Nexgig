@@ -374,8 +374,10 @@ if (!lineupError && lineupData) {
         name="assign-artist"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.78],
-          sheetExpandsWhenScrolledToEdge: false,
+          // Two detents + expand-on-scroll so a long artist list is fully reachable —
+          // opens at 78%, drags/scrolls up to full screen.
+          sheetAllowedDetents: [0.78, 1.0],
+          sheetExpandsWhenScrolledToEdge: true,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
         }}
@@ -384,8 +386,10 @@ if (!lineupError && lineupData) {
         name="add-slot"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.78],
-          sheetExpandsWhenScrolledToEdge: false,
+          // Two detents + expand-on-scroll so a long artist list is fully reachable —
+          // opens at 78%, drags/scrolls up to full screen.
+          sheetAllowedDetents: [0.78, 1.0],
+          sheetExpandsWhenScrolledToEdge: true,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
         }}
