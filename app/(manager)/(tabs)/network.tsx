@@ -484,7 +484,8 @@ export default function NetworkScreen() {
         ))}
       </View>
 
-      {/* Search — artists and venues */}
+      {/* Search hidden — few enough artists/venues to scan by eye. The `search` state and
+          both filters are left wired up, so restoring it is uncommenting this block.
       <View style={[styles.searchWrap, { borderColor: colors.border }]}>
         <MaterialIcons name="search" size={18} color={colors.muted} />
         <TextInput
@@ -502,6 +503,7 @@ export default function NetworkScreen() {
           </Pressable>
         )}
       </View>
+      */}
 
       {/* Artists tab */}
       {activeTab === 'artists' && (
@@ -509,7 +511,6 @@ export default function NetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
-        ItemSeparatorComponent={() => <Divider full />}
             data={filteredArtists}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -580,9 +581,9 @@ export default function NetworkScreen() {
               );
               return (
                 <View>
-                  {showHeader && (
-                    <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                  )}
+                  {showHeader
+                    ? <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                    : <Divider full />}
                   {rowContent}
                 </View>
               );
@@ -597,7 +598,6 @@ export default function NetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
-        ItemSeparatorComponent={() => <Divider full />}
             data={filteredVenues}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -618,9 +618,9 @@ export default function NetworkScreen() {
               const showHeader = prevMine === null || prevMine !== mine;
               return (
               <View>
-                {showHeader && (
-                  <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                )}
+                {showHeader
+                  ? <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                  : <Divider full />}
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
