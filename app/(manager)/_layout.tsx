@@ -390,7 +390,7 @@ if (!lineupError && lineupData) {
           sheetCornerRadius: 20,
         }}
       />
-      <Stack.Screen name="create-venue" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="create-venue" />
       <Stack.Screen name="artist-profile-view" />
       <Stack.Screen name="my-venues" />
       <Stack.Screen name="my-artists" />

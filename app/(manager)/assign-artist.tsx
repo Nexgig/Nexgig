@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput, Image } from '@/lib/rn';
+import { Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -72,6 +73,9 @@ export default function AssignDJScreen() {
   // ── Cross-manager conflict detection ─────────────────────────────────────
   // Fetch confirmed bookings + blocks from OTHER managers for lineup artists on this slot's date
   const [crossConflicts, setCrossConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
+  // Fixed top (header + past-slot note) height; the list is capped below it so it scrolls
+  // in place — flex:1 doesn't bound a list inside the native formSheet.
+  const [topH, setTopH] = useState(0);
 
   useEffect(() => {
     if (!slot || !currentUser || isVenueLineupMode) return;
@@ -560,30 +564,32 @@ export default function AssignDJScreen() {
 
   return (
     <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerInfo}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {isPastSlot ? 'Add to Completed Gigs' : 'Assign Artist'}
-          </Text>
-          <Text style={[styles.headerSub, { color: colors.muted }]}>
-            {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
-          </Text>
+      {/* Fixed top (header + note) — stays on screen; only the list below scrolls. */}
+      <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerInfo}>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+              {isPastSlot ? 'Add to Completed Gigs' : 'Assign Artist'}
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.muted }]}>
+              {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
+            </Text>
+          </View>
         </View>
+
+        {/* Past slots still warn: tapping fires a real request, not a draft. */}
+        {isPastSlot && (
+          <View style={[styles.infoNote, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
+            <MaterialIcons name="history" size={14} color={colors.warning} />
+            <Text style={[styles.infoNoteText, { color: colors.warning }]}>
+              This slot is in the past. Tapping an artist will send them a completed gig request — they must confirm or decline the completed gig.
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Past slots still warn: tapping fires a real request, not a draft. */}
-      {isPastSlot && (
-        <View style={[styles.infoNote, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
-          <MaterialIcons name="history" size={14} color={colors.warning} />
-          <Text style={[styles.infoNoteText, { color: colors.warning }]}>
-            This slot is in the past. Tapping an artist will send them a completed gig request — they must confirm or decline the completed gig.
-          </Text>
-        </View>
-      )}
-
       <FlatList
-        style={{ flex: 1, backgroundColor: colors.background }}
+        style={[{ backgroundColor: colors.background }, topH ? { maxHeight: Dimensions.get('window').height * 0.78 - topH - 30 } : { flex: 1 }]}
         contentContainerStyle={{ flexGrow: 1 }}
         removeClippedSubviews={true}
         windowSize={5}

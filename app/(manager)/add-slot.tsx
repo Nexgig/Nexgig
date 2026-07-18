@@ -32,8 +32,10 @@ export default function AddSlotScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  // Header height is measured; the ScrollView's max height is window*0.78 − header.
+  // Header + fixed-top heights measured; only the artist list scrolls, capped at
+  // window*0.78 − header − fixed top − grabber.
   const [headerH, setHeaderH] = useState(0);
+  const [topH, setTopH] = useState(0);
   const { date, venueId } = useLocalSearchParams<{ date?: string; venueId?: string }>();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -368,16 +370,8 @@ export default function AddSlotScreen() {
         </Pressable>
       </View>
 
-      {/* Concrete height so the ScrollView scrolls in place. flex:1 doesn't bound a
-          ScrollView inside a native formSheet — the sheet's own onLayout reports CONTENT
-          height (measured: 992 > window 874), so we compute from the window: the 0.78
-          detent is ~78% of the screen, minus the header and a grabber allowance. */}
-      <ScrollView
-        style={[{ backgroundColor: colors.background }, headerH ? { maxHeight: Dimensions.get('window').height * 0.78 - headerH - 30 } : { flex: 1 }]}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Fixed top — venue + time pickers stay on screen; only the artist list scrolls. */}
+      <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
         <View style={styles.fieldBlock}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>VENUE</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.pillRow}>
@@ -478,7 +472,16 @@ export default function AddSlotScreen() {
             </View>
           </View>
         </View>
+      </View>
 
+      {/* Only the artist list scrolls. Bounded height because flex:1 doesn't bound a
+          ScrollView inside the native formSheet (its onLayout reports content height). */}
+      <ScrollView
+        style={[{ backgroundColor: colors.background }, headerH && topH ? { maxHeight: Dimensions.get('window').height * 0.78 - headerH - topH - 30 } : { flex: 1 }]}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {isPast ? (
           <>
             <View style={styles.listHeaderRow}>
