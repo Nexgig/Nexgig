@@ -178,9 +178,8 @@ export default function DJSetupScreen() {
       return;
     }
 
-    const hasMediaLink = form.soundcloud || form.mixcloud || form.instagram || form.spotify;
-    if (!hasMediaLink) {
-      Alert.alert('Required', 'Please add at least one media link.');
+    if (!form.instagram.trim()) {
+      Alert.alert('Required', 'Please add your Instagram handle.');
       return;
     }
 
@@ -432,7 +431,6 @@ export default function DJSetupScreen() {
           {/* Step 3: Profile Photo (optional) */}
           {displayStep === 3 && (
             <View style={styles.form}>
-              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — pick an avatar. You can change this anytime.</Text>
               <View style={styles.photoStep}>
                 <AvatarImage avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} />
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
@@ -448,7 +446,7 @@ export default function DJSetupScreen() {
             <View style={styles.form}>
               <Text style={[styles.infoText, { color: colors.muted, marginBottom: 8 }]}>At least one link is required.</Text>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Instagram</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Instagram *</Text>
                 <View style={[styles.instagramRow, { borderColor: colors.border }]}>
                   <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
                   <TextInput

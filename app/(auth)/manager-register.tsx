@@ -244,7 +244,7 @@ export default function ManagerRegisterScreen() {
   };
 
   const loadingLabel = () => {
-    if (!isLoading) return step < TOTAL_STEPS ? 'Continue' : 'Create Account';
+    if (!isLoading) return step < TOTAL_STEPS ? 'Continue' : 'Done';
     if (step === 1) return 'Creating account...';
     return 'Saving profile...';
   };
@@ -273,12 +273,12 @@ export default function ManagerRegisterScreen() {
             <Text style={[styles.title, { color: colors.foreground }]}>
               {displayStep === 1 && 'Create Account'}
               {displayStep === 2 && 'Profile Photo'}
-              {displayStep === 3 && 'Your Profile'}
+              {displayStep === 3 && 'More Info'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.muted }]}>
               {displayStep === 1 && 'Step 1 of 3 — Basic information'}
               {displayStep === 2 && 'Step 2 of 3 — Pick an avatar'}
-              {displayStep === 3 && 'Step 3 of 3 — Tell us about yourself'}
+              {displayStep === 3 && 'Step 3 of 3 — Almost done'}
             </Text>
           </View>
 
@@ -342,7 +342,6 @@ export default function ManagerRegisterScreen() {
           {/* Step 2: Profile Photo (optional) */}
           {displayStep === 2 && (
             <View style={styles.form}>
-              <Text style={[styles.infoText, { color: colors.muted, marginBottom: 4 }]}>Optional — pick an avatar. You can change this anytime.</Text>
               <View style={styles.photoStep}>
                 <AvatarImage avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} variant="manager" />
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
