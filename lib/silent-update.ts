@@ -31,8 +31,7 @@ import { reportError } from './observability';
  * booking-detail with its review form) — a manager who steps out to Google Maps for an
  * address and returns six minutes later is the case that gap alone does not cover.
  */
-// TEMPORARY: 30s while testing the mechanism. Back to 5 * 60 * 1000 once confirmed.
-const MIN_BACKGROUND_MS = 30 * 1000;
+const MIN_BACKGROUND_MS = 5 * 60 * 1000;
 
 /**
  * How long "Updating…" stays up before the reload.
