@@ -401,7 +401,9 @@ export default function DJBookingDetailScreen() {
             />
           </Section>
 
-          <Divider />
+          {/* Only rule off the Details block when something actually follows it —
+              otherwise this drew a line under the last row with nothing beneath. */}
+          {(!!venue?.vibeDescription || (venue?.preferredEnergy?.length ?? 0) > 0 || !!venue?.rulesTemplate) && <Divider />}
 
           {/* Venue Vibe */}
           {venue && venue.vibeDescription ? (
