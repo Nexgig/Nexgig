@@ -1,3 +1,4 @@
+import { RoleSwitcher } from '@/components/ui/role-switcher';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl } from '@/lib/rn';
 import { useRouter } from 'expo-router';
@@ -205,7 +206,7 @@ export default function ArtistProfileScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Artist</Text>
+          <RoleSwitcher role="artist" />
           <View style={styles.headerRight}>
             <Pressable
               style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}

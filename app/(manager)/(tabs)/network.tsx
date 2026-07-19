@@ -12,6 +12,7 @@ import { useColors } from '@/hooks/use-colors';
 import { genreLabel, firstName } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { SectionSeparator } from '@/components/ui/month-separator';
+import { ALLOW_DUAL_ROLE } from '@/lib/features';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
@@ -232,7 +233,10 @@ export default function NetworkScreen() {
 
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return [...sbArtists.filter((u) => u.id !== currentUser?.id)]
+    // A dual-role user IS an artist, and self-booking is allowed — a venue owner who
+    // also performs can put themselves on their own set. With the flag off they stay
+    // filtered out, as before.
+    return [...sbArtists.filter((u) => ALLOW_DUAL_ROLE || u.id !== currentUser?.id)]
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
       .sort((a, b) => {
         const aMine = isInMyLineup(a.id);

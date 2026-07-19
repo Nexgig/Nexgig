@@ -41,3 +41,18 @@ export const SHOW_ARTIST_DIRECTORY = true;
  * written. Flip back on and both sides return.
  */
 export const ALLOW_ARTIST_VENUE_APPLICATIONS = false;
+
+/**
+ * Dual-role accounts — one login holding BOTH a manager and an artist profile, with a
+ * switcher on the profile screen.
+ *
+ * Off by default and shipped dark on purpose. This touches sign-in, so a bug locks people
+ * out of their account entirely — and unlike a broken screen, a broken sign-in can't be
+ * fixed by simply looking at it. With the flag off, sign-in behaves exactly as it always
+ * has and no switcher is rendered, so the code can ship and be enabled deliberately.
+ *
+ * Self-booking is ALLOWED (a venue owner who also performs can put themselves on their own
+ * set) and notifications are NOT filtered by role, so both sides' notifications appear in
+ * both modes. Both were product decisions, not oversights.
+ */
+export const ALLOW_DUAL_ROLE = true;

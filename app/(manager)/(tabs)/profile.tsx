@@ -1,3 +1,4 @@
+import { RoleSwitcher } from '@/components/ui/role-switcher';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -117,7 +118,7 @@ export default function ManagerProfileScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Manager</Text>
+          <RoleSwitcher role="manager" />
           <Pressable
             style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => router.push('/(manager)/settings' as Href)}
