@@ -150,6 +150,18 @@ export function isPastEnd(date: string, startTime?: string, endTime?: string): b
 }
 
 /**
+ * First name only, for notification bodies.
+ *
+ * Full names push a lock-screen notification past where iOS truncates it — "Ahmed Al Mansouri
+ * wants you at Soho Garden, Sat 12 Jul" loses the part that matters. Notifications are the one
+ * place the app shortens a name; lists and profiles always show it in full.
+ */
+export function firstName(full?: string | null, fallback = 'Someone'): string {
+  const n = (full ?? '').trim();
+  return n ? n.split(/\s+/)[0] : fallback;
+}
+
+/**
  * A UTC ISO timestamp (everything Supabase stores) as a comparable LOCAL "YYYY-MM-DDTHH:MM",
  * so it can be compared against slot datetimes, which are local wall-clock. Dubai is UTC+4:
  * comparing a raw ISO string to a slot string would be four hours out, which is enough to

@@ -1,3 +1,4 @@
+import { firstName } from '@/lib/utils';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator, Animated } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -256,7 +257,8 @@ export default function ArtistProfileViewScreen() {
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId, type: 'lineup_added',
-      title: 'Added to Lineup', body: `${currentUser.fullName ?? 'A manager'}`,
+      title: 'Added to a Lineup',
+      body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false, createdAt: new Date().toISOString(),
     });
   };
@@ -285,8 +287,8 @@ export default function ArtistProfileViewScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
             type: 'lineup_removed',
-            title: 'Removed from Lineup',
-            body: `${currentUser?.fullName ?? 'A manager'}`,
+            title: 'Removed from a Lineup',
+            body: `${firstName(currentUser?.fullName, 'A manager')} removed you — you can no longer be booked at their venues`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });
@@ -317,8 +319,8 @@ export default function ArtistProfileViewScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
             type: 'venue_assigned',
-            title: 'Assigned to Venue',
-            body: `${venueName}`,
+            title: 'New Venue',
+            body: `You can now be booked at ${venueName}`,
             isRead: false,
             relatedId: venueId,
             relatedType: 'venue',
@@ -346,8 +348,8 @@ export default function ArtistProfileViewScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
             type: 'venue_removed',
-            title: 'Removed from Venue',
-            body: `${venueName}`,
+            title: 'Venue Removed',
+            body: `You can no longer be booked at ${venueName}`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });

@@ -13,7 +13,7 @@ import { SectionSeparator } from '@/components/ui/month-separator';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
-import { genreLabel } from '@/lib/utils';
+import { genreLabel, firstName } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { reportError } from '@/lib/observability';
 
@@ -215,7 +215,7 @@ export default function ArtistNetworkScreen() {
             userId: venue.manager_id,
             type: 'lineup_request',
             title: 'New Join Request',
-            body: `${currentUser.fullName ?? 'An artist'} wants to join your lineup`,
+            body: `${firstName(currentUser.fullName, 'An artist')} wants to join your lineup`,
             isRead: false,
             relatedId: venue.id,
             relatedType: 'venue',
@@ -261,7 +261,7 @@ export default function ArtistNetworkScreen() {
             userId: venue.manager_id,
             type: 'lineup_removed' as any,
             title: 'Artist Left Venue',
-            body: `${currentUser.fullName ?? 'An artist'} · ${venue.name}`,
+            body: `${firstName(currentUser.fullName, 'An artist')} left ${venue.name}`,
             isRead: false,
             relatedId: venue.id,
             relatedType: 'venue',

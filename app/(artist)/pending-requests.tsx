@@ -11,7 +11,7 @@ import { Divider } from '@/components/ui/card-free';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isExpiredRequest } from '@/lib/utils';
+import { isPastEnd, isExpiredRequest, firstName } from '@/lib/utils';
 
 export default function ArtistPendingRequestsScreen() {
   const router = useRouter();
@@ -31,16 +31,21 @@ export default function ArtistPendingRequestsScreen() {
   const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled', bookingId: string, venueName: string, date: string) => {
     const artistName = currentUser?.fullName ?? 'The artist';
     const titles: Record<string, string> = {
-      booking_confirmed: 'Booking Confirmed',
-      booking_declined: 'Booking Declined',
-      booking_cancelled: 'Booking Cancelled',
+      booking_confirmed: 'Gig Confirmed',
+      booking_declined: 'Gig Declined',
+      booking_cancelled: 'Artist Cancelled',
+    };
+    const verbs: Record<string, string> = {
+      booking_confirmed: 'accepted',
+      booking_declined: 'declined',
+      booking_cancelled: 'cancelled',
     };
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: managerId,
       type,
       title: titles[type],
-      body: `${artistName} · ${venueName} — ${date}`,
+      body: `${firstName(artistName, 'An artist')} ${verbs[type]} ${venueName}, ${date}`,
       isRead: false,
       relatedId: bookingId,
       relatedType: 'booking',

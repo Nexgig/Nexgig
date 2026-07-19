@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime, useFormatTime } from '@/lib/conflict-detection';
-import { todayLocalStr } from '@/lib/utils';
+import { todayLocalStr, firstName } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
@@ -174,7 +174,7 @@ export default function InvoicePreviewScreen() {
               userId: managerId,
               type: 'invoice_received',
               title: 'Invoice Received',
-              body: `${artistName} · ${venueName} — AED ${Math.round(totalAmount).toLocaleString()}`,
+              body: `${firstName(artistName, 'An artist')} sent AED ${Math.round(totalAmount).toLocaleString()} for ${venueName}`,
               relatedId: newInvoice.id,
               isRead: false,
               createdAt: new Date().toISOString(),

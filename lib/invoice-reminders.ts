@@ -112,7 +112,7 @@ export async function rescheduleInvoiceReminders(artistId: string): Promise<void
       toSchedule.map((c) =>
         Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Invoice reminder',
+            title: 'Invoice Reminder',
             body: `Time to send your invoice for ${c.venueName}`,
             data: { kind: INVOICE_REMINDER_KIND },
             sound: true,

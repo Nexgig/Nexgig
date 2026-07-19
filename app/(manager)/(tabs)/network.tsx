@@ -9,7 +9,7 @@ import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
-import { genreLabel } from '@/lib/utils';
+import { genreLabel, firstName } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { SectionSeparator } from '@/components/ui/month-separator';
 import { supabase } from '@/lib/supabase';
@@ -308,8 +308,8 @@ export default function NetworkScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: app.artist_id,
             type: 'lineup_added' as any,
-            title: 'Added to Lineup',
-            body: `${currentUser.fullName ?? 'A manager'}`,
+            title: 'Added to a Lineup',
+            body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
             isRead: false,
             relatedId: currentUser.id,
             relatedType: 'manager',
@@ -342,7 +342,7 @@ export default function NetworkScreen() {
             userId: app.artist_id,
             type: 'lineup_declined',
             title: 'Request Declined',
-            body: `${app.venue?.name ?? 'the venue'}`,
+            body: `${app.venue?.name ?? 'The venue'} declined your request to join`,
             isRead: false,
             relatedId: app.venue_id,
             relatedType: 'venue',
@@ -400,8 +400,8 @@ export default function NetworkScreen() {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artist.id,
       type: 'lineup_added' as any,
-      title: 'Added to Lineup',
-      body: `${currentUser.fullName ?? 'A manager'}`,
+      title: 'Added to a Lineup',
+      body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false,
       relatedId: currentUser.id,
       relatedType: 'manager',
@@ -440,8 +440,8 @@ export default function NetworkScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artist.id,
             type: 'lineup_removed' as any,
-            title: 'Removed from Lineup',
-            body: `${currentUser.fullName ?? 'A manager'}`,
+            title: 'Removed from a Lineup',
+            body: `${firstName(currentUser.fullName, 'A manager')} removed you — you can no longer be booked at their venues`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });

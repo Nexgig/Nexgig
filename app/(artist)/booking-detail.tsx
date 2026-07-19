@@ -15,7 +15,7 @@ import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { submitReview, fetchReviews } from '@/lib/reviews';
-import { isPastEnd, displayStatus, isExpiredRequest } from '@/lib/utils';
+import { isPastEnd, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -151,16 +151,21 @@ export default function DJBookingDetailScreen() {
     const venueName = venue?.name ?? booking.venueName ?? 'a venue';
     const date = slot?.date ?? booking.slotDate ?? '';
     const titles: Record<string, string> = {
-      booking_confirmed: 'Booking Confirmed',
-      booking_declined: 'Booking Declined',
-      booking_cancelled: 'Booking Cancelled',
+      booking_confirmed: 'Gig Confirmed',
+      booking_declined: 'Gig Declined',
+      booking_cancelled: 'Artist Cancelled',
+    };
+    const verbs: Record<string, string> = {
+      booking_confirmed: 'accepted',
+      booking_declined: 'declined',
+      booking_cancelled: 'cancelled',
     };
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: booking.managerId,
       type,
       title: titles[type],
-      body: `${currentUser.fullName} · ${venueName} — ${date ? formatDate(date) : ''}`,
+      body: `${firstName(currentUser.fullName, 'An artist')} ${verbs[type]} ${venueName}, ${date ? formatDate(date) : ''}`,
       isRead: false,
       relatedId: booking.id,
       relatedType: 'booking',
@@ -217,7 +222,7 @@ export default function DJBookingDetailScreen() {
     if (isPast) {
       // Past booking — confirm goes directly to completed
       Alert.alert(
-        'Confirm Past Gig',
+        'Did You Play This Gig?',
         `Confirm that you performed at ${venue?.name ?? 'this venue'} on ${bookingDate ? formatDate(bookingDate) : 'this date'}?`,
         [
           { text: 'Cancel', style: 'cancel' },
@@ -550,7 +555,7 @@ export default function DJBookingDetailScreen() {
                           userId: booking.managerId,
                           type: 'review_submitted',
                           title: 'New Gig Review',
-                          body: `${currentUser?.fullName ?? 'An artist'} · ${reviewRating}★`,
+                          body: `${firstName(currentUser?.fullName, 'An artist')} left ${reviewRating}★ for ${venue?.name ?? booking.venueName ?? 'a venue'}${booking.slotDate ? `, ${formatDate(booking.slotDate)}` : ''}`,
                           relatedId: booking.id,
                           relatedType: 'booking',
                           isRead: false,

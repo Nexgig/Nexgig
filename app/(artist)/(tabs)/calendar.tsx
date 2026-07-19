@@ -19,7 +19,7 @@ import { DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(artist)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, nowLocalDateTimeStr, todayLocalStr } from '@/lib/utils';
+import { isPastEnd, nowLocalDateTimeStr, todayLocalStr, firstName } from '@/lib/utils';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 
@@ -122,9 +122,14 @@ export default function DJAvailabilityScreen() {
   const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled', b: { id: string; managerId: string; resolvedVenueName?: string; resolvedDate?: string }) => {
     if (!currentUser) return;
     const titles: Record<string, string> = {
-      booking_confirmed: 'Booking Confirmed',
-      booking_declined: 'Booking Declined',
-      booking_cancelled: 'Booking Cancelled',
+      booking_confirmed: 'Gig Confirmed',
+      booking_declined: 'Gig Declined',
+      booking_cancelled: 'Artist Cancelled',
+    };
+    const verbs: Record<string, string> = {
+      booking_confirmed: 'accepted',
+      booking_declined: 'declined',
+      booking_cancelled: 'cancelled',
     };
     const dateStr = b.resolvedDate ? formatDate(b.resolvedDate) : '';
     addNotification({
@@ -132,7 +137,7 @@ export default function DJAvailabilityScreen() {
       userId: b.managerId,
       type,
       title: titles[type],
-      body: `${currentUser.fullName} · ${b.resolvedVenueName ?? 'a venue'} — ${dateStr}`,
+      body: `${firstName(currentUser.fullName, 'An artist')} ${verbs[type]} ${b.resolvedVenueName ?? 'a venue'}, ${dateStr}`,
       isRead: false,
       relatedId: b.id,
       relatedType: 'booking',
@@ -654,7 +659,7 @@ export default function DJAvailabilityScreen() {
                 const isPast = bookingDate !== '' && isPastEnd(bookingDate, b.resolvedStart ?? '23:59', b.resolvedEnd);
                 if (isPast) {
                   Alert.alert(
-                    'Confirm Past Gig',
+                    'Did You Play This Gig?',
                     `Confirm that you performed at ${b.resolvedVenueName} on ${bookingDate}?`,
                     [
                       { text: 'Cancel', style: 'cancel' },

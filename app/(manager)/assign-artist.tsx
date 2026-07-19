@@ -10,7 +10,7 @@ import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
-import { isPastStart, genreLabel, addDaysStr } from '@/lib/utils';
+import { isPastStart, genreLabel, addDaysStr, firstName } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
@@ -198,8 +198,8 @@ export default function AssignDJScreen() {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId,
       type: 'venue_assigned',
-      title: 'Assigned to Venue',
-      body: `${venueName}`,
+      title: 'New Venue',
+      body: `You can now be booked at ${venueName}`,
       isRead: false,
       relatedId: venueIdParam,
       relatedType: 'venue',
@@ -409,8 +409,8 @@ export default function AssignDJScreen() {
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               userId: artistId,
               type: 'past_confirmation_request',
-              title: 'Confirm Past Gig',
-              body: `${venue?.name ?? 'a venue'} — ${formatDate(slot!.date)}`,
+              title: 'Did You Play This Gig?',
+              body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venue?.name ?? 'a venue'}, ${formatDate(slot!.date)}`,
               isRead: false,
               relatedId: booking.id,
               relatedType: 'booking',
@@ -463,8 +463,8 @@ export default function AssignDJScreen() {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId,
       type: 'venue_assigned',
-      title: 'Assigned to Venue',
-      body: `${venueName}`,
+      title: 'New Venue',
+      body: `You can now be booked at ${venueName}`,
       isRead: false,
       relatedId: slot!.venueId,
       relatedType: 'venue',

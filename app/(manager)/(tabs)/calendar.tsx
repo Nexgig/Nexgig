@@ -15,7 +15,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest } from '@/lib/utils';
+import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
@@ -948,8 +948,8 @@ export default function CalendarScreen() {
                 id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                 userId: draft.artistId,
                 type: 'booking_request',
-                title: 'New Booking Request',
-                body: `${venue?.name ?? 'a venue'} — ${formatDate(slot.date)}`,
+                title: 'New Gig Request',
+                body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(slot.date)}`,
                 isRead: false,
                 relatedId: newBookingId,
                 relatedType: 'booking',
@@ -2001,8 +2001,8 @@ export default function CalendarScreen() {
                             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                             userId: artistId,
                             type: 'booking_request',
-                            title: 'New Booking Request',
-                            body: `${draftVenue?.name ?? 'a venue'} — ${draftSlot?.date ? formatDate(draftSlot.date) : ''}`,
+                            title: 'New Gig Request',
+                            body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${draftVenue?.name ?? 'a venue'}, ${draftSlot?.date ? formatDate(draftSlot.date) : ''}`,
                             isRead: false,
                             relatedId: newBookingId,
                             relatedType: 'booking',

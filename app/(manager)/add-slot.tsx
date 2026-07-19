@@ -11,7 +11,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { isPastStart, genreLabel, addDaysStr } from '@/lib/utils';
+import { isPastStart, genreLabel, addDaysStr, firstName } from '@/lib/utils';
 import { formatDate, detectConflicts, timesOverlap } from '@/lib/conflict-detection';
 import type { Slot, Booking, ConflictInfo, VenueAssignment } from '@/lib/types';
 
@@ -257,7 +257,7 @@ export default function AddSlotScreen() {
     if (error) console.warn('past booking insert:', error.message);
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
-      type: 'past_confirmation_request', title: 'Confirm Past Gig', body: `${venueName ?? 'a venue'} — ${formatDate(targetDate)}`,
+      type: 'past_confirmation_request', title: 'Did You Play This Gig?', body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venueName ?? 'a venue'}, ${formatDate(targetDate)}`,
       isRead: false, relatedId: booking.id, relatedType: 'booking', createdAt: new Date().toISOString(),
     });
   };
@@ -311,7 +311,7 @@ export default function AddSlotScreen() {
     ).then(({ error }) => { if (error) console.warn('venue_assignment upsert error:', error.message); });
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
-      type: 'venue_assigned', title: 'Assigned to Venue', body: `${venueName}`,
+      type: 'venue_assigned', title: 'New Venue', body: `You can now be booked at ${venueName}`,
       isRead: false, relatedId: createSlotVenueId, relatedType: 'venue', createdAt: new Date().toISOString(),
     });
   };

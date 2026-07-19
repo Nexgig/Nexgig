@@ -14,7 +14,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { cityFromAddress } from '@/lib/places';
 import { ReportModal } from '@/components/report-modal';
 import { supabase } from '@/lib/supabase';
-import { genreLabel } from '@/lib/utils';
+import { genreLabel, firstName } from '@/lib/utils';
 import { fonts } from '@/lib/fonts';
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 
@@ -158,8 +158,8 @@ export default function VenueDetailScreen() {
                 id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                 userId: booking.artistId,
                 type: isRequested ? 'booking_request_cancelled' : 'booking_cancelled',
-                title: isRequested ? 'Request Cancelled' : 'Booking Cancelled',
-                body: `${booking.venueName ?? venue.name} — ${snapDate ? formatDate(snapDate) : ''}`,
+                title: isRequested ? 'Request Withdrawn' : 'Gig Cancelled',
+                body: `${firstName(currentUser?.fullName, 'The manager')} ${isRequested ? 'withdrew the request for' : 'cancelled'} ${booking.venueName ?? venue.name}, ${snapDate ? formatDate(snapDate) : ''}`,
                 isRead: false,
                 relatedId: booking.id,
                 relatedType: 'booking',

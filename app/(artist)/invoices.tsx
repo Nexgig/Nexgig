@@ -1,3 +1,4 @@
+import { firstName } from '@/lib/utils';
 import { useState, useMemo, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, Modal, ScrollView, Alert } from '@/lib/rn';
 import { useRouter } from 'expo-router';
@@ -145,7 +146,7 @@ export default function InvoicesScreen() {
               userId: inv.managerId,
               type: 'invoice_cancelled',
               title: 'Invoice Cancelled',
-              body: `${artistName} cancelled invoice ${inv.invoiceNumber} · ${inv.venueName}`,
+              body: `${firstName(artistName, 'An artist')} cancelled invoice ${inv.invoiceNumber} for ${inv.venueName}`,
               isRead: false,
               relatedId: inv.id,
               relatedType: 'invoice',

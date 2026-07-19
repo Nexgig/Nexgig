@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { firstName } from './utils';
 import { supabase } from './supabase';
 import { syncBookingStatus } from './booking-sync';
 import type {
@@ -336,8 +337,8 @@ export const useSlotStore = create<SlotState>()(
         id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         userId: b.artistId,
         type: 'booking_request_cancelled',
-        title: 'Request Cancelled',
-        body: `${venueName} — ${new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
+        title: 'Request Withdrawn',
+        body: `${firstName(useAuthStore.getState().currentUser?.fullName, 'The manager')} withdrew the request for ${venueName}, ${new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
         isRead: false,
         relatedId: b.id,
         relatedType: 'booking',
@@ -359,8 +360,8 @@ export const useSlotStore = create<SlotState>()(
         id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         userId: b.artistId,
         type: 'booking_cancelled',
-        title: 'Booking Cancelled',
-        body: `${venueName} — ${new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
+        title: 'Gig Cancelled',
+        body: `${firstName(useAuthStore.getState().currentUser?.fullName, 'The manager')} cancelled ${venueName}, ${new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
         isRead: false,
         relatedId: b.id,
         relatedType: 'booking',

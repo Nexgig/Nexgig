@@ -133,8 +133,8 @@ export async function rescheduleArtistReminders(artistId: string): Promise<void>
       toSchedule.map((c) =>
         Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Upcoming gig',
-            body: `${c.venueName} — ${c.phrase}`,
+            title: 'Upcoming Gig',
+            body: `You're on at ${c.venueName} ${c.phrase}`,
             data: { kind: REMINDER_KIND },
             sound: true,
           },
