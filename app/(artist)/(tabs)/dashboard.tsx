@@ -318,7 +318,7 @@ export default function DJHomeScreen() {
               return (
               <View key={booking.id}>
               {showMonth && (
-                <MonthSeparator label={monthLabel(bDate!)} color={colors.muted} borderColor={colors.border} center />
+                <MonthSeparator label={monthLabel(bDate!)} color={colors.muted} borderColor={colors.border} />
               )}
               <Pressable
                 style={({ pressed }) => [styles.gigCard, { opacity: pressed ? 0.85 : 1 }]}

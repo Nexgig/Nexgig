@@ -420,7 +420,7 @@ export default function ManagerDashboard() {
               return (
               <View key={g.key}>
               {showMonth && (
-                <MonthSeparator label={monthLabel(gDate!)} color={colors.muted} borderColor={colors.border} center />
+                <MonthSeparator label={monthLabel(gDate!)} color={colors.muted} borderColor={colors.border} />
               )}
               <Pressable
                 style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
