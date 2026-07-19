@@ -6,7 +6,6 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
-import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -581,9 +580,9 @@ export default function NetworkScreen() {
               );
               return (
                 <View>
-                  {showHeader
-                    ? <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                    : <Divider full />}
+                  {showHeader && (
+                    <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                  )}
                   {rowContent}
                 </View>
               );
@@ -618,9 +617,9 @@ export default function NetworkScreen() {
               const showHeader = prevMine === null || prevMine !== mine;
               return (
               <View>
-                {showHeader
-                  ? <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                  : <Divider full />}
+                {showHeader && (
+                  <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                )}
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}

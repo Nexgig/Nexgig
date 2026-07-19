@@ -9,7 +9,6 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import type { Venue } from '@/lib/types';
 import { SHOW_ARTIST_DIRECTORY, ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
-import { Divider } from '@/components/ui/card-free';
 import { SectionSeparator } from '@/components/ui/month-separator';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -413,9 +412,9 @@ export default function ArtistNetworkScreen() {
               );
               return (
                 <View>
-                  {showHeader
-                    ? <SectionSeparator label={isConnected ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                    : <Divider full />}
+                  {showHeader && (
+                    <SectionSeparator label={isConnected ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                  )}
                   {rowContent}
                 </View>
               );
@@ -430,7 +429,6 @@ export default function ArtistNetworkScreen() {
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
           <FlatList
-        ItemSeparatorComponent={() => <Divider full />}
             data={filteredArtists}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
