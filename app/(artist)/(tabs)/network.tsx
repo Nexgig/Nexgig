@@ -470,7 +470,6 @@ export default function ArtistNetworkScreen() {
                       <Text style={[styles.youPillText, { color: colors.primary }]}>You</Text>
                     </View>
                   )}
-                  <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
                 </View>
               </Pressable>
             )}
