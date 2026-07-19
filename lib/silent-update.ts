@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import * as Updates from 'expo-updates';
 import { useUpdates } from 'expo-updates';
@@ -35,9 +35,21 @@ import { reportError } from './observability';
 const MIN_BACKGROUND_MS = 30 * 1000;
 
 /**
- * Mount once, at the root. Returns nothing — it works entirely through side effects.
+ * How long "Updating…" stays up before the reload.
+ *
+ * Applying an already-downloaded update is near-instant, so without a floor the overlay
+ * flashes for a frame and the restart still looks like a glitch. This is long enough to
+ * read, short enough not to feel like waiting.
  */
-export function useSilentUpdates(): void {
+const MIN_OVERLAY_MS = 700;
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Mount once, at the root. Returns whether an update is being applied — render
+ * <UpdatingOverlay visible={...} /> on it, or the restart reads as a crash.
+ */
+export function useSilentUpdates(): boolean {
   /**
    * True when an update has been downloaded and is waiting to run.
    *
@@ -56,6 +68,7 @@ export function useSilentUpdates(): void {
   const backgroundedAt = useRef<number | null>(null);
   // Guards against overlapping checks if the app is foregrounded twice in quick succession.
   const checking = useRef(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     // In development the JS is served by Metro, not by expo-updates — checking would throw.
@@ -79,16 +92,26 @@ export function useSilentUpdates(): void {
       try {
         // Already downloaded (see isUpdatePending above) — just run it.
         if (pendingRef.current) {
+          setUpdating(true);
+          await delay(MIN_OVERLAY_MS);
           await Updates.reloadAsync();
           return;
         }
+        // The check runs WITHOUT the overlay: it is quick and usually finds nothing, so
+        // showing it here would flash "Updating…" on every single foreground.
         const check = await Updates.checkForUpdateAsync();
         if (!check.isAvailable) return;
-        await Updates.fetchUpdateAsync();
+        // From here an update is definitely coming, so cover the app: the download takes a
+        // second or two, and that is exactly the window in which the user starts tapping
+        // into a screen the restart is about to discard.
+        setUpdating(true);
+        const [, ] = await Promise.all([Updates.fetchUpdateAsync(), delay(MIN_OVERLAY_MS)]);
         await Updates.reloadAsync();
       } catch (e) {
         // Offline, or the update server is unreachable. Not worth surfacing to the user —
         // they keep running the bundle they have, which is exactly the old behaviour.
+        // Drop the overlay: reloadAsync never happened, so nothing is going to replace it.
+        setUpdating(false);
         reportError(e, { where: 'useSilentUpdates' });
       } finally {
         checking.current = false;
@@ -98,4 +121,6 @@ export function useSilentUpdates(): void {
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();
   }, []);
+
+  return updating;
 }

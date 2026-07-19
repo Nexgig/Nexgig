@@ -19,6 +19,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
 import { supabase } from "@/lib/supabase";
 import { useSilentUpdates } from '@/lib/silent-update';
+import { UpdatingOverlay } from '@/components/updating-overlay';
 import { useAuthStore, resetAllStores } from "@/lib/store";
 import { registerForPushNotifications } from "@/lib/notifications-push";
 import * as Notifications from "expo-notifications";
@@ -57,7 +58,7 @@ function ThemedStatusBar() {
 
 function RootLayout() {
   // Adopt OTA updates on foreground instead of waiting for two cold starts.
-  useSilentUpdates();
+  const applyingUpdate = useSilentUpdates();
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
   const router = useRouter();
@@ -241,6 +242,7 @@ function RootLayout() {
           <Stack.Screen name="(artist)" />
         </Stack>
         <ThemedStatusBar />
+        <UpdatingOverlay visible={applyingUpdate} />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
