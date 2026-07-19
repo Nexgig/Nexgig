@@ -4,10 +4,13 @@
 // Render order everywhere is: uploaded photo → chosen avatar → deterministic default.
 
 export type AvatarId =
-  | 'avatar-1' | 'avatar-2' | 'avatar-3' | 'avatar-4' | 'avatar-5' | 'avatar-6'
+  'avatar-1' | 'avatar-2' | 'avatar-3' | 'avatar-4' | 'avatar-5' | 'avatar-6'
   | 'avatar-7' | 'avatar-8' | 'avatar-9' | 'avatar-10' | 'avatar-11' | 'avatar-12'
   | 'avatar-13' | 'avatar-14' | 'avatar-15' | 'avatar-16' | 'avatar-17' | 'avatar-18'
-  | 'avatar-19' | 'avatar-20' | 'avatar-21' | 'avatar-22';
+  | 'avatar-19' | 'avatar-20' | 'avatar-21' | 'avatar-22' | 'avatar-23' | 'avatar-24'
+  | 'avatar-25' | 'avatar-26' | 'avatar-27' | 'avatar-28' | 'avatar-29' | 'avatar-30'
+  | 'avatar-31' | 'avatar-32' | 'avatar-33' | 'avatar-34' | 'avatar-35' | 'avatar-36'
+  | 'avatar-37';
 
 // Static require() map — Metro needs literal requires, so they're listed explicitly.
 export const AVATAR_SOURCES: Record<AvatarId, number> = {
@@ -33,6 +36,21 @@ export const AVATAR_SOURCES: Record<AvatarId, number> = {
   'avatar-20': require('@/assets/images/avatars/avatar-20.png'),
   'avatar-21': require('@/assets/images/avatars/avatar-21.png'),
   'avatar-22': require('@/assets/images/avatars/avatar-22.png'),
+  'avatar-23': require('@/assets/images/avatars/avatar-23.png'),
+  'avatar-24': require('@/assets/images/avatars/avatar-24.png'),
+  'avatar-25': require('@/assets/images/avatars/avatar-25.png'),
+  'avatar-26': require('@/assets/images/avatars/avatar-26.png'),
+  'avatar-27': require('@/assets/images/avatars/avatar-27.png'),
+  'avatar-28': require('@/assets/images/avatars/avatar-28.png'),
+  'avatar-29': require('@/assets/images/avatars/avatar-29.png'),
+  'avatar-30': require('@/assets/images/avatars/avatar-30.png'),
+  'avatar-31': require('@/assets/images/avatars/avatar-31.png'),
+  'avatar-32': require('@/assets/images/avatars/avatar-32.png'),
+  'avatar-33': require('@/assets/images/avatars/avatar-33.png'),
+  'avatar-34': require('@/assets/images/avatars/avatar-34.png'),
+  'avatar-35': require('@/assets/images/avatars/avatar-35.png'),
+  'avatar-36': require('@/assets/images/avatars/avatar-36.png'),
+  'avatar-37': require('@/assets/images/avatars/avatar-37.png'),
 };
 
 // Ordered list of all avatar ids (for the picker grid).
