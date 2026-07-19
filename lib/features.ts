@@ -21,14 +21,15 @@ export const SHOW_CALENDAR_LEGEND = false;
 
 /**
  * The **Artists** sub-tab of the artist-side Network — i.e. artists browsing other
- * artists. Hidden 17 Jul 2026: the artist Network is venues-only.
+ * artists. Hidden 17 Jul 2026, restored 19 Jul 2026: the artist Network carries both
+ * Venues and Artists again.
  *
- * With this off, the sub-tab bar disappears entirely (venues is the only tab, so a
- * one-tab bar is noise) and `artist-profile-view` becomes unreachable from the artist
- * side — that list was its only entry point. The screen and the fetch stay in place.
- * Does NOT affect the manager's Network, which still browses artists.
+ * With this off the sub-tab bar disappears entirely (venues would be the only tab, so a
+ * one-tab bar is noise), the header reads "Venues" instead of "Network", and
+ * `artist-profile-view` becomes unreachable from the artist side — that list is its only
+ * entry point. Does NOT affect the manager's Network, which always browses artists.
  */
-export const SHOW_ARTIST_DIRECTORY = false;
+export const SHOW_ARTIST_DIRECTORY = true;
 
 /**
  * Artists applying to join a venue from their side (the `applications` table).

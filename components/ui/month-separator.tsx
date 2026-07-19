@@ -8,11 +8,11 @@ import { View, Text, StyleSheet } from '@/lib/rn';
  * gig look identical. When everything is in one month the header is pure noise, so the
  * caller omits it. Shared by both dashboards so they read the same.
  */
-export function MonthSeparator({ label, color, borderColor, rule = true }: {
-  label: string; color: string; borderColor: string; rule?: boolean;
+export function MonthSeparator({ label, color, borderColor, rule = false, center = false }: {
+  label: string; color: string; borderColor: string; rule?: boolean; center?: boolean;
 }) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, center && styles.wrapCenter]}>
       {rule ? <View style={[styles.rule, { backgroundColor: borderColor }]} /> : null}
       <Text style={[styles.label, { color }]}>{label}</Text>
       {rule ? <View style={[styles.rule, { backgroundColor: borderColor }]} /> : null}
@@ -22,13 +22,13 @@ export function MonthSeparator({ label, color, borderColor, rule = true }: {
 
 /** Same header under a different name, for non-month groupings (e.g. the manager's
  *  network tab splitting My Venues / Discover). Aliased rather than duplicated so the
- *  two never drift apart. Those lists pass rule={false}, which also drops the centring:
- *  with no rules the label sits left, and their rows already carry dividers, so a rule
- *  on the header read as a second line. */
+ *  two never drift apart. Those lists take the defaults: no rule (their rows already
+ *  carry dividers, so a rule read as a second line) and left-aligned. */
 export const SectionSeparator = MonthSeparator;
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 14, paddingBottom: 6 },
+  wrapCenter: { justifyContent: 'center' },
   label: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
   rule: { flex: 1, height: StyleSheet.hairlineWidth },
 });

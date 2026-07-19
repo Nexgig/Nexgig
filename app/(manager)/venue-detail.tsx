@@ -60,7 +60,7 @@ export default function VenueDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'slots' | 'lineup'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'slots'>('overview');
   const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
@@ -244,13 +244,15 @@ export default function VenueDetailScreen() {
             already separates the info block from the content. */}
         {!isOwner && <Divider />}
 
-        {/* Tab Bar — Slots and Lineup only visible to the venue owner */}
+        {/* Tab Bar — Sets only visible to the venue owner. The Lineup list lived here
+            too; it moved to the artist's profile, which is where a manager adds and removes
+            an artist's venues. */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'slots', 'lineup'] as const).map((tab) => (
+            {(['overview', 'slots'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : tab === 'slots' ? 'Sets' : 'Lineup'}
+                  {tab === 'overview' ? 'Overview' : 'Sets'}
                 </Text>
               </Pressable>
             ))}
@@ -425,97 +427,6 @@ export default function VenueDetailScreen() {
           </View>
         )}
 
-        {/* Lineup Tab — owner only */}
-        {isOwner && activeTab === 'lineup' && (
-          <View style={styles.tabContent}>
-            {/* Add Artist button */}
-            <Pressable
-              style={({ pressed }) => [styles.greyBtn, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => router.push(('/(manager)/assign-artist?venueId=' + venue.id) as Href)}
-            >
-              <MaterialIcons name="person-add" size={18} color={colors.muted} />
-              <Text style={[styles.greyBtnText, { color: colors.muted }]}>Add Artist</Text>
-            </Pressable>
-            {venueAssignments.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <MaterialIcons name="group" size={32} color={colors.muted} />
-                <Text style={{ color: colors.muted, fontSize: 14 }}>No artists assigned to this venue</Text>
-              </View>
-            ) : (
-              <View>
-              {[...venueAssignments]
-                .sort((a, b) => {
-                  const nameA = (getArtistUser(a.artistId)?.fullName ?? '').toLowerCase();
-                  const nameB = (getArtistUser(b.artistId)?.fullName ?? '').toLowerCase();
-                  return nameA.localeCompare(nameB);
-                })
-                .map((a, i, arr) => {
-                const dj = getArtistUser(a.artistId);
-                if (!dj) return null;
-                const profile = getArtistProfile(a.artistId);
-                return (
-                  <View
-                    key={a.id}
-                    style={[styles.lineupRow, { borderBottomColor: colors.border, borderBottomWidth: i === arr.length - 1 ? 0 : StyleSheet.hairlineWidth * 2 }]}
-                  >
-                    <Pressable
-                      style={({ pressed }) => [styles.lineupRowLeft, { opacity: pressed ? 0.6 : 1 }]}
-                      onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + a.artistId) as Href)}
-                    >
-                      <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={48} />
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                          <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{dj.fullName}</Text>
-                          {profile?.hasCompletedBooking && (
-                            <MaterialIcons name="verified" size={15} color={colors.primary} />
-                          )}
-                        </View>
-                        <Text style={[styles.djLocation, { color: colors.muted }]} numberOfLines={1}>{genreLabel(profile?.primaryGenre, profile?.instruments)}</Text>
-                      </View>
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [styles.removeBtn, { opacity: pressed ? 0.7 : 1 }]}
-                      onPress={() => {
-                        Alert.alert(
-                          'Remove from Lineup',
-                          `Remove ${dj.fullName} from this venue's lineup?`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Remove', style: 'destructive', onPress: async () => {
-                              // Update local store
-                              useLineupStore.getState().removeFromVenue(a.venueId, a.artistId);
-                              // Update Supabase so artist sees the change on next load
-                              const { error: vaErr } = await supabase.from('venue_assignments')
-                                .delete()
-                                .eq('venue_id', a.venueId)
-                                .eq('artist_id', a.artistId);
-                              if (vaErr) console.warn('venue_assignments remove error:', vaErr.message);
-                              // Notify the artist
-                              useNotificationStore.getState().addNotification({
-                                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                                userId: a.artistId,
-                                type: 'venue_removed',
-                                title: 'Removed from Venue',
-                                body: `${venue.name}`,
-                                isRead: false,
-                                relatedId: a.venueId,
-                                relatedType: 'venue',
-                                createdAt: new Date().toISOString(),
-                              });
-                            }},
-                          ]
-                        );
-                      }}
-                    >
-                      <MaterialIcons name="person-remove" size={20} color={colors.error} />
-                    </Pressable>
-                  </View>
-                );
-              })}
-              </View>
-            )}
-          </View>
-        )}
       </ScrollView>
       <ReportModal
         visible={showReport}

@@ -582,7 +582,7 @@ export default function NetworkScreen() {
               return (
                 <View>
                   {showHeader
-                    ? <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} rule={false} />
+                    ? <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
                     : <Divider full />}
                   {rowContent}
                 </View>
@@ -619,7 +619,7 @@ export default function NetworkScreen() {
               return (
               <View>
                 {showHeader
-                  ? <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} rule={false} />
+                  ? <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
                   : <Divider full />}
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}

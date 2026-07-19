@@ -414,7 +414,7 @@ export default function ArtistNetworkScreen() {
               return (
                 <View>
                   {showHeader
-                    ? <SectionSeparator label={isConnected ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} rule={false} />
+                    ? <SectionSeparator label={isConnected ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
                     : <Divider full />}
                   {rowContent}
                 </View>
