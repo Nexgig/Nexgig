@@ -1,3 +1,4 @@
+import * as Updates from 'expo-updates';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -549,9 +550,11 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Version footer */}
+        {/* Version footer. The short update id identifies WHICH OTA bundle is running —
+            the app version alone can't, since every OTA ships under v1.0.0. Null means the
+            build's original bundle (no OTA applied yet), or dev. */}
         <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 12, paddingVertical: 24 }}>
-          Nexgig v1.0.0
+          {`Nexgig v1.0.0${Updates.updateId ? ` · ${Updates.updateId.slice(0, 8)}` : ''}`}
         </Text>
 
       </ScrollView>
