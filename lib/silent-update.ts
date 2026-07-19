@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import * as Updates from 'expo-updates';
+import { useUpdates } from 'expo-updates';
 import { reportError } from './observability';
 
 /**
@@ -30,12 +31,28 @@ import { reportError } from './observability';
  * booking-detail with its review form) — a manager who steps out to Google Maps for an
  * address and returns six minutes later is the case that gap alone does not cover.
  */
-const MIN_BACKGROUND_MS = 5 * 60 * 1000;
+// TEMPORARY: 30s while testing the mechanism. Back to 5 * 60 * 1000 once confirmed.
+const MIN_BACKGROUND_MS = 30 * 1000;
 
 /**
  * Mount once, at the root. Returns nothing — it works entirely through side effects.
  */
 export function useSilentUpdates(): void {
+  /**
+   * True when an update has been downloaded and is waiting to run.
+   *
+   * This is the cold-start leftover. Launching the app fully (rather than returning to it)
+   * makes expo-updates download the new bundle in the background and keep running the old
+   * one — so the update is already on the phone. Asking the SERVER "is anything newer?" can
+   * then answer no, because there isn't: the newest version is already downloaded, just not
+   * running. Reloading on this flag catches that case; the server check below is only for
+   * updates published while the app sat in the background.
+   */
+  const { isUpdatePending } = useUpdates();
+  // Read the live value inside the listener without re-subscribing when it flips.
+  const pendingRef = useRef(isUpdatePending);
+  pendingRef.current = isUpdatePending;
+
   const backgroundedAt = useRef<number | null>(null);
   // Guards against overlapping checks if the app is foregrounded twice in quick succession.
   const checking = useRef(false);
@@ -60,6 +77,11 @@ export function useSilentUpdates(): void {
 
       checking.current = true;
       try {
+        // Already downloaded (see isUpdatePending above) — just run it.
+        if (pendingRef.current) {
+          await Updates.reloadAsync();
+          return;
+        }
         const check = await Updates.checkForUpdateAsync();
         if (!check.isAvailable) return;
         await Updates.fetchUpdateAsync();
