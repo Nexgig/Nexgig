@@ -263,7 +263,7 @@ export default function ArtistNetworkScreen() {
           addNotification({
             id: notifId,
             userId: venue.manager_id,
-            type: 'lineup_removed' as any,
+            type: 'artist_left_venue' as any,
             title: 'Artist Left Venue',
             body: `${firstName(currentUser.fullName, 'An artist')} left ${venue.name}`,
             isRead: false,

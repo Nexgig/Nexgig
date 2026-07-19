@@ -285,7 +285,8 @@ export type NotificationType =
   | 'booking_request'
   | 'booking_confirmed'
   | 'booking_declined'
-  | 'booking_cancelled'
+  | 'booking_cancelled'          // manager cancels -> artist
+  | 'booking_cancelled_by_artist' // artist cancels -> manager
   | 'booking_request_cancelled'
   | 'past_confirmation_request'
   | 'lineup_invite'
@@ -294,7 +295,8 @@ export type NotificationType =
   | 'lineup_declined'
   | 'artist_joined'
   | 'lineup_added'
-  | 'lineup_removed'
+  | 'lineup_removed'   // manager removes the artist -> artist
+  | 'artist_left_venue' // artist leaves a venue -> manager
   | 'venue_assigned'
   | 'venue_removed'
   | 'review_submitted'

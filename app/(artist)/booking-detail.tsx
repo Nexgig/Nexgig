@@ -146,19 +146,19 @@ export default function DJBookingDetailScreen() {
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   // Helper: send a notification to the manager
-  const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled') => {
+  const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled_by_artist') => {
     if (!booking || !currentUser) return;
     const venueName = venue?.name ?? booking.venueName ?? 'a venue';
     const date = slot?.date ?? booking.slotDate ?? '';
     const titles: Record<string, string> = {
       booking_confirmed: 'Gig Confirmed',
       booking_declined: 'Gig Declined',
-      booking_cancelled: 'Artist Cancelled',
+      booking_cancelled_by_artist: 'Artist Cancelled',
     };
     const verbs: Record<string, string> = {
       booking_confirmed: 'accepted',
       booking_declined: 'declined',
-      booking_cancelled: 'cancelled',
+      booking_cancelled_by_artist: 'cancelled',
     };
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -295,7 +295,7 @@ export default function DJBookingDetailScreen() {
             artistRespondedFromRequests: true,
           });
           markRelatedNotificationsRead(booking.id);
-          notifyManager('booking_cancelled');
+          notifyManager('booking_cancelled_by_artist');
           if (currentUser?.id) rescheduleArtistReminders(currentUser.id);
           router.back();
         }

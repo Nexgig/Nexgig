@@ -1,3 +1,4 @@
+import { isForRole } from '@/lib/notification-roles';
 import { useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl, Animated } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -15,6 +16,8 @@ const NOTIF_ICONS: Record<string, string> = {
   booking_confirmed: 'check-circle',
   booking_declined: 'cancel',
   booking_cancelled: 'event-busy',
+  booking_cancelled_by_artist: 'event-busy',
+  artist_left_venue: 'location-off',
   booking_completed: 'star',
   lineup_invite: 'person-add',
   invite_accepted: 'how-to-reg',
@@ -29,6 +32,8 @@ const NOTIF_COLORS: Record<string, string> = {
   booking_confirmed: '#22C55E',
   booking_declined: '#EF4444',
   booking_cancelled: '#8E8E93',
+  booking_cancelled_by_artist: '#8E8E93',
+  artist_left_venue: '#EF4444',
   booking_completed: '#8B5CF6',
   lineup_invite: '#D4A017',
   invite_accepted: '#22C55E',
@@ -56,7 +61,7 @@ export default function ManagerNotificationsScreen() {
   const allNotifications = useNotificationStore((s) => s.notifications);
   const notifications = useMemo(
     () => allNotifications
-      .filter((n) => n.userId === currentUser?.id)
+      .filter((n) => n.userId === currentUser?.id && isForRole(n.type, 'manager'))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [allNotifications, currentUser?.id]
   );
@@ -73,7 +78,7 @@ export default function ManagerNotificationsScreen() {
     loadNotificationsFromSupabase(currentUser.id);
     const unread = new Set(
       useNotificationStore.getState().notifications
-        .filter((n) => n.userId === currentUser.id && !n.isRead)
+        .filter((n) => n.userId === currentUser.id && !n.isRead && isForRole(n.type, 'manager'))
         .map((n) => n.id)
     );
     if (unread.size === 0) return;
@@ -111,7 +116,7 @@ export default function ManagerNotificationsScreen() {
     const showUnread = isFading || !item.isRead;
     const dotColor =
       item.type === 'booking_request' || item.type === 'booking_confirmed' || item.type === 'lineup_accepted' || item.type === 'artist_joined' || item.type === 'lineup_added' || item.type === 'lineup_request' || item.type === 'review_submitted' || item.type === 'invoice_received' ? '#22C55E' :
-      item.type === 'booking_cancelled' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' ? '#EF4444' :
+      item.type === 'booking_cancelled' || item.type === 'booking_cancelled_by_artist' || item.type === 'booking_declined' || item.type === 'booking_request_cancelled' || item.type === 'lineup_declined' || item.type === 'lineup_removed' || item.type === 'artist_left_venue' ? '#EF4444' :
       colors.primary;
     return (
       <Pressable

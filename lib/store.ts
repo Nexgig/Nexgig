@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firstName } from './utils';
 import { supabase } from './supabase';
 import { syncBookingStatus } from './booking-sync';
+import { isForRole } from './notification-roles';
 import type {
   User, ArtistProfile, Venue, Lineup, Slot, Booking, BookingStatus,
   AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, DraftAssignment,
@@ -733,7 +734,14 @@ export const useNotificationStore = create<NotificationState>()(
       getByUser: (userId) => get().notifications.filter((n) => n.userId === userId).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       ),
-      getUnreadCount: (userId) => get().notifications.filter((n) => n.userId === userId && !n.isRead).length,
+      // Role-aware: a dual-role account shares one userId across both sides, so an
+      // unfiltered count would advertise unread items the visible list filters out.
+      getUnreadCount: (userId) => {
+        const role = useAuthStore.getState().currentUser?.accountType;
+        return get().notifications.filter((n) =>
+          n.userId === userId && !n.isRead && (!role || isForRole(n.type, role))
+        ).length;
+      },
     }),
     {
       name: 'nexgig:notifications',

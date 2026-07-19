@@ -1,3 +1,4 @@
+import { isForRole } from '@/lib/notification-roles';
 import { useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, RefreshControl, Animated } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -87,7 +88,7 @@ export default function ArtistNotificationsScreen() {
     loadNotificationsFromSupabase(currentUser.id);
     const unread = new Set(
       useNotificationStore.getState().notifications
-        .filter((n) => n.userId === currentUser.id && !n.isRead && !needsAction(n))
+        .filter((n) => n.userId === currentUser.id && !n.isRead && isForRole(n.type, 'artist') && !needsAction(n))
         .map((n) => n.id)
     );
     if (unread.size === 0) return;
@@ -113,7 +114,7 @@ export default function ArtistNotificationsScreen() {
   const notifications = useMemo(
     () =>
       allNotifications
-        .filter((n) => n.userId === currentUser?.id)
+        .filter((n) => n.userId === currentUser?.id && isForRole(n.type, 'artist'))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [allNotifications, currentUser?.id]
   );

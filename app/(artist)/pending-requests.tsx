@@ -28,17 +28,17 @@ export default function ArtistPendingRequestsScreen() {
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   // Helper: send a notification to the manager
-  const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled', bookingId: string, venueName: string, date: string) => {
+  const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled_by_artist', bookingId: string, venueName: string, date: string) => {
     const artistName = currentUser?.fullName ?? 'The artist';
     const titles: Record<string, string> = {
       booking_confirmed: 'Gig Confirmed',
       booking_declined: 'Gig Declined',
-      booking_cancelled: 'Artist Cancelled',
+      booking_cancelled_by_artist: 'Artist Cancelled',
     };
     const verbs: Record<string, string> = {
       booking_confirmed: 'accepted',
       booking_declined: 'declined',
-      booking_cancelled: 'cancelled',
+      booking_cancelled_by_artist: 'cancelled',
     };
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,

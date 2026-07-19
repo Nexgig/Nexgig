@@ -123,17 +123,17 @@ export default function DJAvailabilityScreen() {
   // (Overdue-invoice indicator + invoice button moved to the Completed Gigs page.)
 
   // Helper: send a notification to the manager
-  const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled', b: { id: string; managerId: string; resolvedVenueName?: string; resolvedDate?: string }) => {
+  const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled_by_artist', b: { id: string; managerId: string; resolvedVenueName?: string; resolvedDate?: string }) => {
     if (!currentUser) return;
     const titles: Record<string, string> = {
       booking_confirmed: 'Gig Confirmed',
       booking_declined: 'Gig Declined',
-      booking_cancelled: 'Artist Cancelled',
+      booking_cancelled_by_artist: 'Artist Cancelled',
     };
     const verbs: Record<string, string> = {
       booking_confirmed: 'accepted',
       booking_declined: 'declined',
-      booking_cancelled: 'cancelled',
+      booking_cancelled_by_artist: 'cancelled',
     };
     const dateStr = b.resolvedDate ? formatDate(b.resolvedDate) : '';
     addNotification({
