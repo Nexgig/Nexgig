@@ -1,3 +1,4 @@
+import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal } from '@/lib/rn';
 import { useRouter } from 'expo-router';
@@ -27,6 +28,9 @@ const PRIVATE_GIGS_FILTER = '__private_gigs__';
 export default function DJHomeScreen() {
   const router = useRouter();
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — unmounting one with the group
+  // crashes natively. See useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const { formatTime: fmtTime } = useFormatTime();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allBookings = useBookingStore((s) => s.bookings);
@@ -260,7 +264,7 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <View>

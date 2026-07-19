@@ -1,3 +1,4 @@
+import { useRoleSwitching } from '@/lib/roles';
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -95,6 +96,9 @@ function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; s
 
 export default function DJAvailabilityScreen() {
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — unmounting one with the group
+  // crashes natively. See useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { formatTime: fmtTime } = useFormatTime();
@@ -808,7 +812,7 @@ export default function DJAvailabilityScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>

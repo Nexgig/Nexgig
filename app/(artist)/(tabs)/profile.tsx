@@ -1,4 +1,5 @@
 import { RoleSwitcher } from '@/components/ui/role-switcher';
+import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl } from '@/lib/rn';
 import { useRouter } from 'expo-router';
@@ -29,6 +30,8 @@ export default function ArtistProfileScreen() {
   const router = useRouter();
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — see useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const keyboardHeight = useKeyboardHeight();
   const currentUser = useAuthStore((s) => s.currentUser);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -203,7 +206,7 @@ export default function ArtistProfileScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
+      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <RoleSwitcher role="artist" />

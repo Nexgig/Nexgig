@@ -1,4 +1,5 @@
 import { RoleSwitcher } from '@/components/ui/role-switcher';
+import { useRoleSwitching } from '@/lib/roles';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -17,6 +18,8 @@ import { useMemo, useState, useCallback } from 'react';
 export default function ManagerProfileScreen() {
   const router = useRouter();
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — see useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const keyboardHeight = useKeyboardHeight();
   const currentUser = useAuthStore((s) => s.currentUser);
   const signOut = useAuthStore((s) => s.signOut);
@@ -115,7 +118,7 @@ export default function ManagerProfileScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
+      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <RoleSwitcher role="manager" />

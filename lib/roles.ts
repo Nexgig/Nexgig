@@ -1,3 +1,4 @@
+import { create } from 'zustand';
 import { supabase } from './supabase';
 import { useAuthStore, useLineupStore, resetAllStores } from './store';
 import { reportError } from './observability';
@@ -16,6 +17,23 @@ export type Role = 'manager' | 'artist';
  * survives an app restart for free. Signing out drops it, and the next sign-in falls back
  * to the role stamped on the auth user at signup.
  */
+
+/**
+ * True while a role switch is in flight. The profile screens drop their RefreshControl
+ * when it is set.
+ *
+ * Why: switching is the only cross-group router.replace in the app — everything else uses
+ * push, which leaves the old screen mounted underneath. replace tears the whole group down,
+ * and unmounting a ScrollView that owns a UIRefreshControl crashed the app natively:
+ * RCTPullToRefreshViewComponentView._detach calls -endRefreshingAnimated: on the way out,
+ * which reads back from a UIScrollView already being released. Native, so Sentry never saw
+ * it. Taking the refresh control out of the tree a frame early means it is not part of the
+ * teardown transaction at all.
+ */
+export const useRoleSwitching = create<{ switching: boolean; setSwitching: (v: boolean) => void }>((set) => ({
+  switching: false,
+  setSwitching: (v) => set({ switching: v }),
+}));
 
 /** Which sides this account has a profile on. Both false means an abandoned signup. */
 export async function rolesAvailable(email: string): Promise<{ manager: boolean; artist: boolean }> {

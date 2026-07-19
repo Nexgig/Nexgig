@@ -1,3 +1,4 @@
+import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, Modal } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -20,6 +21,9 @@ import { MonthSeparator } from '@/components/ui/month-separator';
 export default function ManagerDashboard() {
   const router = useRouter();
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — unmounting one with the group
+  // crashes natively. See useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const { formatTime: fmtTime } = useFormatTime();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
@@ -337,7 +341,7 @@ export default function ManagerDashboard() {
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* Header */}
         <View style={styles.header}>

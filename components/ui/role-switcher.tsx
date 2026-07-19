@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { useAuthStore } from '@/lib/store';
-import { rolesAvailable, switchRole, type Role } from '@/lib/roles';
+import { rolesAvailable, switchRole, useRoleSwitching, type Role } from '@/lib/roles';
 import { ALLOW_DUAL_ROLE } from '@/lib/features';
 
 /**
@@ -21,6 +21,7 @@ export function RoleSwitcher({ role }: { role: Role }) {
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.currentUser);
   const [other, setOther] = useState<'has' | 'none' | 'unknown'>('unknown');
+  const setSwitching = useRoleSwitching((s) => s.setSwitching);
   const [busy, setBusy] = useState(false);
 
   const otherRole: Role = role === 'manager' ? 'artist' : 'manager';
@@ -63,15 +64,25 @@ export function RoleSwitcher({ role }: { role: Role }) {
       return;
     }
     setBusy(true);
+    // Take the profile screen's RefreshControl out of the tree and let that commit before
+    // navigating. router.replace tears down this whole route group, and unmounting a
+    // ScrollView that still owns a UIRefreshControl crashes natively (see useRoleSwitching).
+    // Two frames: one for React to render without it, one for the mount transaction to land.
+    setSwitching(true);
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
     const ok = await switchRole(otherRole);
     setBusy(false);
     if (!ok) {
+      setSwitching(false);
       Alert.alert('Could not switch', `We couldn't open your ${otherLabel.toLowerCase()} profile. Check your connection and try again.`);
       return;
     }
     router.replace((otherRole === 'manager'
       ? '/(manager)/(tabs)/dashboard'
       : '/(artist)/(tabs)/dashboard') as Href);
+    // The old group is gone by now; restore normal pull-to-refresh on the new side.
+    setSwitching(false);
   };
 
   return (

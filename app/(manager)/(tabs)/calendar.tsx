@@ -1,3 +1,4 @@
+import { useRoleSwitching } from '@/lib/roles';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,6 +74,9 @@ function formatDateStr(date: Date): string {
 export default function CalendarScreen() {
   const router = useRouter();
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — unmounting one with the group
+  // crashes natively. See useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const keyboardHeight = useKeyboardHeight();
   const insets = useSafeAreaInsets();
   const { formatTime: fmtTime } = useFormatTime();
@@ -1503,7 +1507,7 @@ export default function CalendarScreen() {
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={<RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
+      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
           {/* Header */}
           <View style={styles.header}>

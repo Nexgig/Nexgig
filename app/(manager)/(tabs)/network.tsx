@@ -1,3 +1,4 @@
+import { useRoleSwitching } from '@/lib/roles';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from '@/lib/rn';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -39,6 +40,9 @@ function venueTypeLabel(t?: string | null): string {
 export default function NetworkScreen() {
   const router = useRouter();
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — unmounting one with the group
+  // crashes natively. See useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const { tab: initialTab } = useLocalSearchParams<{ tab?: NetworkTab }>();
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -518,7 +522,7 @@ export default function NetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               // "No artists have signed up yet" is a lie when the list is empty because
               <View style={styles.emptyWrap}>
@@ -605,7 +609,7 @@ export default function NetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="place" size={48} color={colors.muted} />

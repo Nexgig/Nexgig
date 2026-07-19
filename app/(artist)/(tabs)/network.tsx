@@ -1,3 +1,4 @@
+import { useRoleSwitching } from '@/lib/roles';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -63,6 +64,9 @@ function venueTypeLabel(t?: string | null): string {
 
 export default function ArtistNetworkScreen() {
   const colors = useColors();
+  // Drops the RefreshControl during a role switch — unmounting one with the group
+  // crashes natively. See useRoleSwitching.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.currentUser);
 
@@ -366,7 +370,7 @@ export default function ArtistNetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="place" size={48} color={colors.muted} />
@@ -433,7 +437,7 @@ export default function ArtistNetworkScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <MaterialIcons name="people" size={48} color={colors.muted} />
