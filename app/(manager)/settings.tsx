@@ -1,3 +1,5 @@
+import { useAuthStore } from '@/lib/store';
+import { fetchPrefs, savePref, DEFAULT_PREFS, type NotificationPrefs, type PrefKey } from '@/lib/notification-prefs';
 import * as Updates from 'expo-updates';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
@@ -19,8 +21,6 @@ export const STORAGE_KEY_APPEARANCE = 'nexgig:appearance';
 export const STORAGE_KEY_EMAIL_MARKETING = 'nexgig:emailMarketing';
 export const STORAGE_KEY_WEEKLY_DIGEST = 'nexgig:weeklyDigest';
 export const STORAGE_KEY_LINEUP_STATUSES = 'nexgig:lineupStatuses';
-export const STORAGE_KEY_NOTIF_ARTIST_RESPONSES = 'nexgig:mgr:notif:artistResponses';
-export const STORAGE_KEY_NOTIF_NEW_ARTIST = 'nexgig:mgr:notif:newArtist';
 export const STORAGE_KEY_FEEDBACK = 'nexgig:mgr:feedback';
 
 export type CalendarViewMode = 'month' | 'week' | 'today';
@@ -45,8 +45,10 @@ export default function SettingsScreen() {
   const [defaultCalendarView, setDefaultCalendarView] = useState<CalendarViewMode>('month');
   const [emailMarketing, setEmailMarketing] = useState(true);
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
-  const [notifArtistResponses, setNotifArtistResponses] = useState(true);
-  const [notifNewArtist, setNotifNewArtist] = useState(true);
+  // Push preferences live in Supabase, not on the device: a notification is created by the
+  // OTHER person's phone, which can't read local storage. See lib/notification-prefs.ts.
+  const currentUserId = useAuthStore((s) => s.currentUser?.id);
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -54,14 +56,12 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [msd, slb, dcv, em, ls, nar, nna] = await Promise.all([
+        const [msd, slb, dcv, em, ls] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_MONTH_START_DAY),
           AsyncStorage.getItem(STORAGE_KEY_SHOW_LINEUP_BALANCE),
           AsyncStorage.getItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
           AsyncStorage.getItem(STORAGE_KEY_EMAIL_MARKETING),
           AsyncStorage.getItem(STORAGE_KEY_LINEUP_STATUSES),
-          AsyncStorage.getItem(STORAGE_KEY_NOTIF_ARTIST_RESPONSES),
-          AsyncStorage.getItem(STORAGE_KEY_NOTIF_NEW_ARTIST),
         ]);
         if (msd !== null) setMonthStartDay(Number(msd));
         if (slb !== null) setShowLineupBalance(slb !== 'false');
@@ -77,8 +77,7 @@ export default function SettingsScreen() {
             if (Array.isArray(parsed) && parsed.length > 0) setLineupStatuses(parsed);
           } catch { /* ignore corrupt data */ }
         }
-        if (nar !== null) setNotifArtistResponses(nar === 'true');
-        if (nna !== null) setNotifNewArtist(nna === 'true');
+        if (currentUserId) setPrefs(await fetchPrefs(currentUserId));
       } finally {
         setLoading(false);
       }
@@ -106,15 +105,17 @@ export default function SettingsScreen() {
     await AsyncStorage.setItem(STORAGE_KEY_EMAIL_MARKETING, String(val));
   }, []);
 
-  const saveNotifArtistResponses = useCallback(async (val: boolean) => {
-    setNotifArtistResponses(val);
-    await AsyncStorage.setItem(STORAGE_KEY_NOTIF_ARTIST_RESPONSES, String(val));
-  }, []);
-
-  const saveNotifNewArtist = useCallback(async (val: boolean) => {
-    setNotifNewArtist(val);
-    await AsyncStorage.setItem(STORAGE_KEY_NOTIF_NEW_ARTIST, String(val));
-  }, []);
+  // Optimistic: flip the switch immediately, put it back if the write fails. A switch that
+  // silently reverts on next open is worse than one that visibly refuses.
+  const setPref = useCallback(async (key: PrefKey, val: boolean) => {
+    if (!currentUserId) return;
+    setPrefs((p) => ({ ...p, [key]: val }));
+    const ok = await savePref(currentUserId, key, val);
+    if (!ok) {
+      setPrefs((p) => ({ ...p, [key]: !val }));
+      Alert.alert('Not saved', 'Could not save that setting. Check your connection and try again.');
+    }
+  }, [currentUserId]);
 
   const toggleLineupStatus = useCallback(async (status: LineupStatusFilter) => {
     setLineupStatuses((prev) => {
@@ -148,8 +149,6 @@ export default function SettingsScreen() {
               AsyncStorage.removeItem(STORAGE_KEY_APPEARANCE),
               AsyncStorage.removeItem(STORAGE_KEY_EMAIL_MARKETING),
               AsyncStorage.removeItem(STORAGE_KEY_LINEUP_STATUSES),
-              AsyncStorage.removeItem(STORAGE_KEY_NOTIF_ARTIST_RESPONSES),
-              AsyncStorage.removeItem(STORAGE_KEY_NOTIF_NEW_ARTIST),
             ]);
             setMonthStartDay(1);
             setShowLineupBalance(true);
@@ -157,8 +156,7 @@ export default function SettingsScreen() {
             setAppearance('system');
             setEmailMarketing(true);
             setLineupStatuses(LINEUP_STATUS_DEFAULT);
-            setNotifArtistResponses(true);
-            setNotifNewArtist(true);
+            setPrefs(DEFAULT_PREFS);
           },
         },
       ]
@@ -431,23 +429,49 @@ export default function SettingsScreen() {
               <MaterialIcons name="reply" size={20} color={colors.primary} />
               <View style={styles.settingText}>
                 <Text style={[styles.settingTitle, { color: colors.foreground }]}>Artist Responses</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>Confirms, declines, or cancels a booking</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Gigs confirmed, declined or cancelled by an artist</Text>
               </View>
             </View>
-            <Switch value={notifArtistResponses} onValueChange={saveNotifArtistResponses} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+            <Switch value={prefs.artist_responses} onValueChange={(v) => setPref('artist_responses', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <MaterialIcons name="person-add" size={20} color={colors.primary} />
+              <MaterialIcons name="group" size={20} color={colors.primary} />
               <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>New Artist Joined</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>Artist added to lineup</Text>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Roster Changes</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Artists joining or leaving your lineup and venues</Text>
               </View>
             </View>
-            <Switch value={notifNewArtist} onValueChange={saveNotifNewArtist} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+            <Switch value={prefs.roster} onValueChange={(v) => setPref('roster', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <MaterialIcons name="star" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Gig Reviews</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>An artist reviews a gig they played</Text>
+              </View>
+            </View>
+            <Switch value={prefs.reviews} onValueChange={(v) => setPref('reviews', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <MaterialIcons name="receipt-long" size={20} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Invoices</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Invoices sent or cancelled by an artist</Text>
+              </View>
+            </View>
+            <Switch value={prefs.invoices} onValueChange={(v) => setPref('invoices', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
           </View>
 
         </View>

@@ -1,3 +1,4 @@
+import { fetchPrefs, savePref, DEFAULT_PREFS, type NotificationPrefs, type PrefKey } from '@/lib/notification-prefs';
 import * as Updates from 'expo-updates';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
@@ -16,9 +17,6 @@ import * as Notifications from 'expo-notifications'; // TEMP: reminder debug but
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 export const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
 export const DJ_STORAGE_KEY_APPEARANCE = 'nexgig:appearance'; // shared with manager
-export const DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS = 'nexgig:dj:notif:bookingRequests';
-export const DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES = 'nexgig:dj:notif:bookingUpdates';
-export const DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES = 'nexgig:dj:notif:lineupVenues';
 export const DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES = 'nexgig:dj:emailProductUpdates';
 export const DJ_STORAGE_KEY_LANGUAGE = 'nexgig:dj:language';
 export const DJ_STORAGE_KEY_FEEDBACK = 'nexgig:dj:feedback';
@@ -45,9 +43,10 @@ export default function DJSettingsScreen() {
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [defaultCalendarView, setDefaultCalendarView] = useState<CalendarViewMode>('month');
-  const [notifBookingRequests, setNotifBookingRequests] = useState(true);
-  const [notifBookingUpdates, setNotifBookingUpdates] = useState(true);
-  const [notifLineupVenues, setNotifLineupVenues] = useState(true);
+  // Push preferences live in Supabase, not on the device: a notification is created by the
+  // OTHER person's phone, which can't read this phone's local storage. That is why the old
+  // AsyncStorage switches were inert. See lib/notification-prefs.ts.
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
   const [emailProductUpdates, setEmailProductUpdates] = useState(true);
   const [reminderOffsets, setReminderOffsetsState] = useState<number[]>([]);
   const [language, setLanguage] = useState<LanguageOption>('en');
@@ -58,18 +57,13 @@ export default function DJSettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [dcv, nbr, nbu, nlv, epu, lang] = await Promise.all([
+        const [dcv, epu, lang] = await Promise.all([
           AsyncStorage.getItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
-          AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS),
-          AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES),
-          AsyncStorage.getItem(DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES),
           AsyncStorage.getItem(DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES),
           AsyncStorage.getItem(DJ_STORAGE_KEY_LANGUAGE),
         ]);
         if (dcv !== null) setDefaultCalendarView(dcv === 'week' ? 'week' : dcv === 'today' ? 'today' : 'month');
-        if (nbr !== null) setNotifBookingRequests(nbr === 'true');
-        if (nbu !== null) setNotifBookingUpdates(nbu === 'true');
-        if (nlv !== null) setNotifLineupVenues(nlv === 'true');
+        if (currentUserId) setPrefs(await fetchPrefs(currentUserId));
         if (epu !== null) setEmailProductUpdates(epu === 'true');
         if (lang !== null) setLanguage(lang as LanguageOption);
         // Reminder offsets come from the reminders module (its own storage key + default).
@@ -86,20 +80,17 @@ export default function DJSettingsScreen() {
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, view);
   }, []);
 
-  const saveNotifBookingRequests = useCallback(async (val: boolean) => {
-    setNotifBookingRequests(val);
-    await AsyncStorage.setItem(DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS, String(val));
-  }, []);
-
-  const saveNotifBookingUpdates = useCallback(async (val: boolean) => {
-    setNotifBookingUpdates(val);
-    await AsyncStorage.setItem(DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES, String(val));
-  }, []);
-
-  const saveNotifLineupVenues = useCallback(async (val: boolean) => {
-    setNotifLineupVenues(val);
-    await AsyncStorage.setItem(DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES, String(val));
-  }, []);
+  // Optimistic: flip the switch immediately, put it back if the write fails. A switch that
+  // silently reverts on next open is worse than one that visibly refuses.
+  const setPref = useCallback(async (key: PrefKey, val: boolean) => {
+    if (!currentUserId) return;
+    setPrefs((p) => ({ ...p, [key]: val }));
+    const ok = await savePref(currentUserId, key, val);
+    if (!ok) {
+      setPrefs((p) => ({ ...p, [key]: !val }));
+      Alert.alert('Not saved', 'Could not save that setting. Check your connection and try again.');
+    }
+  }, [currentUserId]);
 
   const saveEmailProductUpdates = useCallback(async (val: boolean) => {
     setEmailProductUpdates(val);
@@ -136,18 +127,13 @@ export default function DJSettingsScreen() {
             await Promise.all([
               AsyncStorage.removeItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
               AsyncStorage.removeItem(DJ_STORAGE_KEY_APPEARANCE),
-              AsyncStorage.removeItem(DJ_STORAGE_KEY_NOTIF_BOOKING_REQUESTS),
-              AsyncStorage.removeItem(DJ_STORAGE_KEY_NOTIF_BOOKING_UPDATES),
-              AsyncStorage.removeItem(DJ_STORAGE_KEY_NOTIF_LINEUP_VENUES),
               AsyncStorage.removeItem(DJ_STORAGE_KEY_EMAIL_PRODUCT_UPDATES),
               AsyncStorage.removeItem(DJ_STORAGE_KEY_LANGUAGE),
             ]);
             setDefaultCalendarView('month');
             setAppearance('system');
             setTimeFormat('24h');
-            setNotifBookingRequests(true);
-            setNotifBookingUpdates(true);
-            setNotifLineupVenues(true);
+            setPrefs(DEFAULT_PREFS);
             setEmailProductUpdates(true);
             // Reset reminders to the default offsets (3h + 1 day) + reschedule.
             const defaults = [180, 1440];
@@ -338,11 +324,11 @@ export default function DJSettingsScreen() {
             <View style={styles.settingInfo}>
               <MaterialIcons name="notifications" size={20} color={colors.primary} />
               <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Booking Requests</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>New request received &amp; request cancelled</Text>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Gig Requests</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>New requests, past-gig confirmations, and withdrawn requests</Text>
               </View>
             </View>
-            <Switch value={notifBookingRequests} onValueChange={saveNotifBookingRequests} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+            <Switch value={prefs.gig_requests} onValueChange={(v) => setPref('gig_requests', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -351,11 +337,11 @@ export default function DJSettingsScreen() {
             <View style={styles.settingInfo}>
               <MaterialIcons name="event-busy" size={20} color={colors.primary} />
               <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Booking Updates</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>Confirmed booking cancelled</Text>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Gig Updates</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>A manager cancels a gig you had confirmed</Text>
               </View>
             </View>
-            <Switch value={notifBookingUpdates} onValueChange={saveNotifBookingUpdates} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+            <Switch value={prefs.gig_updates} onValueChange={(v) => setPref('gig_updates', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -368,7 +354,7 @@ export default function DJSettingsScreen() {
                 <Text style={[styles.settingDesc, { color: colors.muted }]}>Added / removed from lineup or venue</Text>
               </View>
             </View>
-            <Switch value={notifLineupVenues} onValueChange={saveNotifLineupVenues} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
+            <Switch value={prefs.lineup_venues} onValueChange={(v) => setPref('lineup_venues', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />

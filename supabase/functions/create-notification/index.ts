@@ -13,6 +13,38 @@ const json = (body: unknown, status: number) =>
     status,
   });
 
+/**
+ * Which preference column governs each notification type.
+ *
+ * MUST stay in step with lib/notification-roles.ts in the app — this is Deno and cannot
+ * import from lib/. A type missing here is always pushed, which is the safe direction: a
+ * forgotten slug reaches the user rather than being silently swallowed.
+ */
+const PREF_COLUMN: Record<string, string> = {
+  // artist-facing
+  booking_request: 'gig_requests',
+  past_confirmation_request: 'gig_requests',
+  booking_request_cancelled: 'gig_requests',
+  booking_cancelled: 'gig_updates',
+  lineup_added: 'lineup_venues',
+  lineup_removed: 'lineup_venues',
+  lineup_declined: 'lineup_venues',
+  lineup_invite: 'lineup_venues',
+  venue_assigned: 'lineup_venues',
+  venue_removed: 'lineup_venues',
+  // manager-facing
+  booking_confirmed: 'artist_responses',
+  booking_declined: 'artist_responses',
+  booking_cancelled_by_artist: 'artist_responses',
+  artist_joined: 'roster',
+  artist_left_venue: 'roster',
+  lineup_request: 'roster',
+  lineup_accepted: 'roster',
+  review_submitted: 'reviews',
+  invoice_received: 'invoices',
+  invoice_cancelled: 'invoices',
+};
+
 function isUuid(v: unknown): v is string {
   return typeof v === 'string' &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -76,7 +108,25 @@ serve(async (req) => {
     // 4. Best-effort push notification to the recipient's device.
     //    Failures here never fail the request — the in-app notification row
     //    is already saved above.
+    //
+    //    The recipient's preferences are checked HERE rather than on the sending device:
+    //    a notification is created by the other party's phone, which cannot read the
+    //    recipient's settings. Suppressing only the push means the in-app row above still
+    //    stands, so nothing is lost — the toggle governs interruption, not history.
     try {
+      const prefColumn = PREF_COLUMN[type];
+      if (prefColumn) {
+        const { data: prefs } = await admin
+          .from('notification_preferences')
+          .select(prefColumn)
+          .eq('user_id', user_id)
+          .maybeSingle();
+        // No row means the user has never changed a switch — everything is on.
+        if (prefs && (prefs as Record<string, boolean>)[prefColumn] === false) {
+          return json({ success: true, push: 'suppressed_by_preference' }, 200);
+        }
+      }
+
       const { data: recipient } = await admin
         .from('users')
         .select('push_token')
