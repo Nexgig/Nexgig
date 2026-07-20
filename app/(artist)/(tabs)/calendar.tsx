@@ -507,28 +507,7 @@ export default function DJAvailabilityScreen() {
       .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
   };
 
-  const handleDeletePrivateEvent = (bookingId: string, name: string) => {
-    Alert.alert('Delete Private Event', `Delete "${name}"? This cannot be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => {
-        deleteBooking(bookingId);
-        // Also remove from availability_blocks (private events are stored there)
-        supabase.from('availability_blocks').delete().eq('id', bookingId)
-          .then(({ error }) => { if (error) console.warn('availability_blocks delete error:', error.message); });
-      }},
-    ]);
-  };
 
-  const handleHideBooking = (bookingId: string, venueName: string) => {
-    Alert.alert(
-      'Remove from Calendar',
-      `Remove this past booking at ${venueName} from your calendar? Your gig history will be preserved in the Bookings tab.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => hideFromCalendar(bookingId) },
-      ]
-    );
-  };
 
   const handleCancelManagerBooking = (bookingId: string, venueName: string) => {
     Alert.alert(
@@ -555,30 +534,7 @@ export default function DJAvailabilityScreen() {
     );
   };
 
-  const openEditModal = (b: typeof myBookings[0]) => {
-    const isFull = b.slotStartTime === '00:00' && b.slotEndTime === '23:59';
-    const q = new URLSearchParams();
-    q.set('date', b.resolvedDate ?? selectedDate);
-    q.set('editBookingId', b.id);
-    q.set('kind', 'private_event');
-    q.set('ev', b.slotName ?? '');
-    if (b.privateEventLocation) q.set('loc', b.privateEventLocation);
-    q.set('st', b.slotStartTime ?? '21:00');
-    q.set('et', b.slotEndTime ?? '01:00');
-    q.set('fd', isFull ? '1' : '0');
-    router.push(('/(artist)/add-block?' + q.toString()) as Href);
-  };
 
-  const openEditBlockModal = (bl: AvailabilityBlock) => {
-    const q = new URLSearchParams();
-    q.set('date', bl.date);
-    q.set('editBlockId', bl.id);
-    q.set('kind', 'block');
-    q.set('st', bl.startTime);
-    q.set('et', bl.endTime);
-    q.set('fd', bl.fullDay ? '1' : '0');
-    router.push(('/(artist)/add-block?' + q.toString()) as Href);
-  };
 
   // ─── Render a booking card (same design as manager slot card) ───
   const renderBookingCard = (b: typeof myBookings[0], _showDelete: boolean) => {

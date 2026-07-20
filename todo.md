@@ -20,7 +20,8 @@ Updated 20 July 2026. Only open items live here. Done work is deleted, not archi
 >
 > **The current phase is TESTFLIGHT POLISH, not launch.** Testing with friends, fixing what
 > they hit, shipping via `eas update` in seconds. The polish batch, avatars and dual-role
-> accounts are all done (19–20 Jul); what remains before submitting is item 2.
+> accounts are all done (19–20 Jul). Demo-account avatars re-picked and the role
+> switcher verified on device (20 Jul), so nothing blocks submission but the decision.
 > **Submission is on hold on purpose — see item 1. Don't push for it.**
 
 **1 · App Store submission — DELIBERATELY ON HOLD. Do not submit yet. Do not suggest it.**
@@ -36,28 +37,10 @@ TestFlight build 17 and the reviewers' build pull JS from the same `production` 
 OTA during review changes the app under the reviewer. Submitting early trades the fast feedback
 loop for a queue slot that buys nothing.
 
-**Submit only when:** real-world testing has settled, item 2 is cleared, and Tuts
+**Submit only when:** real-world testing has settled and Tuts
 says so. Until then: test, fix what testers hit, and OTA freely.
 
-**2 · Before submitting — two things that must happen first.**
-  - **Re-pick avatars on the demo accounts.** The avatar set was replaced (37 characters,
-    19 Jul) and every saved `avatarId` now points at different artwork. The seeded demo
-    artists are the accounts **Apple's reviewer signs into**, so they currently show
-    whatever landed in each slot.
-  - **Prove the role-switch crash is gone.** Switching roles crashed once natively
-    (UIRefreshControl torn down with its scroll view — see CLAUDE.md). Fixed 19 Jul by
-    dropping every tab's RefreshControl a frame before navigating, but it was a race, so
-    one clean switch proves nothing. Switch repeatedly, after visiting several tabs.
-    `ALLOW_DUAL_ROLE` in `lib/features.ts` turns the whole feature off in one word if needed.
-
-**3 · Artists cannot EDIT a private event or an availability block.** They can create and
-delete both, but not edit. `openEditModal` / `openEditBlockModal` in the artist calendar are
-the only code for it and nothing has ever called them — the three-dot menu that would have
-was itself unreachable (`setMenuItem` was only ever passed null) and was deleted 20 Jul. The
-handlers were deliberately LEFT in place rather than removed, so this reads as a missing
-feature rather than vanishing silently. Decide: wire up an edit affordance, or delete them.
-
-**4 · Known limitation — push notifications are not separated by role.** The in-app lists
+**2 · Known limitation — push notifications are not separated by role.** The in-app lists
 are (`lib/notification-roles.ts`), and the on/off categories are honoured at send time
 (`supabase/notification-preferences.sql` + the create-notification function). But a push
 arrives when the app isn't running, so nothing knows which role the user last chose, and one
