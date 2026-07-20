@@ -21,6 +21,11 @@ const SLOT_PRESETS = [
   { name: 'Night', start: '21:00', end: '01:00' },
 ] as const;
 
+/** A preset reads as selected when the TIMES match — the name is no longer written. */
+function isPresetActive(form: { startTime: string; endTime: string }, preset: { start: string; end: string }) {
+  return form.startTime === preset.start && form.endTime === preset.end;
+}
+
 const TIME_OPTIONS: string[] = [];
 for (let h = 0; h < 24; h++) {
   for (const m of ['00', '30']) {
@@ -397,14 +402,18 @@ export default function AddSlotScreen() {
             {SLOT_PRESETS.map((preset) => (
               <Pressable
                 key={preset.name}
-                onPress={() => setSlotForm((f) => ({ ...f, name: preset.name, startTime: preset.start, endTime: preset.end }))}
+                // Times only — the preset is a shortcut for start/end, not a name for the
+                // set. It used to write preset.name into slotForm.name, which is the ONLY
+                // thing that ever set a set's name (there is no name field), so every
+                // preset tap surfaced "Night" or "Sunset" on the artist's calendar row.
+                onPress={() => setSlotForm((f) => ({ ...f, startTime: preset.start, endTime: preset.end }))}
                 style={({ pressed }) => [styles.presetChip, {
-                  backgroundColor: slotForm.name === preset.name ? colors.primary + '18' : 'transparent',
-                  borderColor: slotForm.name === preset.name ? colors.primary : colors.border,
+                  backgroundColor: isPresetActive(slotForm, preset) ? colors.primary + '18' : 'transparent',
+                  borderColor: isPresetActive(slotForm, preset) ? colors.primary : colors.border,
                   opacity: pressed ? 0.7 : 1,
                 }]}
               >
-                <Text style={[styles.presetChipText, { color: slotForm.name === preset.name ? colors.primary : colors.foreground, fontWeight: slotForm.name === preset.name ? '700' : '500' }]}>{preset.name}</Text>
+                <Text style={[styles.presetChipText, { color: isPresetActive(slotForm, preset) ? colors.primary : colors.foreground, fontWeight: isPresetActive(slotForm, preset) ? '700' : '500' }]}>{preset.name}</Text>
               </Pressable>
             ))}
           </View>

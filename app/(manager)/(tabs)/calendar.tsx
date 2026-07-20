@@ -2140,16 +2140,18 @@ export default function CalendarScreen() {
                       {SLOT_PRESETS.map((preset) => (
                         <Pressable
                           key={preset.name}
-                          onPress={() => setBulkTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, name: preset.name, startTime: preset.start, endTime: preset.end } : t))}
+                          // Times only — see add-slot. Writing preset.name here leaked
+                          // "Night" onto the artist's calendar row for every bulk set.
+                          onPress={() => setBulkTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, startTime: preset.start, endTime: preset.end } : t))}
                           style={({ pressed }) => [slotModalStyles.presetChip, {
-                            backgroundColor: tpl.name === preset.name ? colors.primary + '18' : 'transparent',
-                            borderColor: tpl.name === preset.name ? colors.primary : colors.border,
+                            backgroundColor: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? colors.primary + '18' : 'transparent',
+                            borderColor: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? colors.primary : colors.border,
                             opacity: pressed ? 0.7 : 1,
                           }]}
                         >
                           <Text style={[slotModalStyles.presetChipText, {
-                            color: tpl.name === preset.name ? colors.primary : colors.foreground,
-                            fontWeight: tpl.name === preset.name ? '700' : '500',
+                            color: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? colors.primary : colors.foreground,
+                            fontWeight: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? '700' : '500',
                           }]}>{preset.name}</Text>
                         </Pressable>
                       ))}
