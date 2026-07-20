@@ -224,7 +224,6 @@ export default function DJAvailabilityScreen() {
   const [viewedDayStr, setViewedDayStr] = useState(todayStr);
 
   // Three-dot menu state: { type: 'booking'|'block', id: string } | null
-  const [menuItem, setMenuItem] = useState<{ type: 'booking' | 'block'; id: string } | null>(null);
 
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBookingFn = useBookingStore((s) => s.addBooking);
@@ -589,6 +588,9 @@ export default function DJAvailabilityScreen() {
     const isRequested = b.status === 'requested' || b.status === 'past_confirmation';
     const isConfirmed = b.status === 'confirmed';
     const isCompleted = b.status === 'completed';
+    // Nobody answered before the gig ended. Dismissible like a cancellation, but grey:
+    // nothing was taken away, the request simply ran out of time.
+    const isExpired = b.status === 'expired';
 
     // Determine the right action icon for non-artist-created bookings
     const renderActionBtn = () => {
@@ -635,11 +637,12 @@ export default function DJAvailabilityScreen() {
           </View>
         );
       }
-      if (isCancelled || isDeclined) {
+      if (isCancelled || isDeclined || isExpired) {
         // Dismiss button shown inline on the right side (same position as other action buttons)
+        const dismissColor = isExpired ? colors.muted : colors.error;
         return (
           <TouchableOpacity
-            style={[styles.slotMenuBtn, { borderWidth: 1, borderColor: colors.error, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 12 }]}
+            style={[styles.slotMenuBtn, { borderWidth: 1, borderColor: dismissColor, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 12 }]}
                         onPress={(e) => { 
               e.stopPropagation?.(); 
               hideFromCalendar(b.id);
@@ -649,7 +652,7 @@ export default function DJAvailabilityScreen() {
             }}
             activeOpacity={0.6}
           >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.error }}>Dismiss</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: dismissColor }}>Dismiss</Text>
           </TouchableOpacity>
         );
       }
@@ -1130,108 +1133,6 @@ export default function DJAvailabilityScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
-
-      {/* ─── Three-dot Action Sheet ─── */}
-      <Modal visible={menuItem !== null} transparent animationType="fade" onRequestClose={() => setMenuItem(null)}>
-        <Pressable style={styles.menuOverlay} onPress={() => setMenuItem(null)}>
-          <View style={[styles.menuSheet, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            {menuItem?.type === 'booking' && (() => {
-              const b = myBookings.find((x) => x.id === menuItem.id);
-              if (!b) return null;
-              return (
-                <>
-                  {b.isArtistCreated ? (
-                    <>
-                      <Pressable
-                        style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                        onPress={() => { setMenuItem(null); openEditModal(b); }}
-                      >
-                        <MaterialIcons name="edit" size={20} color={colors.foreground} />
-                        <Text style={[styles.menuActionText, { color: colors.foreground }]}>Edit</Text>
-                      </Pressable>
-                      {Platform.OS !== 'web' && !exportedGigIds.has(b.id) && (
-                        <>
-                          <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-                          <Pressable
-                            style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                            onPress={() => { setMenuItem(null); exportPrivateBookingToCalendar(b); }}
-                          >
-                            <MaterialIcons name="event" size={20} color={colors.primary} />
-                            <Text style={[styles.menuActionText, { color: colors.primary }]}>Export to Calendar</Text>
-                          </Pressable>
-                        </>
-                      )}
-                      <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-                      <Pressable
-                        style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                        onPress={() => { setMenuItem(null); handleDeletePrivateEvent(b.id, b.slotName ?? b.resolvedVenueName); }}
-                      >
-                        <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
-                        <Text style={[styles.menuActionText, { color: '#EF4444' }]}>Delete</Text>
-                      </Pressable>
-                    </>
-                  ) : (
-                    <>
-                      <Pressable
-                        style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                        onPress={() => { setMenuItem(null); handleCancelManagerBooking(b.id, b.resolvedVenueName); }}
-                      >
-                        <MaterialIcons name="cancel" size={20} color="#EF4444" />
-                        <Text style={[styles.menuActionText, { color: '#EF4444' }]}>Decline Booking</Text>
-                      </Pressable>
-                      {b.resolvedDate && b.resolvedDate < todayStr && (
-                        <>
-                          <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-                          <Pressable
-                            style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                            onPress={() => { setMenuItem(null); handleHideBooking(b.id, b.resolvedVenueName); }}
-                          >
-                            <MaterialIcons name="visibility-off" size={20} color={colors.muted} />
-                            <Text style={[styles.menuActionText, { color: colors.muted }]}>Remove from Calendar</Text>
-                          </Pressable>
-                        </>
-                      )}
-                    </>
-                  )}
-                </>
-              );
-            })()}
-
-            {menuItem?.type === 'block' && (() => {
-              const bl = blocks.find((x) => x.id === menuItem.id);
-              if (!bl) return null;
-              return (
-                <>
-                  <Pressable
-                    style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                    onPress={() => { setMenuItem(null); openEditBlockModal(bl); }}
-                  >
-                    <MaterialIcons name="edit" size={20} color={colors.foreground} />
-                    <Text style={[styles.menuActionText, { color: colors.foreground }]}>Edit</Text>
-                  </Pressable>
-                  <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-                  <Pressable
-                    style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-                    onPress={() => { setMenuItem(null); handleDeleteBlock(bl.id); }}
-                  >
-                    <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
-                    <Text style={[styles.menuActionText, { color: '#EF4444' }]}>Delete</Text>
-                  </Pressable>
-                </>
-              );
-            })()}
-
-            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-            <Pressable
-              style={({ pressed }) => [styles.menuAction, { opacity: pressed ? 0.6 : 1 }]}
-              onPress={() => setMenuItem(null)}
-            >
-              <MaterialIcons name="close" size={20} color={colors.muted} />
-              <Text style={[styles.menuActionText, { color: colors.muted }]}>Dismiss</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
 
       {/* ═══════════════════ CALENDAR SYNC SHEET ═══════════════════ */}
       <Modal
