@@ -27,7 +27,11 @@ export default function PendingRequestsScreen() {
 
   const pendingBookings = useMemo(() => {
     return allBookings
-      .filter((b) => b.managerId === currentUser?.id && !b.hiddenFromManagerCalendar && (b.status === 'requested' || b.status === 'past_confirmation'))
+      // isExpiredRequest as well as the status: the sweep may not have run yet, and a
+      // dead request must never appear as something awaiting a response.
+      .filter((b) => b.managerId === currentUser?.id && !b.hiddenFromManagerCalendar
+        && (b.status === 'requested' || b.status === 'past_confirmation')
+        && !isExpiredRequest(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime))
       .map((b) => {
         const slot = slots.find((s) => s.id === b.slotId);
         const dj = artistUsers.find((u) => u.id === b.artistId);

@@ -74,6 +74,7 @@ function getBookingStatusColor(b: { status: string; isArtistCreated?: boolean; s
     const isPast = isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime);
     return isPast ? STATUS_COLORS.completed : STATUS_COLORS.confirmed;
   }
+  if (b.status === 'expired') return '#8E8E93';
   if (b.status === 'requested' || b.status === 'past_confirmation') return STATUS_COLORS.pending;
   if (b.status === 'confirmed') return STATUS_COLORS.confirmed;
   if (b.status === 'completed') return STATUS_COLORS.completed;
@@ -86,6 +87,7 @@ function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; s
     const isPast = isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime);
     return isPast ? 'Completed' : 'Private Event';
   }
+  if (b.status === 'expired') return 'Expired';
   if (b.status === 'requested' || b.status === 'past_confirmation') return 'Pending';
   if (b.status === 'confirmed') return 'Confirmed';
   if (b.status === 'completed') return 'Completed';

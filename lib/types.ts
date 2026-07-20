@@ -243,7 +243,12 @@ export interface Slot {
 
 // ─── Booking ─────────────────────────────────────────────────────────────────
 
-export type BookingStatus = 'requested' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'past_confirmation';
+export type BookingStatus =
+  | 'requested' | 'confirmed' | 'declined' | 'cancelled' | 'completed'
+  | 'past_confirmation'
+  /** Nobody answered before the gig ended. Dead: no action can change it. Set by
+   *  lib/expire-requests.ts — see there for why it is a real status, not a badge. */
+  | 'expired';
 
 export interface Booking {
   id: string;

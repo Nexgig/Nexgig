@@ -165,7 +165,7 @@ export default function CalendarScreen() {
   // (i.e. empty or draft-only). Reads authoritative Supabase data — NOT the local
   // store — so it can never wrongly delete history slots before bookings have loaded.
   // A slot is KEPT if it has any booking with status requested / past_confirmation /
-  // confirmed / completed.
+  // confirmed / completed / expired.
   const sweepPastEmptySlots = useCallback(async () => {
     if (!currentUser) return;
     const { data: slotRows } = await supabase.from('slots').select('id, date, start_time').eq('manager_id', currentUser.id);
@@ -176,7 +176,9 @@ export default function CalendarScreen() {
     // If the bookings read failed we know nothing — deleting on a failed read would be
     // destroying slots we simply couldn't see. Do nothing and try again next focus.
     if (bkErr) { console.warn('sweep past slots (bookings read):', bkErr.message); return; }
-    const keep = new Set(['requested', 'past_confirmation', 'confirmed', 'completed']);
+    // 'expired' included: an unanswered request is still history worth showing, and
+    // without it the whole set silently disappears from the manager's calendar.
+    const keep = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'expired']);
     const keepSlotIds = new Set((bks ?? []).filter((b: any) => keep.has(b.status)).map((b: any) => b.slot_id));
     // Also protect any slot the LOCAL store knows has a booking or a draft on it. A booking
     // written moments ago may not be readable yet; the sweep must not race the write and
@@ -1265,7 +1267,7 @@ export default function CalendarScreen() {
             const isCancelled = booking.status === 'cancelled';
             // Expired: nobody answered before the gig ended, so it can be cleared away
             // like a declined one. Clearing hides the row; it does not touch the slot.
-            const isExpiredReq = isExpiredRequest(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime);
+            const isExpiredReq = booking.status === 'expired';
             return (
               <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
                 <Pressable
@@ -1369,7 +1371,7 @@ export default function CalendarScreen() {
             const isCancelled = booking.status === 'cancelled';
             // Expired: nobody answered before the gig ended, so it can be cleared away
             // like a declined one. Clearing hides the row; it does not touch the slot.
-            const isExpiredReq = isExpiredRequest(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime);
+            const isExpiredReq = booking.status === 'expired';
             return (
               <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
                 <Pressable

@@ -1,3 +1,4 @@
+import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal } from '@/lib/rn';
@@ -93,6 +94,10 @@ export default function DJHomeScreen() {
   // written at creation). Without this fallback the slot lookup always failed on the
   // artist side, so a past confirmed gig never flipped to completed — it disappeared
   // from the dashboard COMPLETED count, Completed Gigs, and profile History.
+  // Retire requests nobody answered before the gig ended. Runs on both sides — the
+  // write is idempotent, so whichever app opens first does it.
+  useEffect(() => { sweepExpiredRequests(); }, [nowDT]);
+
   useEffect(() => {
     bookings
       .filter((b) => b.status === 'confirmed' && !b.isCompleted && !b.isArtistCreated)

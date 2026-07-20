@@ -12,7 +12,7 @@ import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
-import { displayStatus, isExpiredRequest } from '@/lib/utils';
+import { displayStatus } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchReviews } from '@/lib/reviews';
 import type { } from '@/lib/types';
@@ -347,7 +347,7 @@ export default function DJBookingDetailScreen() {
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
                   trailing={<StatusWithX status={booking.status} onX={
-                    isExpiredRequest(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime)
+                    booking.status === 'expired'
                       ? () => dismissExpiredBooking(booking.id)
                       : cancellableStatus(booking.status) ? () => cancelOneBooking(booking.id) : undefined} />}
                   divider={coBookings.length > 0 || draftArtists.length > 0}
@@ -361,7 +361,7 @@ export default function DJBookingDetailScreen() {
                       title={coArtist?.fullName ?? 'Former Artist'}
                       subtitle="Artist"
                       trailing={<StatusWithX status={cb.status} onX={
-                        isExpiredRequest(cb.status, cb.createdAt, cb.slotDate, cb.slotStartTime, cb.slotEndTime)
+                        cb.status === 'expired'
                           ? () => dismissExpiredBooking(cb.id)
                           : cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
                       onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}

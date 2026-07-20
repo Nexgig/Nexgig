@@ -1,3 +1,4 @@
+import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, Modal } from '@/lib/rn';
@@ -197,6 +198,10 @@ export default function ManagerDashboard() {
   // Auto-complete confirmed bookings whose slot END time has passed.
   // End, not start: a gig isn't done when it begins, and completion is what triggers
   // the review flow. isPastEnd handles the midnight cross (20:00–00:00 ends next day).
+  // Retire requests nobody answered before the gig ended. Runs on both sides — the
+  // write is idempotent, so whichever app opens first does it.
+  useEffect(() => { sweepExpiredRequests(); }, [nowDT]);
+
   useEffect(() => {
     bookings
       .filter((b) => b.status === 'confirmed' && !b.isCompleted)
