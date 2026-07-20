@@ -8,7 +8,7 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 17 July 2026. Only open items live here. Done work is deleted, not archived.
+Updated 20 July 2026. Only open items live here. Done work is deleted, not archived.
 
 > **State of play (17 Jul).** Build 17 passed **Beta App Review** — TestFlight external
 > testers have it. That is *not* App Store approval; the public submission has **not been
@@ -18,9 +18,10 @@ Updated 17 July 2026. Only open items live here. Done work is deleted, not archi
 > **Beta review ≠ App Store review — don't conflate them.** Beta clears TestFlight only.
 > Nothing is in front of App Store reviewers until Submit is pressed.
 >
-> **The current phase is TESTFLIGHT POLISH (1–2 weeks), not launch.** Testing with friends,
-> fixing what they hit, shipping via `eas update` in seconds. The active work is the POLISHING
-> batch + avatars. **Submission is on hold on purpose — see item 1. Don't push for it.**
+> **The current phase is TESTFLIGHT POLISH, not launch.** Testing with friends, fixing what
+> they hit, shipping via `eas update` in seconds. The polish batch, avatars and dual-role
+> accounts are all done (19–20 Jul); what remains before submitting is item 2.
+> **Submission is on hold on purpose — see item 1. Don't push for it.**
 
 **1 · App Store submission — DELIBERATELY ON HOLD. Do not submit yet. Do not suggest it.**
 Everything is ready: build 17 is uploaded and through Beta App Review, and the App Store
@@ -29,57 +30,34 @@ Diagnostics = YES, age rating, reviewer notes, demo accounts). It is one click �
 click is **deliberately not being made yet**.
 
 **Why (this is the plan, not an oversight):** Tuts is testing with friends on TestFlight for
-**1–2 weeks** and working through the POLISHING batch below. Right now a bug found by a tester
+**1–2 weeks**. Right now a bug found by a tester
 is fixed and shipped in seconds via `eas update`. **The moment Submit is pressed that stops** —
 TestFlight build 17 and the reviewers' build pull JS from the same `production` channel, so an
 OTA during review changes the app under the reviewer. Submitting early trades the fast feedback
 loop for a queue slot that buys nothing.
 
-**Submit only when:** real-world testing has settled, the POLISHING batch is done, and Tuts
+**Submit only when:** real-world testing has settled, item 2 is cleared, and Tuts
 says so. Until then the active work is POLISHING + avatars, and OTA freely.
 
-**2 · Artist avatar swap.** New illustrated set (24 characters × 4 hair colours) is in
-hand. Waiting on Tuts's final character picks — recommended #04, 05, 06, 08, 12, 16 × 4
-colours = 24. Then: rename to `avatar-1..N.png` in `assets/images/avatars/`, rewrite
-`lib/avatars.ts`, and re-pick avatars on the demo accounts (pre-launch data is wiped, so
-no migration — only the seeded demo artists carry an `avatarId`). Ships via `eas update`.
+**2 · Before submitting — two things that must happen first.**
+  - **Re-pick avatars on the demo accounts.** The avatar set was replaced (37 characters,
+    19 Jul) and every saved `avatarId` now points at different artwork. The seeded demo
+    artists are the accounts **Apple's reviewer signs into**, so they currently show
+    whatever landed in each slot.
+  - **Prove the role-switch crash is gone.** Switching roles crashed once natively
+    (UIRefreshControl torn down with its scroll view — see CLAUDE.md). Fixed 19 Jul by
+    dropping every tab's RefreshControl a frame before navigating, but it was a race, so
+    one clean switch proves nothing. Switch repeatedly, after visiting several tabs.
+    `ALLOW_DUAL_ROLE` in `lib/features.ts` turns the whole feature off in one word if needed.
 
-**3 · Dual-role accounts — a manager who is ALSO an artist.** (Not started. Sized, not scoped.)
+**3 · Known limitation — push notifications are not separated by role.** The in-app lists
+are (`lib/notification-roles.ts`), and the on/off categories are honoured at send time
+(`supabase/notification-preferences.sql` + the create-notification function). But a push
+arrives when the app isn't running, so nothing knows which role the user last chose, and one
+device is registered per account. A dual-role user gets both sides' pushes. Fixing it means
+either two device registrations or a role check at send time — only worth it if it proves
+annoying in practice.
 
-The DB already supports it: `artists.id` and `managers.id` are both `auth.users.id`, so
-one account can have a row in *both* tables. Three app-level things block it:
-  1. `users.account_type` is a single value.
-  2. `sign-in` checks `managers` first and returns — a dual user always lands as manager.
-  3. Signup forces one choice and never offers the other.
-
-**Model:** one auth user, optionally both profiles. An **active role** held client-side
-(persisted); `account_type` is the default. Switching = set active role → re-hydrate
-`currentUser` from the other table → `router.replace` into the other route group. Creating
-the second profile = run the existing setup wizard with `hasSession` (that machinery
-already exists, built for the abandoned-signup fix).
-
-**Two product decisions needed BEFORE starting:**
-  - ⚠️ **Self-booking** — a dual user could add themselves to their own lineup and invoice
-    themselves. DECIDE: forbid (filter own id out of network/lineup) or allow.
-  - ⚠️ **Notifications** — push registers per user id; the in-app list filters by `userId`,
-    not role. In artist mode you'd see manager notifications. DECIDE: tag by role and
-    filter, or accept the mixing.
-
-**Also:** RLS policy audit (some policies may key off `account_type`), sign-in routing
-must change from "manager wins" to "last used role", and persisted stores need clearing
-on switch or an artist sees a manager's cached venues. **Do this AFTER the App Store
-submission clears** — it touches auth, routing, notifications and RLS, and a bug here locks a
-user out of their account entirely. Not an OTA-and-see change.
-
-### POLISHING  (batch added 16 July 2026 — all JS-only → OTA unless noted)
-  1. **Signup wizard copy pass.** Review + fix the texts and questions across the sign-up
-     process (manager + artist wizards) — wording, clarity, question phrasing.
-  2. **Notifications copy pass.** Review + rewrite the text of ALL in-app notifications AND
-     push notifications (titles + bodies). Make them consistent and clear.
-     - Includes **"Added to Lineup"**: a manager-initiated add shows the manager's name and
-       implies a manager profile the artist can't open. Reframe around the venues (the tap
-       already routes to My Venues), e.g. "You've been added to <Manager>'s venues".
-       ⚠️ Decision still open: reword, or build an artist-facing manager profile?
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
