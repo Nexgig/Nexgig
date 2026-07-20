@@ -37,7 +37,7 @@ OTA during review changes the app under the reviewer. Submitting early trades th
 loop for a queue slot that buys nothing.
 
 **Submit only when:** real-world testing has settled, item 2 is cleared, and Tuts
-says so. Until then the active work is POLISHING + avatars, and OTA freely.
+says so. Until then: test, fix what testers hit, and OTA freely.
 
 **2 · Before submitting — two things that must happen first.**
   - **Re-pick avatars on the demo accounts.** The avatar set was replaced (37 characters,
@@ -50,7 +50,14 @@ says so. Until then the active work is POLISHING + avatars, and OTA freely.
     one clean switch proves nothing. Switch repeatedly, after visiting several tabs.
     `ALLOW_DUAL_ROLE` in `lib/features.ts` turns the whole feature off in one word if needed.
 
-**3 · Known limitation — push notifications are not separated by role.** The in-app lists
+**3 · Artists cannot EDIT a private event or an availability block.** They can create and
+delete both, but not edit. `openEditModal` / `openEditBlockModal` in the artist calendar are
+the only code for it and nothing has ever called them — the three-dot menu that would have
+was itself unreachable (`setMenuItem` was only ever passed null) and was deleted 20 Jul. The
+handlers were deliberately LEFT in place rather than removed, so this reads as a missing
+feature rather than vanishing silently. Decide: wire up an edit affordance, or delete them.
+
+**4 · Known limitation — push notifications are not separated by role.** The in-app lists
 are (`lib/notification-roles.ts`), and the on/off categories are honoured at send time
 (`supabase/notification-preferences.sql` + the create-notification function). But a push
 arrives when the app isn't running, so nothing knows which role the user last chose, and one
