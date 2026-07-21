@@ -1,20 +1,30 @@
 import { supabase } from './supabase';
-import { resetAllStores } from './store';
+import { resetAllStores, useAuthStore } from './store';
+import { hydrateRole, type Role } from './roles';
+
+export interface DeleteResult {
+  /** True when the whole account (both profiles + login) is gone. False when only the
+   *  named role was removed and the other survives. */
+  fullyDeleted: boolean;
+  /** The role still signed in after a partial delete, or null on a full delete. */
+  remaining: Role | null;
+}
 
 /**
- * Permanently deletes the current user's account.
+ * Deletes the given ROLE's account.
  *
- * Calls the `delete-account` Supabase Edge Function, which (server-side, with the
- * service-role key):
- *  - anonymizes shared history (bookings / lineup / venue assignments → "Former …")
- *  - deactivates a manager's venues (kept for history, hidden from active use)
- *  - deletes the user's private data (notifications, availability, invoices, etc.)
- *  - deletes the identity rows and the auth login itself
+ * Dual-role accounts share one login across a manager and an artist profile, so this is
+ * scoped: deleting from artist mode removes the artist profile only and leaves the manager
+ * profile and the login intact. The login is deleted server-side only when the role being
+ * removed is the last one. (Before this, delete-from-either-side wiped everything.)
  *
- * On success this clears all local stores and signs the user out locally.
- * Throws an Error (with a user-readable message) on failure.
+ * The `delete-account` Edge Function does the work with the service-role key. On a FULL
+ * delete this clears local stores and signs out; on a PARTIAL delete it re-hydrates the
+ * surviving role so the caller can drop the user into that side instead of the login screen.
+ *
+ * Throws an Error (user-readable) on failure.
  */
-export async function deleteAccount(): Promise<void> {
+export async function deleteAccount(role: Role): Promise<DeleteResult> {
   // Must have a live session to authorize the call.
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
@@ -23,6 +33,7 @@ export async function deleteAccount(): Promise<void> {
 
   const { data, error } = await supabase.functions.invoke('delete-account', {
     method: 'POST',
+    body: { role },
   });
 
   if (error) {
@@ -46,11 +57,34 @@ export async function deleteAccount(): Promise<void> {
     throw new Error((data as { error: string }).error);
   }
 
-  // Account is gone server-side. Clear local state and end the session.
+  const result = data as { fullyDeleted?: boolean; remaining?: Role | null };
+  const remaining = result?.remaining ?? null;
+  // Treat a missing `fullyDeleted` as a full delete — the safe default is to sign out
+  // rather than risk stranding a session on a half-deleted account.
+  const fullyDeleted = result?.fullyDeleted !== false && !remaining;
+
+  // Either way the departing role's data is gone and the local stores are loaded for it,
+  // so clear them.
   resetAllStores();
+
+  if (!fullyDeleted && remaining) {
+    // The other profile survives — re-hydrate it so the app can show that side.
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData.user) {
+      const ok = await hydrateRole(remaining, authData.user);
+      if (ok) return { fullyDeleted: false, remaining };
+    }
+    // Re-hydrate failed (offline?). Fall through to sign-out rather than sit on empty
+    // stores with a stale session — the surviving profile is intact and a fresh sign-in
+    // recovers it.
+  }
+
+  // Full delete, or a partial we couldn't re-hydrate: end the session.
+  useAuthStore.getState().signOut();
   try {
     await supabase.auth.signOut();
   } catch {
     // Session may already be invalid now that the auth user is deleted — ignore.
   }
+  return { fullyDeleted: true, remaining: null };
 }

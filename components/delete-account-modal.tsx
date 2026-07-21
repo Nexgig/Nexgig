@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { deleteAccount } from '@/lib/delete-account';
+import { rolesAvailable } from '@/lib/roles';
+import { useAuthStore } from '@/lib/store';
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -15,14 +17,31 @@ interface DeleteAccountModalProps {
 export function DeleteAccountModal({ visible, onClose, accountType }: DeleteAccountModalProps) {
   const colors = useColors();
   const router = useRouter();
+  const email = useAuthStore((s) => s.currentUser?.email);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // Does the OTHER role also exist? Decides whether this is a scoped delete (keep the other
+  // profile + login) or a full one, which changes the warning and where the user lands.
+  const [hasOther, setHasOther] = useState(false);
+  const otherRole = accountType === 'manager' ? 'artist' : 'manager';
+
+  useEffect(() => {
+    if (!visible || !email) return;
+    let cancelled = false;
+    rolesAvailable(email).then((r) => { if (!cancelled) setHasOther(r[otherRole]); });
+    return () => { cancelled = true; };
+  }, [visible, email, otherRole]);
 
   const canDelete = confirmText.trim().toUpperCase() === 'DELETE' && !deleting;
 
-  const warning = accountType === 'manager'
-    ? 'This permanently deletes your account, profile, and personal data. Your venues will be deactivated and your name removed from past bookings. This cannot be undone.'
-    : 'This permanently deletes your account, profile, availability, and personal data. Your name will be removed from past bookings. This cannot be undone.';
+  const thisRole = accountType === 'manager' ? 'manager' : 'artist';
+  const warning = hasOther
+    ? `This permanently deletes your ${thisRole} profile and its data. Your ${otherRole} account stays, and you'll switch to it. This cannot be undone.`
+    : accountType === 'manager'
+      ? 'This permanently deletes your account, profile, and personal data. Your venues will be deactivated and your name removed from past bookings. This cannot be undone.'
+      : 'This permanently deletes your account, profile, availability, and personal data. Your name will be removed from past bookings. This cannot be undone.';
+
+  const title = hasOther ? `Delete ${thisRole === 'manager' ? 'Manager' : 'Artist'} Profile` : 'Delete Account';
 
   const handleClose = () => {
     if (deleting) return;
@@ -34,9 +53,16 @@ export function DeleteAccountModal({ visible, onClose, accountType }: DeleteAcco
     if (!canDelete) return;
     setDeleting(true);
     try {
-      await deleteAccount();
-      // Account gone + stores cleared + signed out. Send them to Welcome.
-      router.replace('/(auth)/welcome' as Href);
+      const result = await deleteAccount(thisRole);
+      if (!result.fullyDeleted && result.remaining) {
+        // Scoped delete: the other profile survives and is already re-hydrated. Drop into it.
+        router.replace((result.remaining === 'manager'
+          ? '/(manager)/(tabs)/dashboard'
+          : '/(artist)/(tabs)/dashboard') as Href);
+      } else {
+        // Whole account gone + signed out. Back to Welcome.
+        router.replace('/(auth)/welcome' as Href);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Something went wrong. Please try again.';
       setDeleting(false);
@@ -52,7 +78,7 @@ export function DeleteAccountModal({ visible, onClose, accountType }: DeleteAcco
             <MaterialIcons name="warning-amber" size={28} color="#EF4444" />
           </View>
 
-          <Text style={[styles.title, { color: colors.foreground }]}>Delete Account</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
           <Text style={[styles.body, { color: colors.muted }]}>{warning}</Text>
 
           <Text style={[styles.prompt, { color: colors.foreground }]}>
