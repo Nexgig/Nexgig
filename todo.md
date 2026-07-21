@@ -53,6 +53,11 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Copy fix:** notification title **"Added to a Lineup" → "Added to Lineup"** (drop the "a").
+  3 send sites: `app/(manager)/artist-profile-view.tsx:260` and two in
+  `app/(manager)/(tabs)/network.tsx` (~319, ~411). Note: likely superseded by the
+  lineup-accept change below (which rewrites this notification into a request) — do whichever
+  lands first.
 - **Lineup add should require the artist's acceptance.** Today a manager adding an artist to
   their lineup is instant + one-way — the artist just gets an "Added to a Lineup" FYI
   (`handleConnect` / `addToGlobalLineup` on `app/(manager)/artist-profile-view.tsx`, mirrored
