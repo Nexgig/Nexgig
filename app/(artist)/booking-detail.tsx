@@ -335,6 +335,7 @@ export default function DJBookingDetailScreen() {
                   leading={<AvatarImage seed={c.artist_id} name={c.full_name} size={44} variant="artist" />}
                   title={c.full_name}
                   subtitle="Artist"
+                  onPress={() => router.push(('/(artist)/artist-profile-view?artistId=' + c.artist_id + '&name=' + encodeURIComponent(c.full_name ?? '')) as Href)}
                   trailing={<StatusBadge status={displayStatus(c.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />}
                   divider={i < coArtists.length - 1}
                 />
@@ -351,6 +352,7 @@ export default function DJBookingDetailScreen() {
                   leading={<VenueThumb venue={venue} snapshotType={booking.venueType} />}
                   title={venue.name}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
+                  onPress={() => router.push(('/(artist)/venue-detail?id=' + venue.id) as Href)}
                   divider={false}
                 />
               </Section>

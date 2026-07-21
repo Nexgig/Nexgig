@@ -346,6 +346,7 @@ export default function DJBookingDetailScreen() {
                   leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
                   title={artistUser?.fullName ?? 'Former Artist'}
                   subtitle="Artist"
+                  onPress={artistUser?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + booking.artistId + '&name=' + encodeURIComponent(artistUser.fullName ?? '')) as Href) : undefined}
                   trailing={<StatusWithX status={booking.status} onX={
                     booking.status === 'expired'
                       ? () => dismissExpiredBooking(booking.id)
@@ -396,6 +397,7 @@ export default function DJBookingDetailScreen() {
                   leading={<VenueThumb venue={venue} snapshotType={booking.venueType} />}
                   title={venue.name}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
+                  onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
                   divider={false}
                 />
               </Section>

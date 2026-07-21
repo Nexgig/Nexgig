@@ -116,7 +116,43 @@ export default function VenueDetailScreen() {
   // affected artists, then soft-hides the venue (is_hidden=true) so completed-gig
   // history keeps resolving the real venue name. Behaviour is identical to the old
   // edit-venue handler — only the button's location changed.
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    // Block deletion while the venue still has a COMPLETED gig nobody has invoiced.
+    // Otherwise that gig lingers on the artist's "to invoice" list pointing at a venue that
+    // no longer exists — a count they can never clear, and the reason the invoice tab showed
+    // gigs that opened to an empty list. (An admin can still force-remove it directly in the
+    // database if ever needed.)
+    //
+    // Fetched FRESH, not from the local stores: a stale store could wrongly allow the delete
+    // (the exact bug) or wrongly block it. On a fetch error we block and ask to retry rather
+    // than risk deleting on incomplete information.
+    try {
+      const [done, inv] = await Promise.all([
+        supabase.from('bookings').select('id').eq('venue_id', venue.id).eq('status', 'completed'),
+        supabase.from('invoices').select('gigs').eq('venue_id', venue.id).neq('status', 'cancelled'),
+      ]);
+      if (done.error || inv.error) {
+        Alert.alert('Could not verify', 'We couldn’t check this venue’s gigs. Check your connection and try again.');
+        return;
+      }
+      const invoicedIds = new Set(
+        (inv.data ?? []).flatMap((row: any) => (row.gigs ?? []).map((g: any) => g.bookingId))
+      );
+      const uninvoiced = (done.data ?? []).filter((b: any) => !invoicedIds.has(b.id));
+      if (uninvoiced.length > 0) {
+        const many = uninvoiced.length > 1;
+        Alert.alert(
+          'Can’t delete this venue yet',
+          `"${venue.name}" has ${uninvoiced.length} completed gig${many ? 's' : ''} that ${many ? 'haven’t' : 'hasn’t'} been invoiced. Once the artist${many ? 's' : ''} invoice${many ? '' : 's'} ${many ? 'them' : 'it'}, you’ll be able to delete it.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    } catch {
+      Alert.alert('Could not verify', 'We couldn’t check this venue’s gigs. Check your connection and try again.');
+      return;
+    }
+
     const activeBookings = bookings.filter(
       (b) =>
         b.venueId === venue.id &&
