@@ -99,7 +99,7 @@ export default function AddBlockScreen() {
   const baseDate = params.date ?? new Date().toISOString().slice(0, 10);
 
   const [mode, setMode] = useState<Mode>('single');
-  const [kind, setKind] = useState<BlockKind>((params.kind as BlockKind) || 'block');
+  const [kind, setKind] = useState<BlockKind>((params.kind as BlockKind) || 'private_event');
   const [eventName, setEventName] = useState(params.ev ?? '');
   const [location, setLocation] = useState(params.loc ?? '');
   const [startTime, setStartTime] = useState(params.st ?? '21:00');
