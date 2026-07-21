@@ -8,7 +8,7 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 20 July 2026. Only open items live here. Done work is deleted, not archived.
+Updated 21 July 2026. Only open items live here. Done work is deleted, not archived.
 
 > **State of play (17 Jul).** Build 17 passed **Beta App Review** — TestFlight external
 > testers have it. That is *not* App Store approval; the public submission has **not been
@@ -24,21 +24,17 @@ Updated 20 July 2026. Only open items live here. Done work is deleted, not archi
 > switcher verified on device (20 Jul), so nothing blocks submission but the decision.
 > **Submission is on hold on purpose — see item 1. Don't push for it.**
 
-**1 · App Store submission — DELIBERATELY ON HOLD. Do not submit yet. Do not suggest it.**
-Everything is ready: build 17 is uploaded and through Beta App Review, and the App Store
-Connect form is done (metadata, the 10 shots from `appstore-final/`, App Privacy with
-Diagnostics = YES, age rating, reviewer notes, demo accounts). It is one click — and that
-click is **deliberately not being made yet**.
+**1 · App Store submission — SUBMITTED (21 Jul 2026), now IN REVIEW.**
+Build 17 + OTA bundle `019f841a` (commit a7a3d86) submitted to App Store review. Release
+is MANUAL — on approval it sits at "Pending Developer Release" until Tuts presses Release.
 
-**Why (this is the plan, not an oversight):** Tuts is testing with friends on TestFlight for
-**1–2 weeks**. Right now a bug found by a tester
-is fixed and shipped in seconds via `eas update`. **The moment Submit is pressed that stops** —
-TestFlight build 17 and the reviewers' build pull JS from the same `production` channel, so an
-OTA during review changes the app under the reviewer. Submitting early trades the fast feedback
-loop for a queue slot that buys nothing.
+⚠️ **OTA FREEZE IS ACTIVE. Do NOT run `eas update` until the app is APPROVED.** The reviewer
+pulls JS from the same `production` channel; an OTA mid-review changes the app under them and
+can cause a rejection. Bugs found during review are written down and shipped the moment
+approval lands, not before. The freeze ends at approval (manual-vs-auto release doesn't
+change that — review is done once approved).
 
-**Submit only when:** real-world testing has settled and Tuts
-says so. Until then: test, fix what testers hit, and OTA freely.
+If REJECTED: read Apple's resolution notes, fix, and only then OTA + reply in Resolution Center.
 
 **2 · Known limitation — push notifications are not separated by role.** The in-app lists
 are (`lib/notification-roles.ts`), and the on/off categories are honoured at send time
