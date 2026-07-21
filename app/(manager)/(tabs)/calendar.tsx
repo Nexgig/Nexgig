@@ -2151,13 +2151,13 @@ export default function CalendarScreen() {
                 </View>
 
                 {/* Slot templates */}
-                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>SLOT TEMPLATES</Text>
+                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>SET TEMPLATES</Text>
 
                 {bulkTemplates.map((tpl, tplIdx) => (
                   <View key={tpl.id} style={{ marginBottom: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14 }}>
                     {/* Template header */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>SLOT {tplIdx + 1}</Text>
+                      <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>SET {tplIdx + 1}</Text>
                       {bulkTemplates.length > 1 && (
                         <Pressable onPress={() => setBulkTemplates((prev) => prev.filter((t) => t.id !== tpl.id))} style={{ padding: 4 }}>
                           <MaterialIcons name="remove-circle-outline" size={18} color={colors.error} />
