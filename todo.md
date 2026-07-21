@@ -53,6 +53,11 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Let the manager change the date when adding a single set.** The single Add Set flow fixes
+  the date to whatever was tapped/preselected — there's no way to change the day from inside
+  the sheet. Add a date picker (default = the preselected date, editable), like the bulk flow
+  and add-block already have. Files: the single-set branch of the Add Set sheet in
+  `app/(manager)/(tabs)/calendar.tsx` (and/or `app/(manager)/add-slot.tsx`).
 - **Quick Add Set on the manager dashboard.** A shortcut to create a set without going to the
   calendar — a "+ Add Set" affordance on the manager dashboard that opens the add-set flow
   (reuse the calendar's add-set sheet / `add-slot` route). Decide: jump to today's date, or
