@@ -104,6 +104,11 @@ annoying in practice.
   the sheet. Add a date picker (default = the preselected date, editable), like the bulk flow
   and add-block already have. Files: the single-set branch of the Add Set sheet in
   `app/(manager)/(tabs)/calendar.tsx` (and/or `app/(manager)/add-slot.tsx`).
+- **Quick "Create" button on the artist dashboard.** A shortcut to the artist's Create flow
+  (the add-block screen — private event / block) straight from the dashboard, so an artist can
+  log a private gig or block a date without going to the calendar first. Opens
+  `app/(artist)/add-block.tsx` (default to today's date). Artist-side mirror of the manager
+  quick-add-set item below.
 - **Quick Add Set on the manager dashboard.** A shortcut to create a set without going to the
   calendar — a "+ Add Set" affordance on the manager dashboard that opens the add-set flow
   (reuse the calendar's add-set sheet / `add-slot` route). Decide: jump to today's date, or
