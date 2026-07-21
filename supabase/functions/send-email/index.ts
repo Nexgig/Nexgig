@@ -244,6 +244,24 @@ function renderTemplate(
       };
     }
 
+    // Manager received an invoice from an artist.
+    case 'invoice_received': {
+      const artistName = escapeHtml(String(data.artistName ?? 'An artist'));
+      const venueName = escapeHtml(String(data.venueName ?? 'your venue'));
+      const amount = escapeHtml(String(data.amount ?? ''));
+      const invoiceNumber = escapeHtml(String(data.invoiceNumber ?? ''));
+      return {
+        subject: `New invoice from ${artistName}${invoiceNumber ? ` (${invoiceNumber})` : ''}`,
+        html: shell(
+          h1('You received an invoice') +
+          p(`Hi ${name},`) +
+          p(`<strong>${artistName}</strong> sent you an invoice for gigs at <strong>${venueName}</strong>.`) +
+          p(`Amount: <strong>AED ${amount}</strong>${invoiceNumber ? `<br/>Invoice: ${invoiceNumber}` : ''}`) +
+          p('Open Nexgig to view the full invoice and its details.'),
+        ),
+      };
+    }
+
     default:
       return null;
   }

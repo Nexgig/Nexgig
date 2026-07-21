@@ -1,3 +1,4 @@
+import { sendEmail } from '@/lib/send-email';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -178,6 +179,15 @@ export default function InvoicePreviewScreen() {
               relatedId: newInvoice.id,
               isRead: false,
               createdAt: new Date().toISOString(),
+            });
+
+            // Also email the manager the invoice. Fire-and-forget — email is a best-effort
+            // side-effect and must never block the send (sendEmail swallows its own errors).
+            void sendEmail(managerId, 'invoice_received', {
+              artistName,
+              venueName,
+              amount: Math.round(totalAmount).toLocaleString(),
+              invoiceNumber,
             });
 
             setIsSending(false);

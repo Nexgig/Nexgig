@@ -1066,7 +1066,7 @@ export default function DJAvailabilityScreen() {
                   onPress={() => openAddModal(selectedDate)}
                 >
                   <MaterialIcons name="add" size={16} color="#fff" />
-                  <Text style={styles.addSetBtnText}>Add / Block</Text>
+                  <Text style={styles.addSetBtnText}>Create</Text>
                 </Pressable>
               </View>
 

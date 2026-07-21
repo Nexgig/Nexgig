@@ -8,7 +8,8 @@ export type EmailTemplate =
   | 'test'
   | 'welcome_artist'
   | 'welcome_manager'
-  | 'lineup_added';
+  | 'lineup_added'
+  | 'invoice_received';
 
 /**
  * Admin-notification templates. Unlike EmailTemplate, these do NOT target a

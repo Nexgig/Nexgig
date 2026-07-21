@@ -1,3 +1,4 @@
+import { VenueFilterRow } from '@/components/venue-filter-row';
 import { useRoleSwitching } from '@/lib/roles';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
@@ -310,6 +311,8 @@ export default function CalendarScreen() {
   const [showSendSheet, setShowSendSheet] = useState(false);
   // Selected draft keys for bulk send: "slotId::artistId"
   const [selectedDraftKeys, setSelectedDraftKeys] = useState<Set<string>>(new Set());
+  // Venue filter INSIDE the send sheet, so a manager can send for one venue at a time.
+  const [sendVenueFilter, setSendVenueFilter] = useState<string | null>(null);
 
   // Lineup Balance panel state
   const [lineupBalanceOpen, setLineupBalanceOpen] = useState(false);
@@ -721,6 +724,26 @@ export default function CalendarScreen() {
     }
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
   }, [periodScopedDrafts]);
+
+  // Send-sheet venue filter: chips of the venues that have drafts, and the drafts narrowed
+  // to the chosen one. `sendVenueFilter` is null = All.
+  const sendVenueChips = useMemo(() => {
+    const m = new Map<string, string>();
+    periodScopedDrafts.forEach((d) => { if (d.slot.venueId) m.set(d.slot.venueId, d.venue?.name ?? 'Venue'); });
+    return [...m].map(([id, name]) => ({ id, name }));
+  }, [periodScopedDrafts]);
+  const modalDrafts = useMemo(
+    () => sendVenueFilter ? periodScopedDrafts.filter((d) => d.slot.venueId === sendVenueFilter) : periodScopedDrafts,
+    [periodScopedDrafts, sendVenueFilter]
+  );
+  const modalDraftsByDate = useMemo(() => {
+    const map: Record<string, typeof modalDrafts> = {};
+    for (const item of modalDrafts) {
+      if (!map[item.slot.date]) map[item.slot.date] = [];
+      map[item.slot.date].push(item);
+    }
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [modalDrafts]);
 
   // Context subtitle for the send modal header
   const sendModalSubtitle = useMemo(() => {
@@ -1527,6 +1550,7 @@ export default function CalendarScreen() {
             <Pressable
               style={({ pressed }) => [styles.headerSendBtn, { opacity: pressed ? 0.6 : 1 }]}
               onPress={() => {
+                setSendVenueFilter(null);
                 setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
                 setShowSendSheet(true);
               }}
@@ -1876,22 +1900,26 @@ export default function CalendarScreen() {
             {/* Select All / Deselect All toggle */}
             <Pressable
               onPress={() => {
-                if (selectedDraftKeys.size === periodScopedDrafts.length) {
-                  setSelectedDraftKeys(new Set());
-                } else {
-                  setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
-                }
+                const allSel = modalDrafts.length > 0 && modalDrafts.every((d) => selectedDraftKeys.has(d.key));
+                setSelectedDraftKeys((prev) => {
+                  const next = new Set(prev);
+                  modalDrafts.forEach((d) => { if (allSel) next.delete(d.key); else next.add(d.key); });
+                  return next;
+                });
               }}
               style={({ pressed }) => [{ padding: 8, borderRadius: 20, opacity: pressed ? 0.6 : 1 }]}
             >
               <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
-                {selectedDraftKeys.size === periodScopedDrafts.length && periodScopedDrafts.length > 0 ? 'Deselect All' : 'Select All'}
+                {modalDrafts.length > 0 && modalDrafts.every((d) => selectedDraftKeys.has(d.key)) ? 'Deselect All' : 'Select All'}
               </Text>
             </Pressable>
           </View>
 
+          {/* Venue filter — send for one venue at a time. Hidden when <2 venues have drafts. */}
+          <VenueFilterRow venues={sendVenueChips} selectedId={sendVenueFilter} onSelect={setSendVenueFilter} />
+
           {/* Draft list grouped by date */}
-          {periodScopedDrafts.length === 0 ? (
+          {modalDrafts.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
               <MaterialIcons name="send" size={48} color={colors.border} />
               <Text style={{ fontSize: 16, fontWeight: '700', color: colors.foreground }}>No drafts to send</Text>
@@ -1901,7 +1929,7 @@ export default function CalendarScreen() {
             </View>
           ) : (
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-              {periodDraftsByDate.map(([dateStr, items]) => {
+              {modalDraftsByDate.map(([dateStr, items]) => {
                 const dateObj = new Date(dateStr + 'T00:00:00');
                 const dateLabel = dateObj.toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' });
                 return (

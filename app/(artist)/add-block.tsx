@@ -260,12 +260,12 @@ export default function AddBlockScreen() {
                   onPress={() => { setMode(m); setStartOpen(false); setEndOpen(false); }}
                 >
                   <MaterialIcons
-                    name={m === 'single' ? 'event' : 'date-range'}
+                    name={m === 'single' ? 'event' : 'flight'}
                     size={15}
                     color={mode === m ? '#fff' : colors.muted}
                   />
                   <Text style={[styles.segmentText, { color: mode === m ? '#fff' : colors.muted }]}>
-                    {m === 'single' ? 'Single Day' : 'Date Range'}
+                    {m === 'single' ? 'Single Day' : 'Travel Mode'}
                   </Text>
                 </Pressable>
               ))}
@@ -361,7 +361,7 @@ export default function AddBlockScreen() {
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
               <View style={[styles.segment, { borderColor: colors.border }]}>
-                {(['block', 'private_event'] as const).map((t) => (
+                {(['private_event', 'block'] as const).map((t) => (
                   <Pressable
                     key={t}
                     style={[styles.segmentBtn, kind === t && { backgroundColor: colors.primary }]}
