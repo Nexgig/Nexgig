@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Image, Linking, ActivityIndicator } from '@/lib/rn';
+import { View, Text, Pressable, ScrollView, StyleSheet, Image, Linking, ActivityIndicator, Alert } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import type { Venue } from '@/lib/types';
@@ -7,7 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 import { supabase } from '@/lib/supabase';
 import { fonts } from '@/lib/fonts';
@@ -15,6 +15,8 @@ import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
+import { firstName } from '@/lib/utils';
+import { reportError } from '@/lib/observability';
 import { ReportModal } from '@/components/report-modal';
 
 function MapsBadge({ onPress }: { onPress: () => void }) {
@@ -47,6 +49,8 @@ export default function ArtistVenueDetailScreen() {
   const getSlotsByVenue = useSlotStore((s) => s.getSlotsByVenue);
   const getBookingBySlot = useBookingStore((s) => s.getBookingBySlot);
   const getAssignmentsByVenue = useLineupStore((s) => s.getAssignmentsByVenue);
+  const removeFromVenue = useLineupStore((s) => s.removeFromVenue);
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
@@ -55,6 +59,49 @@ export default function ArtistVenueDetailScreen() {
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
   const venueAssignments = useMemo(() => venue ? getAssignmentsByVenue(venue.id) : [], [venue, getAssignmentsByVenue]);
+  // Is THIS artist on this venue's lineup? Gates the Leave Venue button below.
+  const isConnected = useMemo(
+    () => !!currentUser && venueAssignments.some((a) => a.artistId === currentUser.id && a.status === 'active'),
+    [venueAssignments, currentUser]
+  );
+
+  // Artist removes themselves from this venue's lineup. Mirrors the (unwired) handler that
+  // lived in the Venues tab: delete the assignment, tell the manager. One-way — the artist
+  // can't rejoin themselves; only the venue can add them back.
+  const handleLeaveVenue = () => {
+    if (!currentUser || !venue) return;
+    Alert.alert(
+      'Leave Venue',
+      `Leave the lineup at ${venue.name}? You won't be able to rejoin yourself — only ${venue.name} can add you back.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave', style: 'destructive',
+          onPress: async () => {
+            const { error, count } = await supabase
+              .from('venue_assignments').delete({ count: 'exact' })
+              .eq('artist_id', currentUser.id).eq('venue_id', venue.id);
+            if (error) {
+              reportError(error, { at: 'artist-leave-venue', venueId: venue.id });
+              Alert.alert('Could not leave', 'Something went wrong. Please try again in a moment.');
+              return;
+            }
+            if (!count) { Alert.alert('Could not leave', 'You were not removed — please try again.'); return; }
+            removeFromVenue(venue.id, currentUser.id);
+            const notifId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+            addNotification({
+              id: notifId, userId: venue.managerId, type: 'artist_left_venue' as any,
+              title: 'Artist Left Venue',
+              body: `${firstName(currentUser.fullName, 'An artist')} left ${venue.name}`,
+              isRead: false, relatedId: venue.id, relatedType: 'venue',
+              createdAt: new Date().toISOString(),
+            });
+            router.back();
+          },
+        },
+      ]
+    );
+  };
 
   // Only show slots that are either unbooked or booked by this artist
   const visibleSlots = useMemo(() => {
@@ -280,6 +327,15 @@ export default function ArtistVenueDetailScreen() {
         )}
 
 
+        {isConnected && (
+          <Pressable
+            onPress={handleLeaveVenue}
+            style={({ pressed }) => [styles.leaveBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
+          >
+            <MaterialIcons name="logout" size={18} color={colors.error} />
+            <Text style={[styles.leaveBtnText, { color: colors.error }]}>Leave Venue</Text>
+          </Pressable>
+        )}
       </ScrollView>
       <ReportModal
         visible={showReport}
@@ -293,6 +349,8 @@ export default function ArtistVenueDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  leaveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 20, marginTop: 24, paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
+  leaveBtnText: { fontSize: 14, fontWeight: '600' },
   scroll: { paddingBottom: 40 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
