@@ -105,7 +105,13 @@ export default function ManagerNotificationsScreen() {
     if (notif.relatedType === 'booking' && notif.relatedId) {
       router.push(('/(manager)/booking-detail?id=' + notif.relatedId) as Href);
     } else if (notif.type === 'invoice_received') {
-      router.push('/(manager)/(tabs)/profile' as Href);
+      // relatedId is the invoice id — open the invoice itself. Fall back to the profile
+      // (where invoices live) for older notifications that predate the id.
+      if (notif.relatedId) {
+        router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: notif.relatedId } });
+      } else {
+        router.push('/(manager)/(tabs)/profile' as Href);
+      }
     }
   };
 
