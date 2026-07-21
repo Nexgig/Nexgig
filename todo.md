@@ -53,6 +53,20 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Lineup add should require the artist's acceptance.** Today a manager adding an artist to
+  their lineup is instant + one-way — the artist just gets an "Added to a Lineup" FYI
+  (`handleConnect` / `addToGlobalLineup` on `app/(manager)/artist-profile-view.tsx`, mirrored
+  on the manager network row). Change it to a REQUEST the artist accepts or declines before
+  they're actually on the lineup:
+  - Manager "adds" → creates a PENDING lineup entry (needs a 'pending' state on the global
+    lineup, alongside 'active'/'removed') and sends the artist a request notification.
+  - Artist gets it in their notifications/pending list with Accept / Decline. The
+    `lineup_invite` / `lineup_accepted` / `lineup_declined` notification types already exist —
+    reuse them. On Accept → entry goes 'active' and the manager is notified (artist_joined);
+    on Decline → entry removed + manager notified.
+  - Until accepted, the artist is NOT on the lineup and can't be assigned to the manager's
+    venues. Check every place that reads the lineup as 'active' so a pending entry doesn't leak
+    through (assign-artist, venue assignment, etc.).
 - **Bring back the artist rate field on signup + edit profile.** The data plumbing still
   exists — `minRate` in the artist profile store and `min_rate` in Supabase (hydrateRole
   already reads it) — but there's no visible input in `app/(auth)/artist-setup.tsx` or
