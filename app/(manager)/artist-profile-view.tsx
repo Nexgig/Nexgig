@@ -401,7 +401,7 @@ export default function ArtistProfileViewScreen() {
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Artist Profile</Text>
           {/* Connect / disconnect, moved here from the Network row. + coral to connect,
-              − muted (circled) when connected. Report flag hidden for now. */}
+              − muted (circled) when connected. Report moved to the Account section header. */}
           <Pressable
             onPress={isConnected ? handleRemove : handleConnect}
             style={({ pressed }) => [
@@ -606,7 +606,19 @@ export default function ArtistProfileViewScreen() {
           {/* Account — location is public; email + phone only for artists on your
               lineup, since a manager you haven't connected with shouldn't get their
               contact details. */}
-          <Section label="Account">
+          <Section>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, color: colors.muted }}>Account</Text>
+              {/* Report this artist. Lived in the header until the ± Connect button took that
+                  slot; restored here so a manager can still flag an artist (UGC moderation). */}
+              <Pressable
+                onPress={() => setShowReport(true)}
+                hitSlop={10}
+                style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+              >
+                <MaterialIcons name="flag" size={18} color={colors.muted} />
+              </Pressable>
+            </View>
             {basedInCountry ? (
               <View style={styles.contactRow}>
                 <MaterialIcons name="location-on" size={18} color={colors.muted} style={styles.acctIcon} />
