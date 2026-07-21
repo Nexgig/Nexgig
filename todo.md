@@ -53,6 +53,14 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Add Set / Assign Artist — don't auto-close when an artist is picked.** Right now picking an
+  artist saves the draft and immediately `router.back()`s (the M7 "assign saves draft and
+  closes" behaviour in `app/(manager)/assign-artist.tsx` / `app/(manager)/add-slot.tsx`
+  `handleTapArtist`/`handleTapDJ`). Change it so choosing an artist STAYS on the screen and
+  either (a) shows a **send** icon next to the chosen artist so the manager can send the gig
+  request right there, or (b) surfaces a **Save** button (middle/footer) to save the drafted
+  set — the manager decides send-now vs draft, and can pick more than one artist before
+  leaving. Keeps the draft flow but removes the abrupt close.
 - **Let the manager change the date when adding a single set.** The single Add Set flow fixes
   the date to whatever was tapped/preselected — there's no way to change the day from inside
   the sheet. Add a date picker (default = the preselected date, editable), like the bulk flow
