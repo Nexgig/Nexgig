@@ -20,7 +20,7 @@ import { DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW } from '@/app/(artist)/settings';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import * as Calendar from 'expo-calendar';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, nowLocalDateTimeStr, todayLocalStr, firstName } from '@/lib/utils';
+import { isPastEnd, nowLocalDateTimeStr, todayLocalStr, firstName, bookingVenueName } from '@/lib/utils';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 
@@ -175,7 +175,7 @@ export default function DJAvailabilityScreen() {
         const resolvedEnd = slot?.endTime ?? b.slotEndTime;
         const resolvedSlotName = slot?.name ?? b.slotName;
         const venue = allVenues.find((v) => v.id === b.venueId);
-        const resolvedVenueName = venue?.name ?? b.venueName ?? 'Unknown Venue';
+        const resolvedVenueName = bookingVenueName(b, venue?.name);
         return { ...b, resolvedDate, resolvedStart, resolvedEnd, resolvedSlotName, resolvedVenueName };
       })
       .filter((b) => b.resolvedDate);

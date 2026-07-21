@@ -12,7 +12,7 @@ import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
-import { displayStatus } from '@/lib/utils';
+import { displayStatus, bookingVenueName } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchReviews } from '@/lib/reviews';
 import type { } from '@/lib/types';
@@ -395,7 +395,7 @@ export default function DJBookingDetailScreen() {
               <Section label="Venue">
                 <ListRow
                   leading={<VenueThumb venue={venue} snapshotType={booking.venueType} />}
-                  title={venue.name}
+                  title={bookingVenueName(booking, venue.name)}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
                   onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
                   divider={false}

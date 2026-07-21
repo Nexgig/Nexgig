@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel, bookingVenueName } from '@/lib/utils';
 import { MonthSeparator } from '@/components/ui/month-separator';
 
 /**
@@ -337,7 +337,7 @@ export default function DJHomeScreen() {
                 <View style={styles.gigInfo}>
                   <View style={styles.titleRow}>
                     <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                      {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : (booking.venue?.name ?? 'Unknown Venue')}
+                      {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : bookingVenueName(booking, booking.venue?.name)}
                     </Text>
                   </View>
                   <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>

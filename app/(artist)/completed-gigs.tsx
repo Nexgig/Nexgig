@@ -1,3 +1,4 @@
+import { bookingVenueName } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from '@/lib/rn';
 import { VenueFilterRow } from '@/components/venue-filter-row';
@@ -71,7 +72,8 @@ export default function ArtistCompletedGigsScreen() {
         endTime: b.slotEndTime ?? '',
         createdAt: b.createdAt,
       } : undefined);
-      const resolvedVenueName = venue?.name ?? b.venueName ?? 'Unknown Venue';
+      // Completed gigs are history — freeze to the booking's snapshot name (bookingVenueName).
+      const resolvedVenueName = bookingVenueName(b, venue?.name);
       return { ...b, slot: resolvedSlot, resolvedVenueName, venue, isInvoiced: invoiceByBooking.has(b.id), invoiceId: invoiceByBooking.get(b.id) };
     })
     .sort((a, b) => ((a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1)),

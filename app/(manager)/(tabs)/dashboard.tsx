@@ -16,7 +16,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel, isExpiredRequest } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel, isExpiredRequest, bookingVenueName } from '@/lib/utils';
 import { MonthSeparator } from '@/components/ui/month-separator';
 
 export default function ManagerDashboard() {
@@ -440,7 +440,7 @@ export default function ManagerDashboard() {
                   <View style={styles.titleRow}>
                     <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                       {title}
-                      {g.first.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {g.first.venue.name}</Text> : null}
+                      {(g.first.venue?.name || g.first.venueName) ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {bookingVenueName(g.first, g.first.venue?.name)}</Text> : null}
                     </Text>
                   </View>
                   <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
@@ -544,7 +544,7 @@ export default function ManagerDashboard() {
                                 {booking.dj?.fullName ?? 'Unknown Artist'}
                               </Text>
                               <Text style={[styles.bookingSubDetail, { color: colors.muted }]} numberOfLines={1}>
-                                {booking.venue?.name ?? booking.venueName ?? 'Unknown Venue'}
+                                {bookingVenueName(booking, booking.venue?.name)}
                                 {booking.slot?.date ? ` · ${formatDate(booking.slot.date)}` : ''}
                               </Text>
                             </View>

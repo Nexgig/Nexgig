@@ -15,7 +15,7 @@ import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { submitReview, fetchReviews } from '@/lib/reviews';
-import { isPastEnd, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
+import { isPastEnd, displayStatus, isExpiredRequest, firstName, bookingVenueName } from '@/lib/utils';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -350,7 +350,7 @@ export default function DJBookingDetailScreen() {
               <Section label="Venue">
                 <ListRow
                   leading={<VenueThumb venue={venue} snapshotType={booking.venueType} />}
-                  title={venue.name}
+                  title={bookingVenueName(booking, venue.name)}
                   subtitle={[venue.venueType, venue.googleMapsLocation?.address ? cityFromAddress(venue.googleMapsLocation.address) : undefined].filter(Boolean).join('\n') || undefined}
                   onPress={() => router.push(('/(artist)/venue-detail?id=' + venue.id) as Href)}
                   divider={false}

@@ -150,6 +150,25 @@ export function isPastEnd(date: string, startTime?: string, endTime?: string): b
 }
 
 /**
+ * The venue name to display for a booking.
+ *
+ * A COMPLETED gig is history: it uses the name snapshotted on the booking at creation, so a
+ * later venue rename doesn't rewrite the past — and so it matches the invoice, which is also
+ * frozen. Falls back to the live name when there's no snapshot (older rows), never to blank.
+ *
+ * A non-completed booking shows the LIVE name: an upcoming gig should reflect what the venue
+ * is called now. So this only freezes history, not active bookings.
+ */
+export function bookingVenueName(
+  booking: { status?: string; isCompleted?: boolean; venueName?: string },
+  liveName?: string | null
+): string {
+  const isDone = booking.status === 'completed' || !!booking.isCompleted;
+  if (isDone) return booking.venueName || liveName || 'Unknown Venue';
+  return liveName || booking.venueName || 'Unknown Venue';
+}
+
+/**
  * First name only, for notification bodies.
  *
  * Full names push a lock-screen notification past where iOS truncates it — "Ahmed Al Mansouri

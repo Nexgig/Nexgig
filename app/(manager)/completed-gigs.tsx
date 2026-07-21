@@ -1,3 +1,4 @@
+import { bookingVenueName } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from '@/lib/rn';
 import { VenueFilterRow } from '@/components/venue-filter-row';
@@ -60,7 +61,7 @@ export default function CompletedGigsScreen() {
   const [venueFilter, setVenueFilter] = useState<string | null>(null);
   const venueChips = useMemo(() => {
     const m = new Map<string, string>();
-    completedGigs.forEach((b) => { if (b.venueId) m.set(b.venueId, b.venue?.name ?? b.venueName ?? 'Venue'); });
+    completedGigs.forEach((b) => { if (b.venueId) m.set(b.venueId, bookingVenueName(b, b.venue?.name)); });
     return [...m].map(([id, name]) => ({ id, name }));
   }, [completedGigs]);
   const shownGigs = useMemo(
@@ -110,7 +111,8 @@ export default function CompletedGigsScreen() {
               <View style={styles.titleRow}>
                 <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
                   {booking.dj?.fullName ?? 'Unknown Artist'}
-                  {booking.venue?.name ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {booking.venue.name}</Text> : null}
+                  {/* Frozen venue name — a completed gig keeps the name it had, per bookingVenueName. */}
+                  <Text style={{ color: colors.muted, fontWeight: '500' }}> / {bookingVenueName(booking, booking.venue?.name)}</Text>
                 </Text>
                 {rating !== undefined && (
                   <View style={[styles.reviewChip, { backgroundColor: colors.warning + '1A' }]}>
