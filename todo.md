@@ -53,6 +53,19 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Rework both Network tabs into single-purpose directories.**
+  - **Artist app:** rename the "Network" tab to **"Venues"** and show ONLY venues the artist is
+    connected to (their My Venues). Remove the Discover venues and the Artists sub-tab entirely
+    — an artist should NOT see other artists or venues they're not on. Effectively: set
+    `SHOW_ARTIST_DIRECTORY = false` again AND drop the Discover group from
+    `app/(artist)/(tabs)/network.tsx` so only connected venues remain (no My Venues/Discover
+    split — just the connected list).
+  - **Manager app:** rename the "Network" tab to **"Artists"** and show ALL artists on the app
+    (My Lineup + Discover artists is fine, or just one flat list). Remove the Venues sub-tab
+    entirely — a manager manages venues from their profile/venue screens, not here. File:
+    `app/(manager)/(tabs)/network.tsx` (drop the venues tab + the tab bar, keep the artists list).
+  - Note the knock-on: with `SHOW_ARTIST_DIRECTORY` off, `app/(artist)/artist-profile-view`
+    becomes unreachable again (that list was its only entry point) — fine, that's intended.
 - **Add Set / Assign Artist — don't auto-close when an artist is picked.** Right now picking an
   artist saves the draft and immediately `router.back()`s (the M7 "assign saves draft and
   closes" behaviour in `app/(manager)/assign-artist.tsx` / `app/(manager)/add-slot.tsx`
