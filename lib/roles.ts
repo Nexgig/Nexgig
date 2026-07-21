@@ -1,9 +1,44 @@
 import { create } from 'zustand';
+import * as Updates from 'expo-updates';
 import { supabase } from './supabase';
 import { useAuthStore, useLineupStore, resetAllStores } from './store';
 import { reportError } from './observability';
 
 export type Role = 'manager' | 'artist';
+
+/**
+ * Finish a role transition — a switch, or dropping into the surviving role after a partial
+ * account delete. By this point currentUser is already persisted with the target role's
+ * accountType.
+ *
+ * In production this RELOADS the JS bundle rather than navigating. The app boots into
+ * (tabs)/index, which waits for the auth store to hydrate and redirects to the matching
+ * group — a clean restart with no cross-group view-tree teardown.
+ *
+ * That teardown is the bug this avoids: router.replace from one route group to the other
+ * tears the old group's tree down synchronously, and doing that while expo-secure-store was
+ * mid keychain access (Supabase refreshing the session) crashed the app natively — a
+ * TurboModule method threw inside the teardown transaction. It was worst on the first switch
+ * right after creating the second profile, when the just-finished signup's keychain writes
+ * were still settling.
+ *
+ * reloadAsync re-runs the CURRENT bundle (no re-download). In dev it throws (Metro serves the
+ * JS) and the native crash can't occur anyway, so `fallback` runs instead.
+ */
+export async function reloadIntoRole(fallback: () => void): Promise<void> {
+  if (!__DEV__ && Updates.isEnabled) {
+    // Let the persisted auth write flush before the restart reads it back. Worst case is a
+    // reload into the previous role and a re-tap — never a crash.
+    await new Promise<void>((r) => setTimeout(r, 600));
+    try {
+      await Updates.reloadAsync();
+      return;
+    } catch {
+      // reloadAsync unavailable — fall through to navigation.
+    }
+  }
+  fallback();
+}
 
 /**
  * Dual-role accounts: one login, optionally a profile on BOTH sides.

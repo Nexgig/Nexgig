@@ -20,6 +20,7 @@ import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-run
 import { supabase } from "@/lib/supabase";
 import { useSilentUpdates } from '@/lib/silent-update';
 import { UpdatingOverlay } from '@/components/updating-overlay';
+import { useRoleSwitching } from '@/lib/roles';
 import { useAuthStore, resetAllStores } from "@/lib/store";
 import { registerForPushNotifications } from "@/lib/notifications-push";
 import * as Notifications from "expo-notifications";
@@ -59,6 +60,10 @@ function ThemedStatusBar() {
 function RootLayout() {
   // Adopt OTA updates on foreground instead of waiting for two cold starts.
   const applyingUpdate = useSilentUpdates();
+  // A role switch reloads the JS (see RoleSwitcher) rather than navigating across route
+  // groups — that cross-group teardown raced native keychain work and crashed. The overlay
+  // covers the brief moment before the reload so the restart reads as intentional.
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
   const router = useRouter();
@@ -242,7 +247,7 @@ function RootLayout() {
           <Stack.Screen name="(artist)" />
         </Stack>
         <ThemedStatusBar />
-        <UpdatingOverlay visible={applyingUpdate} />
+        <UpdatingOverlay visible={applyingUpdate || roleSwitching} label={applyingUpdate ? 'Updating…' : 'Switching…'} />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

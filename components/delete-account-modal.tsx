@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { deleteAccount } from '@/lib/delete-account';
-import { rolesAvailable } from '@/lib/roles';
+import { rolesAvailable, reloadIntoRole } from '@/lib/roles';
 import { useAuthStore } from '@/lib/store';
 
 interface DeleteAccountModalProps {
@@ -55,10 +55,12 @@ export function DeleteAccountModal({ visible, onClose, accountType }: DeleteAcco
     try {
       const result = await deleteAccount(thisRole);
       if (!result.fullyDeleted && result.remaining) {
-        // Scoped delete: the other profile survives and is already re-hydrated. Drop into it.
-        router.replace((result.remaining === 'manager'
+        // Scoped delete: the other profile survives and is already re-hydrated. Drop into it
+        // by reloading (same as a role switch) rather than a cross-group navigation.
+        const remaining = result.remaining;
+        await reloadIntoRole(() => router.replace((remaining === 'manager'
           ? '/(manager)/(tabs)/dashboard'
-          : '/(artist)/(tabs)/dashboard') as Href);
+          : '/(artist)/(tabs)/dashboard') as Href));
       } else {
         // Whole account gone + signed out. Back to Welcome.
         router.replace('/(auth)/welcome' as Href);

@@ -12,13 +12,13 @@ import { useColors } from '@/hooks/use-colors';
  * Deliberately opaque and touch-blocking rather than a toast — the point is to stop
  * interaction, not to narrate it.
  */
-export function UpdatingOverlay({ visible }: { visible: boolean }) {
+export function UpdatingOverlay({ visible, label = 'Updating…' }: { visible: boolean; label?: string }) {
   const colors = useColors();
   if (!visible) return null;
   return (
     <View style={[StyleSheet.absoluteFillObject, styles.wrap, { backgroundColor: colors.background }]}>
       <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={[styles.label, { color: colors.muted }]}>Updating…</Text>
+      <Text style={[styles.label, { color: colors.muted }]}>{label}</Text>
     </View>
   );
 }
