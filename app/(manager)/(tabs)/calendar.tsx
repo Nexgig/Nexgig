@@ -1686,7 +1686,7 @@ export default function CalendarScreen() {
                     onPress={openMultipleSlots}
                     style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                   >
-                    <MaterialIcons name="add-circle-outline" size={26} color={colors.foreground} />
+                    <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
                   </Pressable>
                   <Pressable onPress={nextWeek} style={styles.monthNavBtn}>
                     <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
@@ -1746,7 +1746,7 @@ export default function CalendarScreen() {
                     onPress={openMultipleSlots}
                     style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
                   >
-                    <MaterialIcons name="add-circle-outline" size={26} color={colors.foreground} />
+                    <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
                   </Pressable>
                   <Pressable onPress={nextMonthNav} style={styles.monthNavBtn}>
                     <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
