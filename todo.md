@@ -56,10 +56,14 @@ annoying in practice.
 - **Bring back the artist rate field on signup + edit profile.** The data plumbing still
   exists — `minRate` in the artist profile store and `min_rate` in Supabase (hydrateRole
   already reads it) — but there's no visible input in `app/(auth)/artist-setup.tsx` or
-  `app/(artist)/edit-profile.tsx` (only stale comments referencing "rate"). So re-add the rate
-  input on both screens, wired to `minRate` / `min_rate` (check git history for the old block
-  to restore rather than rebuild). Decide: is it required at signup or optional, and the
-  currency/label (e.g. "Min. rate (AED)").
+  `app/(artist)/edit-profile.tsx` (only stale comments referencing "rate"). Re-add the input
+  on both screens, wired to `minRate` / `min_rate` (check git history for the old block).
+  - **OPTIONAL** (not required at signup), currency **AED**, label e.g. "Min. Rate (AED)".
+  - Add a helper note under the field: **"Only visible to managers you're connected to."**
+    For that to be TRUE, the rate must be gated on the manager side: right now
+    `app/(manager)/artist-profile-view.tsx` READS `min_rate` (line 156) but doesn't display it.
+    Show it only when `isConnected` (mirror the email/phone gate in the Account section), so a
+    non-connected manager never sees the rate.
 - **Rework both Network tabs into single-purpose directories.**
   - **Artist app:** rename the "Network" tab to **"Venues"** and show ONLY venues the artist is
     connected to (their My Venues). Remove the Discover venues and the Artists sub-tab entirely
