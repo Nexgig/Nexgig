@@ -46,6 +46,17 @@ annoying in practice.
 
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
+- **Bulk Add Sets bug — drop the mandatory template name.** Bulk mode forces a name on each
+  set template: `app/(manager)/(tabs)/calendar.tsx:1106-1107` filters to `t.name.trim()` and
+  errors "Please enter a name for at least one set template." Single add-set no longer has a
+  name field at all (sets are unnamed now — time presets stopped writing the name), so bulk
+  should match: allow name-less templates (times only). Watch the dedup key at
+  `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
+  off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Quick Add Set on the manager dashboard.** A shortcut to create a set without going to the
+  calendar — a "+ Add Set" affordance on the manager dashboard that opens the add-set flow
+  (reuse the calendar's add-set sheet / `add-slot` route). Decide: jump to today's date, or
+  let them pick date + venue in the quick form.
 - **Venue location (Maps) on the artist dashboard booking rows.** Add a Maps/location
   action on the RIGHT of each booking row in the artist dashboard's bookings list, so an
   artist can open the venue's location in Maps straight from the row. The venue's
