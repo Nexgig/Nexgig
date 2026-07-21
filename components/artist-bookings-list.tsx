@@ -4,24 +4,25 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
-import { todayLocalStr } from '@/lib/utils';
+import { todayLocalStr, bookingVenueName } from '@/lib/utils';
 
 type Tab = 'pending' | 'upcoming' | 'completed';
 
 /**
- * One artist's bookings WITH THE CURRENT MANAGER, split Pending / Upcoming / Completed.
- *
- * Extracted from the old app/(manager)/artist-bookings.tsx screen so it can live as a
- * tab on artist-profile-view instead of its own route.
+ * A manager's bookings, split Pending / Upcoming / Completed, scoped either to ONE ARTIST
+ * (pass artistId — shown on artist-profile-view) or to ONE VENUE (pass venueId — shown on
+ * venue-detail's Bookings tab). Same layout both ways; only the row's primary label differs:
+ * artist-scoped rows name the venue (frozen for completed gigs), venue-scoped rows name the
+ * artist (the venue is fixed, so repeating it per row would be noise).
  *
  * Renders with .map(), NOT FlatList: the host is already inside a ScrollView, and a
- * VirtualizedList nested in one breaks scrolling and warns. The list is one artist's
- * gigs with one manager, so it's short — virtualisation buys nothing here.
+ * VirtualizedList nested in one breaks scrolling and warns. One artist's (or one venue's)
+ * gigs with one manager is short — virtualisation buys nothing.
  */
-export function ArtistBookingsList({ artistId }: { artistId: string }) {
+export function ArtistBookingsList({ artistId, venueId }: { artistId?: string; venueId?: string }) {
   const router = useRouter();
   const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -29,25 +30,35 @@ export function ArtistBookingsList({ artistId }: { artistId: string }) {
   const allSlots = useSlotStore((s) => s.slots);
   const allVenues = useVenueStore((s) => s.venues);
   const allInvoices = useInvoiceStore((s) => s.invoices);
+  const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const [activeTab, setActiveTab] = useState<Tab>('pending');
 
-  const artistBookings = useMemo(
-    () => allBookings.filter((b) => b.artistId === artistId && b.managerId === currentUser?.id),
-    [allBookings, artistId, currentUser?.id]
+  const byVenue = !!venueId;
+
+  const scopedBookings = useMemo(
+    () => allBookings.filter((b) =>
+      b.managerId === currentUser?.id &&
+      (artistId ? b.artistId === artistId : true) &&
+      (venueId ? b.venueId === venueId : true)
+    ),
+    [allBookings, artistId, venueId, currentUser?.id]
   );
 
-  // Booking ids on a live (non-cancelled) invoice — drives the "Invoiced" chip.
-  const invoicedBookingIds = useMemo(() => new Set(
+  // bookingId -> invoiceId on a live (non-cancelled) invoice — drives the clickable
+  // "Invoiced" chip, which opens the invoice.
+  const invoiceByBooking = useMemo(() => {
+    const m = new Map<string, string>();
     allInvoices
       .filter((inv) => inv.managerId === currentUser?.id && inv.status !== 'cancelled')
-      .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
-  ), [allInvoices, currentUser?.id]);
+      .forEach((inv) => inv.gigs.forEach((g) => m.set(g.bookingId, inv.id)));
+    return m;
+  }, [allInvoices, currentUser?.id]);
 
   // Local date (not UTC) so a gig dated today doesn't drop out of Upcoming in the early
   // hours — toISOString would still read yesterday in Dubai (UTC+4).
   const today = todayLocalStr();
 
-  const enriched = useMemo(() => artistBookings.map((b) => {
+  const enriched = useMemo(() => scopedBookings.map((b) => {
     const slot = allSlots.find((s) => s.id === b.slotId);
     const venue = allVenues.find((v) => v.id === b.venueId);
     const resolvedSlot = slot ?? (b.slotDate ? {
@@ -57,7 +68,7 @@ export function ArtistBookingsList({ artistId }: { artistId: string }) {
     } : undefined);
     const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as unknown as typeof venue : undefined);
     return { ...b, slot: resolvedSlot, venue: resolvedVenue };
-  }), [artistBookings, allSlots, allVenues]);
+  }), [scopedBookings, allSlots, allVenues]);
 
   const pendingBookings = useMemo(() => enriched
     .filter((b) => b.status === 'requested' || b.status === 'past_confirmation')
@@ -83,6 +94,18 @@ export function ArtistBookingsList({ artistId }: { artistId: string }) {
     completedBookings;
 
   const emptyIcon = activeTab === 'pending' ? 'schedule' : activeTab === 'upcoming' ? 'event-available' : 'check-circle';
+
+  const primaryLabel = (item: typeof enriched[number]): string => {
+    if (byVenue) {
+      // Venue-scoped: name the artist. There's no artist-name snapshot on the booking, so
+      // this is a live lookup — matches the completed-gigs convention: null id = a deleted
+      // account, an unresolved id = not loaded.
+      if (item.artistId == null) return 'Former Artist';
+      return getArtistUser(item.artistId)?.fullName ?? 'Unknown Artist';
+    }
+    // Artist-scoped: name the venue, frozen for completed gigs.
+    return bookingVenueName(item, item.venue?.name);
+  };
 
   return (
     <View>
@@ -123,7 +146,7 @@ export function ArtistBookingsList({ artistId }: { artistId: string }) {
           const isDone = item.status === 'completed' || item.isCompleted;
           const isPending = item.status === 'requested' || item.status === 'past_confirmation';
           const color = isDone ? STATUS_COLORS.completed : isPending ? STATUS_COLORS.pending : STATUS_COLORS.confirmed;
-          const isInvoiced = invoicedBookingIds.has(item.id);
+          const invoiceId = invoiceByBooking.get(item.id);
           return (
             <Pressable
               key={item.id}
@@ -132,16 +155,9 @@ export function ArtistBookingsList({ artistId }: { artistId: string }) {
             >
               <DateBadge dateStr={item.slot?.date ?? item.slotDate} color={color} />
               <View style={styles.gigInfo}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.bookingVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                    {item.venue?.name ?? item.venueName ?? 'Unknown Venue'}
-                  </Text>
-                  {isInvoiced && (
-                    <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                      <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                    </View>
-                  )}
-                </View>
+                <Text style={[styles.bookingVenue, { color: colors.foreground }]} numberOfLines={1}>
+                  {primaryLabel(item)}
+                </Text>
                 <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
                   {item.slot?.date ? formatDate(item.slot.date) : 'Date unknown'}
                   {item.slot?.startTime && item.slot?.endTime
@@ -149,6 +165,17 @@ export function ArtistBookingsList({ artistId }: { artistId: string }) {
                     : ''}
                 </Text>
               </View>
+              {/* Invoiced chip on the RIGHT and clickable — opens the invoice, matching the
+                  Completed Gigs page. It used to sit inline by the name and did nothing. */}
+              {invoiceId ? (
+                <Pressable
+                  onPress={(e) => { e.stopPropagation?.(); router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId } }); }}
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.invoicedChip, { backgroundColor: colors.primary + '1A', opacity: pressed ? 0.6 : 1 }]}
+                >
+                  <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                </Pressable>
+              ) : null}
             </Pressable>
           );
         })
@@ -165,11 +192,10 @@ const styles = StyleSheet.create({
   chipCountText: { fontSize: 10, fontWeight: '700' },
   bookingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 10 },
   gigInfo: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   bookingVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   bookingSub: { fontSize: 13 },
-  invoicedChip: { borderRadius: 100, paddingHorizontal: 8, paddingVertical: 2 },
-  invoicedChipText: { fontSize: 10, fontWeight: '700' },
+  invoicedChip: { borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 },
+  invoicedChipText: { fontSize: 11, fontWeight: '700' },
   emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 10 },
   emptyText: { fontSize: 14 },
 });

@@ -1,3 +1,4 @@
+import { ArtistBookingsList } from '@/components/artist-bookings-list';
 import { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -60,7 +61,7 @@ export default function VenueDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'slots'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings'>('overview');
   const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
@@ -285,10 +286,10 @@ export default function VenueDetailScreen() {
             an artist's venues. */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'slots'] as const).map((tab) => (
+            {(['overview', 'bookings'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : 'Sets'}
+                  {tab === 'overview' ? 'Overview' : 'Bookings'}
                 </Text>
               </Pressable>
             ))}
@@ -414,53 +415,11 @@ export default function VenueDetailScreen() {
           </View>
         )}
 
-        {/* Slots Tab — owner only */}
-        {isOwner && activeTab === 'slots' && (
-          <View style={styles.tabContent}>
-            {slots.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <MaterialIcons name="event" size={32} color={colors.muted} />
-                <Text style={{ color: colors.muted, fontSize: 14 }}>No sets created yet</Text>
-              </View>
-            ) : (
-              <View>
-              {slots.sort((a, b) => a.date < b.date ? -1 : 1).map((slot, i, arr) => {
-                const booking = getBookingBySlot(slot.id);
-                const dj = booking ? getArtistUser(booking.artistId) : undefined;
-                return (
-                  <Pressable
-                    key={slot.id}
-                    style={({ pressed }) => [styles.slotRow, { borderBottomColor: colors.border, borderBottomWidth: i === arr.length - 1 ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.6 : 1 }]}
-                    onPress={() => {
-                      if (booking) {
-                        router.push(('/(manager)/booking-detail?id=' + booking.id) as Href);
-                      } else {
-                        router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href);
-                      }
-                    }}
-                  >
-                    {dj ? (
-                      <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={48} variant="artist" />
-                    ) : (
-                      <View style={[styles.slotPlaceholder, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                        <MaterialIcons name="event" size={22} color={colors.muted} />
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.slotRowTitle, { color: colors.foreground }]} numberOfLines={1}>{dj ? dj.fullName : 'Unassigned'}</Text>
-                      <Text style={[styles.slotRowSub, { color: colors.muted }]} numberOfLines={1}>
-                        {formatDate(slot.date)} · {formatTime(slot.startTime)}–{formatTime(slot.endTime)}
-                      </Text>
-                    </View>
-                    {!booking && (
-                      <Text style={[styles.unassigned, { color: colors.warning }]}>Unassigned</Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-              </View>
-            )}
-          </View>
+        {/* Bookings Tab — owner only. Same list as the artist profile's bookings, scoped
+            to this venue: Pending / Upcoming / Completed with the artist named per row.
+            (The old Sets listing, including unassigned sets, is managed on the calendar.) */}
+        {isOwner && activeTab === 'bookings' && (
+          <ArtistBookingsList venueId={venue.id} />
         )}
 
       </ScrollView>
