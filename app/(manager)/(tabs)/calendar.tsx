@@ -2255,8 +2255,8 @@ export default function CalendarScreen() {
                   onPress={() => setBulkTemplates((prev) => [...prev, { id: String(Date.now()), name: '', startTime: '21:00', endTime: '01:00' }])}
                   style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, opacity: pressed ? 0.5 : 1 }]}
                 >
-                  <MaterialIcons name="add" size={16} color={colors.muted} />
-                  <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '500' }}>Add Another Set</Text>
+                  <MaterialIcons name="add" size={16} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Add Another Set</Text>
                 </Pressable>
 
                 {/* Create Sets button — below add template */}
