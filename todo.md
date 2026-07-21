@@ -45,6 +45,14 @@ either two device registrations or a role check at send time — only worth it i
 annoying in practice.
 
 
+### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
+- **Venue location (Maps) on the artist dashboard booking rows.** Add a Maps/location
+  action on the RIGHT of each booking row in the artist dashboard's bookings list, so an
+  artist can open the venue's location in Maps straight from the row. The venue's
+  `googleMapsLocation` (lat/lng or address) already drives the Maps button in booking-detail
+  (`MapsBadge` → `https://www.google.com/maps/dir/?api=1&destination=...`); reuse that. Only
+  show it for real (non-private-event) bookings that have a resolvable location.
+
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
 - **Tap Payments** integration.
