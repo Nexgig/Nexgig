@@ -53,6 +53,16 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Remove the Nexgig wordmark from invoices.** The company isn't registered yet, so the brand
+  must not appear on a financial document exchanged between an artist and a manager. Four
+  places, on-screen AND in the exported PDF/HTML:
+  - `app/(artist)/invoice-preview.tsx:294` (on-screen) and `:430` (`<div class="brand-name">`)
+  - `app/(manager)/manager-invoice-detail.tsx:247` (on-screen) and `:86` (PDF/HTML)
+  Decide what replaces it — likely nothing (the invoice already carries the artist's legal
+  name/email and the venue's legal name, TRN and address, which is what actually matters), or
+  just the word "INVOICE". Once the wordmark is gone, `lib/clash-display-base64.ts` may be
+  dead — it exists ONLY to embed the brand font so "Nexgig." renders correctly in the PDF, so
+  dropping it would remove a large base64 blob from the bundle. Check nothing else uses it.
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
   only way to learn someone's version is to ask them to read it out. That cost real time
