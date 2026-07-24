@@ -53,6 +53,20 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Let the manager edit a set's timing after it's created.** The edit flow already EXISTS but
+  is unreachable: `openEditSlot` (`app/(manager)/(tabs)/calendar.tsx:859`) is never called —
+  no menu/button points at it. So step one is just an entry point (set card menu, or from
+  booking-detail). Then three real gaps to close before it's safe:
+  1. **Bookings keep stale times.** The save handler (~line 878) updates the `slots` row and
+     the slot store only. Bookings carry their OWN snapshot (`slot_start_time` /
+     `slot_end_time`) — used by completion (`isPastEnd`), conflict detection, invoices and
+     every list. Editing a set MUST also update those columns on all its bookings, or the gig
+     displays/completes at the old time. This is the big one.
+  2. **Notify the booked artists** that the time changed — they've already accepted a gig at
+     the old time.
+  3. **Re-check conflicts.** A moved set can now clash with that artist's other gigs; re-run
+     the overlap check and warn the manager (and/or the artist) rather than silently
+     double-booking. Remember overnight sets (`end < start`) roll to the next day.
 - **Copy fix:** notification title **"Added to a Lineup" → "Added to Lineup"** (drop the "a").
   3 send sites: `app/(manager)/artist-profile-view.tsx:260` and two in
   `app/(manager)/(tabs)/network.tsx` (~319, ~411). Note: likely superseded by the
