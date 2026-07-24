@@ -57,16 +57,19 @@ annoying in practice.
   is unreachable: `openEditSlot` (`app/(manager)/(tabs)/calendar.tsx:859`) is never called —
   no menu/button points at it. So step one is just an entry point (set card menu, or from
   booking-detail). Then three real gaps to close before it's safe:
-  1. **Bookings keep stale times.** The save handler (~line 878) updates the `slots` row and
-     the slot store only. Bookings carry their OWN snapshot (`slot_start_time` /
-     `slot_end_time`) — used by completion (`isPastEnd`), conflict detection, invoices and
-     every list. Editing a set MUST also update those columns on all its bookings, or the gig
-     displays/completes at the old time. This is the big one.
+  1. **Bookings keep stale times — sync the snapshot on edit, freeze it at completion.** The
+     save handler (~line 878) updates the `slots` row and slot store only. Bookings carry
+     their OWN snapshot (`slot_start_time` / `slot_end_time`), which is what the ARTIST reads
+     (their app doesn't hold the manager's slots — that's why the snapshot exists) and what
+     drives completion (`isPastEnd`) and invoices.
+     **Rule:** on set edit, update the snapshot on all NON-completed bookings of that slot, so
+     the artist sees the new time. Leave COMPLETED bookings untouched — their times stay
+     frozen as history. Same shape as the venue-name freeze already shipped
+     (`bookingVenueName`): live while active, frozen once completed.
   2. **Notify the booked artists** that the time changed — they've already accepted a gig at
      the old time.
-  3. **Re-check conflicts.** A moved set can now clash with that artist's other gigs; re-run
-     the overlap check and warn the manager (and/or the artist) rather than silently
-     double-booking. Remember overnight sets (`end < start`) roll to the next day.
+  3. ~~Re-check conflicts~~ — decided NOT needed here (Tuts, 21 Jul). A moved set won't
+     re-run the overlap check; accepted as-is.
 - **Copy fix:** notification title **"Added to a Lineup" → "Added to Lineup"** (drop the "a").
   3 send sites: `app/(manager)/artist-profile-view.tsx:260` and two in
   `app/(manager)/(tabs)/network.tsx` (~319, ~411). Note: likely superseded by the
