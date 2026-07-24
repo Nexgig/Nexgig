@@ -53,6 +53,19 @@ annoying in practice.
   should match: allow name-less templates (times only). Watch the dedup key at
   `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
   off start/end time instead, or two same-time unnamed templates collapse into one.
+- **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
+  nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
+  only way to learn someone's version is to ask them to read it out. That cost real time
+  chasing a tester who was silently on build 14 (21 Jul).
+  Write these to the `users` row on launch / sign-in:
+  - `app_update_id` — the OTA bundle running (`Updates.updateId`)
+  - `app_build` — native build number (this is what distinguishes **build 14 vs 17**)
+  - `is_embedded_launch` — `Updates.isEmbeddedLaunch`; true = never applied an OTA, still on
+    the bundle baked into the binary. This one flag answers "why is this user seeing old
+    behaviour?" instantly.
+  - `last_seen_at` — so you know how stale the reading is
+  Then a one-line query shows everyone not on the current bundle. Needs a small migration
+  (columns on `users`) + a few lines on launch; ships over the air.
 - **Let the manager edit a set's timing after it's created.** The edit flow already EXISTS but
   is unreachable: `openEditSlot` (`app/(manager)/(tabs)/calendar.tsx:859`) is never called —
   no menu/button points at it. So step one is just an entry point (set card menu, or from
