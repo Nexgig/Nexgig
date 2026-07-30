@@ -53,6 +53,34 @@ annoying in practice.
 
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
+- **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
+  then fix what's off:
+  - **Copy** at each send site — title + body, tone, `firstName()` truncation, and that the
+    venue/date/name snapshots read right. Send sites are spread across `app/(manager)/*` and
+    `app/(artist)/*` (e.g. `booking_request`, `booking_confirmed/declined/cancelled`,
+    `past_confirmation_request`, `lineup_added`, `venue_assigned`, `artist_left_venue`,
+    `invoice_received`, `review_submitted`). Grep `addNotification(` + `type:` for the full set.
+  - **Tap routing** — every type should open the right screen. Check `handlePress` in BOTH
+    `app/(manager)/notifications.tsx` and `app/(artist)/notifications.tsx`, and `routeFromPush`
+    in `app/_layout.tsx` (the push-tap path). Flag any type that falls through to just the list.
+  - **Icon + colour maps** — `NOTIF_ICONS` / `NOTIF_COLORS` in both notifications screens: any
+    type missing from the map silently falls back to a generic bell/primary. Make sure every
+    live type has an entry, and the dot colours in `renderNotif` match.
+  - **Role separation** — `lib/notification-roles.ts` (`isForRole`): confirm no type leaks to the
+    wrong side's list. (Push-level role separation is its own known-limitation item above.)
+  - Deliverable: a short list of what was wrong + the amendments, then ship them.
+- **Notify artists when a manager creates a new venue.** Today creating a venue is silent to
+  artists (`app/(manager)/create-venue.tsx` — the `venues` insert / `addVenue`). Send a
+  notification so connected artists know a new venue exists (they can now be booked there).
+  - **Who to notify:** the manager's lineup — connected artists in the global lineup
+    (`globalLineup`, status `'active'` for that manager). A brand-new venue has no
+    `venue_assignments` yet, so target the manager relationship, not the venue. (Decide whether
+    to also auto-assign them to the new venue, or leave assignment manual — probably manual.)
+  - **Reuse:** the `venue_assigned` type already exists with a body like "You can now be booked
+    at {venue}" and routes to the venue; consider a distinct type (e.g. `venue_created`) or
+    reuse `venue_assigned` copy. Mirror the send pattern in `handleAddToVenue`
+    (`app/(manager)/add-slot.tsx`) / `handleAddToVenueFromSlot` (`assign-artist.tsx`).
+  - Fold the copy/routing/icon-map/role checks into the notification audit item above.
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
   only way to learn someone's version is to ask them to read it out. That cost real time
