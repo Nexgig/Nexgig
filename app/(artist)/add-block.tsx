@@ -360,6 +360,30 @@ export default function AddBlockScreen() {
         {/* ─────────── SINGLE DAY MODE ─────────── */}
         {mode === 'single' && (
           <>
+            {/* Type toggle: Block / Private Event */}
+            <View style={styles.fieldBlock}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
+              <View style={[styles.segment, { borderColor: colors.border }]}>
+                {(['private_event', 'block'] as const).map((t) => (
+                  <Pressable
+                    key={t}
+                    style={[styles.segmentBtn, kind === t && { backgroundColor: colors.primary }]}
+                    onPress={() => setKind(t)}
+                  >
+                    <Text style={[styles.segmentText, { color: kind === t ? '#fff' : colors.muted }]}>
+                      {t === 'block' ? 'Block' : 'Private Event'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {/* Explain what each type does — these terms aren't self-evident. */}
+              <Text style={[styles.helperText, { color: colors.muted, marginTop: 8 }]}>
+                {kind === 'block'
+                  ? 'Block: marks you unavailable for this period. Managers will see you as unavailable but can still send you requests.'
+                  : 'Private Event: save your own gigs here to keep track of them. Managers will see you as unavailable but can still send you requests.'}
+              </Text>
+            </View>
+
             {/* DATE — editable; defaults to the day Create was opened on. */}
             <View style={[styles.fieldBlock, { zIndex: singleDateOpen ? 30 : 1 }]}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>DATE</Text>
@@ -388,30 +412,6 @@ export default function AddBlockScreen() {
                   </View>
                 )}
               </View>
-            </View>
-
-            {/* Type toggle: Block / Private Event */}
-            <View style={styles.fieldBlock}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
-              <View style={[styles.segment, { borderColor: colors.border }]}>
-                {(['private_event', 'block'] as const).map((t) => (
-                  <Pressable
-                    key={t}
-                    style={[styles.segmentBtn, kind === t && { backgroundColor: colors.primary }]}
-                    onPress={() => setKind(t)}
-                  >
-                    <Text style={[styles.segmentText, { color: kind === t ? '#fff' : colors.muted }]}>
-                      {t === 'block' ? 'Block' : 'Private Event'}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              {/* Explain what each type does — these terms aren't self-evident. */}
-              <Text style={[styles.helperText, { color: colors.muted, marginTop: 8 }]}>
-                {kind === 'block'
-                  ? 'Block: marks you unavailable for this period. Managers will see you as unavailable but can still send you requests.'
-                  : 'Private Event: save your own gigs here to keep track of them. Managers will see you as unavailable but can still send you requests.'}
-              </Text>
             </View>
 
             {/* Private event fields */}
