@@ -257,7 +257,7 @@ export default function ArtistProfileViewScreen() {
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId, type: 'lineup_added',
-      title: 'Added to a Lineup',
+      title: 'Added to Lineup',
       body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false, createdAt: new Date().toISOString(),
     });

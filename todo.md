@@ -53,16 +53,6 @@ annoying in practice.
 
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
-- **Remove the Nexgig wordmark from invoices.** The company isn't registered yet, so the brand
-  must not appear on a financial document exchanged between an artist and a manager. Four
-  places, on-screen AND in the exported PDF/HTML:
-  - `app/(artist)/invoice-preview.tsx:294` (on-screen) and `:430` (`<div class="brand-name">`)
-  - `app/(manager)/manager-invoice-detail.tsx:247` (on-screen) and `:86` (PDF/HTML)
-  Decide what replaces it — likely nothing (the invoice already carries the artist's legal
-  name/email and the venue's legal name, TRN and address, which is what actually matters), or
-  just the word "INVOICE". Once the wordmark is gone, `lib/clash-display-base64.ts` may be
-  dead — it exists ONLY to embed the brand font so "Nexgig." renders correctly in the PDF, so
-  dropping it would remove a large base64 blob from the bundle. Check nothing else uses it.
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
   only way to learn someone's version is to ask them to read it out. That cost real time
@@ -93,11 +83,6 @@ annoying in practice.
      the old time.
   3. ~~Re-check conflicts~~ — decided NOT needed here (Tuts, 21 Jul). A moved set won't
      re-run the overlap check; accepted as-is.
-- **Copy fix:** notification title **"Added to a Lineup" → "Added to Lineup"** (drop the "a").
-  3 send sites: `app/(manager)/artist-profile-view.tsx:260` and two in
-  `app/(manager)/(tabs)/network.tsx` (~319, ~411). Note: likely superseded by the
-  lineup-accept change below (which rewrites this notification into a request) — do whichever
-  lands first.
 - **Lineup add should require the artist's acceptance.** Today a manager adding an artist to
   their lineup is instant + one-way — the artist just gets an "Added to a Lineup" FYI
   (`handleConnect` / `addToGlobalLineup` on `app/(manager)/artist-profile-view.tsx`, mirrored

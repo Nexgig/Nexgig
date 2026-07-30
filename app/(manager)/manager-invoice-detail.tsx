@@ -83,11 +83,9 @@ function generateInvoiceHTML(data: {
   <body>
     <div class="header">
       <div>
-        <div class="brand-name">Nexgig<span style="color:#E2674A">.</span></div>
-        <div class="brand-slogan">Book. Play. Discover.</div>
+        <div class="brand-name">INVOICE</div>
       </div>
       <div class="inv-meta">
-        <div class="inv-label">Invoice</div>
         <div class="inv-num">${data.invoiceNumber}</div>
         <div class="inv-date">${data.sentDate}</div>
       </div>
@@ -244,11 +242,9 @@ export default function ManagerInvoiceDetailScreen() {
           {/* Invoice Header */}
           <View style={styles.invoiceHeader}>
             <View>
-              <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>Nexgig<Text style={{ color: colors.primary, fontFamily: fonts.displayBold }}>.</Text></Text>
-              <Text style={[styles.brandSlogan, { color: colors.muted }]}>BOOK. PLAY. DISCOVER.</Text>
+              <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>INVOICE</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.invMetaLabel, { color: colors.muted }]}>INVOICE</Text>
               <Text style={[styles.invoiceNum, { color: colors.primary }]}>{invoice.invoiceNumber}</Text>
               <Text style={[styles.invoiceDate, { color: colors.muted }]}>{sentDate}</Text>
             </View>
