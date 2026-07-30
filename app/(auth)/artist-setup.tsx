@@ -134,7 +134,7 @@ export default function DJSetupScreen() {
       // OAuth (Apple/Google): never REQUIRE a name. Apple only returns it on the first-ever
       // sign-in, so blocking on it would re-trigger Guideline 4 for a returning reviewer. It's
       // pre-filled when available and editable later in Edit Profile.
-      if (!isOAuth && !form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
+      if (!isOAuth && !form.fullName.trim()) { Alert.alert('Required', 'Please enter your display name.'); return; }
       if (!isOAuth && !form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
       if (!hasSession) {
         const emailErr = validateEmail(form.email);
@@ -357,7 +357,7 @@ export default function DJSetupScreen() {
           {displayStep === 1 && (
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Artist Name{isOAuth ? '' : ' *'}</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Display Name{isOAuth ? '' : ' *'}</Text>
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Your stage name — shown publicly</Text>
                 <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
                   placeholder="DJ Kai" placeholderTextColor={colors.muted}
