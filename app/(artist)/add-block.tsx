@@ -106,6 +106,8 @@ export default function AddBlockScreen() {
   const [endTime, setEndTime] = useState(params.et ?? '01:00');
   const [fullDay, setFullDay] = useState(params.fd === '1');
 
+  // Single-day date — editable (was fixed to baseDate). Seeded from the tapped/quick-add day.
+  const [singleDate, setSingleDate] = useState(baseDate);
   // Range dates
   const [rangeStart, setRangeStart] = useState(baseDate);
   const [rangeEnd, setRangeEnd] = useState(baseDate);
@@ -113,6 +115,7 @@ export default function AddBlockScreen() {
   // Dropdown open states
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  const [singleDateOpen, setSingleDateOpen] = useState(false);
   const [rangeStartOpen, setRangeStartOpen] = useState(false);
   const [rangeEndOpen, setRangeEndOpen] = useState(false);
   const startScrollRef = useRef<ScrollView>(null);
@@ -120,7 +123,7 @@ export default function AddBlockScreen() {
 
   const headerTitle = mode === 'range'
     ? 'Block Dates'
-    : formatDateLabel(baseDate);
+    : formatDateLabel(singleDate);
 
   const closeSheet = () => { Keyboard.dismiss(); router.back(); };
 
@@ -154,7 +157,7 @@ export default function AddBlockScreen() {
     }
 
     // ── SINGLE DAY ──
-    const targetDate = baseDate;
+    const targetDate = singleDate;
 
     if (kind === 'private_event') {
       if (!eventName.trim()) { Alert.alert('Required', 'Please enter an event name.'); return; }
@@ -357,6 +360,36 @@ export default function AddBlockScreen() {
         {/* ─────────── SINGLE DAY MODE ─────────── */}
         {mode === 'single' && (
           <>
+            {/* DATE — editable; defaults to the day Create was opened on. */}
+            <View style={[styles.fieldBlock, { zIndex: singleDateOpen ? 30 : 1 }]}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>DATE</Text>
+              <View style={{ position: 'relative', zIndex: singleDateOpen ? 30 : 1 }}>
+                <Pressable
+                  style={[styles.timeDropdownBtn, { borderColor: singleDateOpen ? colors.primary : colors.border }]}
+                  onPress={() => { Keyboard.dismiss(); setSingleDateOpen((v) => !v); setStartOpen(false); setEndOpen(false); }}
+                >
+                  <MaterialIcons name="calendar-today" size={14} color={singleDateOpen ? colors.primary : colors.muted} />
+                  <Text style={[styles.timeDropdownText, { color: colors.foreground }]} numberOfLines={1}>{formatDateShort(singleDate)}</Text>
+                  <MaterialIcons name={singleDateOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+                </Pressable>
+                {singleDateOpen && (
+                  <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <ScrollView style={styles.dateDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                      {DATE_OPTIONS.map((d) => {
+                        const sel = singleDate === d;
+                        return (
+                          <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setSingleDate(d); setSingleDateOpen(false); }}>
+                            <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{formatDateShort(d)}</Text>
+                            {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            </View>
+
             {/* Type toggle: Block / Private Event */}
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
