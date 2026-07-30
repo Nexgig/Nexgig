@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase, useArtistDirectoryStore, mapVenueRow } from '@/lib/store';
+import { refreshCurrentUserProfile } from '@/lib/roles';
 
 export default function ManagerLayout() {
   const colors = useColors();
@@ -285,6 +286,14 @@ if (!lineupError && lineupData) {
       supabase.removeChannel(venueSubscription);
     };
   }, []);
+
+  // Re-read our own name/photo/avatar from the DB on launch — the persisted phone copy can be
+  // stale after a build upgrade (e.g. an avatar chosen on the old bundle). See the artist
+  // _layout for the full rationale. Keyed on currentUser.id so it runs once hydrated.
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    refreshCurrentUserProfile();
+  }, [currentUser?.id]);
 
   // Notifications: load from Supabase + realtime subscription (depends on currentUser)
   useEffect(() => {

@@ -3,6 +3,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useBookingStore, useAuthStore, useNotificationStore, useLineupStore, useVenueStore, useAvailabilityStore, useInvoiceStore, loadNotificationsFromSupabase } from '@/lib/store';
+import { refreshCurrentUserProfile } from '@/lib/roles';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import type { Booking } from '@/lib/types';
@@ -14,6 +15,12 @@ export default function DJLayout() {
 
   useEffect(() => {
     if (!currentUser?.id) return;
+
+    // Re-read our own name/photo/avatar from the DB on launch. The persisted copy on the
+    // phone can be stale after a build upgrade (e.g. an avatar chosen on the old bundle shows
+    // in the DB but not on this user's own screens) — this closes that gap without waiting for
+    // the Profile tab to be opened. See refreshCurrentUserProfile.
+    refreshCurrentUserProfile();
 
     const fetchBookings = async () => {
       const { data, error } = await supabase

@@ -180,6 +180,30 @@ export async function hydrateRole(
 }
 
 /**
+ * Refresh the signed-in user's OWN identity fields (name, photo, AVATAR) from Supabase into
+ * currentUser, on cold start. The app otherwise trusts the copy persisted on the phone, and
+ * only re-reads it from the DB when the user opens their Profile tab (profile.tsx). So after a
+ * build upgrade the phone carries over a stale currentUser — the classic symptom being a chosen
+ * avatar that the DB has (and everyone reading it fresh sees) but the user's own dashboard does
+ * not, because their local copy predates the pick. This runs on every launch and closes that gap.
+ *
+ * MERGES via updateProfile (never replaces currentUser), keyed by id so it hits the row that
+ * actually belongs to this session. Safe no-op if the row is missing.
+ */
+export async function refreshCurrentUserProfile(): Promise<void> {
+  const cu = useAuthStore.getState().currentUser;
+  if (!cu?.id) return;
+  const table = cu.accountType === 'manager' ? 'managers' : 'artists';
+  const { data } = await supabase.from(table).select('full_name, profile_photo_url, avatar_id').eq('id', cu.id).maybeSingle();
+  if (!data) return;
+  useAuthStore.getState().updateProfile({
+    fullName: data.full_name ?? cu.fullName,
+    profilePhotoUrl: data.profile_photo_url ?? undefined,
+    avatarId: data.avatar_id ?? undefined,
+  });
+}
+
+/**
  * Move the session to the other role. Returns false if that profile doesn't exist, leaving
  * the current one untouched.
  *
