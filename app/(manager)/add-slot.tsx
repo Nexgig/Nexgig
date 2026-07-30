@@ -319,6 +319,19 @@ export default function AddSlotScreen() {
     });
   };
 
+  // Confirm before firing a gig request from the pick screen (send is not undoable).
+  const confirmSend = (artistId: string, name: string) => {
+    const venueName = venues.find((v) => v.id === createSlotVenueId)?.name ?? 'this venue';
+    Alert.alert(
+      'Send Gig Request',
+      `Send ${name} a gig request for ${venueName} on ${formatDate(targetDate)}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Send', onPress: () => sendNow(artistId) },
+      ]
+    );
+  };
+
   const handleTapArtist = (artistId: string) => {
     if (!currentUser || !createdSlotId) return;
     if (isPast) {
@@ -420,7 +433,7 @@ export default function AddSlotScreen() {
         ) : drafted ? (
           // Drafted: tap the row to deselect; tap this coral send button to send the request now.
           <Pressable
-            onPress={() => sendNow(item.artistId)}
+            onPress={() => confirmSend(item.artistId, item.user.fullName)}
             hitSlop={8}
             style={({ pressed }) => [styles.rowSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
           >

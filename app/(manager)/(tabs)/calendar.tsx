@@ -1842,7 +1842,7 @@ export default function CalendarScreen() {
                     }}
                   >
                     <MaterialIcons name="add" size={18} color="#fff" />
-                    <Text style={styles.addSetBtnText}>Add Set</Text>
+                    <Text style={styles.addSetBtnText}>Create</Text>
                   </Pressable>
                 </View>
 

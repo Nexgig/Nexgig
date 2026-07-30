@@ -445,6 +445,18 @@ export default function AssignDJScreen() {
     });
   };
 
+  // Confirm before firing a gig request from the assign screen (send is not undoable).
+  const confirmSend = (artistId: string, name: string) => {
+    Alert.alert(
+      'Send Gig Request',
+      `Send ${name} a gig request for "${slot!.name}" on ${formatDate(slot!.date)}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Send', onPress: () => sendNow(artistId) },
+      ]
+    );
+  };
+
   const handleTapDJ = (artistId: string) => {
     if (isPastSlot) {
       handleTapDJPast(artistId);
@@ -580,7 +592,7 @@ export default function AssignDJScreen() {
           ? (
             // Drafted: tap the row to deselect; tap this coral send button to send now.
             <Pressable
-              onPress={() => sendNow(item.user.id)}
+              onPress={() => confirmSend(item.user.id, item.user.fullName)}
               hitSlop={8}
               style={({ pressed }) => [styles.rowSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
             >
