@@ -38,6 +38,9 @@ export default function ManagerRegisterScreen() {
   //   oauth  — Apple/Google signed them in before we got here.
   //   resume — they signed up, abandoned setup, and sign-in sent them back to finish.
   const hasSession = oauth === '1' || resume === '1';
+  // Apple/Google signup: never REQUIRE the name (Apple only sends it on first sign-in), so we
+  // don't re-ask for a name the provider supplies (Guideline 4). Pre-filled when available.
+  const isOAuth = oauth === '1';
 
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
@@ -88,8 +91,10 @@ export default function ManagerRegisterScreen() {
     // ✅ Step 1 — sign up with email + password (skipped in OAuth mode)
     if (step === 1) {
       if (hasSession) {
-        // Session already exists from Apple/Google. Just need a name.
-        if (!form.fullName.trim()) {
+        // Session already exists from Apple/Google. Don't require a name for OAuth users —
+        // it's pre-filled from the provider when available and editable later (Guideline 4).
+        // `resume` (email/password user finishing setup) still needs a name.
+        if (!isOAuth && !form.fullName.trim()) {
           Alert.alert('Required', 'Please enter your full name.');
           return;
         }

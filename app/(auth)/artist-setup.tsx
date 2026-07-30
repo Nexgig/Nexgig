@@ -61,7 +61,8 @@ export default function DJSetupScreen() {
   // the user is never required to type a name after Sign in with Apple. It stays editable in
   // Edit Profile. `resume` (email/password user finishing setup) is NOT this case — they still
   // enter their own name. Only when the provider actually gave a name do we hide/pre-fill.
-  const oauthGaveName = oauth === '1' && !!(oauthName && oauthName.trim());
+  const isOAuth = oauth === '1';
+  const oauthGaveName = isOAuth && !!(oauthName && oauthName.trim());
 
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
@@ -130,8 +131,11 @@ export default function DJSetupScreen() {
     if (isAnimating) return;
 
     if (step === 1) {
-      if (!form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
-      if (!form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
+      // OAuth (Apple/Google): never REQUIRE a name. Apple only returns it on the first-ever
+      // sign-in, so blocking on it would re-trigger Guideline 4 for a returning reviewer. It's
+      // pre-filled when available and editable later in Edit Profile.
+      if (!isOAuth && !form.fullName.trim()) { Alert.alert('Required', 'Please enter your artist name.'); return; }
+      if (!isOAuth && !form.fullLegalName.trim()) { Alert.alert('Required', 'Please enter your full legal name.'); return; }
       if (!hasSession) {
         const emailErr = validateEmail(form.email);
         if (emailErr) { setEmailError(emailErr); return; }
@@ -349,15 +353,15 @@ export default function DJSetupScreen() {
           {displayStep === 1 && (
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Artist Name *</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Artist Name{isOAuth ? '' : ' *'}</Text>
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Your stage name — shown publicly</Text>
                 <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
                   placeholder="DJ Kai" placeholderTextColor={colors.muted}
                   value={form.fullName} onChangeText={(v) => update('fullName', v)} returnKeyType="next" />
               </View>
-              {/* Hidden when Apple/Google already gave us the name (Guideline 4 — don't
-                  re-ask). Pre-filled from the provider and editable later in Edit Profile. */}
-              {!oauthGaveName && (
+              {/* Hidden for Apple/Google signups (Guideline 4 — don't re-ask for the real
+                  name). Pre-filled from the provider when available, editable in Edit Profile. */}
+              {!isOAuth && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Full Legal Name *</Text>
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Kept private, used for invoicing</Text>
