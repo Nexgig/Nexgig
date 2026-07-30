@@ -17,7 +17,7 @@ for (let h = 0; h < 24; h++) {
   }
 }
 
-// Next ~120 days as YYYY-MM-DD, used by the range date dropdowns.
+// Next ~120 days as YYYY-MM-DD, used by the DATE dropdown.
 function buildDateOptions(): string[] {
   const out: string[] = [];
   const base = new Date();
@@ -51,24 +51,6 @@ const genUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c
   return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
 });
 
-// Every YYYY-MM-DD from start..end inclusive
-function datesInRange(start: string, end: string): string[] {
-  const out: string[] = [];
-  const s = new Date(start + 'T00:00:00');
-  const e = new Date(end + 'T00:00:00');
-  if (e < s) return [start];
-  const cur = new Date(s);
-  while (cur <= e) {
-    const y = cur.getFullYear();
-    const m = String(cur.getMonth() + 1).padStart(2, '0');
-    const dd = String(cur.getDate()).padStart(2, '0');
-    out.push(`${y}-${m}-${dd}`);
-    cur.setDate(cur.getDate() + 1);
-  }
-  return out;
-}
-
-type Mode = 'single' | 'range';
 type BlockKind = 'block' | 'private_event';
 
 export default function AddBlockScreen() {
@@ -98,7 +80,6 @@ export default function AddBlockScreen() {
   const isEditing = !!(editBlockId || editBookingId);
   const baseDate = params.date ?? new Date().toISOString().slice(0, 10);
 
-  const [mode, setMode] = useState<Mode>('single');
   const [kind, setKind] = useState<BlockKind>((params.kind as BlockKind) || 'private_event');
   const [eventName, setEventName] = useState(params.ev ?? '');
   const [location, setLocation] = useState(params.loc ?? '');
@@ -106,24 +87,17 @@ export default function AddBlockScreen() {
   const [endTime, setEndTime] = useState(params.et ?? '01:00');
   const [fullDay, setFullDay] = useState(params.fd === '1');
 
-  // Single-day date — editable (was fixed to baseDate). Seeded from the tapped/quick-add day.
+  // Editable day for this event/block. Seeded from the tapped/quick-add day.
   const [singleDate, setSingleDate] = useState(baseDate);
-  // Range dates
-  const [rangeStart, setRangeStart] = useState(baseDate);
-  const [rangeEnd, setRangeEnd] = useState(baseDate);
 
   // Dropdown open states
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
   const [singleDateOpen, setSingleDateOpen] = useState(false);
-  const [rangeStartOpen, setRangeStartOpen] = useState(false);
-  const [rangeEndOpen, setRangeEndOpen] = useState(false);
   const startScrollRef = useRef<ScrollView>(null);
   const endScrollRef = useRef<ScrollView>(null);
 
-  const headerTitle = mode === 'range'
-    ? 'Block Dates'
-    : formatDateLabel(singleDate);
+  const headerTitle = formatDateLabel(singleDate);
 
   const closeSheet = () => { Keyboard.dismiss(); router.back(); };
 
@@ -137,24 +111,6 @@ export default function AddBlockScreen() {
 
   const handleSave = () => {
     if (!currentUser?.id) { closeSheet(); return; }
-
-    // ── RANGE MODE: full-day block for each day in the span ──
-    if (mode === 'range') {
-      const days = datesInRange(rangeStart, rangeEnd);
-      days.forEach((date) => {
-        const id = genUUID();
-        const block: AvailabilityBlock = {
-          id, artistId: currentUser.id, date,
-          startTime: '00:00', endTime: '23:59', fullDay: true,
-          label: 'Unavailable', blockType: 'block',
-          createdAt: new Date().toISOString(),
-        };
-        addBlock(block);
-        insertBlockRow(id, date, '00:00', '23:59', true);
-      });
-      closeSheet();
-      return;
-    }
 
     // ── SINGLE DAY ──
     const targetDate = singleDate;
@@ -251,115 +207,6 @@ export default function AddBlockScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Mode toggle — hidden while editing (edit is always single-day) */}
-        {!isEditing && (
-          <View style={styles.fieldBlock}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>WHEN</Text>
-            <View style={[styles.segment, { borderColor: colors.border }]}>
-              {(['single', 'range'] as const).map((m) => (
-                <Pressable
-                  key={m}
-                  style={[styles.segmentBtn, mode === m && { backgroundColor: colors.primary }]}
-                  onPress={() => { setMode(m); setStartOpen(false); setEndOpen(false); }}
-                >
-                  <MaterialIcons
-                    name={m === 'single' ? 'event' : 'flight'}
-                    size={15}
-                    color={mode === m ? '#fff' : colors.muted}
-                  />
-                  <Text style={[styles.segmentText, { color: mode === m ? '#fff' : colors.muted }]}>
-                    {m === 'single' ? 'Single Day' : 'Travel Mode'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* ─────────── RANGE MODE ─────────── */}
-        {mode === 'range' && (
-          <>
-            <Text style={[styles.helperText, { color: colors.muted }]}>
-              Block a full range of days — handy when you&apos;re travelling or away.
-            </Text>
-            <View style={styles.dateRangeRow}>
-              {/* FROM */}
-              <View style={{ flex: 1, zIndex: rangeStartOpen ? 30 : 1 }}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>FROM</Text>
-                <Pressable
-                  style={[styles.timeDropdownBtn, { borderColor: rangeStartOpen ? colors.primary : colors.border }]}
-                  onPress={() => { setRangeStartOpen((v) => !v); setRangeEndOpen(false); }}
-                >
-                  <MaterialIcons name="calendar-today" size={14} color={rangeStartOpen ? colors.primary : colors.muted} />
-                  <Text style={[styles.timeDropdownText, { color: colors.foreground }]} numberOfLines={1}>{formatDateShort(rangeStart)}</Text>
-                  <MaterialIcons name={rangeStartOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
-                </Pressable>
-                {rangeStartOpen && (
-                  <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <ScrollView style={styles.dateDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                      {DATE_OPTIONS.map((d) => {
-                        const sel = rangeStart === d;
-                        return (
-                          <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => {
-                            setRangeStart(d);
-                            if (rangeEnd < d) setRangeEnd(d);
-                            setRangeStartOpen(false);
-                          }}>
-                            <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{formatDateShort(d)}</Text>
-                            {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.timeSep}>
-                <MaterialIcons name="arrow-forward" size={16} color={colors.muted} />
-              </View>
-
-              {/* TO */}
-              <View style={{ flex: 1, zIndex: rangeEndOpen ? 30 : 1 }}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>TO</Text>
-                <Pressable
-                  style={[styles.timeDropdownBtn, { borderColor: rangeEndOpen ? colors.primary : colors.border }]}
-                  onPress={() => { setRangeEndOpen((v) => !v); setRangeStartOpen(false); }}
-                >
-                  <MaterialIcons name="calendar-today" size={14} color={rangeEndOpen ? colors.primary : colors.muted} />
-                  <Text style={[styles.timeDropdownText, { color: colors.foreground }]} numberOfLines={1}>{formatDateShort(rangeEnd)}</Text>
-                  <MaterialIcons name={rangeEndOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
-                </Pressable>
-                {rangeEndOpen && (
-                  <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <ScrollView style={styles.dateDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                      {DATE_OPTIONS.filter((d) => d >= rangeStart).map((d) => {
-                        const sel = rangeEnd === d;
-                        return (
-                          <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setRangeEnd(d); setRangeEndOpen(false); }}>
-                            <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{formatDateShort(d)}</Text>
-                            {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View style={[styles.infoPill, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
-              <MaterialIcons name="flight" size={14} color={colors.primary} />
-              <Text style={[styles.infoPillText, { color: colors.primary }]}>
-                {datesInRange(rangeStart, rangeEnd).length} day{datesInRange(rangeStart, rangeEnd).length !== 1 ? 's' : ''} will be blocked (full day)
-              </Text>
-            </View>
-          </>
-        )}
-
-        {/* ─────────── SINGLE DAY MODE ─────────── */}
-        {mode === 'single' && (
-          <>
             {/* Type toggle: Block / Private Event */}
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
@@ -525,8 +372,6 @@ export default function AddBlockScreen() {
                 </View>
               </View>
             </View>
-          </>
-        )}
 
         {/* Actions */}
         <View style={styles.modalActions}>
@@ -555,15 +400,11 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   helperText: { fontSize: 12, marginBottom: 12, lineHeight: 17 },
 
-  // Segmented control (mode + type) — pill style consistent with app
+  // Segmented control (type toggle) — pill style consistent with app
   segment: { flexDirection: 'row', borderRadius: 10, borderWidth: 1, padding: 3, gap: 3 },
   segmentBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 9, borderRadius: 7 },
   segmentText: { fontSize: 12, fontWeight: '700' },
 
-  // Date range
-  dateRangeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 4 },
-  infoPill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginTop: 14, alignSelf: 'flex-start' },
-  infoPillText: { fontSize: 12, fontWeight: '700' },
 
   // Text inputs
   textInputBox: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
