@@ -6,6 +6,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import type { User } from '@supabase/supabase-js';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';
 
 // Reusable Apple + Google sign-in buttons. Handles the full post-sign-in
@@ -160,37 +161,33 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
         <View style={[styles.line, { backgroundColor: onDark ? 'rgba(255,255,255,0.3)' : '#E5E7EB' }]} />
       </View>
 
-      <View style={styles.oauthRow}>
-        {Platform.OS === 'ios' && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.oauthBtn,
-              { opacity: pressed || busy === 'apple' ? 0.85 : 1 },
-            ]}
-            onPress={handleApple}
-            disabled={!!busy}
-          >
-            <AntDesign name="apple" size={18} color="#FFFFFF" />
-            <Text style={styles.oauthText}>
-              {busy === 'apple' ? '…' : 'Apple'}
-            </Text>
-          </Pressable>
-        )}
+      {/* Apple's OFFICIAL system button — required by the HIG (correct logo, wording,
+          styling and localization). Do NOT replace with a custom Pressable. */}
+      {Platform.OS === 'ios' && (
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+          buttonStyle={onDark
+            ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+            : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+          cornerRadius={14}
+          style={styles.appleBtn}
+          onPress={handleApple}
+        />
+      )}
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.oauthBtn,
-            { opacity: pressed || busy === 'google' ? 0.85 : 1 },
-          ]}
-          onPress={handleGoogle}
-          disabled={!!busy}
-        >
-          <AntDesign name="google" size={18} color="#FFFFFF" />
-          <Text style={styles.oauthText}>
-            {busy === 'google' ? '…' : 'Google'}
-          </Text>
-        </Pressable>
-      </View>
+      <Pressable
+        style={({ pressed }) => [
+          styles.oauthBtn,
+          { opacity: pressed || busy === 'google' ? 0.85 : 1 },
+        ]}
+        onPress={handleGoogle}
+        disabled={!!busy}
+      >
+        <AntDesign name="google" size={18} color="#FFFFFF" />
+        <Text style={styles.oauthText}>
+          {busy === 'google' ? '…' : 'Continue with Google'}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -200,9 +197,9 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
   line: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontWeight: '500' },
-  oauthRow: { flexDirection: 'row', gap: 12, width: '100%' },
+  appleBtn: { width: '100%', height: 50 },
   oauthBtn: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: '#000000', borderRadius: 14, paddingVertical: 15,
   },
