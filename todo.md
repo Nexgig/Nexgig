@@ -36,6 +36,13 @@ change that — review is done once approved).
 
 If REJECTED: read Apple's resolution notes, fix, and only then OTA + reply in Resolution Center.
 
+**Freeze status (updated):** broke the freeze ONCE on 28 Jul to OTA `019fb214` (commit
+7223b94) — a real blocker (testers couldn't create bulk sets: name was mandatory on a
+template but single sets are name-less). Bundled the staged polish batch with it (all benign,
+JS-only). The invoice-email function deploy is STILL held — the sendEmail call ships but
+no-ops safely until `send-email` is redeployed post-approval. **Re-freeze now: no more OTAs
+until approved unless another true blocker.**
+
 **2 · Known limitation — push notifications are not separated by role.** The in-app lists
 are (`lib/notification-roles.ts`), and the on/off categories are honoured at send time
 (`supabase/notification-preferences.sql` + the create-notification function). But a push
