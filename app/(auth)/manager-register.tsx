@@ -294,17 +294,17 @@ export default function ManagerRegisterScreen() {
           {/* Step 1: Basic Info + Password */}
           {displayStep === 1 && (
             <View style={styles.form}>
-              {/* Hidden for Apple/Google signups (Guideline 4 — don't re-ask for the name).
-                  Pre-filled from the provider when available; editable in Edit Profile. */}
-              {!isOAuth && (
+              {/* A public DISPLAY name (app handle), not the user's real name — so it's fine to
+                  show after Sign in with Apple (Guideline 4 is about the real name/email). For
+                  OAuth it's optional + pre-filled from the provider, and falls back to the email
+                  local-part if left blank (see resolvedName). */}
               <InputField
-                label="Full Name"
+                label="Display Name"
                 value={form.fullName}
                 onChangeText={(v) => update('fullName', v)}
                 placeholder="Alex Thompson"
                 colors={colors}
               />
-              )}
               {!hasSession && (
                 <InputField
                   label="Email Address"
