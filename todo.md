@@ -46,13 +46,6 @@ annoying in practice.
 
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
-- **Bulk Add Sets bug — drop the mandatory template name.** Bulk mode forces a name on each
-  set template: `app/(manager)/(tabs)/calendar.tsx:1106-1107` filters to `t.name.trim()` and
-  errors "Please enter a name for at least one set template." Single add-set no longer has a
-  name field at all (sets are unnamed now — time presets stopped writing the name), so bulk
-  should match: allow name-less templates (times only). Watch the dedup key at
-  `calendar.tsx:1153` (`${venueId}|${date}|${tpl.name.trim()}`) — with empty names it must key
-  off start/end time instead, or two same-time unnamed templates collapse into one.
 - **Remove the Nexgig wordmark from invoices.** The company isn't registered yet, so the brand
   must not appear on a financial document exchanged between an artist and a manager. Four
   places, on-screen AND in the exported PDF/HTML:

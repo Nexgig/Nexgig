@@ -1103,8 +1103,8 @@ export default function CalendarScreen() {
   const handleBulkCreate = () => {
     if (bulkVenueIds.length === 0) { Alert.alert('Required', 'Please select at least one venue.'); return; }
     if (bulkDays.length === 0) { Alert.alert('Required', 'Please select at least one day of the week.'); return; }
-    const validTemplates = bulkTemplates.filter((t) => t.name.trim());
-    if (validTemplates.length === 0) { Alert.alert('Required', 'Please enter a name for at least one set template.'); return; }
+    const validTemplates = bulkTemplates.filter((t) => t.startTime && t.endTime);
+    if (validTemplates.length === 0) { Alert.alert('Required', 'Please add at least one set template.'); return; }
 
     // Build all dates in the selected period that match the selected days of week
     // Days stored as 0=Mon..6=Sun; JS getDay() is 0=Sun..6=Sat
@@ -1142,7 +1142,7 @@ export default function CalendarScreen() {
     }
 
     // Build slot objects, skip duplicates (same venueId + date + name)
-    const existingKeys = new Set(allSlots.map((s) => `${s.venueId}|${s.date}|${s.name}`));
+    const existingKeys = new Set(allSlots.map((s) => `${s.venueId}|${s.date}|${s.startTime}-${s.endTime}`));
     const newSlots: Slot[] = [];
     let skipped = 0;
     const now = new Date().toISOString();
@@ -1150,7 +1150,7 @@ export default function CalendarScreen() {
     for (const venueId of bulkVenueIds) {
       for (const date of matchingDates) {
         for (const tpl of validTemplates) {
-          const key = `${venueId}|${date}|${tpl.name.trim()}`;
+          const key = `${venueId}|${date}|${tpl.startTime}-${tpl.endTime}`;
           if (existingKeys.has(key)) { skipped++; continue; }
           existingKeys.add(key);
           newSlots.push({
