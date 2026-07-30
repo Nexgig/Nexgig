@@ -55,13 +55,20 @@ export default function DJSetupScreen() {
   //   oauth  — Apple/Google signed them in before we got here.
   //   resume — they signed up, abandoned setup, and sign-in sent them back to finish.
   const hasSession = oauth === '1' || resume === '1';
+  // Apple/Google already handed us the user's real name — App Store Guideline 4 (Sign in with
+  // Apple) forbids RE-ASKING for a name/email the provider supplies. When we have it, pre-fill
+  // BOTH the (public) artist name and the legal name from it, and hide the legal-name field so
+  // the user is never required to type a name after Sign in with Apple. It stays editable in
+  // Edit Profile. `resume` (email/password user finishing setup) is NOT this case — they still
+  // enter their own name. Only when the provider actually gave a name do we hide/pre-fill.
+  const oauthGaveName = oauth === '1' && !!(oauthName && oauthName.trim());
 
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
   const [form, setForm] = useState({
     fullName: oauthName ?? '',
-    fullLegalName: '',
+    fullLegalName: oauthGaveName ? (oauthName ?? '') : '',
     email: oauthEmail ?? '',
     password: '',
     phone: '',
@@ -348,6 +355,9 @@ export default function DJSetupScreen() {
                   placeholder="DJ Kai" placeholderTextColor={colors.muted}
                   value={form.fullName} onChangeText={(v) => update('fullName', v)} returnKeyType="next" />
               </View>
+              {/* Hidden when Apple/Google already gave us the name (Guideline 4 — don't
+                  re-ask). Pre-filled from the provider and editable later in Edit Profile. */}
+              {!oauthGaveName && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Full Legal Name *</Text>
                 <Text style={[styles.fieldHint, { color: colors.muted }]}>Kept private, used for invoicing</Text>
@@ -355,6 +365,7 @@ export default function DJSetupScreen() {
                   placeholder="Kai Nakamura" placeholderTextColor={colors.muted}
                   value={form.fullLegalName} onChangeText={(v) => update('fullLegalName', v)} returnKeyType="next" />
               </View>
+              )}
               {!hasSession && (
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Email *</Text>
