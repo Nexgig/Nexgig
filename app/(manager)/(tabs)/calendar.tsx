@@ -18,6 +18,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
+import { persistGigRequestBooking } from '@/lib/gig-requests';
 import type { Slot } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
@@ -124,24 +125,15 @@ export default function CalendarScreen() {
   const getBookingsBySlot = useBookingStore((s) => s.getBookingsBySlot);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const addNotification = useNotificationStore((s) => s.addNotification);
-  const saveBookingToSupabase = async (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null) => {
-  const { error } = await supabase.from('bookings').insert({
-    id: bookingId,
-    slot_id: slotId,
-    venue_id: venueId,
-    artist_id: artistId,
-    manager_id: currentUser?.id,
-    status: 'requested',
-    is_completed: false,
-    slot_date: slotDate,
-    slot_name: slotName,
-    slot_start_time: slotStartTime,
-    slot_end_time: slotEndTime,
-    venue_name: venueName,
-    venue_type: getVenueById(venueId)?.venueType ?? null,
-  });
-  if (error) console.warn('booking insert error:', JSON.stringify(error));
-};
+  // Thin wrapper over the shared persistGigRequestBooking (lib/gig-requests) — the pick
+  // screens (add-slot / assign-artist) use the same helper, so the booking row shape stays
+  // in lockstep. Signature kept so the call sites below don't change.
+  const saveBookingToSupabase = (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null) =>
+    persistGigRequestBooking({
+      bookingId, slotId, venueId, artistId, managerId: currentUser?.id ?? '',
+      slotDate, slotName, slotStartTime, slotEndTime, venueName,
+      venueType: getVenueById(venueId)?.venueType ?? null,
+    });
 
   const clearSlots = useSlotStore((s) => s.clearSlots);
   const [calendarRefreshing, setCalendarRefreshing] = useState(false);

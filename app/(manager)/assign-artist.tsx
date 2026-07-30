@@ -11,6 +11,7 @@ import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
 import { isPastStart, genreLabel, addDaysStr, firstName } from '@/lib/utils';
+import { persistGigRequestBooking } from '@/lib/gig-requests';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
@@ -45,6 +46,7 @@ export default function AssignDJScreen() {
   const allDrafts = useDraftStore((s) => s.drafts);
   const setDraft = useDraftStore((s) => s.setDraft);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
   const getBookingsBySlot = useBookingStore((s) => s.getBookingsBySlot);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -422,21 +424,42 @@ export default function AssignDJScreen() {
     );
   };
 
+  // Send a drafted artist their gig request in place (same sequence as the calendar's
+  // send-drafts, via the shared persistGigRequestBooking so the booking row can't drift).
+  const sendNow = async (artistId: string) => {
+    if (!currentUser) return;
+    if (!assignedDJIds.has(artistId)) setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
+    const newBookingId = sendDraftByDJ(slot!.id, artistId, currentUser.id, addBooking);
+    if (!newBookingId) return;
+    await persistGigRequestBooking({
+      bookingId: newBookingId, slotId: slot!.id, venueId: slot!.venueId, artistId,
+      managerId: currentUser.id, slotDate: slot!.date, slotName: slot!.name,
+      slotStartTime: slot!.startTime, slotEndTime: slot!.endTime,
+      venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+    });
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
+      type: 'booking_request', title: 'New Gig Request',
+      body: `${firstName(currentUser.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(slot!.date)}`,
+      isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
+    });
+  };
+
   const handleTapDJ = (artistId: string) => {
     if (isPastSlot) {
       handleTapDJPast(artistId);
       return;
     }
     if (!currentUser) return;
-    // M7: tapping an already-drafted artist toggles them off (stays open). Tapping a NEW
-    // artist saves the draft and closes immediately — to add another, reopen assign from
-    // the set card's "+ Assign artist" row.
+    // Tapping an already-drafted artist toggles them off; tapping a new one drafts them.
+    // Either way we STAY on the screen so the manager can pick more than one artist, then
+    // send in place (the row's send icon) or close to keep the drafts to send from the
+    // calendar. Rows with a real booking already fall through untouched (see render states).
     if (assignedDJIds.has(artistId)) {
       removeDraftByDJ(slot!.id, artistId);
       return;
     }
     setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
-    router.back();
   };
 
   // Add a roster artist to THIS venue's lineup from the slot screen. No draft is
@@ -554,7 +577,16 @@ export default function AssignDJScreen() {
           : isPastPending || isPending
           ? <MaterialIcons name="schedule" size={20} color={colors.warning} />
           : isDrafted
-          ? <MaterialIcons name="check-circle" size={20} color={colors.primary} />
+          ? (
+            // Drafted: tap the row to deselect; tap this coral send button to send now.
+            <Pressable
+              onPress={() => sendNow(item.user.id)}
+              hitSlop={8}
+              style={({ pressed }) => [styles.rowSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
+            >
+              <MaterialIcons name="send" size={15} color="#fff" />
+            </Pressable>
+          )
           : <MaterialIcons name="add-circle-outline" size={20} color={colors.muted} />
         }
       </Pressable>
@@ -665,6 +697,7 @@ const styles = StyleSheet.create({
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   statusPillText: { fontSize: 10, fontWeight: '700' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  rowSendBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   artistPhoto: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   djInfo: { flex: 1 },
   djNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },

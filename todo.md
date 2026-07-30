@@ -121,28 +121,6 @@ annoying in practice.
     `app/(manager)/(tabs)/network.tsx` (drop the venues tab + the tab bar, keep the artists list).
   - Note the knock-on: with `SHOW_ARTIST_DIRECTORY` off, `app/(artist)/artist-profile-view`
     becomes unreachable again (that list was its only entry point) — fine, that's intended.
-- **Add Set / Assign Artist — don't auto-close when an artist is picked.** Right now picking an
-  artist saves the draft and immediately `router.back()`s (the M7 "assign saves draft and
-  closes" behaviour in `app/(manager)/assign-artist.tsx` / `app/(manager)/add-slot.tsx`
-  `handleTapArtist`/`handleTapDJ`). Change it so choosing an artist STAYS on the screen and
-  either (a) shows a **send** icon next to the chosen artist so the manager can send the gig
-  request right there, or (b) surfaces a **Save** button (middle/footer) to save the drafted
-  set — the manager decides send-now vs draft, and can pick more than one artist before
-  leaving. Keeps the draft flow but removes the abrupt close.
-- **Let the manager change the date when adding a single set.** The single Add Set flow fixes
-  the date to whatever was tapped/preselected — there's no way to change the day from inside
-  the sheet. Add a date picker (default = the preselected date, editable), like the bulk flow
-  and add-block already have. Files: the single-set branch of the Add Set sheet in
-  `app/(manager)/(tabs)/calendar.tsx` (and/or `app/(manager)/add-slot.tsx`).
-- **Quick "Create" button on the artist dashboard.** A shortcut to the artist's Create flow
-  (the add-block screen — private event / block) straight from the dashboard, so an artist can
-  log a private gig or block a date without going to the calendar first. Opens
-  `app/(artist)/add-block.tsx` (default to today's date). Artist-side mirror of the manager
-  quick-add-set item below.
-- **Quick Add Set on the manager dashboard.** A shortcut to create a set without going to the
-  calendar — a "+ Add Set" affordance on the manager dashboard that opens the add-set flow
-  (reuse the calendar's add-set sheet / `add-slot` route). Decide: jump to today's date, or
-  let them pick date + venue in the quick form.
 - **Venue location (Maps) on the artist dashboard booking rows.** Add a Maps/location
   action on the RIGHT of each booking row in the artist dashboard's bookings list, so an
   artist can open the venue's location in Maps straight from the row. The venue's

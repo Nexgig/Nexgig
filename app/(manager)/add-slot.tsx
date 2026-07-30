@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { isPastStart, genreLabel, addDaysStr, firstName } from '@/lib/utils';
 import { formatDate, detectConflicts, timesOverlap } from '@/lib/conflict-detection';
+import { persistGigRequestBooking } from '@/lib/gig-requests';
 import type { Slot, Booking, ConflictInfo, VenueAssignment } from '@/lib/types';
 
 const SLOT_PRESETS = [
@@ -31,6 +32,24 @@ for (let h = 0; h < 24; h++) {
   for (const m of ['00', '30']) {
     TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:${m}`);
   }
+}
+
+// Next ~120 days as YYYY-MM-DD for the editable DATE dropdown (mirrors add-block's picker).
+const DATE_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+  for (let i = 0; i < 120; i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  }
+  return out;
+})();
+function formatDateShort(dateStr: string) {
+  if (!dateStr) return 'Select';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-AE', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export default function AddSlotScreen() {
@@ -59,16 +78,20 @@ export default function AddSlotScreen() {
   const allDrafts = useDraftStore((s) => s.drafts);
   const setDraft = useDraftStore((s) => s.setDraft);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
   const allBookings = useBookingStore((s) => s.bookings);
   const addBooking = useBookingStore((s) => s.addBooking);
   const blocks = useAvailabilityStore((s) => s.blocks);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   const venues = allVenues.filter((v) => !v.isHidden && v.managerId === currentUser?.id);
-  const targetDate = date ?? new Date().toISOString().slice(0, 10);
+  // Editable: seeded from the tapped/preselected date, but the manager can change the day
+  // from the DATE dropdown below (the background slot is kept in sync — see the effect).
+  const [targetDate, setTargetDate] = useState(date ?? new Date().toISOString().slice(0, 10));
 
   const [createSlotVenueId, setCreateSlotVenueId] = useState<string>(venueId ?? venues[0]?.id ?? '');
   const [slotForm, setSlotForm] = useState({ name: '', startTime: '20:00', endTime: '00:00' });
+  const [dateOpen, setDateOpen] = useState(false);
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
   const [createdSlotId, setCreatedSlotId] = useState<string | null>(null);
@@ -104,15 +127,15 @@ export default function AddSlotScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the background slot in sync when venue/time/name change.
+  // Keep the background slot in sync when venue/date/time/name change.
   useEffect(() => {
     if (!createdSlotId) return;
-    updateSlot(createdSlotId, { venueId: createSlotVenueId, name: slotForm.name, startTime: slotForm.startTime, endTime: slotForm.endTime });
+    updateSlot(createdSlotId, { venueId: createSlotVenueId, name: slotForm.name, date: targetDate, startTime: slotForm.startTime, endTime: slotForm.endTime });
     supabase.from('slots').update({
-      venue_id: createSlotVenueId, name: slotForm.name, start_time: slotForm.startTime, end_time: slotForm.endTime,
+      venue_id: createSlotVenueId, name: slotForm.name, date: targetDate, start_time: slotForm.startTime, end_time: slotForm.endTime,
     }).eq('id', createdSlotId).then(({ error }) => { if (error) console.warn('bg slot update:', error.message); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createSlotVenueId, slotForm.name, slotForm.startTime, slotForm.endTime, createdSlotId]);
+  }, [createSlotVenueId, slotForm.name, targetDate, slotForm.startTime, slotForm.endTime, createdSlotId]);
 
   // On close without assigning anyone, delete the empty background slot.
   useEffect(() => {
@@ -206,6 +229,11 @@ export default function AddSlotScreen() {
     .filter(Boolean) as Array<{ slotId: string; date: string; startTime: string; endTime: string; venueName: string; slotName: string }>;
 
   const draftedIds = new Set(allDrafts.filter((d) => d.slotId === createdSlotId).map((d) => d.artistId));
+  // Artists already SENT a request for this slot (draft was converted to a booking, in-place
+  // or earlier). Shown as "Requested" so the manager doesn't re-draft someone they've sent.
+  const bookedIds = new Set(
+    allBookings.filter((b) => b.slotId === createdSlotId && (b.status === 'requested' || b.status === 'confirmed')).map((b) => b.artistId)
+  );
 
   // Venue lineup artists with conflict info
   const lineupWithConflicts = venueAssignments
@@ -267,6 +295,30 @@ export default function AddSlotScreen() {
     });
   };
 
+  // Send a drafted artist their gig request right here, without going back to the calendar.
+  // Draft -> booking + Supabase row + notification, the same sequence the calendar's
+  // send-drafts action runs (shares persistGigRequestBooking so the row can't drift).
+  const sendNow = async (artistId: string) => {
+    if (!currentUser || !createdSlotId) return;
+    if (!draftedIds.has(artistId)) setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
+    assignedRef.current = true;
+    const venue = venues.find((v) => v.id === createSlotVenueId);
+    const newBookingId = sendDraftByDJ(createdSlotId, artistId, currentUser.id, addBooking);
+    if (!newBookingId) return;
+    await persistGigRequestBooking({
+      bookingId: newBookingId, slotId: createdSlotId, venueId: createSlotVenueId, artistId,
+      managerId: currentUser.id, slotDate: targetDate, slotName: slotForm.name,
+      slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime,
+      venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+    });
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
+      type: 'booking_request', title: 'New Gig Request',
+      body: `${firstName(currentUser.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(targetDate)}`,
+      isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
+    });
+  };
+
   const handleTapArtist = (artistId: string) => {
     if (!currentUser || !createdSlotId) return;
     if (isPast) {
@@ -286,9 +338,11 @@ export default function AddSlotScreen() {
       );
       return;
     }
-    // M7: tapping an already-drafted artist toggles off (stays open). Tapping a NEW
-    // artist saves the draft and closes immediately — matches assign-artist. To add
-    // another, reopen from the set card's "+ Assign artist" row.
+    // Tapping an already-drafted artist toggles them off; tapping a new one drafts them.
+    // Either way we STAY on the screen so the manager can pick more than one artist, then
+    // send in place (the row's send icon) or close the sheet to keep them as drafts to send
+    // from the calendar later. (Already-requested artists are non-interactive — see render.)
+    if (bookedIds.has(artistId)) return;
     if (draftedIds.has(artistId)) {
       removeDraftByDJ(createdSlotId, artistId);
       Keyboard.dismiss();
@@ -297,7 +351,6 @@ export default function AddSlotScreen() {
     assignedRef.current = true;   // the unmount cleanup must not delete the just-created slot
     setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
     Keyboard.dismiss();
-    router.back();
   };
 
   // Add a roster artist to this venue's lineup (stays open; they move into the assignable list).
@@ -330,6 +383,7 @@ export default function AddSlotScreen() {
 
   const renderAssignRow = (item: { artistId: string; user: any; profile: any; hasConflict?: boolean; conflicts?: ConflictInfo[] }, index = 0) => {
     const drafted = !isPast && draftedIds.has(item.artistId);
+    const booked = !isPast && bookedIds.has(item.artistId);
     // Card-free: no tint, no state border. Drafted reads from the trailing coral
     // check-circle; a conflict reads from the inline red banner below the name.
     return (
@@ -352,12 +406,29 @@ export default function AddSlotScreen() {
         </View>
         {isPast ? (
           <StatusPill tone={colors.warning} icon="history" label="Past gig" />
+        ) : booked ? (
+          <StatusPill tone={colors.primary} icon="schedule" label="Requested" />
         ) : item.hasConflict ? (
           <StatusPill tone={colors.warning} icon="warning" label="Conflict" />
         ) : (
           <StatusPill tone={colors.success} icon="check-circle" label="Available" />
         )}
-        <MaterialIcons name={drafted ? 'check-circle' : (isPast ? 'send' : 'add-circle-outline')} size={20} color={drafted ? colors.primary : colors.muted} />
+        {isPast ? (
+          <MaterialIcons name="send" size={20} color={colors.muted} />
+        ) : booked ? (
+          <MaterialIcons name="check-circle" size={20} color={colors.primary} />
+        ) : drafted ? (
+          // Drafted: tap the row to deselect; tap this coral send button to send the request now.
+          <Pressable
+            onPress={() => sendNow(item.artistId)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.rowSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
+          >
+            <MaterialIcons name="send" size={15} color="#fff" />
+          </Pressable>
+        ) : (
+          <MaterialIcons name="add-circle-outline" size={20} color={colors.muted} />
+        )}
       </Pressable>
       </Fragment>
     );
@@ -394,6 +465,35 @@ export default function AddSlotScreen() {
               );
             })}
           </ScrollView>
+        </View>
+
+        <View style={[styles.fieldBlock, { zIndex: dateOpen ? 30 : 1 }]}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>DATE</Text>
+          <View style={{ position: 'relative', zIndex: dateOpen ? 30 : 1 }}>
+            <Pressable
+              style={[styles.timeDropdownBtn, { borderColor: dateOpen ? colors.primary : colors.border }]}
+              onPress={() => { Keyboard.dismiss(); setDateOpen(!dateOpen); setStartTimeOpen(false); setEndTimeOpen(false); }}
+            >
+              <MaterialIcons name="event" size={14} color={dateOpen ? colors.primary : colors.muted} />
+              <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{formatDateShort(targetDate)}</Text>
+              <MaterialIcons name={dateOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+            </Pressable>
+            {dateOpen && (
+              <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <ScrollView style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                  {DATE_OPTIONS.map((d) => {
+                    const isSelected = targetDate === d;
+                    return (
+                      <Pressable key={d} style={[styles.timeOption, isSelected && { backgroundColor: colors.primary + '15' }]} onPress={() => { setTargetDate(d); setDateOpen(false); }}>
+                        <Text style={[styles.timeOptionText, { color: isSelected ? colors.primary : colors.foreground, fontWeight: isSelected ? '700' : '400' }]}>{formatDateShort(d)}</Text>
+                        {isSelected && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.fieldBlock}>
@@ -582,6 +682,7 @@ const styles = StyleSheet.create({
   conflictText: { fontSize: 12, flex: 1, lineHeight: 16 },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   statusPillText: { fontSize: 10, fontWeight: '700' },
+  rowSendBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },

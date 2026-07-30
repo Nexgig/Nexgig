@@ -278,6 +278,13 @@ export default function DJHomeScreen() {
           <View style={styles.headerRight}>
             <Pressable
               style={styles.notifBtn}
+              onPress={() => router.push('/(artist)/add-block' as Href)}
+              hitSlop={6}
+            >
+              <MaterialIcons name="add" size={26} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              style={styles.notifBtn}
               onPress={() => router.push('/(artist)/notifications' as Href)}
             >
               <MaterialIcons name="notifications" size={22} color={colors.foreground} />
