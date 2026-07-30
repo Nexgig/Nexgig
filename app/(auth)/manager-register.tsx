@@ -176,11 +176,15 @@ export default function ManagerRegisterScreen() {
     // email field isn't shown, so form.email is empty — take it from the session.
     const profileEmail = (hasSession ? (user.email ?? form.email) : form.email).trim().toLowerCase();
 
+    // Never store a blank name. The name field is hidden/optional for OAuth signups, and Apple
+    // only sends a name on the first-ever sign-in — so fall back to the email's local part.
+    const resolvedName = form.fullName.trim() || (profileEmail.split('@')[0] || 'Manager');
+
     // Insert into users table first
     const { error: userInsertError } = await supabase.from('users').upsert({
       id: user.id,
       email: profileEmail,
-      full_name: form.fullName.trim(),
+      full_name: resolvedName,
       account_type: 'manager',
       phone: form.phone.trim(),
       is_phone_verified: false,
@@ -202,7 +206,7 @@ export default function ManagerRegisterScreen() {
       id: user.id,
       email: profileEmail,
       phone: form.phone.trim(),
-      full_name: form.fullName.trim(),
+      full_name: resolvedName,
       based_in: form.basedIn || null,
       company_name: form.companyName.trim() || null,
       profile_photo_url: photoUrl,
@@ -221,7 +225,7 @@ export default function ManagerRegisterScreen() {
       email: profileEmail,
       phone: form.phone.trim(),
       accountType: 'manager' as const,
-      fullName: form.fullName.trim(),
+      fullName: resolvedName,
       location: undefined,
       companyName: form.companyName.trim() || undefined,
       profilePhotoUrl: photoUrl ?? undefined,
@@ -290,6 +294,9 @@ export default function ManagerRegisterScreen() {
           {/* Step 1: Basic Info + Password */}
           {displayStep === 1 && (
             <View style={styles.form}>
+              {/* Hidden for Apple/Google signups (Guideline 4 — don't re-ask for the name).
+                  Pre-filled from the provider when available; editable in Edit Profile. */}
+              {!isOAuth && (
               <InputField
                 label="Full Name"
                 value={form.fullName}
@@ -297,6 +304,7 @@ export default function ManagerRegisterScreen() {
                 placeholder="Alex Thompson"
                 colors={colors}
               />
+              )}
               {!hasSession && (
                 <InputField
                   label="Email Address"

@@ -209,11 +209,15 @@ export default function DJSetupScreen() {
     // The email used for profile rows: OAuth users use their session email.
     const profileEmail = (hasSession ? (user.email ?? form.email) : form.email).trim().toLowerCase();
 
+    // Never store a blank artist name: it's optional for OAuth and Apple only sends a name on
+    // the first-ever sign-in. Fall back to the email's local part (editable in Edit Profile).
+    const resolvedName = form.fullName.trim() || (profileEmail.split('@')[0] || 'Artist');
+
     // ✅ Step 2 — insert into users table
     const { error: userInsertError } = await supabase.from('users').upsert({
   id: user.id,
   email: profileEmail,
-  full_name: form.fullName.trim(),
+  full_name: resolvedName,
   account_type: 'artist',
   phone: form.phone.trim(),
   is_phone_verified: false,
@@ -229,7 +233,7 @@ export default function DJSetupScreen() {
     // Auto-generate a unique username from the artist name (no manual entry).
     // Base = name lowercased with non-alphanumerics collapsed to underscores;
     // if taken, append 2, 3, 4… until free (DB unique constraint is the backstop).
-    const baseUsername = form.fullName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'artist';
+    const baseUsername = resolvedName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'artist';
     let username = baseUsername;
     for (let n = 2; n <= 60; n++) {
       const { data: taken } = await supabase.from('artists').select('id').eq('username', username).maybeSingle();
@@ -244,7 +248,7 @@ export default function DJSetupScreen() {
     const artistRow = {
       id: user.id,
       email: profileEmail,
-      full_name: form.fullName.trim(),
+      full_name: resolvedName,
       full_legal_name: form.fullLegalName.trim(),
       phone: form.phone.trim(),
       bio: form.bio || null,
@@ -285,7 +289,7 @@ export default function DJSetupScreen() {
       email: profileEmail,
       phone: form.phone.trim(),
       accountType: 'artist' as const,
-      fullName: form.fullName.trim(),
+      fullName: resolvedName,
       fullLegalName: form.fullLegalName.trim(),
       username,
       bio: form.bio,
