@@ -1,10 +1,9 @@
 import { Tabs, useFocusEffect, useRouter, usePathname } from 'expo-router';
 import type { Href } from 'expo-router';
-import { View, Text, Pressable, StyleSheet, Modal } from '@/lib/rn';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Pressable, StyleSheet } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useVenueFilterStore, useCalendarSelectionStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
@@ -16,27 +15,16 @@ export default function ManagerTabsLayout() {
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
   const router = useRouter();
   const pathname = usePathname();
-  const insets = useSafeAreaInsets();
-  const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const venueFilterId = useVenueFilterStore((s) => s.venueId);
   const calendarSelectedDate = useCalendarSelectionStore((s) => s.selectedDate);
 
-  // Navigate only AFTER the action sheet has fully dismissed — otherwise pushing the native
-  // form-sheet (add-slot) while this RN Modal is still up presents it behind the closing sheet
-  // and it looks wrong. We stash the action and run it from the Modal's onDismiss.
-  const pendingActionRef = useRef<(() => void) | null>(null);
-
-  // Add Slot from the center "+": on the calendar it lands on the day selected there; elsewhere
-  // it uses today. Carries the shared venue filter through as the preselected venue.
-  const handleAddSlot = () => {
+  // Center "+" opens the quick-actions NATIVE form sheet. Only the tab layout knows which tab
+  // we're on, so the Add-Slot date is resolved here: on the calendar → its selected day, else
+  // today; the shared venue filter rides along as the preselected venue.
+  const openQuickActions = () => {
     const today = new Date().toISOString().slice(0, 10);
     const date = pathname?.includes('calendar') ? (calendarSelectedDate || today) : today;
-    pendingActionRef.current = () => router.push(('/(manager)/add-slot?date=' + date + (venueFilterId ? '&venueId=' + venueFilterId : '')) as Href);
-    setActionSheetOpen(false);
-  };
-  const handleCreateVenue = () => {
-    pendingActionRef.current = () => router.push('/(manager)/create-venue' as Href);
-    setActionSheetOpen(false);
+    router.push(('/(manager)/quick-actions?slotDate=' + date + '&venueId=' + (venueFilterId ?? '')) as Href);
   };
 
   const fetchPendingCount = useCallback(async () => {
@@ -122,7 +110,6 @@ export default function ManagerTabsLayout() {
   }, [invoiceSentDates, profileSeenAt]);
 
   return (
-    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -154,7 +141,7 @@ export default function ManagerTabsLayout() {
           title: '',
           tabBarButton: () => (
             <Pressable
-              onPress={() => setActionSheetOpen(true)}
+              onPress={openQuickActions}
               style={fabStyles.btn}
               accessibilityRole="button"
               accessibilityLabel="Quick actions"
@@ -186,50 +173,10 @@ export default function ManagerTabsLayout() {
         }}
       />
     </Tabs>
-
-    <Modal
-      visible={actionSheetOpen}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setActionSheetOpen(false)}
-      onDismiss={() => { const fn = pendingActionRef.current; pendingActionRef.current = null; fn?.(); }}
-    >
-      <Pressable style={fabStyles.overlay} onPress={() => setActionSheetOpen(false)}>
-        <Pressable
-          style={[fabStyles.sheet, { backgroundColor: colors.background, borderColor: colors.border, paddingBottom: insets.bottom + 16 }]}
-          onPress={() => {}}
-        >
-          <View style={[fabStyles.handle, { backgroundColor: colors.border }]} />
-          <ActionRow icon="event" label="Add Slot" colors={colors} onPress={handleAddSlot} />
-          <ActionRow icon="add-business" label="Create Venue" colors={colors} onPress={handleCreateVenue} />
-        </Pressable>
-      </Pressable>
-    </Modal>
-    </>
-  );
-}
-
-function ActionRow({ icon, label, colors, onPress }: {
-  icon: any; label: string; colors: ReturnType<typeof useColors>; onPress: () => void;
-}) {
-  return (
-    <Pressable style={({ pressed }) => [fabStyles.row, { opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
-      <View style={[fabStyles.rowIcon, { backgroundColor: colors.primary + '18' }]}>
-        <MaterialIcons name={icon} size={22} color={colors.primary} />
-      </View>
-      <Text style={[fabStyles.rowLabel, { color: colors.foreground }]}>{label}</Text>
-      <MaterialIcons name="chevron-right" size={22} color={colors.muted} />
-    </Pressable>
   );
 }
 
 const fabStyles = StyleSheet.create({
   btn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   circle: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, paddingHorizontal: 12 },
-  handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12, opacity: 0.6 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 8 },
-  rowIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  rowLabel: { flex: 1, fontSize: 16, fontWeight: '600' },
 });
