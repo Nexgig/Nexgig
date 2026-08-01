@@ -813,6 +813,20 @@ export const useBookingFilterStore = create<BookingFilterState>()(
   )
 );
 
+// ─── Venue Filter Store ───────────────────────────────────────────────────────
+// One shared "which venue am I looking at" filter for the manager, used by the
+// dashboard, calendar and roster headers at once (tap the header venue name to change
+// it). null = All Venues. Session-only (not persisted) — it resets to All on relaunch so
+// nobody opens the app silently filtered to one venue and thinks data is missing.
+interface VenueFilterState {
+  venueId: string | null;
+  setVenueId: (id: string | null) => void;
+}
+export const useVenueFilterStore = create<VenueFilterState>((set) => ({
+  venueId: null,
+  setVenueId: (id) => set({ venueId: id }),
+}));
+
 // ─── Manager Profile Invoices Last-Seen Store ─────────────────────────────────
 // Tracks when the manager last opened the Profile tab, per user, so the Profile
 // tab can show a badge when new invoices have arrived since then. This is

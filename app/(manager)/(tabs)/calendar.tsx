@@ -1,4 +1,5 @@
 import { VenueFilterRow } from '@/components/venue-filter-row';
+import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { useRoleSwitching } from '@/lib/roles';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
@@ -12,7 +13,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -95,8 +96,10 @@ export default function CalendarScreen() {
   // Track whether the default view has already been applied (only apply once per app session)
   const defaultViewApplied = useRef(false);
   // Venue filter: 'all' or a specific venueId
-  const [venueFilter, setVenueFilter] = useState<VenueFilter>('all');
-  const [venueMenuOpen, setVenueMenuOpen] = useState(false);
+  // Shared venue filter (dashboard/calendar/roster). Derived so the existing
+  // `venueFilter !== 'all'` checks keep working; the header title (VenueFilterHeader) sets it.
+  const sharedVenueId = useVenueFilterStore((s) => s.venueId);
+  const venueFilter: VenueFilter = sharedVenueId ?? 'all';
   const allSlots = useSlotStore((s) => s.slots);
   const addSlot = useSlotStore((s) => s.addSlot);
   const bulkAddSlots = useSlotStore((s) => s.bulkAddSlots);
@@ -1528,17 +1531,8 @@ export default function CalendarScreen() {
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
+            <VenueFilterHeader />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-            {venues.length > 1 && (
-              <Pressable
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
-                onPress={() => setVenueMenuOpen(true)}
-                hitSlop={8}
-              >
-                <MaterialIcons name="tune" size={24} color={venueFilter === 'all' ? colors.foreground : colors.primary} />
-              </Pressable>
-            )}
             <Pressable
               style={({ pressed }) => [styles.headerSendBtn, { opacity: pressed ? 0.6 : 1 }]}
               onPress={() => {
@@ -2286,27 +2280,7 @@ export default function CalendarScreen() {
           </View>
       </Modal>
 
-      {/* Venue filter — dashboard-style popup listing the venue names */}
-      <Modal visible={venueMenuOpen} transparent animationType="fade" onRequestClose={() => setVenueMenuOpen(false)}>
-        <Pressable style={venueFilterStyles.overlay} onPress={() => setVenueMenuOpen(false)}>
-          <Pressable style={[venueFilterStyles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[venueFilterStyles.title, { color: colors.foreground }]}>Filter by venue</Text>
-            {[{ id: 'all' as VenueFilter, name: 'All venues' }, ...venues.map((v) => ({ id: v.id as VenueFilter, name: v.name }))].map((v) => {
-              const active = venueFilter === v.id;
-              return (
-                <Pressable
-                  key={v.id}
-                  style={({ pressed }) => [venueFilterStyles.row, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={() => { setVenueFilter(v.id); setVenueMenuOpen(false); }}
-                >
-                  <Text style={[venueFilterStyles.rowLabel, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
-                </Pressable>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
+
     </ScreenContainer>
   );
 }

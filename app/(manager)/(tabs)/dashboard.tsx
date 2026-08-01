@@ -5,13 +5,13 @@ import { ScrollView, View, Text, Pressable, StyleSheet, Image, RefreshControl, M
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
-import { Wordmark } from '@/components/wordmark';
+import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -115,9 +115,9 @@ export default function ManagerDashboard() {
     [bookings, slots, artistUsers, allVenues, invoicedBookingIds]
   );
 
-  // Venue filter for the Bookings section (local, resets on nav — a quick lens).
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
+  // Shared venue filter — the header title (VenueFilterHeader) sets it; dashboard, calendar
+  // and roster all read this one.
+  const bookingVenueId = useVenueFilterStore((s) => s.venueId);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -266,7 +266,7 @@ export default function ManagerDashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Wordmark size={26} />
+            <VenueFilterHeader />
           </View>
           <View style={styles.headerRight}>
             <Pressable
@@ -319,14 +319,7 @@ export default function ManagerDashboard() {
 
         {/* Bookings */}
         <View style={styles.section}>
-          <SectionHeader
-            title="Bookings"
-            rightAccessory={
-              <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <MaterialIcons name="tune" size={20} color={bookingVenueId ? colors.primary : colors.muted} />
-              </Pressable>
-            }
-          />
+          <SectionHeader title="Bookings" />
           {groupedBookingsPreview.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
@@ -380,27 +373,6 @@ export default function ManagerDashboard() {
 
       </ScrollView>
 
-      {/* Bookings status filter popup */}
-      <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
-        <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
-          <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Filter by venue</Text>
-            {[{ id: null as string | null, name: 'All venues' }, ...venues].map((v) => {
-              const active = bookingVenueId === v.id;
-              return (
-                <Pressable
-                  key={v.id ?? 'all'}
-                  style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={() => { setBookingVenueId(v.id); setFilterOpen(false); }}
-                >
-                  <Text style={[styles.filterRowLabel, { color: colors.foreground, flex: 1 }]} numberOfLines={1}>{v.name}</Text>
-                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
-                </Pressable>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
     </ScreenContainer>
   );
 }

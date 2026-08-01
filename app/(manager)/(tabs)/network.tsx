@@ -4,8 +4,9 @@ import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, Activity
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -45,6 +46,7 @@ export default function NetworkScreen() {
   const roleSwitching = useRoleSwitching((s) => s.switching);
   const { tab: initialTab } = useLocalSearchParams<{ tab?: NetworkTab }>();
   const globalLineup = useLineupStore((s) => s.globalLineup);
+  const venueAssignments = useLineupStore((s) => s.venueAssignments);
   const currentUser = useAuthStore((s) => s.currentUser);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const allVenues = useVenueStore((s) => s.venues);
@@ -224,12 +226,23 @@ export default function NetworkScreen() {
     [currentUser?.id]
   );
 
+  // Roster respects the shared venue filter: with a venue selected, show only artists
+  // assigned to that venue's lineup ('All Venues' => everyone).
+  const sharedVenueId = useVenueFilterStore((s) => s.venueId);
+  const venueArtistIds = useMemo(
+    () => sharedVenueId
+      ? new Set(venueAssignments.filter((a) => a.venueId === sharedVenueId && a.status === 'active').map((a) => a.artistId))
+      : null,
+    [venueAssignments, sharedVenueId]
+  );
+
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
     // A dual-role user IS an artist, and self-booking is allowed — a venue owner who
     // also performs can put themselves on their own set. With the flag off they stay
     // filtered out, as before.
     return [...sbArtists.filter((u) => ALLOW_DUAL_ROLE || u.id !== currentUser?.id)]
+      .filter((u) => !venueArtistIds || venueArtistIds.has(u.id))
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
       .sort((a, b) => {
         const aMine = isInMyLineup(a.id);
@@ -237,7 +250,7 @@ export default function NetworkScreen() {
         if (aMine !== bMine) return aMine ? -1 : 1;
         return (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase());
       });
-  }, [sbArtists, currentUser?.id, search, isInMyLineup]);
+  }, [sbArtists, currentUser?.id, search, isInMyLineup, venueArtistIds]);
 
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -452,7 +465,7 @@ export default function NetworkScreen() {
     <ScreenContainer edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Roster</Text>
+        <VenueFilterHeader />
       </View>
 
       {/* Search hidden — few enough artists/venues to scan by eye. The `search` state and
