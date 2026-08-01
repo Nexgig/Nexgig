@@ -52,6 +52,32 @@ either two device registrations or a role check at send time — only worth it i
 annoying in practice.
 
 
+### FROM TODAY'S SESSION (manager UI overhaul — follow-ups, 31 Jul 2026)
+- **Check the create-venue steps.** Walk `app/(manager)/create-venue.tsx` end to end — required
+  fields, validation, billing/TRN, the multi-step flow — make sure nothing's broken or awkward
+  now that it's only reachable from the center "+" and My Venues.
+- **Check the artist sign-up + edit-profile steps.** After the Apple/Google auth changes
+  (`app/(auth)/artist-setup.tsx`, `app/(artist)/edit-profile.tsx`): re-verify every step, the
+  Display-Name/legal-name behaviour, the optional-for-OAuth fields, and the rate field.
+- **Merge Add Slot + Add Multiple Slots into ONE sheet.** Right now single = the `add-slot`
+  route (native form sheet) and bulk = the inline modal on the calendar (`slotSheetMode`
+  'single'|'multiple'). The center "+" offers them as two separate actions. Reunify into one
+  sheet with a single/multiple toggle so it's one flow. (There used to be an in-sheet toggle —
+  `openMultipleSlots`/`setSlotMode` still exist in `calendar.tsx`.)
+- **Dashboard bookings: show ALL, not just ~5 rows.** The Bookings list on the manager (and
+  check artist) dashboard is capped/bounded — show every live booking (or make the cap a "see
+  all" link). File: `app/(manager)/(tabs)/dashboard.tsx` (`groupedBookingsPreview` + the bounded
+  ScrollView).
+- **Dashboard stats don't respect the venue filter.** The Confirmed/Pending/Completed StatRow
+  is computed across ALL venues regardless of the selected venue (only the Bookings list is
+  venue-scoped via `bookingVenueId`). Decide: scope the stats to the selected venue too, or
+  leave them global and label them clearly. File: `app/(manager)/(tabs)/dashboard.tsx`.
+- **Document today's manager-side changes to mirror on the artist side.** Today's manager work
+  (per-artist invoices view, Set→Slot wording, shared venue filter + venue-name header, Roster
+  tab rename + artists-only, center "+" native action sheet, removed redundant create buttons,
+  auth/Display-Name changes). Go through each and decide which apply to the artist side
+  (`app/(artist)/(tabs)/*`) and mirror them for consistency.
+
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
 - **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
   then fix what's off:
