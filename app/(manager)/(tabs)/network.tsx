@@ -566,7 +566,7 @@ export default function NetworkScreen() {
               return (
                 <View>
                   {showHeader && (
-                    <SectionSeparator label={isConnected ? 'My Lineup' : 'Discover'} color={colors.muted} borderColor={colors.border} />
+                    <SectionSeparator label={isConnected ? 'Roster' : 'Invite Artists'} color={colors.muted} borderColor={colors.border} />
                   )}
                   {rowContent}
                 </View>

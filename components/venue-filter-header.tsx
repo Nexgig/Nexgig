@@ -27,7 +27,7 @@ export function VenueFilterHeader() {
   return (
     <>
       <Pressable style={styles.titleBtn} onPress={() => setOpen(true)} hitSlop={8}>
-        <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+        <Text style={[styles.title, { color: venueId ? colors.primary : colors.foreground }]} numberOfLines={1}>{title}</Text>
         <MaterialIcons name="expand-more" size={24} color={venueId ? colors.primary : colors.muted} />
       </Pressable>
 
