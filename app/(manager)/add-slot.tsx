@@ -235,6 +235,11 @@ export default function AddSlotScreen() {
     allBookings.filter((b) => b.slotId === createdSlotId && (b.status === 'requested' || b.status === 'confirmed')).map((b) => b.artistId)
   );
 
+  // Once ANY artist is drafted or requested, the venue is locked. A draft/booking snapshots the
+  // venue at that moment, so switching it afterwards left the slot on one venue and the booking
+  // on another (calendar showed venue A, booking-detail + dashboard showed venue B).
+  const venueLocked = draftedIds.size > 0 || bookedIds.size > 0;
+
   // Venue lineup artists with conflict info
   const lineupWithConflicts = venueAssignments
     .filter((a) => a.venueId === createSlotVenueId && a.status === 'active')
@@ -463,16 +468,20 @@ export default function AddSlotScreen() {
       {/* Fixed top — venue + time pickers stay on screen; only the artist list scrolls. */}
       <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
         <View style={styles.fieldBlock}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>VENUE</Text>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>
+            VENUE{venueLocked ? '  ·  LOCKED (artist assigned)' : ''}
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.pillRow}>
             {venues.map((v) => {
               const sel = createSlotVenueId === v.id;
               return (
                 <Pressable
                   key={v.id}
-                  onPress={() => setCreateSlotVenueId(v.id)}
-                  style={[styles.venuePill, { backgroundColor: sel ? colors.primary : 'transparent', borderColor: sel ? colors.primary : colors.border }]}
+                  onPress={() => { if (!venueLocked) setCreateSlotVenueId(v.id); }}
+                  disabled={venueLocked}
+                  style={[styles.venuePill, { backgroundColor: sel ? colors.primary : 'transparent', borderColor: sel ? colors.primary : colors.border, opacity: venueLocked && !sel ? 0.35 : 1 }]}
                 >
+                  {venueLocked && sel && <MaterialIcons name="lock" size={11} color="#fff" />}
                   <Text style={[styles.venuePillText, { color: sel ? '#fff' : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
                 </Pressable>
               );
