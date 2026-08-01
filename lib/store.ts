@@ -827,6 +827,19 @@ export const useVenueFilterStore = create<VenueFilterState>((set) => ({
   setVenueId: (id) => set({ venueId: id }),
 }));
 
+// ─── Calendar Selection Store ─────────────────────────────────────────────────
+// The day the manager last selected on the calendar (YYYY-MM-DD). Lifted out of the
+// calendar screen so the center tab-bar "+" can add a slot on that day when the manager is
+// on the calendar (elsewhere it uses today). '' = none yet → callers fall back to today.
+interface CalendarSelectionState {
+  selectedDate: string;
+  setSelectedDate: (d: string) => void;
+}
+export const useCalendarSelectionStore = create<CalendarSelectionState>((set) => ({
+  selectedDate: '',
+  setSelectedDate: (d) => set({ selectedDate: d }),
+}));
+
 // ─── Manager Profile Invoices Last-Seen Store ─────────────────────────────────
 // Tracks when the manager last opened the Profile tab, per user, so the Profile
 // tab can show a badge when new invoices have arrived since then. This is

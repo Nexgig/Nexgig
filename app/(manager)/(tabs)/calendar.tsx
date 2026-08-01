@@ -13,7 +13,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore, useCalendarSelectionStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -227,6 +227,9 @@ export default function CalendarScreen() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  // Publish the selected day so the center tab-bar "+" can add a slot on it (see _layout).
+  const setSharedCalendarDate = useCalendarSelectionStore((s) => s.setSelectedDate);
+  useEffect(() => { setSharedCalendarDate(selectedDate); }, [selectedDate, setSharedCalendarDate]);
 
   // Week view state
   const [weekStart, setWeekStart] = useState(() => getWeekStart(today));
