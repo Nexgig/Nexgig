@@ -72,11 +72,11 @@ annoying in practice.
   is computed across ALL venues regardless of the selected venue (only the Bookings list is
   venue-scoped via `bookingVenueId`). Decide: scope the stats to the selected venue too, or
   leave them global and label them clearly. File: `app/(manager)/(tabs)/dashboard.tsx`.
-- **Document today's manager-side changes to mirror on the artist side.** Today's manager work
-  (per-artist invoices view, Set→Slot wording, shared venue filter + venue-name header, Roster
-  tab rename + artists-only, center "+" native action sheet, removed redundant create buttons,
-  auth/Display-Name changes). Go through each and decide which apply to the artist side
-  (`app/(artist)/(tabs)/*`) and mirror them for consistency.
+- **Mirror today's manager changes onto the artist side.** Documented in
+  `docs/manager-ui-2026-07-31.md` (every change + files + a per-item "Mirror?" call). The
+  remaining WORK is to act on it — strongest candidates: the center "+" native action sheet with
+  artist create actions, the dashboard "show all bookings + stat/venue behaviour", and a "Set"→
+  "Slot" wording sweep on the artist side. Work through the doc's Mirror? calls.
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
 - **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
