@@ -123,7 +123,7 @@ export default function ManagerTabsLayout() {
       <Tabs.Screen
         name="network"
         options={{
-          title: 'Network',
+          title: 'Roster',
           tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
           tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
         }}

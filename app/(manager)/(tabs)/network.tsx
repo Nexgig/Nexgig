@@ -50,19 +50,8 @@ export default function NetworkScreen() {
   const allVenues = useVenueStore((s) => s.venues);
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
-  const [activeTab, setActiveTab] = useState<NetworkTab>(initialTab === 'venues' ? 'venues' : 'artists');
+  const [activeTab] = useState<NetworkTab>('artists');  // Roster = artists only (venues tab removed)
 
-  // Apply the `tab` param on focus, because this is a persistent tab: useState's
-  // initializer only runs on first mount, so deep-linking here while the screen is
-  // already alive would otherwise be ignored. Consume-then-clear so returning from a
-  // pushed screen doesn't re-snap the tab.
-  useFocusEffect(
-    useCallback(() => {
-      if (!initialTab) return;
-      if (initialTab === 'artists' || initialTab === 'venues') setActiveTab(initialTab);
-      router.setParams({ tab: undefined });
-    }, [initialTab])
-  );
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -461,34 +450,9 @@ export default function NetworkScreen() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
-      {/* Header — the + creates a venue. It lives here (not on my-venues, which this
-          screen is replacing) and only on the Venues tab, where it means something. */}
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Network</Text>
-        {activeTab === 'venues' && (
-          <Pressable
-            style={({ pressed }) => [styles.headerAddBtn, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => router.push('/(manager)/create-venue' as Href)}
-            hitSlop={8}
-          >
-            <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* Sub-tabs */}
-      <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-        {(['artists', 'venues'] as NetworkTab[]).map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
+        <Text style={[styles.title, { color: colors.foreground }]}>Roster</Text>
       </View>
 
       {/* Search hidden — few enough artists/venues to scan by eye. The `search` state and
@@ -599,82 +563,6 @@ export default function NetworkScreen() {
         )
       )}
 
-      {/* Venues tab */}
-      {activeTab === 'venues' && (
-        venuesLoading ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={filteredVenues}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="place" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Venues Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  {search ? 'Try a different search term' : 'No venues available yet'}
-                </Text>
-              </View>
-            }
-            renderItem={({ item: venue, index }) => {
-              const mine = isMyVenue(venue);
-              const prevMine = index > 0 ? isMyVenue(filteredVenues[index - 1]) : null;
-              const showHeader = prevMine === null || prevMine !== mine;
-              return (
-              <View>
-                {showHeader && (
-                  <SectionSeparator label={mine ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                )}
-              <Pressable
-                style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
-              >
-                <View style={styles.cardLeft}>
-                  <Image source={venueImage(venue.venueType)} style={styles.thumb} resizeMode="cover" />
-                  <View style={styles.cardInfo}>
-                    <View style={styles.titleRow}>
-                      <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>
-                      {venue.verificationStatus === 'verified' && (
-                        <MaterialIcons name="verified" size={15} color={colors.primary} />
-                      )}
-                    </View>
-                    {venue.venueType ? (
-                      <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {venueTypeLabel(venue.venueType)}
-                      </Text>
-                    ) : null}
-                    {/* Ported from the old my-venues screen, which this list replaced —
-                        it was the only place a manager learned their venue wasn't
-                        approved yet. Own venues only: another manager's verification
-                        state isn't yours to see. */}
-                    {venue.managerId === currentUser?.id && venue.verificationStatus !== 'verified' && (
-                      <View style={[styles.verifyPill, {
-                        backgroundColor: (venue.verificationStatus === 'rejected' ? colors.error : colors.warning) + '15',
-                      }]}>
-                        <MaterialIcons
-                          name={venue.verificationStatus === 'rejected' ? 'cancel' : 'schedule'}
-                          size={11}
-                          color={venue.verificationStatus === 'rejected' ? colors.error : colors.warning}
-                        />
-                        <Text style={[styles.verifyPillText, {
-                          color: venue.verificationStatus === 'rejected' ? colors.error : colors.warning,
-                        }]}>
-                          {venue.verificationStatus === 'rejected' ? 'Not approved' : 'Pending verification'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </Pressable>
-              </View>
-              );
-            }}
-          />
-        )
-      )}
     </ScreenContainer>
   );
 }
