@@ -77,6 +77,13 @@ annoying in practice.
   remaining WORK is to act on it — strongest candidates: the center "+" native action sheet with
   artist create actions, the dashboard "show all bookings + stat/venue behaviour", and a "Set"→
   "Slot" wording sweep on the artist side. Work through the doc's Mirror? calls.
+- **Minimise the Add Slot / Assign Artist artist rows — too much per row.** The assignable-artist
+  rows (`renderAssignRow` in `app/(manager)/add-slot.tsx`, `renderDJ` in `assign-artist.tsx`)
+  cram in avatar + name + genre + an inline RED conflict banner (full description) + a status
+  pill (Available / Conflict / Requested / Drafted) + a trailing action icon. Trim to something
+  clean: shorten/drop the conflict error text (a small icon or dot instead of the full banner),
+  simplify the drafted + conflict badges (one compact indicator, not a pill AND a banner). Keep
+  it minimal and scannable.
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
 - **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
