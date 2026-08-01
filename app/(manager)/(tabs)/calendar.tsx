@@ -876,7 +876,7 @@ export default function CalendarScreen() {
       updated_at: new Date().toISOString(),
     }).eq('id', editingSlot.id);
 
-    if (error) { Alert.alert('Error updating set', error.message); return; }
+    if (error) { Alert.alert('Error updating slot', error.message); return; }
 
     updateSlot(editingSlot.id, { name: slotForm.name, startTime: slotForm.startTime, endTime: slotForm.endTime });
     setShowSlotModal(false);
@@ -897,7 +897,7 @@ export default function CalendarScreen() {
       status: 'open',
     }).select().single();
 
-    if (error) { Alert.alert('Error creating set', error.message); return; }
+    if (error) { Alert.alert('Error creating slot', error.message); return; }
 
     const newSlot: Slot = {
       id: slotData.id,
@@ -924,13 +924,13 @@ export default function CalendarScreen() {
   const handleDeleteSlot = (slot: Slot) => {
     setActiveSlotMenu(null);
     Alert.alert(
-      'Delete Set',
-      'Are you sure you want to delete this set? Any associated bookings will be affected.',
+      'Delete Slot',
+      'Are you sure you want to delete this slot? Any associated bookings will be affected.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: async () => {
   const { error } = await supabase.from('slots').delete().eq('id', slot.id);
-  if (error) { Alert.alert('Error deleting set', error.message); return; }
+  if (error) { Alert.alert('Error deleting slot', error.message); return; }
   deleteSlot(slot.id);
 }},
       ]
@@ -940,7 +940,7 @@ export default function CalendarScreen() {
   // Delete a slot with no confirmation (used by the empty-slot Delete button on the card).
   const deleteSlotNow = async (slot: Slot) => {
     const { error } = await supabase.from('slots').delete().eq('id', slot.id);
-    if (error) { Alert.alert('Error deleting set', error.message); return; }
+    if (error) { Alert.alert('Error deleting slot', error.message); return; }
     deleteSlot(slot.id);
   };
 
@@ -1069,12 +1069,12 @@ export default function CalendarScreen() {
     }
 
     if (openSlots.length === 0) {
-      Alert.alert('No Open Sets', `There are no empty sets in ${periodLabel}.`);
+      Alert.alert('No Open Slots', `There are no empty slots in ${periodLabel}.`);
       return;
     }
     Alert.alert(
-      'Delete Empty Sets',
-      `Delete ${openSlots.length} empty set${openSlots.length > 1 ? 's' : ''} from ${periodLabel}? Only sets with no drafts or bookings will be removed.`,
+      'Delete Empty Slots',
+      `Delete ${openSlots.length} empty slot${openSlots.length > 1 ? 's' : ''} from ${periodLabel}? Only slots with no drafts or bookings will be removed.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1083,7 +1083,7 @@ export default function CalendarScreen() {
           onPress: async () => {
             const ids = openSlots.map((s) => s.id);
             const { error } = await supabase.from('slots').delete().in('id', ids);
-            if (error) { Alert.alert('Error deleting sets', error.message); return; }
+            if (error) { Alert.alert('Error deleting slots', error.message); return; }
             ids.forEach((id) => deleteSlot(id));
             setShowSlotModal(false);
           },
@@ -1096,7 +1096,7 @@ export default function CalendarScreen() {
     if (bulkVenueIds.length === 0) { Alert.alert('Required', 'Please select at least one venue.'); return; }
     if (bulkDays.length === 0) { Alert.alert('Required', 'Please select at least one day of the week.'); return; }
     const validTemplates = bulkTemplates.filter((t) => t.startTime && t.endTime);
-    if (validTemplates.length === 0) { Alert.alert('Required', 'Please add at least one set template.'); return; }
+    if (validTemplates.length === 0) { Alert.alert('Required', 'Please add at least one slot template.'); return; }
 
     // Build all dates in the selected period that match the selected days of week
     // Days stored as 0=Mon..6=Sun; JS getDay() is 0=Sun..6=Sat
@@ -1159,15 +1159,15 @@ export default function CalendarScreen() {
     }
 
     if (newSlots.length === 0) {
-      Alert.alert('Nothing to create', skipped > 0 ? `All ${skipped} sets already exist.` : 'No matching dates found.');
+      Alert.alert('Nothing to create', skipped > 0 ? `All ${skipped} slots already exist.` : 'No matching dates found.');
       return;
     }
 
     const skipMsg = skipped > 0 ? `\n(${skipped} duplicate${skipped > 1 ? 's' : ''} skipped)` : '';
     const periodLabel = bulkIsWeekMode ? weekLabel : `${MONTHS[currentMonth]} ${currentYear}`;
     Alert.alert(
-      'Create Sets',
-      `Create ${newSlots.length} set${newSlots.length > 1 ? 's' : ''} for ${periodLabel}?${skipMsg}`,
+      'Create Slots',
+      `Create ${newSlots.length} slot${newSlots.length > 1 ? 's' : ''} for ${periodLabel}?${skipMsg}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -2077,7 +2077,7 @@ export default function CalendarScreen() {
                 </Text>
                 {slotSheetMode === 'multiple' && !bulkIsWeekMode && (
                   <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
-                    Create sets in bulk for the month of {MONTHS[currentMonth]}
+                    Create slots in bulk for the month of {MONTHS[currentMonth]}
                   </Text>
                 )}
               </View>
@@ -2143,13 +2143,13 @@ export default function CalendarScreen() {
                 </View>
 
                 {/* Slot templates */}
-                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>SET TEMPLATES</Text>
+                <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 8 }]}>SLOT TEMPLATES</Text>
 
                 {bulkTemplates.map((tpl, tplIdx) => (
                   <View key={tpl.id} style={{ marginBottom: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14 }}>
                     {/* Template header */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>SET {tplIdx + 1}</Text>
+                      <Text style={[slotModalStyles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>SLOT {tplIdx + 1}</Text>
                       {bulkTemplates.length > 1 && (
                         <Pressable onPress={() => setBulkTemplates((prev) => prev.filter((t) => t.id !== tpl.id))} style={{ padding: 4 }}>
                           <MaterialIcons name="remove-circle-outline" size={18} color={colors.error} />
@@ -2248,15 +2248,15 @@ export default function CalendarScreen() {
                   style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, opacity: pressed ? 0.5 : 1 }]}
                 >
                   <MaterialIcons name="add" size={16} color={colors.primary} />
-                  <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Add Another Set</Text>
+                  <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Add Another Slot</Text>
                 </Pressable>
 
-                {/* Create Sets button — below add template */}
+                {/* Create Slots button — below add template */}
                 <Pressable
                   onPress={handleBulkCreate}
                   style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8, marginBottom: 8, opacity: pressed ? 0.85 : 1 }]}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Create Sets</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Create Slots</Text>
                 </Pressable>
 
                 {/* ── Delete All Open Slots ── */}
@@ -2277,7 +2277,7 @@ export default function CalendarScreen() {
                     onPress={handleDeleteOpenSlots}
                   >
                     <MaterialIcons name="delete-sweep" size={20} color={colors.error} />
-                    <Text style={{ color: colors.error, fontSize: 14, fontWeight: '600' }}>{bulkIsWeekMode ? 'Delete All Empty Sets For This Week' : 'Delete All Empty Sets For This Month'}</Text>
+                    <Text style={{ color: colors.error, fontSize: 14, fontWeight: '600' }}>{bulkIsWeekMode ? 'Delete All Empty Slots For This Week' : 'Delete All Empty Slots For This Month'}</Text>
                   </Pressable>
                 </View>
               </ScrollView>

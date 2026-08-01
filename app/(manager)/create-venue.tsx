@@ -465,7 +465,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       </Text>
       <TextInput
         style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-        placeholder="e.g. No explicit lyrics, set ends at 3am..."
+        placeholder="e.g. No explicit lyrics, slot ends at 3am..."
         placeholderTextColor={colors.muted}
         value={form.rulesTemplate}
         onChangeText={(v) => update('rulesTemplate', v)}

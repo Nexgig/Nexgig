@@ -239,8 +239,8 @@ export default function DJBookingDetailScreen() {
     const req = target?.status === 'requested' || target?.status === 'past_confirmation';
     Alert.alert(
       req ? 'Cancel Request' : 'Cancel Booking',
-      req ? "Withdraw this artist's request? The rest of the set stays."
-          : "Cancel this artist's booking? The rest of the set stays.",
+      req ? "Withdraw this artist's request? The rest of the slot stays."
+          : "Cancel this artist's booking? The rest of the slot stays.",
       [
         { text: 'No', style: 'cancel' },
         {
@@ -283,7 +283,7 @@ export default function DJBookingDetailScreen() {
     }
   };
   const removeOneDraft = (artistId: string) => {
-    Alert.alert('Remove Draft', 'Remove this drafted artist from the set?', [
+    Alert.alert('Remove Draft', 'Remove this drafted artist from the slot?', [
       { text: 'No', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => removeDraftByDJ(booking.slotId, artistId) },
     ]);
