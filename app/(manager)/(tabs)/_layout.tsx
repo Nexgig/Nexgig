@@ -4,7 +4,7 @@ import { View, Text, Pressable, StyleSheet, Modal } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useVenueFilterStore, useCalendarSelectionStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
@@ -21,17 +21,22 @@ export default function ManagerTabsLayout() {
   const venueFilterId = useVenueFilterStore((s) => s.venueId);
   const calendarSelectedDate = useCalendarSelectionStore((s) => s.selectedDate);
 
+  // Navigate only AFTER the action sheet has fully dismissed — otherwise pushing the native
+  // form-sheet (add-slot) while this RN Modal is still up presents it behind the closing sheet
+  // and it looks wrong. We stash the action and run it from the Modal's onDismiss.
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
   // Add Slot from the center "+": on the calendar it lands on the day selected there; elsewhere
   // it uses today. Carries the shared venue filter through as the preselected venue.
   const handleAddSlot = () => {
-    setActionSheetOpen(false);
     const today = new Date().toISOString().slice(0, 10);
     const date = pathname?.includes('calendar') ? (calendarSelectedDate || today) : today;
-    router.push(('/(manager)/add-slot?date=' + date + (venueFilterId ? '&venueId=' + venueFilterId : '')) as Href);
+    pendingActionRef.current = () => router.push(('/(manager)/add-slot?date=' + date + (venueFilterId ? '&venueId=' + venueFilterId : '')) as Href);
+    setActionSheetOpen(false);
   };
   const handleCreateVenue = () => {
+    pendingActionRef.current = () => router.push('/(manager)/create-venue' as Href);
     setActionSheetOpen(false);
-    router.push('/(manager)/create-venue' as Href);
   };
 
   const fetchPendingCount = useCallback(async () => {
@@ -182,7 +187,13 @@ export default function ManagerTabsLayout() {
       />
     </Tabs>
 
-    <Modal visible={actionSheetOpen} transparent animationType="slide" onRequestClose={() => setActionSheetOpen(false)}>
+    <Modal
+      visible={actionSheetOpen}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setActionSheetOpen(false)}
+      onDismiss={() => { const fn = pendingActionRef.current; pendingActionRef.current = null; fn?.(); }}
+    >
       <Pressable style={fabStyles.overlay} onPress={() => setActionSheetOpen(false)}>
         <Pressable
           style={[fabStyles.sheet, { backgroundColor: colors.background, borderColor: colors.border, paddingBottom: insets.bottom + 16 }]}
