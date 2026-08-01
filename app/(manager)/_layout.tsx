@@ -403,7 +403,7 @@ if (!lineupError && lineupData) {
         name="quick-actions"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.26],
+          sheetAllowedDetents: [0.34],
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,

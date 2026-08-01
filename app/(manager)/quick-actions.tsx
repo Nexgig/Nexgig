@@ -3,6 +3,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
+import { useCalendarBulkStore } from '@/lib/store';
 
 // Quick-action sheet opened by the center "+" in the manager tab bar. Presented as a NATIVE
 // form sheet (see the manager _layout Stack.Screen options) so it matches Add Slot. The date +
@@ -17,11 +18,18 @@ export default function QuickActionsScreen() {
     const q = 'date=' + date + (venueId ? '&venueId=' + venueId : '');
     router.replace(('/(manager)/add-slot?' + q) as Href);
   };
+  const addMultipleSlots = () => {
+    // The bulk sheet lives on the calendar; flag it and jump there so it opens on focus.
+    useCalendarBulkStore.getState().requestBulk();
+    router.replace('/(manager)/(tabs)/calendar' as Href);
+  };
   const createVenue = () => router.replace('/(manager)/create-venue' as Href);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ActionRow icon="event" label="Add Slot" colors={colors} onPress={addSlot} />
+      <View style={[styles.sep, { backgroundColor: colors.border }]} />
+      <ActionRow icon="date-range" label="Add Multiple Slots" colors={colors} onPress={addMultipleSlots} />
       <View style={[styles.sep, { backgroundColor: colors.border }]} />
       <ActionRow icon="add-business" label="Create Venue" colors={colors} onPress={createVenue} />
     </View>

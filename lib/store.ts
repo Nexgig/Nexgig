@@ -840,6 +840,21 @@ export const useCalendarSelectionStore = create<CalendarSelectionState>((set) =>
   setSelectedDate: (d) => set({ selectedDate: d }),
 }));
 
+// ─── Calendar Bulk Trigger ────────────────────────────────────────────────────
+// The bulk "Add Multiple Slots" flow is an inline modal that lives on the calendar screen.
+// The center tab-bar "+" (a separate route) can't open it directly, so it flips this flag and
+// jumps to the calendar; the calendar opens its bulk sheet on focus and clears the flag.
+interface CalendarBulkState {
+  pending: boolean;
+  requestBulk: () => void;
+  clearBulk: () => void;
+}
+export const useCalendarBulkStore = create<CalendarBulkState>((set) => ({
+  pending: false,
+  requestBulk: () => set({ pending: true }),
+  clearBulk: () => set({ pending: false }),
+}));
+
 // ─── Manager Profile Invoices Last-Seen Store ─────────────────────────────────
 // Tracks when the manager last opened the Profile tab, per user, so the Profile
 // tab can show a badge when new invoices have arrived since then. This is

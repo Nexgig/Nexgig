@@ -13,7 +13,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore, useCalendarSelectionStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore, useCalendarSelectionStore, useCalendarBulkStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -854,6 +854,14 @@ export default function CalendarScreen() {
     setShowSlotModal(true);
   };
 
+  // The center "+" → "Add Multiple Slots" flips a flag and jumps here; open the bulk sheet.
+  const bulkPending = useCalendarBulkStore((s) => s.pending);
+  const clearBulk = useCalendarBulkStore((s) => s.clearBulk);
+  useEffect(() => {
+    if (bulkPending) { clearBulk(); openMultipleSlots(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulkPending]);
+
   const openEditSlot = (slot: Slot) => {
     setEditingSlot(slot);
     setCreateSlotDate(slot.date);
@@ -1671,12 +1679,6 @@ export default function CalendarScreen() {
                   <Text style={[styles.weekLabel, { color: colors.foreground, textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>{weekLabel}</Text>
                 </Pressable>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, width: 64, justifyContent: 'flex-end' }}>
-                  <Pressable
-                    onPress={openMultipleSlots}
-                    style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
-                  >
-                    <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
-                  </Pressable>
                   <Pressable onPress={nextWeek} style={styles.monthNavBtn}>
                     <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
                   </Pressable>
@@ -1731,12 +1733,6 @@ export default function CalendarScreen() {
                 </View>
                 <Text style={[styles.monthTitle, { color: colors.foreground, flex: 1, textAlign: 'center' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
-                  <Pressable
-                    onPress={openMultipleSlots}
-                    style={({ pressed }) => [styles.monthNavBtn, { opacity: pressed ? 0.6 : 1 }]}
-                  >
-                    <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
-                  </Pressable>
                   <Pressable onPress={nextMonthNav} style={styles.monthNavBtn}>
                     <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
                   </Pressable>
@@ -1831,16 +1827,6 @@ export default function CalendarScreen() {
                   <Text style={[styles.slotsSectionTitle, { color: colors.foreground }]}>
                     {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </Text>
-                  <Pressable
-                    style={({ pressed }) => [styles.addSlotBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
-                    onPress={() => {
-                      if (venueFilter !== 'all') openCreateSlot(selectedDate, venueFilter);
-                      else openCreateSlot(selectedDate);
-                    }}
-                  >
-                    <MaterialIcons name="add" size={18} color="#fff" />
-                    <Text style={styles.addSetBtnText}>Create</Text>
-                  </Pressable>
                 </View>
 
                 {selectedSlots.length === 0 ? (
