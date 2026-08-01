@@ -6,6 +6,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { Section, Divider, StatRow, SoftButton } from '@/components/ui/card-free';
 import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, useBookingStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
@@ -292,9 +293,9 @@ function InvoicesSection({ colors, currentUserId, router }: {
                   <Text style={[invStyles.subLabel, { color: colors.muted }]}>{a.invoiceCount > 0 ? `${a.invoiceCount} invoice${a.invoiceCount !== 1 ? 's' : ''}` : 'No invoices yet'}</Text>
                 </View>
                 {a.uninvoiced > 0 && (
-                  <View style={[invStyles.pendingPill, { backgroundColor: colors.warning + '20' }]}>
-                    <Text style={[invStyles.pendingCount, { color: colors.warning }]}>{a.uninvoiced}</Text>
-                    <Text style={[invStyles.pendingLabel, { color: colors.warning }]}>to invoice</Text>
+                  <View style={[invStyles.pendingPill, { backgroundColor: STATUS_COLORS.pending + '20' }]}>
+                    <Text style={[invStyles.pendingCount, { color: STATUS_COLORS.pending }]}>{a.uninvoiced}</Text>
+                    <Text style={[invStyles.pendingLabel, { color: STATUS_COLORS.pending }]}>to invoice</Text>
                   </View>
                 )}
                 <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
