@@ -1,10 +1,11 @@
 import { Tabs, useFocusEffect, useRouter, usePathname } from 'expo-router';
 import type { Href } from 'expo-router';
 import { View, Pressable, StyleSheet } from '@/lib/rn';
+import { ActionSheetIOS } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useVenueFilterStore, useCalendarSelectionStore } from '@/lib/store';
+import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useVenueFilterStore, useCalendarSelectionStore, useCalendarBulkStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 
@@ -18,13 +19,22 @@ export default function ManagerTabsLayout() {
   const venueFilterId = useVenueFilterStore((s) => s.venueId);
   const calendarSelectedDate = useCalendarSelectionStore((s) => s.selectedDate);
 
-  // Center "+" opens the quick-actions NATIVE form sheet. Only the tab layout knows which tab
-  // we're on, so the Add-Slot date is resolved here: on the calendar → its selected day, else
-  // today; the shared venue filter rides along as the preselected venue.
+  // Center "+" opens the native iOS action sheet. Its callback runs AFTER the sheet dismisses,
+  // so each destination then opens with its own proper animation (add-slot's form sheet, a
+  // normal slide for create-venue) — no modal-over-modal jank. The Add-Slot date is resolved
+  // here (only the tab layout knows which tab we're on): calendar → its selected day, else today.
   const openQuickActions = () => {
     const today = new Date().toISOString().slice(0, 10);
     const date = pathname?.includes('calendar') ? (calendarSelectedDate || today) : today;
-    router.push(('/(manager)/quick-actions?slotDate=' + date + '&venueId=' + (venueFilterId ?? '')) as Href);
+    const venueQ = venueFilterId ? '&venueId=' + venueFilterId : '';
+    ActionSheetIOS.showActionSheetWithOptions(
+      { options: ['Add Slot', 'Add Multiple Slots', 'Create Venue', 'Cancel'], cancelButtonIndex: 3 },
+      (i) => {
+        if (i === 0) router.push(('/(manager)/add-slot?date=' + date + venueQ) as Href);
+        else if (i === 1) { useCalendarBulkStore.getState().requestBulk(); router.navigate('/(manager)/(tabs)/calendar' as Href); }
+        else if (i === 2) router.push('/(manager)/create-venue' as Href);
+      }
+    );
   };
 
   const fetchPendingCount = useCallback(async () => {

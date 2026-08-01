@@ -399,16 +399,6 @@ if (!lineupError && lineupData) {
           sheetCornerRadius: 20,
         }}
       />
-      <Stack.Screen
-        name="quick-actions"
-        options={{
-          presentation: 'formSheet',
-          sheetAllowedDetents: [0.34],
-          sheetExpandsWhenScrolledToEdge: false,
-          sheetGrabberVisible: true,
-          sheetCornerRadius: 20,
-        }}
-      />
       <Stack.Screen name="create-venue" />
       <Stack.Screen name="artist-profile-view" />
       <Stack.Screen name="my-venues" />
