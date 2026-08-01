@@ -7,7 +7,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, SoftButton } from '@/components/ui/card-free';
-import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, resetAllStores } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, useBookingStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
@@ -204,8 +204,6 @@ export default function ManagerProfileScreen() {
 
 // ─── Invoices Section ─────────────────────────────────────────────────────────
 
-import type { Invoice } from '@/lib/types';
-import * as Haptics from 'expo-haptics';
 
 function InvoicesSection({ colors, currentUserId, router }: {
   colors: ReturnType<typeof import('@/hooks/use-colors').useColors>;
@@ -213,99 +211,55 @@ function InvoicesSection({ colors, currentUserId, router }: {
   router: ReturnType<typeof import('expo-router').useRouter>;
 }) {
   const invoices = useInvoiceStore((s) => s.invoices);
-  const deleteInvoice = useInvoiceStore((s) => s.deleteInvoice);
+  const allBookings = useBookingStore((s) => s.bookings);
+  const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const [expanded, setExpanded] = useState(false);
-  const [downloadingAll, setDownloadingAll] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const sortedInvoices = useMemo(
-    () => invoices
-      .filter((inv) => inv.managerId === currentUserId && !inv.isDeletedByManager)
-      .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()),
+  const managerInvoices = useMemo(
+    () => invoices.filter((inv) => inv.managerId === currentUserId && !inv.isDeletedByManager),
     [invoices, currentUserId]
   );
 
-  const totalUnread = useMemo(
-    () => sortedInvoices.filter((inv) => !inv.isReadByManager).length,
-    [sortedInvoices]
+  // Booking ids already covered by a non-cancelled invoice (InvoiceGig.bookingId).
+  const invoicedBookingIds = useMemo(
+    () => new Set(managerInvoices.filter((inv) => inv.status !== 'cancelled').flatMap((inv) => inv.gigs.map((g) => g.bookingId))),
+    [managerInvoices]
   );
 
-  const enterSelect = useCallback(() => { setExpanded(true); setSelectMode(true); setSelectedIds(new Set()); }, []);
-  const exitSelect = useCallback(() => { setSelectMode(false); setSelectedIds(new Set()); }, []);
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  }, []);
+  // One row per artist: invoice count + unread + how many of their COMPLETED gigs are still
+  // uninvoiced. Includes artists who have completed gigs but have not sent an invoice yet, so
+  // the manager can see who still owes them one.
+  const artistRows = useMemo(() => {
+    const map = new Map<string, { artistId: string; name: string; invoiceCount: number; unread: number; uninvoiced: number }>();
+    const ensure = (artistId: string, fallbackName: string) => {
+      let e = map.get(artistId);
+      if (!e) { e = { artistId, name: getArtistUser(artistId)?.fullName ?? fallbackName, invoiceCount: 0, unread: 0, uninvoiced: 0 }; map.set(artistId, e); }
+      return e;
+    };
+    managerInvoices.forEach((inv) => {
+      if (!inv.artistId) return;
+      const e = ensure(inv.artistId, inv.artistLegalName ?? 'Artist');
+      e.invoiceCount += 1;
+      if (!inv.isReadByManager) e.unread += 1;
+    });
+    allBookings.forEach((b) => {
+      if (b.managerId !== currentUserId || !b.artistId) return;
+      if (!(b.status === 'completed' || b.isCompleted)) return;
+      if (invoicedBookingIds.has(b.id)) return;
+      ensure(b.artistId, 'Artist').uninvoiced += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [managerInvoices, allBookings, invoicedBookingIds, currentUserId, getArtistUser]);
 
-  const downloadInvoices = useCallback(async (list: Invoice[]) => {
-    if (list.length === 0) return;
-    setDownloadingAll(true);
-    try {
-      const Print = await import('expo-print');
-      const Sharing = await import('expo-sharing');
-      const FileSystem = await import('expo-file-system/legacy');
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      for (const inv of list) {
-        const html = generateManagerInvoiceHTML(inv);
-        const { uri } = await Print.printToFileAsync({ html });
-        const sentDate = new Date(inv.sentAt);
-        const day = String(sentDate.getDate()).padStart(2, '0');
-        const mon = months[sentDate.getMonth()];
-        const year = sentDate.getFullYear();
-        const artistSlug = (inv.artistLegalName || 'Artist').replace(/[^a-zA-Z0-9]/g, '');
-        const venueSlug = (inv.venueName || 'Venue').replace(/[^a-zA-Z0-9]/g, '');
-        const invSlug = (inv.invoiceNumber || inv.id.slice(0, 8)).replace(/[^a-zA-Z0-9]/g, '');
-        const filename = `${invSlug}.pdf`;
-        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-        zip.file(filename, base64, { base64: true, compression: 'STORE' });
-      }
-      const zipBase64 = await zip.generateAsync({ type: 'base64', compression: 'STORE' });
-      const zipPath = `${FileSystem.cacheDirectory}Nexgig_Invoices.zip`;
-      await FileSystem.writeAsStringAsync(zipPath, zipBase64, { encoding: 'base64' });
-      await Sharing.shareAsync(zipPath, { mimeType: 'application/zip', dialogTitle: 'Nexgig_Invoices.zip' });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      Alert.alert('Error', `Could not create invoice archive.\n${msg}`);
-    } finally {
-      setDownloadingAll(false);
-    }
-  }, []);
+  const totalUnread = useMemo(() => artistRows.reduce((n, a) => n + a.unread, 0), [artistRows]);
 
-  const handleDownloadSelected = useCallback(async () => {
-    const chosen = sortedInvoices.filter((i) => selectedIds.has(i.id));
-    if (chosen.length === 0) return;
-    await downloadInvoices(chosen);
-    exitSelect();
-  }, [sortedInvoices, selectedIds, downloadInvoices, exitSelect]);
-
-  const handleDeleteSelected = useCallback(() => {
-    const count = selectedIds.size;
-    if (count === 0) return;
-    Alert.alert(
-      `Delete ${count} invoice${count !== 1 ? 's' : ''}?`,
-      'This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
-          selectedIds.forEach((id) => deleteInvoice(id));
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          exitSelect();
-        }},
-      ]
-    );
-  }, [selectedIds, deleteInvoice, exitSelect]);
-
-  if (sortedInvoices.length === 0) return null;
-
-  const allSelected = selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0;
+  if (artistRows.length === 0) return null;
 
   return (
     <View style={invStyles.container}>
       <Pressable
         style={({ pressed }) => [invStyles.collapseHeader, { borderBottomColor: expanded ? colors.border : 'transparent', opacity: pressed ? 0.85 : 1 }]}
-        onPress={() => { if (selectMode) return; setExpanded((v) => !v); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        onPress={() => setExpanded((v) => !v)}
       >
         <View style={invStyles.collapseHeaderLeft}>
           <MaterialIcons name="receipt-long" size={20} color={colors.foreground} />
@@ -316,199 +270,58 @@ function InvoicesSection({ colors, currentUserId, router }: {
             </View>
           )}
         </View>
-        <View style={invStyles.collapseHeaderRight}>
-          {selectMode ? (
-            <>
-              <Pressable
-                disabled={selectedIds.size === 0 || downloadingAll}
-                style={({ pressed }) => [invStyles.iconPillBtn, { borderColor: selectedIds.size === 0 ? colors.border : colors.primary, opacity: (selectedIds.size === 0 || downloadingAll) ? 0.4 : (pressed ? 0.6 : 1) }]}
-                onPress={(e) => { e.stopPropagation?.(); handleDownloadSelected(); }}
-                hitSlop={8}
-              >
-                {downloadingAll
-                  ? <ActivityIndicator size="small" color={colors.primary} />
-                  : <MaterialIcons name="download" size={18} color={selectedIds.size === 0 ? colors.muted : colors.primary} />}
-              </Pressable>
-              <Pressable
-                disabled={selectedIds.size === 0}
-                style={({ pressed }) => [invStyles.iconPillBtn, { borderColor: selectedIds.size === 0 ? colors.border : colors.error, opacity: selectedIds.size === 0 ? 0.4 : (pressed ? 0.6 : 1) }]}
-                onPress={(e) => { e.stopPropagation?.(); handleDeleteSelected(); }}
-                hitSlop={8}
-              >
-                <MaterialIcons name="delete-outline" size={18} color={selectedIds.size === 0 ? colors.muted : colors.error} />
-              </Pressable>
-              <Pressable onPress={(e) => { e.stopPropagation?.(); exitSelect(); }} hitSlop={8}>
-                <Text style={[invStyles.selectActionText, { color: colors.primary }]}>Cancel</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable
-                style={({ pressed }) => [invStyles.downloadAllBtn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
-                onPress={(e) => { e.stopPropagation?.(); enterSelect(); }}
-                hitSlop={8}
-              >
-                <MaterialIcons name="checklist" size={14} color={colors.muted} /><Text style={[invStyles.downloadAllText, { color: colors.muted }]}>Select</Text>
-              </Pressable>
-              <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
-            </>
-          )}
-        </View>
+        <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
       </Pressable>
       {expanded && (
-        <View style={invStyles.content}>
-          {/* Select All stays OUTSIDE the scroll box — it's a control for the whole
-              list, so it shouldn't scroll away from it. */}
-          {selectMode && (
-            <Pressable
-              onPress={() => setSelectedIds(allSelected ? new Set() : new Set(sortedInvoices.map((i) => i.id)))}
-              style={({ pressed }) => [invStyles.selectAllRow, { borderBottomColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
-            >
-              <Text style={[invStyles.selectAllText, { color: colors.primary }]}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
-              <Text style={[invStyles.selectCountText, { color: colors.muted }]}>{selectedIds.size} selected</Text>
-            </Pressable>
-          )}
-          {/* Bounded scroll area, same as the dashboard's Bookings section: the list
-              scrolls inside a fixed box instead of pushing Account Info and Sign Out
-              off the bottom. nestedScrollEnabled is what lets it scroll inside the
-              profile's own ScrollView. */}
-          <ScrollView
-            style={{ maxHeight: 330 }}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-          >
-          {sortedInvoices.map((inv, idx) => {
-            const isLast = idx === sortedInvoices.length - 1;
-            const isUnread = !inv.isReadByManager;
-            const selected = selectedIds.has(inv.id);
-            const sentDate = new Date(inv.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-
-            const cardBody = (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {selectMode && (
-                  <MaterialIcons name={selected ? 'check-circle' : 'radio-button-unchecked'} size={22} color={selected ? colors.primary : colors.muted} style={{ marginRight: 12 }} />
-                )}
-                <View style={[invStyles.cardTop, { flex: 1 }]}>
-                  <View style={invStyles.cardLeft}>
-                    <View style={invStyles.nameRow}>
-                      <Text style={[invStyles.artistNameLabel, { color: inv.status === 'cancelled' ? colors.muted : colors.error, flexShrink: 1 }]} numberOfLines={1}>{inv.artistLegalName}</Text>
-                      {isUnread && <View style={[invStyles.unreadDot, { backgroundColor: colors.error }]} />}
-                    </View>
-                    <Text style={[invStyles.venueName, { color: colors.foreground, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
-                    <Text style={[invStyles.sentDateText, { color: colors.muted }]}>
-                      {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
-                    </Text>
-                  </View>
-                  <View style={invStyles.cardRight}>
-                    <Text style={[invStyles.amountText, { color: inv.status === 'cancelled' ? colors.muted : colors.error, textDecorationLine: inv.status === 'cancelled' ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
-                  </View>
-                  {inv.status === 'cancelled' && (
-                    <View style={[invStyles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
-                      <Text style={[invStyles.cancelledBadgeText, { color: colors.error }]}>CANCELLED</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            );
-
-            const cardStyle = ({ pressed }: { pressed: boolean }) => [invStyles.invoiceCard, { borderColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.85 : 1 }];
-
-            if (selectMode) {
-              return (
-                <Pressable key={inv.id} style={cardStyle} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleSelect(inv.id); }}>
-                  {cardBody}
-                </Pressable>
-              );
-            }
-
+        <ScrollView style={{ maxHeight: 360 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+          {artistRows.map((a, idx) => {
+            const artist = getArtistUser(a.artistId);
+            const isLast = idx === artistRows.length - 1;
             return (
               <Pressable
-                key={inv.id}
-                style={cardStyle}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: inv.id } });
-                }}
+                key={a.artistId}
+                style={({ pressed }) => [invStyles.artistRow, { borderBottomColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => router.push({ pathname: '/(manager)/artist-invoices' as any, params: { artistId: a.artistId, name: a.name } })}
               >
-                {cardBody}
+                <AvatarImage uri={artist?.profilePhotoUrl} avatarId={artist?.avatarId} seed={a.artistId} name={a.name} size={40} variant="artist" />
+                <View style={{ flex: 1 }}>
+                  <View style={invStyles.nameRow}>
+                    <Text style={[invStyles.artistName, { color: colors.foreground }]} numberOfLines={1}>{a.name}</Text>
+                    {a.unread > 0 && <View style={[invStyles.unreadDot, { backgroundColor: colors.error }]} />}
+                  </View>
+                  <Text style={[invStyles.subLabel, { color: colors.muted }]}>{a.invoiceCount > 0 ? `${a.invoiceCount} invoice${a.invoiceCount !== 1 ? 's' : ''}` : 'No invoices yet'}</Text>
+                </View>
+                {a.uninvoiced > 0 && (
+                  <View style={[invStyles.pendingPill, { backgroundColor: colors.warning + '20' }]}>
+                    <Text style={[invStyles.pendingCount, { color: colors.warning }]}>{a.uninvoiced}</Text>
+                    <Text style={[invStyles.pendingLabel, { color: colors.warning }]}>to invoice</Text>
+                  </View>
+                )}
+                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
               </Pressable>
             );
           })}
-          </ScrollView>
-        </View>
+        </ScrollView>
       )}
     </View>
   );
-}
-
-function generateManagerInvoiceHTML(inv: Invoice): string {
-  const rows = inv.gigs.map((g) => `
-    <tr>
-      <td>${g.date}</td>
-      <td>${g.startTime} – ${g.endTime}</td>
-      <td style="text-align:right">${g.price.toLocaleString()}</td>
-    </tr>
-  `).join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:40px;color:#1a1a1a}
-    h1{font-size:28px;margin-bottom:4px}.inv-num{color:#E2674A;font-size:16px;margin-bottom:8px}
-    .date{color:#666;font-size:14px;margin-bottom:24px}.parties{display:flex;gap:40px;margin-bottom:24px}
-    .party{flex:1}.party-label{font-size:10px;font-weight:700;color:#999;letter-spacing:1px;margin-bottom:4px}
-    .party-name{font-size:15px;font-weight:700;margin-bottom:2px}.party-detail{font-size:12px;color:#666}
-    table{width:100%;border-collapse:collapse;margin-bottom:16px}
-    th{background:#f0f4ff;text-align:left;padding:10px 12px;font-size:12px;font-weight:700;border-bottom:1px solid #e5e7eb}
-    th:last-child{text-align:right}td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f0f0f0}
-    td:last-child{text-align:right;font-weight:600}
-    .total-row{display:flex;justify-content:flex-end;align-items:center;gap:16px;padding:16px 0;border-top:2px solid #E2674A}
-    .total-label{font-size:14px;font-weight:700}.total-value{font-size:22px;font-weight:800;color:#E2674A}
-  </style></head><body>
-    <h1>INVOICE</h1><div class="inv-num">${inv.invoiceNumber}</div>
-    <div class="date">Date: ${new Date(inv.sentAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-    <div class="parties">
-      <div class="party"><div class="party-label">FROM</div><div class="party-name">${inv.artistLegalName}</div>
-        ${inv.artistEmail ? `<div class="party-detail">${inv.artistEmail}</div>` : ''}
-        ${inv.artistLocation ? `<div class="party-detail">${inv.artistLocation}</div>` : ''}
-      </div>
-      <div class="party"><div class="party-label">TO</div><div class="party-name">${inv.venueLegalName}</div>
-        ${inv.venueTrnNumber ? `<div class="party-detail">TRN: ${inv.venueTrnNumber}</div>` : ''}
-        ${inv.venueAddress ? `<div class="party-detail">${inv.venueAddress}</div>` : ''}
-      </div>
-    </div>
-    <table><thead><tr><th>Date</th><th>Time</th><th>AED</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="total-row"><span class="total-label">TOTAL</span>
-      <span class="total-value">AED ${inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-    </div>
-  </body></html>`;
 }
 
 const invStyles = StyleSheet.create({
   container: {},
   collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0.5 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  collapseHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   collapseTitle: { fontSize: 16, fontWeight: '700' },
   unreadBadge: { borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  downloadAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
-  downloadAllText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  selectActionText: { fontSize: 14, fontWeight: '600' },
-  iconPillBtn: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 5, alignItems: 'center', justifyContent: 'center' },
-  selectAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 0.5 },
-  selectAllText: { fontSize: 14, fontWeight: '600' },
-  selectCountText: { fontSize: 12 },
-  content: {},
-  invoiceCard: { paddingHorizontal: 16, paddingVertical: 14 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardLeft: { flex: 1, gap: 3 },
-  artistNameLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
-  venueName: { fontSize: 15, fontWeight: '700' },
-  sentDateText: { fontSize: 12 },
-  cancelledBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
-  cancelledBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  cardRight: { alignItems: 'flex-end', gap: 6 },
-  amountText: { fontSize: 15, fontWeight: '800', fontFamily: fonts.bodyBold },
+  artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  artistName: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  subLabel: { fontSize: 12, marginTop: 2 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  pendingPill: { alignItems: 'center', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, minWidth: 58 },
+  pendingCount: { fontSize: 15, fontWeight: '800' },
+  pendingLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
 });
 
 const styles = StyleSheet.create({

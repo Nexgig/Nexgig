@@ -411,6 +411,7 @@ if (!lineupError && lineupData) {
       <Stack.Screen name="edit-profile" options={{ gestureEnabled: false }} />
       <Stack.Screen name="edit-venue" options={{ gestureEnabled: false }} />
       <Stack.Screen name="manager-invoice-detail" />
+      <Stack.Screen name="artist-invoices" />
       <Stack.Screen name="settings" options={{ gestureEnabled: true }} />
       <Stack.Screen
         name="send-feedback"
