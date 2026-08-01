@@ -7,7 +7,6 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, SoftButton } from '@/components/ui/card-free';
-import { ManagerHistorySection } from '@/components/manager-history-section';
 import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
@@ -173,9 +172,6 @@ export default function ManagerProfileScreen() {
             <Divider />
           </>
         ) : null}
-
-        {/* Completed-gig history — moved here from the dashboard. Renders null when empty. */}
-        <ManagerHistorySection />
 
         {/* Account */}
         <Section label="Account">
