@@ -163,6 +163,26 @@ export default function ManagerDashboard() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [groupedBookingsPreview]);
 
+  // Split the list: this week stays inline; from NEXT week's Monday onward collapses under
+  // a "Later" row. Hard cutoff at 14 days out — the dashboard doesn't show further than that
+  // (the calendar / confirmed-bookings pages do).
+  const { nearGroups, laterGroups, laterCount } = useMemo(() => {
+    const today = todayLocalStr();
+    const dow = new Date(today + 'T00:00:00').getDay();        // 0 Sun .. 6 Sat
+    const nextMonday = addDaysStr(today, 7 - ((dow + 6) % 7)); // start of next calendar week
+    const cutoff = addDaysStr(today, 14);
+    const near: typeof bookingsByDate = [];
+    const later: typeof bookingsByDate = [];
+    for (const grp of bookingsByDate) {
+      if (grp.date && grp.date >= nextMonday) {
+        if (grp.date <= cutoff) later.push(grp);               // beyond cutoff → dropped from dashboard
+      } else {
+        near.push(grp);
+      }
+    }
+    return { nearGroups: near, laterGroups: later, laterCount: later.reduce((n, g) => n + g.gigs.length, 0) };
+  }, [bookingsByDate]);
+
   const formatDateHeader = (dateStr: string) => {
     if (!dateStr) return '';
     const today = todayLocalStr();
@@ -178,6 +198,7 @@ export default function ManagerDashboard() {
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
   const [refreshing, setRefreshing] = useState(false);
+  const [laterExpanded, setLaterExpanded] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -262,6 +283,46 @@ export default function ManagerDashboard() {
     [globalLineup, currentUser?.id]
   );
 
+  const renderDateGroup = ({ date, gigs }: { date: string; gigs: typeof groupedBookingsPreview }) => (
+    <View key={date}>
+      <View style={styles.dateHeader}>
+        <Text style={[styles.dateHeaderLabel, { color: colors.muted }]}>{formatDateHeader(date)}</Text>
+      </View>
+      {gigs.map((g) => {
+        const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
+        const title = g.count === 1
+          ? names[0]
+          : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
+        // Only pending shows a label; confirmed shows nothing (just the time).
+        const isPending = g.dotColor === STATUS_COLORS.pending;
+        return (
+          <Pressable
+            key={g.key}
+            style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
+          >
+            <View style={styles.avatarStack}>
+              {g.djs.slice(0, 2).map((d, i) => (
+                <View key={i} style={[styles.avatarRing, { borderColor: colors.background, marginLeft: i === 0 ? 0 : -18, zIndex: g.djs.length - i }]}>
+                  <AvatarImage uri={d?.profilePhotoUrl || undefined} avatarId={(d as any)?.avatarId} seed={(d as any)?.id} name={d?.fullName} size={44} />
+                </View>
+              ))}
+            </View>
+            <View style={styles.gigInfo}>
+              <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+              <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
+            </View>
+            <View style={styles.gigRight}>
+              {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
+              <Text style={[styles.gigTime, { color: colors.muted }]}>
+                {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
+              </Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 
   return (
     <ScreenContainer>
@@ -326,46 +387,29 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             <View>
-            {bookingsByDate.map(({ date, gigs }) => (
-              <View key={date}>
-                <View style={styles.dateHeader}>
-                  <Text style={[styles.dateHeaderLabel, { color: colors.muted }]}>{formatDateHeader(date)}</Text>
-                </View>
-                {gigs.map((g) => {
-                  const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
-                  const title = g.count === 1
-                    ? names[0]
-                    : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
-                  // Only pending shows a label; confirmed shows nothing (just the time).
-                  const isPending = g.dotColor === STATUS_COLORS.pending;
-                  return (
-                    <Pressable
-                      key={g.key}
-                      style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
-                      onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
-                    >
-                      <View style={styles.avatarStack}>
-                        {g.djs.slice(0, 2).map((d, i) => (
-                          <View key={i} style={[styles.avatarRing, { borderColor: colors.background, marginLeft: i === 0 ? 0 : -18, zIndex: g.djs.length - i }]}>
-                            <AvatarImage uri={d?.profilePhotoUrl || undefined} avatarId={(d as any)?.avatarId} seed={(d as any)?.id} name={d?.fullName} size={44} />
-                          </View>
-                        ))}
-                      </View>
-                      <View style={styles.gigInfo}>
-                        <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
-                        <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
-                      </View>
-                      <View style={styles.gigRight}>
-                        {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
-                        <Text style={[styles.gigTime, { color: colors.muted }]}>
-                          {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+            {nearGroups.map(renderDateGroup)}
+            {laterGroups.length > 0 && (
+              <View>
+                <View style={styles.laterDivider}><Divider full /></View>
+                <Pressable
+                  style={({ pressed }) => [styles.laterRow, { opacity: pressed ? 0.6 : 1 }]}
+                  onPress={() => setLaterExpanded((v) => !v)}
+                >
+                  <View style={styles.laterLeft}>
+                    <Text style={[styles.laterLabel, { color: colors.foreground }]}>Later</Text>
+                    <View style={[styles.laterCountPill, { backgroundColor: colors.surface }]}>
+                      <Text style={[styles.laterCountText, { color: colors.muted }]}>{laterCount}</Text>
+                    </View>
+                  </View>
+                  <MaterialIcons
+                    name={laterExpanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
+                    size={24}
+                    color={colors.muted}
+                  />
+                </Pressable>
+                {laterExpanded && laterGroups.map(renderDateGroup)}
               </View>
-            ))}
+            )}
             </View>
           )}
         </View>
@@ -400,4 +444,10 @@ const styles = StyleSheet.create({
   gigStatus: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
   gigTime: { fontSize: 13, fontWeight: '500' },
   gigInfo: { flex: 1 },
+  laterDivider: { marginTop: 12 },
+  laterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 18 },
+  laterLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  laterLabel: { fontSize: 16, fontWeight: '700' },
+  laterCountPill: { minWidth: 26, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3, alignItems: 'center' },
+  laterCountText: { fontSize: 13, fontWeight: '700' },
 });
