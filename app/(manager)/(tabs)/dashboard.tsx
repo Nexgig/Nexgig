@@ -163,24 +163,24 @@ export default function ManagerDashboard() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [groupedBookingsPreview]);
 
-  // Split the list: this week stays inline; from NEXT week's Monday onward collapses under
-  // a "Later" row. Hard cutoff at 14 days out — the dashboard doesn't show further than that
-  // (the calendar / confirmed-bookings pages do).
-  const { nearGroups, laterGroups, laterCount } = useMemo(() => {
+  // Three buckets: this week stays inline; NEXT week (Mon–Sun) and everything after fold
+  // under their own collapsible rows that expand in place. No cutoff — the last bucket
+  // catches the rest so nothing is hidden.
+  const { thisWeekGroups, nextWeekGroups, restGroups, nextWeekCount, restCount } = useMemo(() => {
     const today = todayLocalStr();
     const dow = new Date(today + 'T00:00:00').getDay();        // 0 Sun .. 6 Sat
     const nextMonday = addDaysStr(today, 7 - ((dow + 6) % 7)); // start of next calendar week
-    const cutoff = addDaysStr(today, 14);
-    const near: typeof bookingsByDate = [];
-    const later: typeof bookingsByDate = [];
+    const nextSunday = addDaysStr(nextMonday, 6);              // end of next week
+    const week: typeof bookingsByDate = [];
+    const next: typeof bookingsByDate = [];
+    const rest: typeof bookingsByDate = [];
     for (const grp of bookingsByDate) {
-      if (grp.date && grp.date >= nextMonday) {
-        if (grp.date <= cutoff) later.push(grp);               // beyond cutoff → dropped from dashboard
-      } else {
-        near.push(grp);
-      }
+      if (!grp.date || grp.date < nextMonday) week.push(grp);
+      else if (grp.date <= nextSunday) next.push(grp);
+      else rest.push(grp);
     }
-    return { nearGroups: near, laterGroups: later, laterCount: later.reduce((n, g) => n + g.gigs.length, 0) };
+    const count = (gs: typeof bookingsByDate) => gs.reduce((n, g) => n + g.gigs.length, 0);
+    return { thisWeekGroups: week, nextWeekGroups: next, restGroups: rest, nextWeekCount: count(next), restCount: count(rest) };
   }, [bookingsByDate]);
 
   const formatDateHeader = (dateStr: string) => {
@@ -198,7 +198,8 @@ export default function ManagerDashboard() {
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
   const [refreshing, setRefreshing] = useState(false);
-  const [laterExpanded, setLaterExpanded] = useState(false);
+  const [nextWeekExpanded, setNextWeekExpanded] = useState(false);
+  const [restExpanded, setRestExpanded] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -328,6 +329,35 @@ export default function ManagerDashboard() {
     </View>
   );
 
+  const renderCollapsible = (
+    label: string,
+    groups: typeof bookingsByDate,
+    count: number,
+    expanded: boolean,
+    onToggle: () => void,
+  ) => (
+    <View>
+      <View style={styles.laterDivider}><Divider full /></View>
+      <Pressable
+        style={({ pressed }) => [styles.laterRow, { opacity: pressed ? 0.6 : 1 }]}
+        onPress={onToggle}
+      >
+        <View style={styles.laterLeft}>
+          <Text style={[styles.laterLabel, { color: colors.foreground }]}>{label}</Text>
+          <View style={[styles.laterCountPill, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.laterCountText, { color: colors.muted }]}>{count}</Text>
+          </View>
+        </View>
+        <MaterialIcons
+          name={expanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
+          size={24}
+          color={colors.muted}
+        />
+      </Pressable>
+      {expanded && groups.map(renderDateGroup)}
+    </View>
+  );
+
   return (
     <ScreenContainer>
       <ScrollView
@@ -391,29 +421,9 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             <View>
-            {nearGroups.map(renderDateGroup)}
-            {laterGroups.length > 0 && (
-              <View>
-                <View style={styles.laterDivider}><Divider full /></View>
-                <Pressable
-                  style={({ pressed }) => [styles.laterRow, { opacity: pressed ? 0.6 : 1 }]}
-                  onPress={() => setLaterExpanded((v) => !v)}
-                >
-                  <View style={styles.laterLeft}>
-                    <Text style={[styles.laterLabel, { color: colors.foreground }]}>Coming Up</Text>
-                    <View style={[styles.laterCountPill, { backgroundColor: colors.surface }]}>
-                      <Text style={[styles.laterCountText, { color: colors.muted }]}>{laterCount}</Text>
-                    </View>
-                  </View>
-                  <MaterialIcons
-                    name={laterExpanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
-                    size={24}
-                    color={colors.muted}
-                  />
-                </Pressable>
-                {laterExpanded && laterGroups.map(renderDateGroup)}
-              </View>
-            )}
+            {thisWeekGroups.map(renderDateGroup)}
+            {nextWeekGroups.length > 0 && renderCollapsible('Next Week', nextWeekGroups, nextWeekCount, nextWeekExpanded, () => setNextWeekExpanded((v) => !v))}
+            {restGroups.length > 0 && renderCollapsible('Upcoming', restGroups, restCount, restExpanded, () => setRestExpanded((v) => !v))}
             </View>
           )}
         </View>
