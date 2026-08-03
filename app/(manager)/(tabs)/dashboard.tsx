@@ -387,7 +387,7 @@ export default function ManagerDashboard() {
         {/* Coverage strip — venues (down) × the next 7 nights (across). Sits where the stat
             row used to. STATUS_COLORS, not theme tokens: same statuses as the badges below. */}
         <View style={styles.strip}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 16 }]}>Coverage</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 16 }]}>Overview</Text>
           <View style={styles.stripRow}>
             <View style={styles.stripVenueCol} />
             {coverage.nights.map((date) => (
