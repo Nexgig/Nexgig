@@ -333,7 +333,7 @@ export default function ManagerDashboard() {
 
         {/* Bookings */}
         <View style={styles.section}>
-          <SectionHeader title="Bookings" />
+          <SectionHeader title="Bookings" titleSize={24} />
           {groupedBookingsPreview.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />

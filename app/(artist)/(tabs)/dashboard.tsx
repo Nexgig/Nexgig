@@ -313,6 +313,7 @@ export default function DJHomeScreen() {
         <View style={styles.section}>
           <SectionHeader
             title="Bookings"
+            titleSize={24}
             rightAccessory={
               <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
                 <MaterialIcons name="tune" size={20} color={bookingVenueId ? colors.primary : colors.muted} />

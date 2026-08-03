@@ -10,13 +10,15 @@ interface SectionHeaderProps {
   leftAccessory?: ReactNode;
   /** Optional element pinned to the far right of the header (e.g. a filter button). */
   rightAccessory?: ReactNode;
+  /** Override the title font size (default is text-lg ≈ 18). */
+  titleSize?: number;
 }
 
-export function SectionHeader({ title, actionLabel, onAction, leftAccessory, rightAccessory }: SectionHeaderProps) {
+export function SectionHeader({ title, actionLabel, onAction, leftAccessory, rightAccessory, titleSize }: SectionHeaderProps) {
   return (
     <View className="flex-row items-center justify-between" style={{ marginBottom: 20 }}>
       <View className="flex-row items-center" style={{ gap: 8 }}>
-        <Text className="text-lg text-foreground" style={{ fontFamily: fonts.display }}>{title}</Text>
+        <Text className="text-lg text-foreground" style={[{ fontFamily: fonts.display }, titleSize ? { fontSize: titleSize } : null]}>{title}</Text>
         {leftAccessory}
       </View>
       {rightAccessory ? rightAccessory : (actionLabel && onAction && (
