@@ -11,6 +11,7 @@ import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
+import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
@@ -150,6 +151,27 @@ export default function ManagerDashboard() {
       };
     });
   }, [dashboardBookings, bookingVenueId]);
+
+  // Group the slot-groups by DATE for the dashboard list — a date header ("FRI 31 JUL") with a
+  // per-day gig count, then the gigs under it. groupedBookingsPreview is already date-sorted.
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, typeof groupedBookingsPreview>();
+    const order: string[] = [];
+    for (const g of groupedBookingsPreview) {
+      const d = g.first.slot?.date ?? g.first.slotDate ?? '';
+      if (!map.has(d)) { map.set(d, []); order.push(d); }
+      map.get(d)!.push(g);
+    }
+    return order.map((d) => ({ date: d, gigs: map.get(d)! }));
+  }, [groupedBookingsPreview]);
+
+  const formatDateHeader = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const mon = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    return `${wd} ${d.getDate()} ${mon}`;
+  };
 
   // Month headers for the Bookings window. The DateBadge shows weekday + day but no
   // month, so a list crossing months is ambiguous without them — and a lone "June"
@@ -319,41 +341,43 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             <View>
-            {groupedBookingsPreview.map((g, idx) => {
-              const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
-              const title = g.count === 1
-                ? names[0]
-                : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
-              const gDate = g.first.slot?.date ?? g.first.slotDate;
-              const prev = idx > 0 ? groupedBookingsPreview[idx - 1] : undefined;
-              const prevDate = prev ? (prev.first.slot?.date ?? prev.first.slotDate) : undefined;
-              const showMonth = bookingsSpanMonths && !!gDate &&
-                (!prevDate || monthKey(gDate) !== monthKey(prevDate));
-              return (
-              <View key={g.key}>
-              {showMonth && (
-                <MonthSeparator label={monthLabel(gDate!)} color={colors.muted} borderColor={colors.border} />
-              )}
-              <Pressable
-                style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
-              >
-                <DateBadge dateStr={gDate} color={g.dotColor} />
-                <View style={styles.gigInfo}>
-                  <View style={styles.titleRow}>
-                    <Text style={[styles.bookingDJ, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                      {title}
-                      {(g.first.venue?.name || g.first.venueName) ? <Text style={{ color: colors.muted, fontWeight: '500' }}> / {bookingVenueName(g.first, g.first.venue?.name)}</Text> : null}
-                    </Text>
-                  </View>
-                  <Text style={[styles.bookingSub, { color: colors.muted }]} numberOfLines={1}>
-                    {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
-                  </Text>
+            {bookingsByDate.map(({ date, gigs }) => (
+              <View key={date}>
+                <View style={styles.dateHeader}>
+                  <Text style={[styles.dateHeaderLabel, { color: colors.muted }]}>{formatDateHeader(date)}</Text>
+                  <Text style={[styles.dateHeaderCount, { color: colors.muted }]}>{gigs.length} gig{gigs.length !== 1 ? 's' : ''}</Text>
                 </View>
-              </Pressable>
+                {gigs.map((g) => {
+                  const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
+                  const title = g.count === 1
+                    ? names[0]
+                    : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
+                  return (
+                    <Pressable
+                      key={g.key}
+                      style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
+                      onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
+                    >
+                      <View style={[styles.statusBar, { backgroundColor: g.dotColor }]} />
+                      <View style={styles.avatarStack}>
+                        {g.djs.slice(0, 2).map((d, i) => (
+                          <View key={i} style={[styles.avatarRing, { borderColor: colors.background, marginLeft: i === 0 ? 0 : -18, zIndex: g.djs.length - i }]}>
+                            <AvatarImage uri={d?.profilePhotoUrl || undefined} avatarId={(d as any)?.avatarId} seed={(d as any)?.id} name={d?.fullName} size={44} />
+                          </View>
+                        ))}
+                      </View>
+                      <View style={styles.gigInfo}>
+                        <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+                        <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
+                      </View>
+                      <Text style={[styles.gigTime, { color: colors.muted }]}>
+                        {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-              );
-            })}
+            ))}
             </View>
           )}
         </View>
@@ -402,6 +426,17 @@ const styles = StyleSheet.create({
   section: { marginTop: 24 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
+  // Bookings — date-grouped rows with a status bar + stacked avatars
+  dateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 8 },
+  dateHeaderLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
+  dateHeaderCount: { fontSize: 13, fontWeight: '600' },
+  gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  statusBar: { width: 3, borderRadius: 2, alignSelf: 'stretch', minHeight: 44 },
+  avatarStack: { flexDirection: 'row', alignItems: 'center' },
+  avatarRing: { borderRadius: 24, borderWidth: 2 },
+  gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigVenue: { fontSize: 13 },
+  gigTime: { fontSize: 14, fontWeight: '500' },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
   dateBadge: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   dateBadgeShort: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', color: '#fff', letterSpacing: 0.5 },
