@@ -168,22 +168,24 @@ export default function CalendarScreen() {
     if (!slotRows) return;
     const pastIds = slotRows.filter((s: any) => isPastStart(s.date, s.start_time)).map((s: any) => s.id);
     if (pastIds.length === 0) return;
-    const { data: bks, error: bkErr } = await supabase.from('bookings').select('slot_id, status').in('slot_id', pastIds);
+    const { data: bks, error: bkErr } = await supabase.from('bookings').select('slot_id, status, hidden_from_manager_calendar').in('slot_id', pastIds);
     // If the bookings read failed we know nothing — deleting on a failed read would be
     // destroying slots we simply couldn't see. Do nothing and try again next focus.
     if (bkErr) { console.warn('sweep past slots (bookings read):', bkErr.message); return; }
-    // 'expired' included: an unanswered request is still history worth showing, and
-    // without it the whole set silently disappears from the manager's calendar.
-    const keep = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'expired']);
-    const keepSlotIds = new Set((bks ?? []).filter((b: any) => keep.has(b.status)).map((b: any) => b.slot_id));
-    // Also protect any slot the LOCAL store knows has a booking or a draft on it. A booking
-    // written moments ago may not be readable yet; the sweep must not race the write and
+    // Keep a slot as long as it still has ANY booking the manager hasn't dismissed — regardless
+    // of status. A cancelled/declined booking stays visible (with its ✕) until the manager
+    // clears it; only once dismissed (hidden_from_manager_calendar) does the slot become sweepable.
+    // Before, cancelled/declined were excluded from the keep-set, so a fresh cancellation on a
+    // gig whose start had just passed was deleted out from under the manager before they saw it.
+    const keepSlotIds = new Set((bks ?? []).filter((b: any) => !b.hidden_from_manager_calendar).map((b: any) => b.slot_id));
+    // Also protect any slot the LOCAL store knows has a non-dismissed booking or a draft on it. A
+    // booking written moments ago may not be readable yet; the sweep must not race the write and
     // delete the slot out from under it.
     const localBookings = useBookingStore.getState().bookings;
     const localDrafts = useDraftStore.getState().drafts;
     const toDelete = pastIds.filter((id: string) =>
       !keepSlotIds.has(id) &&
-      !localBookings.some((b) => b.slotId === id && keep.has(b.status)) &&
+      !localBookings.some((b) => b.slotId === id && !b.hiddenFromManagerCalendar) &&
       !localDrafts.some((d) => d.slotId === id)
     );
     if (toDelete.length === 0) return;
