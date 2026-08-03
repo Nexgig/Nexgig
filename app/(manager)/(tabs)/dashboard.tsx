@@ -163,24 +163,33 @@ export default function ManagerDashboard() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [groupedBookingsPreview]);
 
-  // Three buckets: this week stays inline; NEXT week (Mon–Sun) and everything after fold
-  // under their own collapsible rows that expand in place. No cutoff — the last bucket
-  // catches the rest so nothing is hidden.
-  const { thisWeekGroups, nextWeekGroups, restGroups, nextWeekCount, restCount } = useMemo(() => {
+  // First section = the next 7 days, shown inline. After that, group by calendar month:
+  // the current month's leftovers read "Later in August", each following month by its name
+  // ("September", and "January 2027" once the year rolls over).
+  const { inlineGroups, monthBuckets } = useMemo(() => {
     const today = todayLocalStr();
-    const dow = new Date(today + 'T00:00:00').getDay();        // 0 Sun .. 6 Sat
-    const nextMonday = addDaysStr(today, 7 - ((dow + 6) % 7)); // start of next calendar week
-    const nextSunday = addDaysStr(nextMonday, 6);              // end of next week
-    const week: typeof bookingsByDate = [];
-    const next: typeof bookingsByDate = [];
-    const rest: typeof bookingsByDate = [];
+    const inlineEnd = addDaysStr(today, 7);          // exclusive — today + the next 6 days
+    const currentMonthKey = today.slice(0, 7);       // "YYYY-MM"
+    const currentYear = today.slice(0, 4);
+    const inline: typeof bookingsByDate = [];
+    const byMonth = new Map<string, typeof bookingsByDate>();
+    const order: string[] = [];
     for (const grp of bookingsByDate) {
-      if (!grp.date || grp.date < nextMonday) week.push(grp);
-      else if (grp.date <= nextSunday) next.push(grp);
-      else rest.push(grp);
+      if (!grp.date || grp.date < inlineEnd) { inline.push(grp); continue; }
+      const mk = grp.date.slice(0, 7);
+      if (!byMonth.has(mk)) { byMonth.set(mk, []); order.push(mk); }
+      byMonth.get(mk)!.push(grp);
     }
-    const count = (gs: typeof bookingsByDate) => gs.reduce((n, g) => n + g.gigs.length, 0);
-    return { thisWeekGroups: week, nextWeekGroups: next, restGroups: rest, nextWeekCount: count(next), restCount: count(rest) };
+    const buckets = order.map((mk) => {
+      const groups = byMonth.get(mk)!;
+      const [y, m] = mk.split('-').map(Number);
+      const monthName = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long' });
+      const label = mk === currentMonthKey
+        ? `Later in ${monthName}`
+        : (mk.slice(0, 4) === currentYear ? monthName : `${monthName} ${y}`);
+      return { key: mk, label, groups, count: groups.reduce((n, g) => n + g.gigs.length, 0) };
+    });
+    return { inlineGroups: inline, monthBuckets: buckets };
   }, [bookingsByDate]);
 
   const formatDateHeader = (dateStr: string) => {
@@ -198,8 +207,7 @@ export default function ManagerDashboard() {
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
   const [refreshing, setRefreshing] = useState(false);
-  const [nextWeekExpanded, setNextWeekExpanded] = useState(false);
-  const [restExpanded, setRestExpanded] = useState(false);
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
 
   const handleRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -336,7 +344,7 @@ export default function ManagerDashboard() {
     expanded: boolean,
     onToggle: () => void,
   ) => (
-    <View>
+    <View key={label}>
       <View style={styles.laterDivider}><Divider full /></View>
       <Pressable
         style={({ pressed }) => [styles.laterRow, { opacity: pressed ? 0.6 : 1 }]}
@@ -421,9 +429,12 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             <View>
-            {thisWeekGroups.map(renderDateGroup)}
-            {nextWeekGroups.length > 0 && renderCollapsible('Next Week', nextWeekGroups, nextWeekCount, nextWeekExpanded, () => setNextWeekExpanded((v) => !v))}
-            {restGroups.length > 0 && renderCollapsible('Upcoming', restGroups, restCount, restExpanded, () => setRestExpanded((v) => !v))}
+            {inlineGroups.map(renderDateGroup)}
+            {monthBuckets.map((b) => renderCollapsible(
+              b.label, b.groups, b.count,
+              !!expandedMonths[b.key],
+              () => setExpandedMonths((m) => ({ ...m, [b.key]: !m[b.key] })),
+            ))}
             </View>
           )}
         </View>
