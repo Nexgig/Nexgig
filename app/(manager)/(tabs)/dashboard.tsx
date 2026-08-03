@@ -71,8 +71,7 @@ export default function ManagerDashboard() {
       return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue };
     })
     .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime))
-    .sort((a, b) => (a.slot?.date ?? '') < (b.slot?.date ?? '') ? -1 : 1)
-    .slice(0, 5),
+    .sort((a, b) => (a.slot?.date ?? '') < (b.slot?.date ?? '') ? -1 : 1),
     [bookings, slots, artistUsers, allVenues, nowDT]
   );
 
@@ -319,11 +318,7 @@ export default function ManagerDashboard() {
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            <ScrollView
-              style={{ maxHeight: 330 }}
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
-            >
+            <View>
             {groupedBookingsPreview.map((g, idx) => {
               const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
               const title = g.count === 1
@@ -359,7 +354,7 @@ export default function ManagerDashboard() {
               </View>
               );
             })}
-            </ScrollView>
+            </View>
           )}
         </View>
 

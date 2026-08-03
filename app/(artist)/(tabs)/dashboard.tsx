@@ -206,7 +206,7 @@ export default function DJHomeScreen() {
       bookingVenueId === PRIVATE_GIGS_FILTER ? active.filter((b) => b.isArtistCreated)
       : bookingVenueId ? active.filter((b) => b.venueId === bookingVenueId)
       : active;
-    return scoped.slice(0, 6);
+    return scoped;
   }, [dashboardBookings, bookingVenueId]);
 
   // Private events carry no venueId, so they can never match a venue row — without
