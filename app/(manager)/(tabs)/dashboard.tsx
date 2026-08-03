@@ -6,17 +6,17 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
-import { Divider, StatRow } from '@/components/ui/card-free';
+import { Divider } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore, useDraftStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr, isExpiredRequest, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
+import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -51,28 +51,6 @@ export default function ManagerDashboard() {
   ), [allInvoices, currentUser?.id]);
 
   const nowDT = nowLocalDateTimeStr();
-
-  const upcomingBookings = useMemo(() => bookings
-    .filter((b) => b.status === 'confirmed')
-    .map((b) => {
-      const slot = slots.find((s) => s.id === b.slotId);
-      // Null artist_id means the artist deleted their account → show "Former Artist".
-      const dj = b.artistId == null
-        ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
-        : artistUsers.find((u) => u.id === b.artistId);
-      const venue = allVenues.find((v) => v.id === b.venueId);
-      const resolvedSlot = slot ?? (b.slotDate ? {
-        id: b.slotId, venueId: b.venueId, date: b.slotDate,
-        name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
-        endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
-      } : undefined);
-      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
-      return { ...b, slot: resolvedSlot, dj, venue: resolvedVenue };
-    })
-    .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime))
-    .sort((a, b) => (a.slot?.date ?? '') < (b.slot?.date ?? '') ? -1 : 1),
-    [bookings, slots, artistUsers, allVenues, nowDT]
-  );
 
   // Combined list for the "Bookings" section: pending + confirmed + completed,
   // ALL dates. Resolves slot/venue/dj with snapshot fallback, tags each with a
@@ -116,6 +94,40 @@ export default function ManagerDashboard() {
   // Shared venue filter — the header title (VenueFilterHeader) sets it; dashboard, calendar
   // and roster all read this one.
   const bookingVenueId = useVenueFilterStore((s) => s.venueId);
+
+  // Coverage strip: manager's venues (rows) × the next 7 nights (columns). Each cell shows the
+  // strongest state among that venue's slots that night: booked (a confirmed booking) > pending
+  // (a request out, or an artist drafted) > open (a slot with nobody on it) > empty (no slot).
+  const drafts = useDraftStore((s) => s.drafts);
+  const coverage = useMemo(() => {
+    const start = todayLocalStr();
+    const nights = Array.from({ length: 7 }, (_, i) => addDaysStr(start, i));
+    const stripVenues = bookingVenueId ? venues.filter((v) => v.id === bookingVenueId) : venues;
+    const bySlot = new Map<string, typeof bookings>();
+    for (const b of bookings) {
+      if (!b.slotId || b.hiddenFromManagerCalendar) continue;
+      const arr = bySlot.get(b.slotId);
+      if (arr) arr.push(b); else bySlot.set(b.slotId, [b]);
+    }
+    const draftSlotIds = new Set(drafts.map((d) => d.slotId));
+    const rows = stripVenues.map((v) => ({
+      venue: v,
+      cells: nights.map((date) => {
+        const daySlots = slots.filter((s) => s.venueId === v.id && s.date === date);
+        let confirmed = false, pending = false, open = false;
+        for (const s of daySlots) {
+          const active = (bySlot.get(s.id) ?? []).filter(
+            (b) => b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation'
+          );
+          if (active.some((b) => b.status === 'confirmed')) confirmed = true;
+          if (active.some((b) => b.status !== 'confirmed')) pending = true;
+          if (active.length === 0) { if (draftSlotIds.has(s.id)) pending = true; else open = true; }
+        }
+        return confirmed ? 'booked' : pending ? 'pending' : open ? 'open' : 'empty';
+      }),
+    }));
+    return { nights, rows };
+  }, [venues, slots, bookings, drafts, bookingVenueId]);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -270,28 +282,6 @@ export default function ManagerDashboard() {
       });
   }, [bookings, slots, nowDT, updateBookingStatus, allVenues]);
 
-  // Expired requests are excluded: nobody can act on them, so counting them leaves the
-  // tile permanently wrong. `nowDT` is in the deps so the count re-derives as gigs end.
-  const pendingCount = useMemo(
-    () => bookings.filter((b) =>
-      (b.status === 'requested' || b.status === 'past_confirmation') &&
-      !b.hiddenFromManagerCalendar &&
-      !isExpiredRequest(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime)
-    ).length,
-    [bookings, nowDT]
-  );
-
-  const completedCount = useMemo(
-    () => bookings.filter((b) => b.status === 'completed').length,
-    [bookings]
-  );
-
-  const globalLineup = useLineupStore((s) => s.globalLineup);
-  const artistsCount = useMemo(
-    () => globalLineup.filter((r) => r.managerId === currentUser?.id && r.status === 'active').length,
-    [globalLineup, currentUser?.id]
-  );
-
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: typeof groupedBookingsPreview }) => (
     <View key={date}>
       <View style={styles.dateHeader}>
@@ -393,31 +383,55 @@ export default function ManagerDashboard() {
           </View>
         </View>
 
-        {/* Summary — inline stat row, no boxes.
-            STATUS_COLORS, not theme tokens: these tiles label the same statuses as the
-            badges below them, so they must move together. */}
-        <StatRow
-          items={[
-            {
-              value: upcomingBookings.filter((b) => b.status === 'confirmed').length,
-              label: 'Confirmed',
-              color: STATUS_COLORS.confirmed,
-              onPress: () => router.push('/(manager)/confirmed-bookings' as Href),
-            },
-            {
-              value: pendingCount,
-              label: 'Pending',
-              color: STATUS_COLORS.pending,
-              onPress: () => router.push('/(manager)/pending-requests' as Href),
-            },
-            {
-              value: completedCount,
-              label: 'Completed',
-              color: STATUS_COLORS.completed,
-              onPress: () => router.push('/(manager)/completed-gigs' as Href),
-            },
-          ]}
-        />
+        {/* Coverage strip — venues (down) × the next 7 nights (across). Sits where the stat
+            row used to. STATUS_COLORS, not theme tokens: same statuses as the badges below. */}
+        <View style={styles.strip}>
+          <Text style={[styles.stripLabel, { color: colors.muted }]}>NEXT 7 NIGHTS</Text>
+          <View style={styles.stripRow}>
+            <View style={styles.stripVenueCol} />
+            {coverage.nights.map((date) => (
+              <View key={date} style={styles.stripCell}>
+                <Text style={[styles.stripDow, { color: colors.muted }]}>
+                  {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {coverage.rows.map((r) => (
+            <View key={r.venue.id} style={styles.stripRow}>
+              <View style={styles.stripVenueCol}>
+                <Text style={[styles.stripVenueName, { color: colors.foreground }]} numberOfLines={1}>{r.venue.name}</Text>
+              </View>
+              {r.cells.map((state, i) => (
+                <View key={i} style={styles.stripCell}>
+                  <View
+                    style={[
+                      styles.cellBox,
+                      state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
+                        : state === 'pending' ? { backgroundColor: STATUS_COLORS.pending }
+                        : state === 'open' ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }
+                        : { backgroundColor: colors.surface },
+                    ]}
+                  />
+                </View>
+              ))}
+            </View>
+          ))}
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Pending</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, styles.legendSwatchOpen, { borderColor: colors.primary }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Open slot</Text>
+            </View>
+          </View>
+        </View>
         <Divider full />
 
         {/* Bookings */}
@@ -463,6 +477,19 @@ const styles = StyleSheet.create({
   gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   avatarStack: { flexDirection: 'row', alignItems: 'center' },
   avatarRing: { borderRadius: 24, borderWidth: 2 },
+  strip: { marginBottom: 4 },
+  stripLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 14 },
+  stripRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  stripVenueCol: { width: 92, paddingRight: 8 },
+  stripVenueName: { fontSize: 15, fontWeight: '700' },
+  stripDow: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  stripCell: { flex: 1, paddingHorizontal: 3 },
+  cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendSwatchOpen: { borderWidth: 1.5, borderStyle: 'dashed', backgroundColor: 'transparent' },
+  legendText: { fontSize: 12 },
   gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   gigVenue: { fontSize: 13 },
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
