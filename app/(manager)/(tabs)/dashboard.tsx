@@ -1,7 +1,7 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Image } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -10,7 +10,7 @@ import { Divider, StatRow } from '@/components/ui/card-free';
 import { fonts } from '@/lib/fonts';
 import { MaterialIcons } from '@expo/vector-icons';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
-import { venueImageFor } from '@/lib/venue-images';
+import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
@@ -314,10 +314,16 @@ export default function ManagerDashboard() {
             style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
           >
-            <Image source={venueImageFor(g.first.venue, g.first.venueType)} style={styles.venueThumb} />
+            <View style={styles.avatarStack}>
+              {g.djs.slice(0, 2).map((d, i) => (
+                <View key={i} style={[styles.avatarRing, { borderColor: colors.background, marginLeft: i === 0 ? 0 : -18, zIndex: g.djs.length - i }]}>
+                  <AvatarImage uri={d?.profilePhotoUrl || undefined} avatarId={(d as any)?.avatarId} seed={(d as any)?.id} name={d?.fullName} size={44} />
+                </View>
+              ))}
+            </View>
             <View style={styles.gigInfo}>
-              <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
-              <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{title}</Text>
+              <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+              <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
             </View>
             <View style={styles.gigRight}>
               {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
@@ -455,7 +461,8 @@ const styles = StyleSheet.create({
   dateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  venueThumb: { width: 44, height: 44, borderRadius: 22 },
+  avatarStack: { flexDirection: 'row', alignItems: 'center' },
+  avatarRing: { borderRadius: 24, borderWidth: 2 },
   gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   gigVenue: { fontSize: 13 },
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
