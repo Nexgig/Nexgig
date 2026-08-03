@@ -352,13 +352,14 @@ export default function ManagerDashboard() {
                   const title = g.count === 1
                     ? names[0]
                     : `${names.slice(0, 2).join(', ')}${g.count > 2 ? ` +${g.count - 2}` : ''}`;
+                  // Only pending shows a label; confirmed shows nothing (just the time).
+                  const isPending = g.dotColor === STATUS_COLORS.pending;
                   return (
                     <Pressable
                       key={g.key}
                       style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
                       onPress={() => router.push(('/(manager)/booking-detail?id=' + g.first.id) as Href)}
                     >
-                      <View style={[styles.statusBar, { backgroundColor: g.dotColor }]} />
                       <View style={styles.avatarStack}>
                         {g.djs.slice(0, 2).map((d, i) => (
                           <View key={i} style={[styles.avatarRing, { borderColor: colors.background, marginLeft: i === 0 ? 0 : -18, zIndex: g.djs.length - i }]}>
@@ -370,9 +371,12 @@ export default function ManagerDashboard() {
                         <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
                         <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
                       </View>
-                      <Text style={[styles.gigTime, { color: colors.muted }]}>
-                        {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
-                      </Text>
+                      <View style={styles.gigRight}>
+                        {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
+                        <Text style={[styles.gigTime, { color: colors.muted }]}>
+                          {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -431,11 +435,12 @@ const styles = StyleSheet.create({
   dateHeaderLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
   dateHeaderCount: { fontSize: 13, fontWeight: '600' },
   gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  statusBar: { width: 3, borderRadius: 2, alignSelf: 'stretch', minHeight: 44 },
   avatarStack: { flexDirection: 'row', alignItems: 'center' },
   avatarRing: { borderRadius: 24, borderWidth: 2 },
-  gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
   gigVenue: { fontSize: 13 },
+  gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
+  gigStatus: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
   gigTime: { fontSize: 14, fontWeight: '500' },
   bookingCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
   dateBadge: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
