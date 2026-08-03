@@ -2,6 +2,7 @@ import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
+import { ActionSheetIOS } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -127,6 +128,40 @@ export default function ManagerDashboard() {
     }));
     return { nights, rows };
   }, [venues, slots, bookings, drafts, bookingVenueId]);
+
+  // Tapping a coverage cell drills into that venue's night. A slot with a live booking opens
+  // the booking; an empty slot opens the assign flow.
+  const openSlot = (slot: (typeof slots)[number]) => {
+    const booked = bookings.find(
+      (b) => b.slotId === slot.id && !b.hiddenFromManagerCalendar &&
+        (b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation')
+    );
+    router.push((booked
+      ? '/(manager)/booking-detail?id=' + booked.id
+      : '/(manager)/assign-artist?slotId=' + slot.id) as Href);
+  };
+  const openCoverageCell = (venue: { id: string; name: string }, date: string) => {
+    const daySlots = slots
+      .filter((s) => s.venueId === venue.id && s.date === date)
+      .sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''));
+    if (daySlots.length === 0) {
+      router.push(('/(manager)/add-slot?date=' + date + '&venueId=' + venue.id) as Href);
+      return;
+    }
+    if (daySlots.length === 1) { openSlot(daySlots[0]); return; }
+    const labels = daySlots.map((s) => {
+      const time = `${fmtTime(s.startTime)}–${fmtTime(s.endTime)}`;
+      return s.name ? `${s.name} · ${time}` : time;
+    });
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: `${venue.name} · ${formatDateHeader(date)}`,
+        options: [...labels, 'Cancel'],
+        cancelButtonIndex: labels.length,
+      },
+      (idx) => { if (idx < daySlots.length) openSlot(daySlots[idx]); }
+    );
+  };
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -403,7 +438,11 @@ export default function ManagerDashboard() {
                 <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
               </View>
               {r.cells.map((state, i) => (
-                <View key={i} style={styles.stripCell}>
+                <Pressable
+                  key={i}
+                  style={({ pressed }) => [styles.stripCell, { opacity: pressed ? 0.5 : 1 }]}
+                  onPress={() => openCoverageCell(r.venue, coverage.nights[i])}
+                >
                   <View
                     style={[
                       styles.cellBox,
@@ -413,7 +452,7 @@ export default function ManagerDashboard() {
                         : { backgroundColor: colors.surface },
                     ]}
                   />
-                </View>
+                </Pressable>
               ))}
             </View>
           ))}
