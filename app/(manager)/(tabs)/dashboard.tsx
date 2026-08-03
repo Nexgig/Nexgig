@@ -286,7 +286,11 @@ export default function ManagerDashboard() {
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: typeof groupedBookingsPreview }) => (
     <View key={date}>
       <View style={styles.dateHeader}>
-        <Text style={[styles.dateHeaderLabel, { color: colors.muted }]}>{formatDateHeader(date)}</Text>
+        {(() => {
+          const label = formatDateHeader(date);
+          const isSoon = label === 'TODAY' || label === 'TOMORROW';
+          return <Text style={[styles.dateHeaderLabel, { color: isSoon ? colors.foreground : colors.muted }]}>{label}</Text>;
+        })()}
       </View>
       {gigs.map((g) => {
         const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
@@ -396,7 +400,7 @@ export default function ManagerDashboard() {
                   onPress={() => setLaterExpanded((v) => !v)}
                 >
                   <View style={styles.laterLeft}>
-                    <Text style={[styles.laterLabel, { color: colors.foreground }]}>Later</Text>
+                    <Text style={[styles.laterLabel, { color: colors.foreground }]}>Coming Up</Text>
                     <View style={[styles.laterCountPill, { backgroundColor: colors.surface }]}>
                       <Text style={[styles.laterCountText, { color: colors.muted }]}>{laterCount}</Text>
                     </View>
