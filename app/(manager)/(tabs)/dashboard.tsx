@@ -290,6 +290,7 @@ export default function ManagerDashboard() {
           const isSoon = label === 'TODAY' || label === 'TOMORROW';
           return <Text style={[styles.dateHeaderLabel, { color: isSoon ? colors.foreground : colors.muted }]}>{label}</Text>;
         })()}
+        <View style={[styles.dateHeaderLine, { backgroundColor: colors.border }]} />
       </View>
       {gigs.map((g) => {
         const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
@@ -386,7 +387,7 @@ export default function ManagerDashboard() {
         {/* Coverage strip — venues (down) × the next 7 nights (across). Sits where the stat
             row used to. STATUS_COLORS, not theme tokens: same statuses as the badges below. */}
         <View style={styles.strip}>
-          <Text style={[styles.stripLabel, { color: colors.muted }]}>NEXT 7 NIGHTS</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 16 }]}>Coverage</Text>
           <View style={styles.stripRow}>
             <View style={styles.stripVenueCol} />
             {coverage.nights.map((date) => (
@@ -400,7 +401,7 @@ export default function ManagerDashboard() {
           {coverage.rows.map((r) => (
             <View key={r.venue.id} style={styles.stripRow}>
               <View style={styles.stripVenueCol}>
-                <Text style={[styles.stripVenueName, { color: colors.foreground }]} numberOfLines={1}>{r.venue.name}</Text>
+                <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
               </View>
               {r.cells.map((state, i) => (
                 <View key={i} style={styles.stripCell}>
@@ -432,10 +433,11 @@ export default function ManagerDashboard() {
             </View>
           </View>
         </View>
-        <Divider full />
+        <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
         {/* Bookings */}
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
           {groupedBookingsPreview.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
@@ -469,19 +471,21 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   section: { marginTop: 0 },
+  sectionTitle: { fontSize: 22, fontFamily: fonts.display },
+  sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 20 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   // Bookings — date-grouped rows with a status bar + stacked avatars
-  dateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 8 },
+  dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
   gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   avatarStack: { flexDirection: 'row', alignItems: 'center' },
   avatarRing: { borderRadius: 24, borderWidth: 2 },
   strip: { marginBottom: 4 },
-  stripLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 14 },
   stripRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   stripVenueCol: { width: 92, paddingRight: 8 },
-  stripVenueName: { fontSize: 15, fontWeight: '700' },
+  stripVenueName: { fontSize: 15, fontWeight: '600' },
   stripDow: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
   stripCell: { flex: 1, paddingHorizontal: 3 },
   cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
