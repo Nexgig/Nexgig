@@ -22,18 +22,18 @@ export function VenueFilterHeader() {
     [allVenues, currentUser?.id]
   );
   const selected = venues.find((v) => v.id === venueId);
-  // With a single venue there's nothing to filter — just show its name (in black). The dropdown
-  // + coral tint only make sense when the manager actually has multiple venues to pick between.
+  // With a single venue there's nothing to filter — just show its name. The dropdown only
+  // makes sense when the manager has multiple venues to pick between. Title stays black and
+  // the chevron grey regardless of selection — the venue name itself signals what's active.
   const canFilter = venues.length > 1;
   const single = venues.length === 1 ? venues[0] : undefined;
   const title = (selected ?? single)?.name ?? 'All Venues';
-  const active = !!venueId && canFilter;
 
   return (
     <>
       <Pressable style={styles.titleBtn} onPress={() => canFilter && setOpen(true)} disabled={!canFilter} hitSlop={8}>
-        <Text style={[styles.title, { color: active ? colors.primary : colors.foreground }]} numberOfLines={1}>{title}</Text>
-        {canFilter && <MaterialIcons name="expand-more" size={24} color={active ? colors.primary : colors.muted} />}
+        <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+        {canFilter && <MaterialIcons name="expand-more" size={24} color={colors.muted} />}
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
