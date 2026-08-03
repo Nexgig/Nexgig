@@ -16,7 +16,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr, isExpiredRequest, bookingVenueName } from '@/lib/utils';
+import { isPastEnd, isUpcoming, nowLocalDateTimeStr, isExpiredRequest, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -165,6 +165,9 @@ export default function ManagerDashboard() {
 
   const formatDateHeader = (dateStr: string) => {
     if (!dateStr) return '';
+    const today = todayLocalStr();
+    if (dateStr === today) return 'TODAY';
+    if (dateStr === addDaysStr(today, 1)) return 'TOMORROW';
     const d = new Date(dateStr + 'T00:00:00');
     const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
     const mon = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
