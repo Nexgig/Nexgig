@@ -446,8 +446,8 @@ const styles = StyleSheet.create({
   filterRowMark: { width: 11, height: 11, borderRadius: 5.5, marginRight: 6 },
   filterRowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
   filterCheck: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  gigVenue: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
-  gigSlot: { fontSize: 13 },
+  gigVenue: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigSlot: { fontSize: 13, fontWeight: '500' },
   statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
   statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
   // Completed Gigs section — mirrors manager dashboard styles
