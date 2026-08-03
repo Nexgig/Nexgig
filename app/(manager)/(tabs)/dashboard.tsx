@@ -345,7 +345,6 @@ export default function ManagerDashboard() {
               <View key={date}>
                 <View style={styles.dateHeader}>
                   <Text style={[styles.dateHeaderLabel, { color: colors.muted }]}>{formatDateHeader(date)}</Text>
-                  <Text style={[styles.dateHeaderCount, { color: colors.muted }]}>{gigs.length} gig{gigs.length !== 1 ? 's' : ''}</Text>
                 </View>
                 {gigs.map((g) => {
                   const names = g.djs.map((d) => d?.fullName ?? 'Unknown Artist');
