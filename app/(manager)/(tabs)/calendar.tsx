@@ -2140,28 +2140,6 @@ export default function CalendarScreen() {
                       )}
                     </View>
 
-                    {/* Preset chips */}
-                    <View style={[slotModalStyles.presetRow, { marginBottom: 8 }]}>
-                      {SLOT_PRESETS.map((preset) => (
-                        <Pressable
-                          key={preset.name}
-                          // Times only — see add-slot. Writing preset.name here leaked
-                          // "Night" onto the artist's calendar row for every bulk set.
-                          onPress={() => setBulkTemplates((prev) => prev.map((t) => t.id === tpl.id ? { ...t, startTime: preset.start, endTime: preset.end } : t))}
-                          style={({ pressed }) => [slotModalStyles.presetChip, {
-                            backgroundColor: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? colors.primary + '18' : 'transparent',
-                            borderColor: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? colors.primary : colors.border,
-                            opacity: pressed ? 0.7 : 1,
-                          }]}
-                        >
-                          <Text style={[slotModalStyles.presetChipText, {
-                            color: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? colors.primary : colors.foreground,
-                            fontWeight: (tpl.startTime === preset.start && tpl.endTime === preset.end) ? '700' : '500',
-                          }]}>{preset.name}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-
                     {/* Time row */}
                     <View style={slotModalStyles.timeRow}>
                       <View style={{ flex: 1, zIndex: bulkStartOpen === tpl.id ? 10 : 1 }}>

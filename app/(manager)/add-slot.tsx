@@ -518,28 +518,6 @@ export default function AddSlotScreen() {
           </View>
         </View>
 
-        <View style={styles.fieldBlock}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>TIME PRESETS</Text>
-          <View style={styles.presetRow}>
-            {SLOT_PRESETS.map((preset) => (
-              <Pressable
-                key={preset.name}
-                // Times only — the preset is a shortcut for start/end, not a name for the
-                // set. It used to write preset.name into slotForm.name, which is the ONLY
-                // thing that ever set a set's name (there is no name field), so every
-                // preset tap surfaced "Night" or "Sunset" on the artist's calendar row.
-                onPress={() => setSlotForm((f) => ({ ...f, startTime: preset.start, endTime: preset.end }))}
-                style={({ pressed }) => [styles.presetChip, {
-                  backgroundColor: isPresetActive(slotForm, preset) ? colors.primary + '18' : 'transparent',
-                  borderColor: isPresetActive(slotForm, preset) ? colors.primary : colors.border,
-                  opacity: pressed ? 0.7 : 1,
-                }]}
-              >
-                <Text style={[styles.presetChipText, { color: isPresetActive(slotForm, preset) ? colors.primary : colors.foreground, fontWeight: isPresetActive(slotForm, preset) ? '700' : '500' }]}>{preset.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
 
         <View style={styles.timeRow}>
           <View style={{ flex: 1 }}>
