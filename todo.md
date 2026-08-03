@@ -64,10 +64,6 @@ annoying in practice.
   'single'|'multiple'). The center "+" offers them as two separate actions. Reunify into one
   sheet with a single/multiple toggle so it's one flow. (There used to be an in-sheet toggle —
   `openMultipleSlots`/`setSlotMode` still exist in `calendar.tsx`.)
-- **Dashboard bookings: show ALL, not just ~5 rows.** The Bookings list on the manager (and
-  check artist) dashboard is capped/bounded — show every live booking (or make the cap a "see
-  all" link). File: `app/(manager)/(tabs)/dashboard.tsx` (`groupedBookingsPreview` + the bounded
-  ScrollView).
 - **Dashboard stats don't respect the venue filter.** The Confirmed/Pending/Completed StatRow
   is computed across ALL venues regardless of the selected venue (only the Bookings list is
   venue-scoped via `bookingVenueId`). Decide: scope the stats to the selected venue too, or
