@@ -2,7 +2,7 @@ import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
-import { useWindowDimensions, Animated } from 'react-native';
+import { useWindowDimensions, Animated, Modal } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -131,6 +131,7 @@ export default function ManagerDashboard() {
   // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
   // Each square is a (venue, night); the sheet shows just that venue's bookings that night.
   const [sheetTarget, setSheetTarget] = useState<{ venueId: string; name: string; date: string } | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
   const { height: winH } = useWindowDimensions();
   const panelH = winH * 0.53;
   // Slide + mount lifecycle. `renderTarget` keeps the panel mounted (and its content stable) while
@@ -392,7 +393,12 @@ export default function ManagerDashboard() {
         {/* Coverage strip — venues (down) × the next 7 nights (across). Sits where the stat
             row used to. STATUS_COLORS, not theme tokens: same statuses as the badges below. */}
         <View style={styles.strip}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 16 }]}>Overview</Text>
+          <View style={styles.overviewHead}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
+            <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
+              <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
           <View style={styles.stripRow}>
             <View style={styles.stripVenueCol} />
             {coverage.nights.map((date) => (
@@ -428,24 +434,6 @@ export default function ManagerDashboard() {
               ))}
             </View>
           ))}
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Draft</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Sent</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: colors.cancelled }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Cancelled</Text>
-            </View>
-          </View>
         </View>
         <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
@@ -543,6 +531,26 @@ export default function ManagerDashboard() {
         </Animated.View>
       )}
 
+      {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
+      <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
+        <Pressable style={styles.legendBackdrop} onPress={() => setShowLegend(false)}>
+          <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colours mean</Text>
+            {[
+              { label: 'Draft', swatch: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border } },
+              { label: 'Sent', swatch: { backgroundColor: STATUS_COLORS.pending } },
+              { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
+              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
+            ].map((row) => (
+              <View key={row.label} style={styles.legendCardRow}>
+                <View style={[styles.legendSwatch, row.swatch]} />
+                <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
     </ScreenContainer>
   );
 }
@@ -558,10 +566,14 @@ const styles = StyleSheet.create({
   section: { marginTop: 0 },
   sectionTitle: { fontSize: 22, fontWeight: '700' },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 20 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 14, marginTop: 10 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
+  overviewInfo: { padding: 2 },
   legendSwatch: { width: 14, height: 14, borderRadius: 4 },
-  legendText: { fontSize: 12 },
+  legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  legendCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, minWidth: 220, gap: 12 },
+  legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  legendCardText: { fontSize: 14 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   // Bookings — date-grouped rows with a status bar + stacked avatars
