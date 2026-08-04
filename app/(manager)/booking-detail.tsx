@@ -15,7 +15,7 @@ import { cityFromAddress } from '@/lib/places';
 import { displayStatus, bookingVenueName } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchReviews } from '@/lib/reviews';
-import type { } from '@/lib/types';
+import type { Booking } from '@/lib/types';
 
 /** Venue image at IconTile's size/radius. Derived from the venue TYPE, so it always
  *  resolves — and it falls back to the type snapshotted on the booking, since the
@@ -185,27 +185,18 @@ export default function DJBookingDetailScreen() {
 
   const slot = getSlotById(booking.slotId);
   const venue = getVenueById(booking.venueId);
-  // Artist shown to the manager. getArtistUser returns a "Former Artist"
-  // placeholder when the artist_id is null (account deleted).
-  const artistUser = getArtistUser(booking.artistId);
 
-  // Other artists booked on the SAME slot (a slot can hold a multi-artist lineup).
-  // Manager-only: lets them see/switch between everyone on this gig.
-  // Co-artists on this set. A cancelled or declined booking means that artist is no
-  // longer on it, so they must drop out of the list — otherwise a manager who
-  // cancels someone (or an artist who declines) still sees them here.
-  const coBookings = allBookings.filter(
-    (b) =>
-      b.slotId === booking.slotId &&
-      b.id !== booking.id &&
-      b.status !== 'cancelled' &&
-      b.status !== 'declined'
-  );
+  // Every booking on this slot the manager hasn't dismissed — cancelled / declined / expired
+  // INCLUDED, so they stay visible with an X to dismiss (same as the dashboard day sheet).
+  // Rendered uniformly (no primary/co split): first, second, third artist all behave the same.
+  const slotBookings = allBookings
+    .filter((b) => b.slotId === booking.slotId && !b.hiddenFromManagerCalendar)
+    .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
 
-  // Drafted artists on this slot (staged, not yet sent). Exclude anyone who already
-  // has a booking here. Shown with a "Draft" status so the manager sees who's staged.
-  const bookedArtistIds = new Set([booking, ...coBookings].map((b) => b.artistId));
-  const draftArtists = allDrafts.filter((d) => d.slotId === booking.slotId && !bookedArtistIds.has(d.artistId));
+  // Drafted artists on this slot (staged, not yet sent). Exclude anyone who already has a
+  // booking here. Shown with a "Draft" status so the manager sees who's staged.
+  const slotArtistIds = new Set(slotBookings.map((b) => b.artistId));
+  const draftArtists = allDrafts.filter((d) => d.slotId === booking.slotId && !slotArtistIds.has(d.artistId));
 
   const isManager = currentUser?.accountType === 'manager';
   const isDJ = currentUser?.accountType === 'artist';
@@ -239,10 +230,10 @@ export default function DJBookingDetailScreen() {
   // rather than a cancellation the artist has to acknowledge.
   const isRequest = booking.status === 'requested' || booking.status === 'past_confirmation';
 
-  // Per-artist cancel (X next to each status) — cancels ONE artist, leaving the rest of
-  // the set. The bottom button still cancels the whole set.
+  // Per-artist cancel (X next to a live status) — cancels ONE artist and STAYS on the screen.
+  // The row turns into a cancelled row with its own dismiss X; the rest of the set is untouched.
   const cancellableStatus = (s: string) => s === 'requested' || s === 'past_confirmation' || s === 'confirmed';
-  const cancelOneBooking = (targetId: string) => {
+  const cancelOne = (targetId: string) => {
     const target = allBookings.find((b) => b.id === targetId);
     const req = target?.status === 'requested' || target?.status === 'past_confirmation';
     Alert.alert(
@@ -259,36 +250,27 @@ export default function DJBookingDetailScreen() {
               cancellationAcknowledged: true,
               cancelledAsRequest: true,
             });
-            // Cancelling the artist this screen is keyed on: switch to a remaining
-            // co-artist, or leave if that was the last one.
-            if (targetId === booking.id) {
-              const others = coBookings.filter((b) => b.id !== targetId);
-              if (others.length > 0) router.replace(('/(manager)/booking-detail?id=' + others[0].id) as Href);
-              else router.back();
-            }
+            // Stay here — the row becomes a cancelled row with an X to dismiss.
           },
         },
       ]
     );
   };
-  /**
-   * Clearing an EXPIRED request is not a cancellation. cancelOneBooking writes
-   * `cancelled` to the DB, which realtime delivers to the artist as a cancellation
-   * notification and pulls the gig out of their calendar — wrong for a request that
-   * simply went unanswered, and confusing for the artist, who did nothing.
-   * This only hides the row from the manager; the artist's copy is untouched.
-   */
-  const dismissExpiredBooking = (targetId: string) => {
-    // No confirmation — matches the draft X on the calendar, which removes on tap. Nothing
-    // is destroyed here either: the row is hidden from this manager, not cancelled.
+  // Dismiss a cancelled / declined / expired row — hides it from the manager (and from the
+  // artist too if the artist cancelled). No confirmation, no navigation — same as the
+  // dashboard day sheet. Nothing is destroyed; the row just leaves the manager's view.
+  const dismissOne = (targetId: string) => {
     const target = allBookings.find((b) => b.id === targetId);
     hideFromManagerCalendar(targetId);
-    syncBookingStatus(targetId, (target?.status ?? 'requested') as any, { hiddenFromManagerCalendar: true });
-    if (targetId === booking.id) {
-      const others = coBookings.filter((b) => b.id !== targetId);
-      if (others.length > 0) router.replace(('/(manager)/booking-detail?id=' + others[0].id) as Href);
-      else router.back();
-    }
+    const syncFields: any = { hiddenFromManagerCalendar: true };
+    if (target?.cancelledByArtist) syncFields.hiddenFromCalendar = true;
+    syncBookingStatus(targetId, (target?.status ?? 'cancelled') as any, syncFields);
+  };
+  // The X handler for any artist row, by its real status.
+  const rowDismiss = (b: Booking): (() => void) | undefined => {
+    if (b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired') return () => dismissOne(b.id);
+    if (cancellableStatus(b.status)) return () => cancelOne(b.id);
+    return undefined;
   };
   const removeOneDraft = (artistId: string) => {
     Alert.alert('Remove Draft', 'Remove this drafted artist from the slot?', [
@@ -296,9 +278,9 @@ export default function DJBookingDetailScreen() {
       { text: 'Remove', style: 'destructive', onPress: () => removeDraftByDJ(booking.slotId, artistId) },
     ]);
   };
-  const StatusWithX = ({ status, onX }: { status: any; onX?: () => void }) => (
+  const StatusWithX = ({ b, onX }: { b: Booking; onX?: () => void }) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <StatusBadge status={displayStatus(status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
+      <StatusBadge status={displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime) as any} />
       {onX ? (
         <Pressable onPress={onX} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
           <MaterialIcons name="close" size={18} color={colors.muted} />
@@ -322,10 +304,9 @@ export default function DJBookingDetailScreen() {
             cancellationAcknowledged: true,
             cancelledAsRequest: true,
           };
-          // A set can hold multiple artists — cancel this booking AND every co-artist
-          // on the same slot, so the whole set is cancelled, not just one artist.
-          [booking, ...coBookings].forEach((b) => updateBookingStatus(b.id, 'cancelled', extra));
-          router.back();
+          // A set can hold multiple artists — cancel every live artist on the slot, so the
+          // whole set is cancelled. Stay here: each becomes a cancelled row with a dismiss X.
+          slotBookings.filter((b) => cancellableStatus(b.status)).forEach((b) => updateBookingStatus(b.id, 'cancelled', extra));
         }
       },
       ]
@@ -349,31 +330,20 @@ export default function DJBookingDetailScreen() {
           {/* Artist(s) on this booking's slot. Manager-only. */}
           {isManager && (
             <>
-              <Section label={(coBookings.length + draftArtists.length) > 0 ? 'Artists' : 'Artist'}>
-                <ListRow
-                  leading={<AvatarImage uri={artistUser?.profilePhotoUrl} avatarId={(artistUser as any)?.avatarId} seed={artistUser?.id} name={artistUser?.fullName ?? 'Former Artist'} size={44} />}
-                  title={artistUser?.fullName ?? 'Former Artist'}
-                  subtitle="Artist"
-                  onPress={artistUser?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + booking.artistId + '&name=' + encodeURIComponent(artistUser.fullName ?? '')) as Href) : undefined}
-                  trailing={<StatusWithX status={booking.status} onX={
-                    booking.status === 'expired'
-                      ? () => dismissExpiredBooking(booking.id)
-                      : cancellableStatus(booking.status) ? () => cancelOneBooking(booking.id) : undefined} />}
-                  divider
-                />
-                {coBookings.map((cb, i) => {
-                  const coArtist = getArtistUser(cb.artistId);
+              <Section label={(slotBookings.length + draftArtists.length) > 1 ? 'Artists' : 'Artist'}>
+                {slotBookings.length === 0 && draftArtists.length === 0 && (
+                  <Text style={{ color: colors.muted, fontSize: 14, paddingVertical: 6 }}>No artist on this slot.</Text>
+                )}
+                {slotBookings.map((b) => {
+                  const rArtist = getArtistUser(b.artistId);
                   return (
                     <ListRow
-                      key={cb.id}
-                      leading={<AvatarImage uri={coArtist?.profilePhotoUrl} avatarId={(coArtist as any)?.avatarId} seed={coArtist?.id} name={coArtist?.fullName ?? 'Former Artist'} size={44} />}
-                      title={coArtist?.fullName ?? 'Former Artist'}
+                      key={b.id}
+                      leading={<AvatarImage uri={rArtist?.profilePhotoUrl} avatarId={(rArtist as any)?.avatarId} seed={rArtist?.id} name={rArtist?.fullName ?? 'Former Artist'} size={44} />}
+                      title={rArtist?.fullName ?? 'Former Artist'}
                       subtitle="Artist"
-                      trailing={<StatusWithX status={cb.status} onX={
-                        cb.status === 'expired'
-                          ? () => dismissExpiredBooking(cb.id)
-                          : cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
-                      onPress={coArtist?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + cb.artistId + '&name=' + encodeURIComponent(coArtist.fullName ?? '')) as Href) : undefined}
+                      onPress={rArtist?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + b.artistId + '&name=' + encodeURIComponent(rArtist.fullName ?? '')) as Href) : undefined}
+                      trailing={<StatusWithX b={b} onX={rowDismiss(b)} />}
                       divider
                     />
                   );
@@ -386,7 +356,14 @@ export default function DJBookingDetailScreen() {
                       leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                       title={dArtist?.fullName ?? 'Artist'}
                       subtitle="Not sent yet"
-                      trailing={<StatusWithX status="draft" onX={() => removeOneDraft(d.artistId)} />}
+                      trailing={
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <StatusBadge status="draft" />
+                          <Pressable onPress={() => removeOneDraft(d.artistId)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                            <MaterialIcons name="close" size={18} color={colors.muted} />
+                          </Pressable>
+                        </View>
+                      }
                       divider
                     />
                   );
