@@ -429,7 +429,7 @@ export default function ManagerDashboard() {
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Pending</Text>
+              <Text style={[styles.legendText, { color: colors.muted }]}>Sent</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: colors.error }]} />

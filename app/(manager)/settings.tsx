@@ -360,7 +360,10 @@ export default function SettingsScreen() {
           <View style={styles.segmentRow}>
             {(['draft', 'requested', 'confirmed', 'completed'] as LineupStatusFilter[]).map((status) => {
               const active = lineupStatuses.includes(status);
-              const label = status.charAt(0).toUpperCase() + status.slice(1);
+              // Manager-facing labels: a request is one they SENT; confirmed reads "Booked".
+              const label = status === 'requested' ? 'Sent'
+                : status === 'confirmed' ? 'Booked'
+                : status.charAt(0).toUpperCase() + status.slice(1);
               return (
                 <Pressable
                   key={status}
