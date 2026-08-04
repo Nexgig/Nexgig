@@ -1,7 +1,7 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
 import { useWindowDimensions } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -472,51 +472,57 @@ export default function ManagerDashboard() {
 
       </ScrollView>
 
-      {/* Day sheet — opened by tapping an Overview square. Lists that day's bookings, scoped
-          to the active venue filter (All Venues → all; one venue → that one). */}
-      <Modal visible={!!sheetDate} transparent animationType="slide" onRequestClose={() => setSheetDate(null)}>
-        <Pressable style={styles.sheetOverlay} onPress={() => setSheetDate(null)}>
-          <Pressable style={[styles.sheetPanel, { backgroundColor: colors.background, height: winH * 0.6 }]} onPress={() => {}}>
-            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
-              {sheetDate ? new Date(sheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
-            </Text>
-            <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>
-              {bookingVenueId ? (venues.find((v) => v.id === bookingVenueId)?.name ?? 'Venue') : 'All venues'}
-            </Text>
-            <ScrollView style={styles.sheetScroll} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
-              {sheetBookings.length === 0 ? (
-                <View style={styles.sheetEmpty}>
-                  <MaterialIcons name="event-busy" size={28} color={colors.muted} />
-                  <Text style={[styles.sheetEmptyText, { color: colors.muted }]}>No bookings this day</Text>
-                </View>
-              ) : (
-                sheetBookings.map((b) => {
-                  const time = b.slot ? `${fmtTime(b.slot.startTime)}–${fmtTime(b.slot.endTime)}` : '';
-                  return (
-                    <Pressable
-                      key={b.id}
-                      style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
-                      onPress={() => { setSheetDate(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
-                    >
-                      <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
-                      <View style={styles.sheetRowInfo}>
-                        <View style={styles.gigNameRow}>
-                          <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
-                          <StatusBadge status={b.status as any} />
-                        </View>
-                        <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>
-                          {[bookingVenueName(b, b.venue?.name), time].filter(Boolean).join(' · ')}
-                        </Text>
+      {/* Day sheet — a custom in-app panel (no backdrop) so the Overview squares stay tappable:
+          tap another square to SWAP the day in place. Snaps in/out (no slide yet). Lists that
+          day's bookings, scoped to the venue filter (All Venues → all; one venue → that one). */}
+      {sheetDate && (
+        <View style={[styles.sheetPanel, { backgroundColor: colors.background, borderTopColor: colors.border, height: winH * 0.6 }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+          <View style={styles.sheetHeaderRow}>
+            <View style={styles.sheetHeaderText}>
+              <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
+                {new Date(sheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </Text>
+              <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>
+                {bookingVenueId ? (venues.find((v) => v.id === bookingVenueId)?.name ?? 'Venue') : 'All venues'}
+              </Text>
+            </View>
+            <Pressable hitSlop={10} style={styles.sheetClose} onPress={() => setSheetDate(null)}>
+              <MaterialIcons name="close" size={22} color={colors.muted} />
+            </Pressable>
+          </View>
+          <ScrollView style={styles.sheetScroll} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+            {sheetBookings.length === 0 ? (
+              <View style={styles.sheetEmpty}>
+                <MaterialIcons name="event-busy" size={28} color={colors.muted} />
+                <Text style={[styles.sheetEmptyText, { color: colors.muted }]}>No bookings this day</Text>
+              </View>
+            ) : (
+              sheetBookings.map((b) => {
+                const time = b.slot ? `${fmtTime(b.slot.startTime)}–${fmtTime(b.slot.endTime)}` : '';
+                return (
+                  <Pressable
+                    key={b.id}
+                    style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
+                    onPress={() => { setSheetDate(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
+                  >
+                    <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
+                    <View style={styles.sheetRowInfo}>
+                      <View style={styles.gigNameRow}>
+                        <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
+                        <StatusBadge status={b.status as any} />
                       </View>
-                    </Pressable>
-                  );
-                })
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+                      <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>
+                        {[bookingVenueName(b, b.venue?.name), time].filter(Boolean).join(' · ')}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })
+            )}
+          </ScrollView>
+        </View>
+      )}
 
     </ScreenContainer>
   );
@@ -561,11 +567,18 @@ const styles = StyleSheet.create({
   gigTime: { fontSize: 13, fontWeight: '500' },
   gigInfo: { flex: 1 },
   // Day sheet (Overview square tap)
-  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheetPanel: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32 },
+  sheetPanel: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50, elevation: 24,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 24,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: -4 },
+  },
   sheetHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginBottom: 14 },
+  sheetHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  sheetHeaderText: { flex: 1 },
+  sheetClose: { padding: 2 },
   sheetTitle: { fontSize: 20, fontWeight: '700' },
-  sheetSubtitle: { fontSize: 13, marginTop: 2, marginBottom: 12 },
+  sheetSubtitle: { fontSize: 13, marginTop: 2 },
   sheetScroll: { flex: 1 },
   sheetEmpty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   sheetEmptyText: { fontSize: 14 },
