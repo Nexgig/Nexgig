@@ -428,24 +428,6 @@ export default function ManagerDashboard() {
               ))}
             </View>
           ))}
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Draft</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Sent</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: colors.cancelled }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Cancelled</Text>
-            </View>
-          </View>
         </View>
         <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
@@ -574,10 +556,6 @@ const styles = StyleSheet.create({
   stripDow: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
   stripCell: { flex: 1, paddingHorizontal: 3 },
   cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 14, marginTop: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
-  legendText: { fontSize: 12 },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   gigVenue: { fontSize: 13 },
