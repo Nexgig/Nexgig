@@ -96,9 +96,9 @@ export default function ManagerDashboard() {
   const bookingVenueId = useVenueFilterStore((s) => s.venueId);
 
   // Coverage strip: manager's venues (rows) × the next 7 nights (columns). Each cell shows the
-  // strongest state among that venue's slots that night: cancelled > pending (a real request
-  // out) > booked (confirmed) > empty. Drafts DON'T count — nothing has been sent to the artist
-  // yet, so a drafted-only slot stays empty until the request is actually sent.
+  // strongest state among that venue's slots that night. "Needs you" = a slot with no booking
+  // (empty OR draft-only) — it wants the manager's action, so it outranks Sent/Booked.
+  // Priority: cancelled > needs-you > sent > booked > none.
   const coverage = useMemo(() => {
     const start = todayLocalStr();
     const nights = Array.from({ length: 7 }, (_, i) => addDaysStr(start, i));
@@ -113,18 +113,15 @@ export default function ManagerDashboard() {
       venue: v,
       cells: nights.map((date) => {
         const daySlots = slots.filter((s) => s.venueId === v.id && s.date === date);
-        let cancelled = false, confirmed = false, pending = false;
+        let cancelled = false, needsYou = false, sent = false, booked = false;
         for (const s of daySlots) {
           const bs = bySlot.get(s.id) ?? [];               // non-hidden manager bookings for this slot
+          if (bs.length === 0) { needsYou = true; continue; }   // empty or draft-only slot
           if (bs.some((b) => b.status === 'cancelled' || b.status === 'declined')) cancelled = true;
-          const active = bs.filter(
-            (b) => b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation'
-          );
-          if (active.some((b) => b.status === 'confirmed')) confirmed = true;
-          if (active.some((b) => b.status !== 'confirmed')) pending = true;
+          if (bs.some((b) => b.status === 'requested' || b.status === 'past_confirmation')) sent = true;
+          if (bs.some((b) => b.status === 'confirmed')) booked = true;
         }
-        // Priority: cancelled needs attention first, then pending, then confirmed.
-        return cancelled ? 'cancelled' : pending ? 'pending' : confirmed ? 'booked' : 'empty';
+        return cancelled ? 'cancelled' : needsYou ? 'needsYou' : sent ? 'sent' : booked ? 'booked' : 'empty';
       }),
     }));
     return { nights, rows };
@@ -413,8 +410,9 @@ export default function ManagerDashboard() {
                     style={[
                       styles.cellBox,
                       state === 'cancelled' ? { backgroundColor: colors.error }
+                        : state === 'needsYou' ? { borderWidth: 1.5, borderColor: colors.border }   // grey outline
+                        : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
                         : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
-                        : state === 'pending' ? { backgroundColor: STATUS_COLORS.pending }
                         : { backgroundColor: colors.surface },
                     ]}
                   />
@@ -424,12 +422,16 @@ export default function ManagerDashboard() {
           ))}
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
+              <View style={[styles.legendSwatch, styles.legendSwatchRing, { borderColor: colors.border }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Needs you</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
               <Text style={[styles.legendText, { color: colors.muted }]}>Sent</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: colors.error }]} />
@@ -543,9 +545,10 @@ const styles = StyleSheet.create({
   stripDow: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
   stripCell: { flex: 1, paddingHorizontal: 3 },
   cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 14, marginTop: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendSwatchRing: { borderWidth: 1.5, backgroundColor: 'transparent' },
   legendText: { fontSize: 12 },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
