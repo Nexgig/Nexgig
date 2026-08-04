@@ -115,16 +115,19 @@ export default function ManagerDashboard() {
       venue: v,
       cells: nights.map((date) => {
         const daySlots = slots.filter((s) => s.venueId === v.id && s.date === date);
-        let confirmed = false, pending = false;
+        let cancelled = false, confirmed = false, pending = false;
         for (const s of daySlots) {
-          const active = (bySlot.get(s.id) ?? []).filter(
+          const bs = bySlot.get(s.id) ?? [];               // non-hidden manager bookings for this slot
+          if (bs.some((b) => b.status === 'cancelled')) cancelled = true;
+          const active = bs.filter(
             (b) => b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation'
           );
           if (active.some((b) => b.status === 'confirmed')) confirmed = true;
           if (active.some((b) => b.status !== 'confirmed')) pending = true;
           if (active.length === 0 && draftSlotIds.has(s.id)) pending = true;
         }
-        return confirmed ? 'booked' : pending ? 'pending' : 'empty';
+        // Priority: cancelled needs attention first, then pending, then confirmed.
+        return cancelled ? 'cancelled' : pending ? 'pending' : confirmed ? 'booked' : 'empty';
       }),
     }));
     return { nights, rows };
@@ -444,7 +447,8 @@ export default function ManagerDashboard() {
                   <View
                     style={[
                       styles.cellBox,
-                      state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
+                      state === 'cancelled' ? { backgroundColor: colors.error }
+                        : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
                         : state === 'pending' ? { backgroundColor: STATUS_COLORS.pending }
                         : { backgroundColor: colors.surface },
                     ]}
@@ -461,6 +465,10 @@ export default function ManagerDashboard() {
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
               <Text style={[styles.legendText, { color: colors.muted }]}>Pending</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: colors.error }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Cancelled</Text>
             </View>
           </View>
         </View>
