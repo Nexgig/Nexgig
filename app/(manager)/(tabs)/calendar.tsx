@@ -1817,10 +1817,10 @@ export default function CalendarScreen() {
                   const daySlots = getSlotsForDate(dateStr);
                   const isToday = dateStr === todayStr;
                   const isSelected = dateStr === selectedDate;
-                  // Filled square per day, coloured by the strongest status among its slots —
-                  // matches the dashboard Overview: cancelled(red) > pending(amber) > booked(green)
-                  // > open(grey, a slot with no live booking yet) > none. Past unanswered requests
-                  // (slotDate snapshot) count as pending too.
+                  // Strongest state among the day's slots. FILLS are real bookings, RINGS are
+                  // "not a real booking yet": cancelled(brick fill) > pending(amber fill) >
+                  // booked(green fill) > drafted(amber ring) > empty(grey ring) > none.
+                  // Past unanswered requests (slotDate snapshot) count as pending too.
                   const pastPendingOnDay = allBookings.filter(
                     (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
                       (venueFilter === 'all' || b.venueId === venueFilter) &&
@@ -1830,22 +1830,28 @@ export default function CalendarScreen() {
                   const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
                   const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
                   const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
-                  const dOpen = daySlots.some((s) => getBookingsBySlot(s.id).filter((b) => b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation').length === 0);
-                  const cellColor = dCancelled ? colors.error
-                    : dPending ? STATUS_COLORS.pending
-                    : dConfirmed ? STATUS_COLORS.confirmed
-                    : dOpen ? colors.border
-                    : null;
-                  const numColor = !cellColor ? (isToday ? colors.primary : colors.foreground)
-                    : cellColor === colors.border ? colors.foreground   // dark number on light grey
-                    : '#fff';                                            // white on green/amber/red
+                  const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
+                  const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
+                  // fill = a real booking colour; ring = an outline colour (transparent inside)
+                  let fill: string | null = null;
+                  let ring: string | null = null;
+                  if (dCancelled) fill = colors.error;
+                  else if (dPending) fill = STATUS_COLORS.pending;
+                  else if (dConfirmed) fill = STATUS_COLORS.confirmed;
+                  else if (dDrafted) ring = STATUS_COLORS.pending;   // amber ring
+                  else if (dEmpty) ring = colors.border;             // grey ring
+                  const numColor = fill ? '#fff' : (isToday && !ring ? colors.primary : colors.foreground);
                   return (
                     <Pressable
                       key={day}
                       style={styles.calendarCell}
                       onPress={() => setSelectedDate(dateStr === selectedDate ? '' : dateStr)}
                     >
-                      <View style={[styles.dayCircle, cellColor ? { backgroundColor: cellColor } : null]}>
+                      <View style={[
+                        styles.dayCircle,
+                        fill ? { backgroundColor: fill } : null,
+                        ring ? { borderWidth: 1.5, borderColor: ring } : null,
+                      ]}>
                         <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                     </Pressable>
