@@ -1396,9 +1396,12 @@ export default function CalendarScreen() {
           overshootRight={false}
           onSwipeableOpen={(dir) => { if (dir === 'right') doDelete(); }}
           renderRightActions={() => (
-            <Pressable style={[styles.swipeDeleteAction, { backgroundColor: colors.error }]} onPress={doDelete}>
-              <MaterialIcons name="delete" size={22} color="#fff" />
-            </Pressable>
+            <View style={styles.swipeDeleteAction}>
+              <Pressable style={[styles.swipeDeleteBtn, { backgroundColor: colors.error }]} onPress={doDelete}>
+                <MaterialIcons name="delete" size={20} color="#fff" />
+                <Text style={styles.swipeDeleteText}>Remove</Text>
+              </Pressable>
+            </View>
           )}
         >
           {child}
@@ -2407,7 +2410,9 @@ const styles = StyleSheet.create({
   dayRowSub: { fontSize: 13 },
   dayRowTime: { fontSize: 13, fontWeight: '500' },
   dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  swipeDeleteAction: { justifyContent: 'center', alignItems: 'center', width: 72 },
+  swipeDeleteAction: { justifyContent: 'center', paddingVertical: 6, paddingLeft: 6, paddingRight: 10 },
+  swipeDeleteBtn: { flex: 1, width: 96, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  swipeDeleteText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   slotsSection: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
   slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
