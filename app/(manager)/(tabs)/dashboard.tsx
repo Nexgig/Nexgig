@@ -155,12 +155,36 @@ export default function ManagerDashboard() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetTarget]);
+  // The sheet resolves from the raw bookings (NOT dashboardBookings, which drops cancelled/declined)
+  // so cancelled rows appear here and can be dismissed. Hidden (already-dismissed) ones stay out.
   const sheetBookings = useMemo(() => {
     if (!renderTarget) return [];
-    return dashboardBookings
-      .filter((b) => (b.slot?.date ?? b.slotDate) === renderTarget.date && b.venueId === renderTarget.venueId)
+    const SHOWN = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'cancelled', 'declined', 'expired']);
+    return bookings
+      .filter((b) => b.venueId === renderTarget.venueId && !b.hiddenFromManagerCalendar && (SHOWN.has(b.status) || b.isCompleted))
+      .map((b) => {
+        const slot = slots.find((s) => s.id === b.slotId);
+        const dj = b.artistId == null
+          ? { fullName: 'Former Artist', profilePhotoUrl: undefined as string | undefined }
+          : artistUsers.find((u) => u.id === b.artistId);
+        const resolvedSlot = slot ?? (b.slotDate ? {
+          id: b.slotId, venueId: b.venueId, date: b.slotDate,
+          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
+        } : undefined);
+        return { ...b, slot: resolvedSlot, dj };
+      })
+      .filter((b) => (b.slot?.date ?? b.slotDate) === renderTarget.date)
       .sort((a, b) => (a.slot?.startTime ?? a.slotStartTime ?? '').localeCompare(b.slot?.startTime ?? b.slotStartTime ?? ''));
-  }, [renderTarget, dashboardBookings]);
+  }, [renderTarget, bookings, slots, artistUsers]);
+  // Dismiss a cancelled/declined/expired booking straight from the sheet — same effect as the
+  // calendar's X: hide it from the manager (and from the artist too if the artist cancelled).
+  const dismissSheetBooking = (b: (typeof sheetBookings)[number]) => {
+    hideFromManagerCalendar(b.id);
+    const syncFields: any = { hiddenFromManagerCalendar: true };
+    if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
+    syncBookingStatus(b.id, b.status as any, syncFields);
+  };
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -251,6 +275,7 @@ export default function ManagerDashboard() {
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
+  const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
 
@@ -523,21 +548,28 @@ export default function ManagerDashboard() {
             ) : (
               sheetBookings.map((b) => {
                 const time = b.slot ? `${fmtTime(b.slot.startTime)}–${fmtTime(b.slot.endTime)}` : '';
+                const dismissable = b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired';
                 return (
-                  <Pressable
-                    key={b.id}
-                    style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => { setSheetTarget(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
-                  >
-                    <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
-                    <View style={styles.sheetRowInfo}>
-                      <View style={styles.gigNameRow}>
-                        <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
-                        <StatusBadge status={b.status as any} />
+                  <View key={b.id} style={styles.sheetRow}>
+                    <Pressable
+                      style={({ pressed }) => [styles.sheetRowMain, { opacity: pressed ? 0.7 : 1 }]}
+                      onPress={() => { setSheetTarget(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
+                    >
+                      <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
+                      <View style={styles.sheetRowInfo}>
+                        <View style={styles.gigNameRow}>
+                          <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
+                          <StatusBadge status={b.status as any} />
+                        </View>
+                        <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
                       </View>
-                      <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                    {dismissable && (
+                      <Pressable hitSlop={8} style={styles.sheetDismiss} onPress={() => dismissSheetBooking(b)}>
+                        <MaterialIcons name="close" size={18} color={colors.muted} />
+                      </Pressable>
+                    )}
+                  </View>
                 );
               })
             )}
@@ -603,7 +635,9 @@ const styles = StyleSheet.create({
   sheetScroll: { flex: 1 },
   sheetEmpty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   sheetEmptyText: { fontSize: 14 },
-  sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  sheetRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sheetDismiss: { padding: 6, marginLeft: 8 },
   sheetRowInfo: { flex: 1 },
   sheetRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   sheetRowSub: { fontSize: 13, marginTop: 1 },
