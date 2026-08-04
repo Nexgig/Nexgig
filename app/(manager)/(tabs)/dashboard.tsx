@@ -1,8 +1,8 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions, Animated } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -134,13 +134,30 @@ export default function ManagerDashboard() {
   // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
   const [sheetDate, setSheetDate] = useState<string | null>(null);
   const { height: winH } = useWindowDimensions();
+  const panelH = winH * 0.45;
+  // Slide + mount lifecycle. `renderDate` keeps the panel mounted (and its content stable) while
+  // it slides down to close; `sheetDate` is the open target — tapping another square just changes
+  // it, so the content swaps in place with no re-animation.
+  const sheetY = useRef(new Animated.Value(panelH)).current;
+  const [renderDate, setRenderDate] = useState<string | null>(null);
+  useEffect(() => {
+    if (sheetDate) {
+      setRenderDate(sheetDate);
+      Animated.timing(sheetY, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+    } else if (renderDate) {
+      Animated.timing(sheetY, { toValue: panelH, duration: 200, useNativeDriver: true }).start(({ finished }) => {
+        if (finished) setRenderDate(null);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetDate]);
   const sheetBookings = useMemo(() => {
-    if (!sheetDate) return [];
+    if (!renderDate) return [];
     return dashboardBookings
-      .filter((b) => (b.slot?.date ?? b.slotDate) === sheetDate)
+      .filter((b) => (b.slot?.date ?? b.slotDate) === renderDate)
       .filter((b) => !bookingVenueId || b.venueId === bookingVenueId)
       .sort((a, b) => (a.slot?.startTime ?? a.slotStartTime ?? '').localeCompare(b.slot?.startTime ?? b.slotStartTime ?? ''));
-  }, [sheetDate, dashboardBookings, bookingVenueId]);
+  }, [renderDate, dashboardBookings, bookingVenueId]);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -475,13 +492,13 @@ export default function ManagerDashboard() {
       {/* Day sheet — a custom in-app panel (no backdrop) so the Overview squares stay tappable:
           tap another square to SWAP the day in place. Snaps in/out (no slide yet). Lists that
           day's bookings, scoped to the venue filter (All Venues → all; one venue → that one). */}
-      {sheetDate && (
-        <View style={[styles.sheetPanel, { backgroundColor: colors.background, borderTopColor: colors.border, height: winH * 0.6 }]}>
+      {renderDate && (
+        <Animated.View style={[styles.sheetPanel, { backgroundColor: colors.background, borderTopColor: colors.border, height: panelH, transform: [{ translateY: sheetY }] }]}>
           <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
           <View style={styles.sheetHeaderRow}>
             <View style={styles.sheetHeaderText}>
               <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
-                {new Date(sheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {new Date(renderDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
               </Text>
               <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>
                 {bookingVenueId ? (venues.find((v) => v.id === bookingVenueId)?.name ?? 'Venue') : 'All venues'}
@@ -521,7 +538,7 @@ export default function ManagerDashboard() {
               })
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       )}
 
     </ScreenContainer>
