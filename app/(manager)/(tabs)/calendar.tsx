@@ -361,7 +361,7 @@ export default function CalendarScreen() {
           } catch { /* ignore */ }
         }
         if (dcv !== null) {
-          const mapped: CalendarMode = (dcv === 'week') ? 'week' : (dcv === 'today') ? 'today' : 'month';
+          const mapped: CalendarMode = 'month';   // week/day views removed — month only
           // Always keep the toggle order in sync with the saved default
           setDefaultCalendarView(mapped);
           // Only apply the default to the active view on the very first mount
@@ -1241,6 +1241,12 @@ export default function CalendarScreen() {
     if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear((y) => y + 1); }
     else setCurrentMonth((m) => m + 1);
   };
+  const goToToday = () => {
+    const t = new Date();
+    setCurrentMonth(t.getMonth());
+    setCurrentYear(t.getFullYear());
+    setSelectedDate(todayStr);
+  };
 
   // ─── Render Helpers ───────────────────────────────────────────────────────
   // Returns true when slot can be deleted (no active/completed bookings)
@@ -1663,39 +1669,6 @@ export default function CalendarScreen() {
             </View>
           </View>
 
-          {/* Mode Toggle — ordered so the default view is always first */}
-          {(() => {
-            const allModes: { mode: CalendarMode; label: string; icon: 'calendar-month' | 'view-week' | 'today' }[] = [
-              { mode: 'month', label: 'Month', icon: 'calendar-month' },
-              { mode: 'week', label: 'Week', icon: 'view-week' },
-              { mode: 'today', label: 'Day', icon: 'today' },
-            ];
-            // Put the saved default first, keep the rest in original order
-            const ordered = [
-              ...allModes.filter((m) => m.mode === defaultCalendarView),
-              ...allModes.filter((m) => m.mode !== defaultCalendarView),
-            ];
-            return (
-              <View style={styles.viewToggleContainer}>
-                <View style={[styles.viewToggle, { backgroundColor: colors.surface }]}>
-                  {ordered.map(({ mode, label, icon }) => (
-                    <Pressable
-                      key={mode}
-                      style={[styles.toggleBtn, calendarMode === mode && [styles.toggleBtnActive, { backgroundColor: colors.background }]]}
-                      onPress={() => {
-                        setCalendarMode(mode);
-                        if (mode === 'today') { setViewedDayStr(todayStr); setCreateSlotDate(todayStr); }
-                      }}
-                    >
-                      {calendarMode === mode ? <MaterialIcons name={icon} size={15} color={colors.foreground} /> : null}
-                      <Text style={[styles.toggleBtnText, { color: calendarMode === mode ? colors.foreground : colors.muted }]}>{label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            );
-          })()}
-
           {venues.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48 }}>
               <MaterialIcons name="business" size={48} color={colors.muted} />
@@ -1824,19 +1797,19 @@ export default function CalendarScreen() {
           ) : (
             /* ═══════════════════ MONTH VIEW ═══════════════════ */
             <>
-              {/* Month Navigation — left and right sides are equal width so title stays centered */}
+              {/* Month Navigation — label + arrows on the left, Today jump on the right. */}
               <View style={styles.monthNav}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64 }}>
-                  <Pressable onPress={prevMonthNav} style={styles.monthNavBtn}>
-                    <MaterialIcons name="chevron-left" size={28} color={colors.foreground} />
-                  </Pressable>
-                </View>
-                <Text style={[styles.monthTitle, { color: colors.foreground, flex: 1, textAlign: 'center' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
-                  <Pressable onPress={nextMonthNav} style={styles.monthNavBtn}>
-                    <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
-                  </Pressable>
-                </View>
+                <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Pressable onPress={prevMonthNav} style={styles.monthNavBtn} hitSlop={6}>
+                  <MaterialIcons name="chevron-left" size={26} color={colors.foreground} />
+                </Pressable>
+                <Pressable onPress={nextMonthNav} style={styles.monthNavBtn} hitSlop={6}>
+                  <MaterialIcons name="chevron-right" size={26} color={colors.foreground} />
+                </Pressable>
+                <View style={{ flex: 1 }} />
+                <Pressable onPress={goToToday} hitSlop={8}>
+                  <Text style={[styles.todayBtn, { color: colors.primary }]}>Today</Text>
+                </Pressable>
               </View>
 
               {/* Day Labels - Monday first */}
@@ -2346,11 +2319,6 @@ const venueFilterStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
-  viewToggleContainer: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
-  viewToggle: { flexDirection: 'row', borderRadius: 12, padding: 3 },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 9, borderRadius: 10 },
-  toggleBtnActive: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
-  toggleBtnText: { fontSize: 12, fontWeight: '700' },
   // Week view
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   weekLabel: { fontSize: 15, fontWeight: '700', textAlign: 'center' },
@@ -2387,10 +2355,11 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 12, fontWeight: '600' },
   // Venue tabs
   // Month view
-  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
-  monthNavBtn: { padding: 4 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 20, paddingVertical: 12 },
+  monthNavBtn: { padding: 2 },
+  todayBtn: { fontSize: 15, fontWeight: '700' },
 
-  monthTitle: { fontSize: 17, fontWeight: '700' },
+  monthTitle: { fontSize: 20, fontWeight: '700' },
 
   // Calendar grid
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
