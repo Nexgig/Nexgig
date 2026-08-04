@@ -42,7 +42,6 @@ export default function SettingsScreen() {
   // ─── State ─────────────────────────────────────────────────────────────────
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showLineupBalance, setShowLineupBalance] = useState(true);
-  const [defaultCalendarView, setDefaultCalendarView] = useState<CalendarViewMode>('month');
   const [emailMarketing, setEmailMarketing] = useState(true);
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   // Push preferences live in Supabase, not on the device: a notification is created by the
@@ -56,20 +55,14 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const [msd, slb, dcv, em, ls] = await Promise.all([
+        const [msd, slb, em, ls] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_MONTH_START_DAY),
           AsyncStorage.getItem(STORAGE_KEY_SHOW_LINEUP_BALANCE),
-          AsyncStorage.getItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
           AsyncStorage.getItem(STORAGE_KEY_EMAIL_MARKETING),
           AsyncStorage.getItem(STORAGE_KEY_LINEUP_STATUSES),
         ]);
         if (msd !== null) setMonthStartDay(Number(msd));
         if (slb !== null) setShowLineupBalance(slb !== 'false');
-        if (dcv !== null) {
-          // Map legacy 'venue'/'all' values to new 'month'
-          const mapped = (dcv === 'week') ? 'week' : 'month';
-          setDefaultCalendarView(mapped as CalendarViewMode);
-        }
         if (em !== null) setEmailMarketing(em === 'true');
         if (ls !== null) {
           try {
@@ -93,11 +86,6 @@ export default function SettingsScreen() {
   const saveShowLineupBalance = useCallback(async (val: boolean) => {
     setShowLineupBalance(val);
     await AsyncStorage.setItem(STORAGE_KEY_SHOW_LINEUP_BALANCE, String(val));
-  }, []);
-
-  const saveDefaultCalendarView = useCallback(async (view: CalendarViewMode) => {
-    setDefaultCalendarView(view);
-    await AsyncStorage.setItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW, view);
   }, []);
 
   const saveEmailMarketing = useCallback(async (val: boolean) => {
@@ -152,7 +140,6 @@ export default function SettingsScreen() {
             ]);
             setMonthStartDay(1);
             setShowLineupBalance(true);
-            setDefaultCalendarView('month');
             setAppearance('system');
             setEmailMarketing(true);
             setLineupStatuses(LINEUP_STATUS_DEFAULT);
@@ -167,11 +154,6 @@ export default function SettingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }} />
   );
 
-  const calendarViews: { label: string; value: CalendarViewMode; icon: string }[] = [
-    { label: 'Month', value: 'month', icon: 'calendar-month' },
-    { label: 'Week', value: 'week', icon: 'view-week' },
-    { label: 'Today', value: 'today', icon: 'today' },
-  ];
 
   const appearanceModes: { label: string; value: AppearanceMode; icon: string }[] = [
     { label: 'System', value: 'system', icon: 'brightness-auto' },
@@ -252,42 +234,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ── Calendar ──────────────────────────────────────────────────────── */}
-        <Text style={[styles.sectionLabel, { color: colors.muted }]}>CALENDAR</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-
-          {/* Default View */}
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <MaterialIcons name="calendar-today" size={20} color={colors.primary} />
-              <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Default Calendar View</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>Which view opens when you tap Calendar</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.segmentRow}>
-            {calendarViews.map((v) => (
-              <Pressable
-                key={v.value}
-                style={[
-                  styles.segmentBtn,
-                  { borderColor: colors.border },
-                  defaultCalendarView === v.value && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => saveDefaultCalendarView(v.value)}
-              >
-                <Text style={[
-                  styles.segmentText,
-                  { color: defaultCalendarView === v.value ? '#fff' : colors.foreground },
-                ]}>{v.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-        </View>
-
-        {/* ── Lineup Balance ────────────────────────────────────────────────── */}
         {/* Time Format */}
         <Text style={[styles.sectionLabel, { color: colors.muted }]}>TIME FORMAT</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
