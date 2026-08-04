@@ -61,11 +61,6 @@ export function ScheduleEditor({ value, onChange }: ScheduleEditorProps) {
 
   return (
     <View>
-      <Text style={[styles.label, { color: colors.muted }]}>PROGRAMME</Text>
-      <Text style={[styles.desc, { color: colors.foreground }]}>
-        The nights this venue books artists. Open nights appear on your calendar automatically.
-      </Text>
-
       {/* Day picker — a dot marks days that already have sets. */}
       <View style={styles.days}>
         {DAY_MIN.map((d, i) => {

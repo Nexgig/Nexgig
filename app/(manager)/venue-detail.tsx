@@ -420,14 +420,8 @@ export default function VenueDetailScreen() {
             Read summary here; tap Edit to open the full editor. */}
         {isOwner && activeTab === 'schedule' && (
           <View style={styles.scheduleTab}>
-            <Text style={[styles.scheduleIntro, { color: colors.muted }]}>
-              The nights this venue books artists. Open nights appear on your calendar automatically.
-            </Text>
             {(venue.schedule ?? []).length === 0 ? (
-              <View style={[styles.scheduleEmpty, { borderColor: colors.border }]}>
-                <MaterialIcons name="event-repeat" size={30} color={colors.muted} />
-                <Text style={[styles.scheduleEmptyText, { color: colors.muted }]}>No programme yet.</Text>
-              </View>
+              <Text style={[styles.scheduleEmptyText, { color: colors.muted }]}>No Schedule yet</Text>
             ) : (
               <View style={{ gap: 10 }}>
                 {[0, 1, 2, 3, 4, 5, 6].map((d) => {
@@ -477,9 +471,7 @@ export default function VenueDetailScreen() {
 
 const styles = StyleSheet.create({
   scheduleTab: { paddingHorizontal: 20, paddingTop: 16, gap: 14 },
-  scheduleIntro: { fontSize: 14, lineHeight: 20 },
-  scheduleEmpty: { borderRadius: 14, borderWidth: 1, paddingVertical: 28, alignItems: 'center', gap: 8 },
-  scheduleEmptyText: { fontSize: 14 },
+  scheduleEmptyText: { fontSize: 15, paddingVertical: 8 },
   scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12 },
   scheduleDayLabel: { fontSize: 15, fontWeight: '700', width: 40 },
   scheduleTimes: { flex: 1, fontSize: 14, fontVariant: ['tabular-nums'] },

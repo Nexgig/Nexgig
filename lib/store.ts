@@ -941,6 +941,7 @@ export function mapVenueRow(data: any): Venue {
     rulesTemplate: data.rules_template ?? undefined,
     instagramUrl: data.instagram_url ?? undefined,
     musicLink: data.music_link ?? undefined,
+    schedule: data.schedule ?? undefined,
     color: data.color ?? '#2563EB',
     isHidden: data.is_hidden ?? false,
     isComplete: data.is_complete ?? true,
