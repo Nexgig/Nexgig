@@ -9,6 +9,7 @@ const themeColors = {
   success: { light: '#22C55E', dark: '#4ADE80' },
   warning: { light: '#D4A017', dark: '#E9C46A' },
   error: { light: '#C4432F', dark: '#C4432F' },
+  cancelled: { light: '#64748B', dark: '#8A93A0' },
   navy: { light: '#1B2D4F', dark: '#1B2D4F' },
   accent: { light: '#E2674A', dark: '#E2674A' },
   purple: { light: '#8B5CF6', dark: '#A78BFA' },

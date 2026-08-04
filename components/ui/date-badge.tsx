@@ -20,7 +20,7 @@ export const STATUS_COLORS = {
   // reusing it would make a completed gig indistinguishable from a draft. This slate is
   // clearly cooler/darker than muted, so the two never collide.
   completed: '#64748B',
-  cancelled: '#C4432F', // brick — also declined, and Block/Unavailable
+  cancelled: '#64748B', // slate — also declined, and Block/Unavailable (theme token `cancelled` has the dark variant)
 } as const;
 
 /**

@@ -6,8 +6,9 @@ import type { BookingStatus, LineupStatus, InviteStatus } from '@/lib/types';
 
 type BadgeVariant = BookingStatus | LineupStatus | InviteStatus | 'conflict' | 'available' | 'hidden' | 'active' | 'draft';
 
-/** Which theme token drives each status. `completed` is the one fixed blue (per HANDOFF). */
-type Tone = 'success' | 'warning' | 'error' | 'muted' | 'completed';
+/** Which theme token drives each status. `completed` is the one fixed blue (per HANDOFF).
+ *  `cancelled` = slate (colors.cancelled) — distinct from `error` (destructive red). */
+type Tone = 'success' | 'warning' | 'error' | 'muted' | 'completed' | 'cancelled';
 
 const BADGE_MAP: Record<string, { tone: Tone; label: string }> = {
   draft:             { tone: 'muted',     label: 'Draft' },
@@ -15,8 +16,8 @@ const BADGE_MAP: Record<string, { tone: Tone; label: string }> = {
   confirmed:         { tone: 'success',   label: 'Booked' },
   completed:         { tone: 'completed', label: 'Completed' },
   past_confirmation: { tone: 'warning',   label: 'Pending' },
-  declined:          { tone: 'error',     label: 'Declined' },
-  cancelled:         { tone: 'error',     label: 'Cancelled' },
+  declined:          { tone: 'cancelled', label: 'Declined' },
+  cancelled:         { tone: 'cancelled', label: 'Cancelled' },
   pending:           { tone: 'warning',   label: 'Pending' },
   active:            { tone: 'success',   label: 'Active' },
   removed:           { tone: 'muted',     label: 'Removed' },
@@ -58,6 +59,7 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
     entry.tone === 'success' ? colors.success :
     entry.tone === 'warning' ? STATUS_COLORS.pending :
     entry.tone === 'error' ? colors.error :
+    entry.tone === 'cancelled' ? colors.cancelled :
     entry.tone === 'completed' ? STATUS_COLORS.completed :
     colors.muted;
 

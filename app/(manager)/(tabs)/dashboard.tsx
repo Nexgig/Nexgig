@@ -417,7 +417,7 @@ export default function ManagerDashboard() {
                   <View
                     style={[
                       styles.cellBox,
-                      state === 'cancelled' ? { backgroundColor: colors.error }
+                      state === 'cancelled' ? { backgroundColor: colors.cancelled }
                         : state === 'needsYou' ? { borderWidth: 1.5, borderColor: colors.border }   // grey outline
                         : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
                         : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
@@ -442,7 +442,7 @@ export default function ManagerDashboard() {
               <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: colors.error }]} />
+              <View style={[styles.legendSwatch, { backgroundColor: colors.cancelled }]} />
               <Text style={[styles.legendText, { color: colors.muted }]}>Cancelled</Text>
             </View>
           </View>

@@ -1862,7 +1862,7 @@ export default function CalendarScreen() {
                   // fill = a real booking colour; ring = an outline colour (transparent inside)
                   let fill: string | null = null;
                   let ring: string | null = null;
-                  if (dCancelled) fill = colors.error;
+                  if (dCancelled) fill = colors.cancelled;
                   else if (dPending) fill = STATUS_COLORS.pending;
                   else if (dConfirmed) fill = STATUS_COLORS.confirmed;
                   else if (dDrafted || dEmpty) ring = colors.border;   // grey ring — empty OR drafted

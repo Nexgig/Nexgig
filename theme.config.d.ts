@@ -8,6 +8,7 @@ export const themeColors: {
   success: { light: string; dark: string };
   warning: { light: string; dark: string };
   error: { light: string; dark: string };
+  cancelled: { light: string; dark: string };
   navy: { light: string; dark: string };
   accent: { light: string; dark: string };
   purple: { light: string; dark: string };
