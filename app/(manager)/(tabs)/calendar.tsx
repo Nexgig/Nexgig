@@ -1524,7 +1524,7 @@ export default function CalendarScreen() {
                     <Pressable
                       key={day}
                       style={styles.calendarCell}
-                      onPress={() => setSelectedDate(dateStr === selectedDate ? '' : dateStr)}
+                      onPress={() => setSelectedDate(dateStr)}
                     >
                       <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null]}>
                         <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
@@ -1553,10 +1553,7 @@ export default function CalendarScreen() {
                 </View>
 
                 {selectedSlots.length === 0 ? (
-                  <View style={[styles.noSlotsCard, { borderColor: colors.border }]}>
-                    <MaterialIcons name="event-busy" size={32} color={colors.muted} />
-                    <Text style={[styles.noSlotsText, { color: colors.muted }]}>No sets for this day</Text>
-                  </View>
+                  <Text style={[styles.noSlotsLine, { color: colors.muted }]}>No slots on this night.</Text>
                 ) : (
                   selectedSlots.flatMap(renderDaySlot)
                 )}
@@ -2016,6 +2013,7 @@ const styles = StyleSheet.create({
   slotsSection: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 20 },
   noSlotsCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
   noSlotsText: { fontSize: 14 },
+  noSlotsLine: { fontSize: 16, paddingTop: 4, paddingBottom: 4 },
   // Slot cards
   // Slot action menu
   // Modal
