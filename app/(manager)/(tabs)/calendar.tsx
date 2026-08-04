@@ -410,22 +410,6 @@ export default function CalendarScreen() {
     return `${MONTHS[start.getMonth()].slice(0, 3)} ${start.getDate()} – ${MONTHS[end.getMonth()].slice(0, 3)} ${end.getDate()}, ${end.getFullYear()}`;
   }, [weekDays]);
 
-  const prevWeek = () => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d); };
-  const nextWeek = () => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d); };
-  const goToThisWeek = () => setWeekStart(getWeekStart(today));
-
-  // Day navigation
-  const prevDay = () => {
-    const d = new Date(viewedDayStr + 'T00:00:00');
-    d.setDate(d.getDate() - 1);
-    setViewedDayStr(formatDateStr(d));
-  };
-  const nextDay = () => {
-    const d = new Date(viewedDayStr + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    setViewedDayStr(formatDateStr(d));
-  };
-
   const getSlotsForDateAll = (dateStr: string) => {
     const base = venueFilter !== 'all'
       ? allManagerSlots.filter((s) => s.venueId === venueFilter)
@@ -1275,110 +1259,6 @@ export default function CalendarScreen() {
     </Pressable>
   );
 
-  const renderCompactSlot = (slot: Slot, showVenue: boolean) => {
-    const slotBookings = getBookingsBySlot(slot.id);
-    const slotDrafts = getDraftsBySlot(slot.id).filter(
-      (d) => !slotBookings.find((b) => b.artistId === d.artistId)
-    );
-    const hasAnyAssignment = slotBookings.length > 0 || slotDrafts.length > 0;
-    const venue = getVenueById(slot.venueId);
-    const venueColor = getVenueColor(slot.venueId);
-
-    const cardContent = (
-      <View style={[styles.slotCard, { borderColor: colors.border, flex: 1 }]}>
-        {/* Slot header — venue name, time, + assign button */}
-        <View style={styles.slotHeaderRow}>
-          <Pressable
-            style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => {
-              // M5: every set tap opens booking-detail. Empty set -> slotId (slot-only view).
-              const firstBooking = getBookingsBySlot(slot.id)[0];
-              router.push((firstBooking
-                ? '/(manager)/booking-detail?id=' + firstBooking.id
-                : '/(manager)/booking-detail?slotId=' + slot.id) as Href);
-            }}
-          >
-            <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
-            <View style={styles.slotInfo}>
-              <Text style={[styles.slotName, { color: colors.foreground }]} numberOfLines={1}>{venue?.name ?? 'Unknown Venue'}</Text>
-              <Text style={[styles.slotTime, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
-            </View>
-          </Pressable>
-          {renderSlotActionButton(slot)}
-        </View>
-
-          {/* Booking rows */}
-          {slotBookings.map((booking) => {
-            const djUser = getArtistUser(booking.artistId);
-            if (!djUser) return null;
-            const isDeclined = booking.status === 'declined';
-            const isCancelled = booking.status === 'cancelled';
-            // Expired: nobody answered before the gig ended, so it can be cleared away
-            // like a declined one. Clearing hides the row; it does not touch the slot.
-            const isExpiredReq = booking.status === 'expired';
-            return (
-              <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
-                <Pressable
-                  style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
-                >
-                  <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
-                  <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                  <StatusBadge status={displayStatus(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
-                </Pressable>
-                {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
-                {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
-                {/* × for declined/cancelled/expired — hides from manager; if artist-cancelled, also hides from artist */}
-                {(isDeclined || isCancelled || isExpiredReq) && (
-                  <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={styles.removeDJBtn}
-                    onPress={() => {
-                      hideFromManagerCalendar(booking.id);
-                      const syncFields: any = { hiddenFromManagerCalendar: true };
-                      if (booking.cancelledByArtist) syncFields.hiddenFromCalendar = true;
-                      syncBookingStatus(booking.id, booking.status as any, syncFields);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
-
-          {/* Draft rows */}
-          {slotDrafts.map((draft) => {
-            const djUser = getArtistUser(draft.artistId);
-            if (!djUser) return null;
-            return (
-              <View key={draft.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
-                <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
-                <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                <StatusBadge status="draft" />
-                {/* Per-draft send removed — use the set-level send button. */}
-                <Pressable
-                  hitSlop={8}
-                  style={[styles.removeDJBtn]}
-                  onPress={() => removeDraftByDJ(slot.id, draft.artistId)}
-                >
-                  <MaterialIcons name="close" size={14} color={colors.muted} />
-                </Pressable>
-              </View>
-            );
-          })}
-
-        {renderAssignRow(slot)}
-      </View>
-    );
-
-    return (
-      <View key={slot.id} style={styles.slotCardRow}>
-        {cardContent}
-      </View>
-    );
-  };
-
   // Month-view day list: dashboard-style rows. A slot with bookings shows one row per artist
   // (avatar + status pill + venue + time -> booking-detail); a slot with none shows a dashed
   // "Needs artist" row -> Add Artist picker.
@@ -1464,110 +1344,6 @@ export default function CalendarScreen() {
           dayRow(getArtistUser(d.artistId), <StatusBadge status="draft" />,
             () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)))),
     ];
-  };
-
-  const renderSlotCard = (slot: Slot) => {
-    const slotBookings = getBookingsBySlot(slot.id);
-    const slotDrafts = getDraftsBySlot(slot.id).filter(
-      (d) => !slotBookings.find((b) => b.artistId === d.artistId)
-    );
-    const hasAnyAssignment = slotBookings.length > 0 || slotDrafts.length > 0;
-    const venue = getVenueById(slot.venueId);
-    const venueColor = getVenueColor(slot.venueId);
-
-    const slotCardContent = (
-      <View style={[styles.slotCard, { borderColor: colors.border, flex: 1 }]}>
-        {/* Slot header row */}
-        <View style={styles.slotHeaderRow}>
-          <Pressable
-            style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => {
-              // M5: every set tap opens booking-detail. Empty set -> slotId (slot-only view).
-              const firstBooking = getBookingsBySlot(slot.id)[0];
-              router.push((firstBooking
-                ? '/(manager)/booking-detail?id=' + firstBooking.id
-                : '/(manager)/booking-detail?slotId=' + slot.id) as Href);
-            }}
-          >
-            <View style={[styles.slotColorBar, { backgroundColor: venueColor }]} />
-            <View style={styles.slotInfo}>
-              <Text style={[styles.slotName, { color: colors.foreground }]}>{venue?.name ?? 'Unknown Venue'}</Text>
-              <Text style={[styles.slotTime, { color: colors.muted }]}>{fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}</Text>
-            </View>
-          </Pressable>
-          {renderSlotActionButton(slot)}
-        </View>
-
-          {/* Booking rows */}
-          {slotBookings.map((booking) => {
-            const djUser = getArtistUser(booking.artistId);
-            if (!djUser) return null;
-            const isDeclined = booking.status === 'declined';
-            const isCancelled = booking.status === 'cancelled';
-            // Expired: nobody answered before the gig ended, so it can be cleared away
-            // like a declined one. Clearing hides the row; it does not touch the slot.
-            const isExpiredReq = booking.status === 'expired';
-            return (
-              <View key={booking.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
-                <Pressable
-                  style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => router.push(('/(manager)/booking-detail?id=' + booking.id) as Href)}
-                >
-                  <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
-                  <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                  <StatusBadge status={displayStatus(booking.status, booking.createdAt, booking.slotDate, booking.slotStartTime, booking.slotEndTime) as any} />
-                </Pressable>
-                {/* Cancel X removed (M3) — cancel a request/booking from booking-detail. */}
-                {/* Cancel X removed (M3) — cancel a confirmed booking from booking-detail. */}
-                {/* × for declined/cancelled/expired — hides from manager; if artist-cancelled, also hides from artist */}
-                {(isDeclined || isCancelled || isExpiredReq) && (
-                  <TouchableOpacity
-                    activeOpacity={0.6}
-                    style={styles.removeDJBtn}
-                    onPress={() => {
-                      hideFromManagerCalendar(booking.id);
-                      const syncFields: any = { hiddenFromManagerCalendar: true };
-                      if (booking.cancelledByArtist) syncFields.hiddenFromCalendar = true;
-                      syncBookingStatus(booking.id, booking.status as any, syncFields);
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
-
-          {/* Draft rows */}
-          {slotDrafts.map((draft) => {
-            const djUser = getArtistUser(draft.artistId);
-            if (!djUser) return null;
-            return (
-              <View key={draft.id} style={[styles.djAssignmentRow, { borderTopColor: colors.border }]}>
-                <AvatarImage uri={djUser.profilePhotoUrl} name={djUser.fullName} size={22} />
-                <Text style={[styles.djAssignmentName, { color: colors.foreground }]} numberOfLines={1}>{djUser.fullName}</Text>
-                <StatusBadge status="draft" />
-                {/* Per-draft send removed — use the set-level send button. */}
-                <Pressable
-                  style={styles.removeDJBtn}
-                  onPress={() => removeDraftByDJ(slot.id, draft.artistId)}
-                  hitSlop={8}
-                >
-                  <MaterialIcons name="close" size={14} color={colors.muted} />
-                </Pressable>
-              </View>
-            );
-          })}
-
-        {renderAssignRow(slot)}
-      </View>
-    );
-
-    return (
-      <View key={slot.id} style={styles.slotCardRow}>
-        {slotCardContent}
-      </View>
-    );
   };
 
   // ─── Lineup Balance Panel ──────────────────────────────────────────────────────────────────────────
@@ -2197,50 +1973,13 @@ export default function CalendarScreen() {
 }
 
 const venueFilterStyles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  sheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 8, paddingHorizontal: 6 },
-  title: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 6, opacity: 0.6 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  rowLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
 });
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
-  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   // Week view
-  weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
-  weekLabel: { fontSize: 15, fontWeight: '700', textAlign: 'center' },
-  weekDaysContainer: { paddingHorizontal: 20 },
-  weekDaySection: { borderBottomWidth: 0.5, paddingVertical: 12 },
-  weekDayHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  weekDayBadge: { width: 44, alignItems: 'center', borderRadius: 10, paddingVertical: 4 },
-  weekDayShort: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-  weekDayNum: { fontSize: 16, fontFamily: fonts.bodySemibold },
-  weekDayMeta: { flex: 1 },
-  weekDayFull: { fontSize: 14, fontWeight: '600' },
-  weekDaySlotCount: { fontSize: 11, marginTop: 1 },
-  weekAddBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  weekSlotsContainer: { paddingLeft: 54, paddingRight: 0, gap: 6 },
-  weekSlotRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 2 },
   // Weekly/Today slot card — mirrors monthly slotCard exactly
-  weekSlotCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  weekSlotTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  weekSlotName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  weekStatusDot: { width: 8, height: 8, borderRadius: 4 },
-  weekSlotTime: { fontSize: 13 },
-  weekDjRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 30, paddingRight: 14, paddingVertical: 8, borderTopWidth: 0.5 },
-  weekDjName: { fontSize: 13, fontWeight: '600', flex: 1 },
-  weekUnassigned: { fontSize: 12, fontStyle: 'italic', marginTop: 3 },
-  weekVenueTag: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, marginTop: 4, alignSelf: 'flex-start' },
-  weekVenueText: { fontSize: 10, fontWeight: '700' },
-  weekEmptyDay: { paddingLeft: 54, paddingVertical: 4 },
-  weekEmptyText: { fontSize: 12, fontStyle: 'italic' },
   // Legend
-  legendScroll: { marginTop: 6, marginBottom: 4 },
-  legendContent: { paddingHorizontal: 20, gap: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 12, fontWeight: '600' },
   // Venue tabs
   // Month view
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 20, paddingVertical: 12 },
@@ -2271,91 +2010,23 @@ const styles = StyleSheet.create({
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
   swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   slotsSection: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
-  slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
-  slotHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconActionBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  addSetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   noSlotsCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
   noSlotsText: { fontSize: 14 },
-  venueGroup: { marginBottom: 16 },
-  venueGroupHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  venueGroupDot: { width: 10, height: 10, borderRadius: 5 },
-  venueGroupName: { fontSize: 15, fontWeight: '700', flex: 1 },
-  venueGroupCount: { fontSize: 12 },
   // Slot cards
-  slotCardRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  slotCard: { flexDirection: 'column', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  slotLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  slotColorBar: { width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 40, marginRight: 10 },
-  slotInfo: { flex: 1 },
-  slotName: { fontSize: 14, fontWeight: '700', marginBottom: 1 },
-  slotTime: { fontSize: 12 },
-  djRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
-  djName: { fontSize: 12, fontWeight: '600' },
-  venueTag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 5, alignSelf: 'flex-start' },
-  venueTagText: { fontSize: 11, fontWeight: '600' },
-  slotRight: {},
-  assignBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7 },
-  assignBtnText: { fontSize: 12, fontWeight: '700' },
   // Slot action menu
-  slotActionsWrap: { position: 'relative' },
-  slotMenuBtn: { padding: 6, marginTop: 6 },
-  slotMenuDropdown: { position: 'absolute', top: 32, right: 0, borderWidth: 1, borderRadius: 10, paddingVertical: 4, minWidth: 120, zIndex: 100, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5 },
-  slotMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10 },
-  slotMenuItemText: { fontSize: 14, fontWeight: '600' },
-  slotMenuDivider: { height: 1, marginHorizontal: 10 },
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, maxHeight: '90%' },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 4 },
-  modalSubtitle: { fontSize: 14, marginBottom: 20 },
-  modalForm: { gap: 16, marginBottom: 24 },
-  fieldGroup: { gap: 6 },
-  fieldLabel: { fontSize: 13, fontWeight: '600' },
-  fieldInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  timeRow: { flexDirection: 'row', gap: 12 },
-  modalActions: { flexDirection: 'row', gap: 12 },
-  modalCancelBtn: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  modalCancelText: { fontSize: 15, fontWeight: '600' },
-  modalConfirmBtn: { flex: 1, backgroundColor: '#E2674A', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  modalConfirmText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  sendAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
-  sendAllBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   // Sticky Send All bottom bar
   // Send action sheet
-  sendSheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sendSheetCard: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: 0.5, borderLeftWidth: 0.5, borderRightWidth: 0.5, paddingBottom: 32, overflow: 'hidden' },
-  sendSheetHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 },
-  sendSheetTitle: { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-  sendSheetSubtitle: { fontSize: 13, textAlign: 'center', marginBottom: 16 },
-  sendSheetRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 14 },
-  sendSheetRowIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  sendSheetRowBody: { flex: 1 },
-  sendSheetRowName: { fontSize: 15, fontWeight: '600' },
-  sendSheetRowCount: { fontSize: 12, marginTop: 1 },
-  sendSheetDivider: { height: 0.5, marginHorizontal: 20, marginVertical: 4 },
-  sendSheetCancel: { marginHorizontal: 20, marginTop: 12, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  sendSheetCancelText: { fontSize: 15, fontWeight: '600' },
   // Header Send button
   headerSendBtn: { padding: 2, position: 'relative' as const },
-  headerSendBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' as const },
   headerSendBadge: { position: 'absolute' as const, top: -4, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#FF6B35', alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' },
   headerSendBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' as const },
   // Send FAB (kept for style reference, no longer rendered)
-  sendFabContainer: { position: 'absolute', bottom: 24, right: 20, alignItems: 'center', justifyContent: 'center' },
-  sendFab: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 8 },
-  sendFabBadge: { position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#FF6B35', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' },
-  sendFabBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   // Lineup Balance panel
   lineupPanel: { marginHorizontal: 20, marginTop: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   lineupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   lineupHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lineupTitle: { fontSize: 14, fontWeight: '700' },
-  lineupBadge: { backgroundColor: '#0a7ea420', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  lineupBadgeText: { fontSize: 11, fontWeight: '700', color: '#0a7ea4' },
   lineupBody: { paddingHorizontal: 16, paddingBottom: 14, gap: 10 },
   lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineupRowInfo: { flex: 1, gap: 4 },
@@ -2366,33 +2037,14 @@ const styles = StyleSheet.create({
   lineupBarFill: { height: 4, borderRadius: 2 },
   lineupEmptyText: { fontSize: 13, fontStyle: 'italic', textAlign: 'center', paddingVertical: 6 },
   // Month-start-day picker
-  monthStartPicker: { borderTopWidth: 1, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, gap: 8 },
-  monthStartLabel: { fontSize: 12, fontWeight: '600' },
-  monthStartDays: { flexDirection: 'row', gap: 6, paddingVertical: 2 },
-  monthStartDayBtn: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  monthStartDayText: { fontSize: 12, fontWeight: '700' },
   // Dot legend
-  slotHeaderRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
-  djAssignmentRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
-  djAssignmentName: { flex: 1, fontSize: 13, fontWeight: '600' },
-  removeDJBtn: { padding: 8, margin: -4 },
   assignRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 5, marginTop: 2, borderTopWidth: StyleSheet.hairlineWidth },
   assignRowText: { fontSize: 13, fontWeight: '600' },
-  sendDraftBtn: { padding: 4 },
-  addAnotherDJBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 28, paddingRight: 12, paddingVertical: 7, borderTopWidth: 0.5 },
-  addAnotherDJText: { fontSize: 12 },
-  slotDeleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 9, borderTopWidth: 0.5 },
-  slotDeleteBtnText: { fontSize: 13, fontWeight: '600' },
 });
 
 // ─── Add / Edit Slot sheet styles ────────────────────────────────────────────
 const slotModalStyles = StyleSheet.create({
   // Wrapper — fills screen with dim overlay, positions sheet above keyboard zone
-  kavWrapper: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
   // The white/dark card
   sheet: {
     borderTopLeftRadius: 0,
@@ -2414,27 +2066,6 @@ const slotModalStyles = StyleSheet.create({
     borderRadius: 2,
   },
   // Single / Multiple segmented toggle (mirrors the calendar Month/Week/Day view toggle)
-  modeToggleWrap: {
-    paddingTop: 2,
-    paddingBottom: 12,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 3,
-  },
-  modeToggleBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  modeToggleText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
   // Header: title + close button
   header: {
     flexDirection: 'row',
@@ -2449,10 +2080,6 @@ const slotModalStyles = StyleSheet.create({
     letterSpacing: -0.4,
     marginBottom: 1,
   },
-  sheetDate: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
   closeBtn: {
     width: 28,
     height: 28,
@@ -2462,9 +2089,6 @@ const slotModalStyles = StyleSheet.create({
     marginTop: 2,
   },
   // Each form section
-  fieldBlock: {
-    marginBottom: 12,
-  },
   fieldLabel: {
     fontSize: 10,
     fontWeight: '700',
@@ -2488,45 +2112,13 @@ const slotModalStyles = StyleSheet.create({
     paddingVertical: 7,
     minHeight: 34,
   },
-  venueDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
   venuePillText: {
     fontSize: 12,
     fontWeight: '600',
     includeFontPadding: false,
   },
   // Preset name chips
-  presetRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 8,
-    flexWrap: 'wrap',
-  },
-  presetChip: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    minHeight: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  presetChipText: {
-    fontSize: 12,
-    includeFontPadding: false,
-  },
   // Text input
-  textInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    minHeight: 42,
-  },
   // Time row
   timeRow: {
     flexDirection: 'row',
@@ -2589,22 +2181,4 @@ const slotModalStyles = StyleSheet.create({
     fontSize: 14,
   },
   // CTA
-  ctaRow: {
-    paddingTop: 10,
-  },
-  ctaBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 14,
-    paddingVertical: 14,
-    minHeight: 48,
-  },
-  ctaBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
 });
