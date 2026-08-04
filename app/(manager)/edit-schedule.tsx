@@ -72,8 +72,8 @@ export default function EditSchedule() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{venue.name}</Text>
-        <Pressable onPress={handleSave} disabled={saving || !dirty} hitSlop={8} style={styles.saveBtn}>
-          <Text style={[styles.saveText, { color: colors.primary, opacity: saving || !dirty ? 0.4 : 1 }]}>
+        <Pressable onPress={handleSave} disabled={saving} hitSlop={8} style={styles.saveBtn}>
+          <Text style={[styles.saveText, { color: colors.primary, opacity: saving ? 0.4 : 1 }]}>
             {saving ? 'Saving…' : 'Save'}
           </Text>
         </Pressable>
