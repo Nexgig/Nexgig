@@ -27,12 +27,13 @@ export default function ManagerTabsLayout() {
     const today = new Date().toISOString().slice(0, 10);
     const date = pathname?.includes('calendar') ? (calendarSelectedDate || today) : today;
     const venueQ = venueFilterId ? '&venueId=' + venueFilterId : '';
+    // "Add Multiple Slots" (bulk) was removed — recurring nights now come from each venue's
+    // weekly programme (the Schedule tab). One-off nights still use Add Slot.
     ActionSheetIOS.showActionSheetWithOptions(
-      { options: ['Add Slot', 'Add Multiple Slots', 'Create Venue', 'Cancel'], cancelButtonIndex: 3 },
+      { options: ['Add Slot', 'Create Venue', 'Cancel'], cancelButtonIndex: 2 },
       (i) => {
         if (i === 0) router.push(('/(manager)/add-slot?date=' + date + venueQ) as Href);
-        else if (i === 1) { useCalendarBulkStore.getState().requestBulk(); router.navigate('/(manager)/(tabs)/calendar' as Href); }
-        else if (i === 2) router.push('/(manager)/create-venue' as Href);
+        else if (i === 1) router.push('/(manager)/create-venue' as Href);
       }
     );
   };

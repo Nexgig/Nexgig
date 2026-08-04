@@ -21,6 +21,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
+import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { persistGigRequestBooking } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -507,6 +508,16 @@ export default function CalendarScreen() {
     };
   }, [currentMonth, currentYear]);
 
+  // Auto-fill the visible month from each venue's weekly programme (materialize-on-view).
+  // Idempotent + only inserts missing nights, so it's safe to run on every month change.
+  const scheduleSig = useMemo(
+    () => JSON.stringify(venues.map((v) => [v.id, v.schedule ?? []])),
+    [venues]
+  );
+  useEffect(() => {
+    ensureScheduleSlots(standardMonthBounds.start, standardMonthBounds.end);
+  }, [standardMonthBounds.start, standardMonthBounds.end, scheduleSig]);
+
   // Custom period bounds — respects monthStartDay. Used ONLY for Lineup Balance.
   const monthPeriodBounds = useMemo(() => {
     // If monthStartDay is 1, it's the standard calendar month
@@ -779,7 +790,7 @@ export default function CalendarScreen() {
     // Pre-select: explicit venueId arg > active venue filter > first venue
     const preselect = venueId ?? (venueFilter !== 'all' ? venueFilter : venues[0]?.id ?? '');
     setCreateSlotVenueId(preselect);
-    setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
+    setSlotForm({ name: '', startTime: '21:00', endTime: '01:00' });
     setStartTimeOpen(false);
     setEndTimeOpen(false);
     // Initialize the "Multiple Sets" (bulk) fields too, so the in-sheet toggle is ready.
@@ -873,7 +884,7 @@ export default function CalendarScreen() {
     updateSlot(editingSlot.id, { name: slotForm.name, startTime: slotForm.startTime, endTime: slotForm.endTime });
     setShowSlotModal(false);
     setEditingSlot(null);
-    setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
+    setSlotForm({ name: '', startTime: '21:00', endTime: '01:00' });
     setCreateSlotVenueId('');
   } else {
     const targetDate = (calendarMode === 'week' || calendarMode === 'today') ? createSlotDate : selectedDate;
@@ -904,7 +915,7 @@ export default function CalendarScreen() {
     addSlot(newSlot);
     setShowSlotModal(false);
     setEditingSlot(null);
-    setSlotForm({ name: '', startTime: '20:00', endTime: '00:00' });
+    setSlotForm({ name: '', startTime: '21:00', endTime: '01:00' });
     setCreateSlotVenueId('');
 
     if (assignNow || isPastStart(targetDate, slotForm.startTime)) {

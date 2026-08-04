@@ -33,5 +33,5 @@ export function newSetId(): string {
 }
 
 export function makeSetForDay(day: number): VenueScheduleSet {
-  return { id: newSetId(), day, startTime: '20:00', endTime: '00:00' };
+  return { id: newSetId(), day, startTime: '21:00', endTime: '01:00' };
 }

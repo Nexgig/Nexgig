@@ -10,6 +10,8 @@ import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe, VenueSchedule } from '@/lib/types';
 import { ScheduleEditor } from '@/components/schedule-editor';
+import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
+import { todayLocalStr, addDaysStr } from '@/lib/utils';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 
@@ -264,6 +266,13 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     updatedAt: new Date().toISOString(),
   };
   addVenue(newVenue);
+
+  // Fill the calendar from the new venue's programme for a horizon (materialize-on-view
+  // handles months beyond this when they're opened).
+  if (newVenue.schedule && newVenue.schedule.length > 0) {
+    const t = todayLocalStr();
+    ensureScheduleSlots(t, addDaysStr(t, 60));
+  }
 
   // Assign all existing lineup artists to the new venue
   const activeLineup = globalLineup.filter(

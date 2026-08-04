@@ -7,6 +7,8 @@ import { useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { ScheduleEditor } from '@/components/schedule-editor';
+import { ensureScheduleSlots, reconcileScheduleSlots } from '@/lib/venue-schedule-sync';
+import { todayLocalStr, addDaysStr } from '@/lib/utils';
 import type { VenueSchedule } from '@/lib/types';
 
 export default function EditSchedule() {
@@ -49,11 +51,17 @@ export default function EditSchedule() {
       .from('venues')
       .update({ schedule, updated_at: new Date().toISOString() })
       .eq('id', venue.id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       Alert.alert('Could not save', 'Please try again.');
       return;
     }
+    // Drop empty future nights that no longer match, then fill the new ones for a horizon
+    // so the change shows on the calendar immediately (never touches booked nights).
+    await reconcileScheduleSlots(venue.id);
+    const today = todayLocalStr();
+    await ensureScheduleSlots(today, addDaysStr(today, 60));
+    setSaving(false);
     router.back();
   };
 

@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { useFormatTime } from '@/lib/conflict-detection';
 import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
+import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -38,6 +39,14 @@ export default function ManagerDashboard() {
     () => allVenues.filter((v) => v.managerId === currentUser?.id && !v.isHidden),
     [allVenues, currentUser?.id]
   );
+
+  // Fill the next few weeks from each venue's programme so the Overview coverage strip
+  // reflects it (materialize-on-view; idempotent). The calendar fills whole months.
+  const scheduleSig = useMemo(() => JSON.stringify(venues.map((v) => [v.id, v.schedule ?? []])), [venues]);
+  useEffect(() => {
+    const today = todayLocalStr();
+    ensureScheduleSlots(today, addDaysStr(today, 20));
+  }, [scheduleSig]);
 
   const bookings = useMemo(
     () => allBookings.filter((b) => b.managerId === currentUser?.id),

@@ -76,7 +76,7 @@ export default function AddSlotScreen() {
   const [targetDate, setTargetDate] = useState(date ?? new Date().toISOString().slice(0, 10));
 
   const [createSlotVenueId, setCreateSlotVenueId] = useState<string>(venueId ?? venues[0]?.id ?? '');
-  const [slotForm, setSlotForm] = useState({ name: '', startTime: '20:00', endTime: '00:00' });
+  const [slotForm, setSlotForm] = useState({ name: '', startTime: '21:00', endTime: '01:00' });
   const [dateOpen, setDateOpen] = useState(false);
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
