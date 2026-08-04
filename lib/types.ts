@@ -181,6 +181,8 @@ export interface Venue {
   audienceType?: AudienceType[];
   subVibe?: SubVibe[];
   billing?: VenueBilling;
+  /** Weekly programme — recurring set templates the calendar auto-fills forever. */
+  schedule?: VenueSchedule;
   color: string; // hex color chosen by manager
   isHidden: boolean;
   isComplete: boolean;
@@ -229,6 +231,22 @@ export interface VenueAssignment {
   status: 'active' | 'removed';
 }
 
+// ─── Venue Schedule (weekly programme) ────────────────────────────────────────
+
+/** One recurring set in a venue's weekly programme. `days` are Monday-first indices
+ *  (0=Mon … 6=Sun); a weekday may appear in several sets (e.g. an early + a late set on
+ *  the same night). The calendar auto-fills a real Slot for every future date matching a
+ *  set's days/time — see lib/venue-schedule.ts. */
+export interface VenueScheduleSet {
+  id: string;
+  name?: string;
+  days: number[];      // Monday-first: 0=Mon … 6=Sun
+  startTime: string;   // HH:MM
+  endTime: string;     // HH:MM
+}
+
+export type VenueSchedule = VenueScheduleSet[];
+
 // ─── Slot ────────────────────────────────────────────────────────────────────
 
 export interface Slot {
@@ -238,6 +256,10 @@ export interface Slot {
   name: string;
   startTime: string; // HH:MM
   endTime: string; // HH:MM
+  /** True when the calendar auto-created this slot from the venue's weekly programme.
+   *  Distinguishes recurring nights from manual one-offs so a programme edit only ever
+   *  touches its own EMPTY future slots — never a manually-added slot or a booked night. */
+  scheduleGenerated?: boolean;
   createdAt: string;
 }
 

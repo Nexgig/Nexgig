@@ -9,6 +9,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { venueImage } from '@/lib/venue-images';
+import { setDaysLabel } from '@/lib/venue-schedule';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -61,7 +62,7 @@ export default function VenueDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'bookings'>('overview');
   const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
@@ -286,10 +287,10 @@ export default function VenueDetailScreen() {
             an artist's venues. */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'bookings'] as const).map((tab) => (
+            {(['overview', 'schedule', 'bookings'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : 'Bookings'}
+                  {tab === 'overview' ? 'Overview' : tab === 'schedule' ? 'Schedule' : 'Bookings'}
                 </Text>
               </Pressable>
             ))}
@@ -415,6 +416,40 @@ export default function VenueDetailScreen() {
           </View>
         )}
 
+        {/* Schedule Tab — owner only. The weekly programme that auto-fills the calendar.
+            Read summary here; tap Edit to open the full editor. */}
+        {isOwner && activeTab === 'schedule' && (
+          <View style={styles.scheduleTab}>
+            <Text style={[styles.scheduleIntro, { color: colors.muted }]}>
+              The nights this venue books artists. Open nights appear on your calendar automatically.
+            </Text>
+            {(venue.schedule ?? []).filter((s) => s.days.length > 0).length === 0 ? (
+              <View style={[styles.scheduleEmpty, { borderColor: colors.border }]}>
+                <MaterialIcons name="event-repeat" size={30} color={colors.muted} />
+                <Text style={[styles.scheduleEmptyText, { color: colors.muted }]}>No programme yet.</Text>
+              </View>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {(venue.schedule ?? []).filter((s) => s.days.length > 0).map((s) => (
+                  <View key={s.id} style={[styles.scheduleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Text style={[styles.scheduleTime, { color: colors.foreground }]}>{s.startTime} – {s.endTime}</Text>
+                    <Text style={[styles.scheduleDays, { color: colors.muted }]}>{setDaysLabel(s.days)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Pressable
+              onPress={() => router.push(('/(manager)/edit-schedule?id=' + venue.id) as any)}
+              style={({ pressed }) => [styles.scheduleEditBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            >
+              <MaterialIcons name="edit-calendar" size={18} color="#fff" />
+              <Text style={styles.scheduleEditText}>
+                {(venue.schedule ?? []).some((s) => s.days.length > 0) ? 'Edit programme' : 'Set up programme'}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Bookings Tab — owner only. Same list as the artist profile's bookings, scoped
             to this venue: Pending / Upcoming / Completed with the artist named per row.
             (The old Sets listing, including unassigned sets, is managed on the calendar.) */}
@@ -435,6 +470,15 @@ export default function VenueDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  scheduleTab: { paddingHorizontal: 20, paddingTop: 16, gap: 14 },
+  scheduleIntro: { fontSize: 14, lineHeight: 20 },
+  scheduleEmpty: { borderRadius: 14, borderWidth: 1, paddingVertical: 28, alignItems: 'center', gap: 8 },
+  scheduleEmptyText: { fontSize: 14 },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12 },
+  scheduleTime: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  scheduleDays: { fontSize: 14 },
+  scheduleEditBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, marginTop: 4 },
+  scheduleEditText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   scroll: { paddingTop: 16, paddingBottom: 40 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   backBtn: { padding: 4 },

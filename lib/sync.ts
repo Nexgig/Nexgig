@@ -66,6 +66,7 @@ async function fetchVenues(managerId: string): Promise<Venue[] | null> {
     audienceType: v.audience_type ?? [],
     subVibe: v.sub_vibe ?? [],
     billing: v.billing ?? undefined,
+    schedule: v.schedule ?? undefined,
     color: v.color ?? '#2563EB',
     isHidden: v.is_hidden ?? false,
     isComplete: v.is_complete ?? false,
@@ -98,6 +99,7 @@ async function fetchManagerSlots(managerId: string): Promise<Slot[] | null> {
     startTime: s.start_time,
     endTime: s.end_time,
     status: s.status,
+    scheduleGenerated: s.schedule_generated ?? false,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
   }));

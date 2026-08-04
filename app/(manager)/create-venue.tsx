@@ -8,7 +8,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
-import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe } from '@/lib/types';
+import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe, VenueSchedule } from '@/lib/types';
+import { ScheduleEditor } from '@/components/schedule-editor';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 
@@ -45,7 +46,7 @@ const SUB_VIBES: SubVibe[] = [
   'Melodic', 'Groovy', 'Underground', 'Commercial', 'High Energy',
   'Chill', 'Dark', 'Tribal', 'Percussive', 'Urban', 'Soul',
 ];
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -87,6 +88,7 @@ export default function CreateVenueScreen() {
     billingCompanyName: '',
     billingCompanyAddress: '',
     billingTrnNumber: '',
+    schedule: [] as VenueSchedule,
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -218,6 +220,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     billing_company_name: form.billingCompanyName || null,
     billing_company_address: form.billingCompanyAddress || null,
     billing_trn_number: form.billingTrnNumber || null,
+    schedule: form.schedule.filter((s) => s.days.length > 0),
     is_hidden: false,
   }).select().single();
 
@@ -254,6 +257,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       trnNumber: form.billingTrnNumber.trim(),
     } : undefined,
     color: form.color,
+    schedule: form.schedule.filter((s) => s.days.length > 0),
     isHidden: false,
     isComplete: true,
     createdAt: new Date().toISOString(),
@@ -316,6 +320,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
           {displayStep === 2 && 'Vibe & Music'}
           {displayStep === 3 && 'Rules & Links'}
           {displayStep === 4 && 'Billing Details'}
+          {displayStep === 5 && 'Schedule'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
       </View>
@@ -524,6 +529,12 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 <Text style={[styles.label, { color: colors.foreground }]}>TRN Number (optional)</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={form.billingTrnNumber} onChangeText={(v) => update('billingTrnNumber', v)} keyboardType="number-pad" returnKeyType="done" />
               </View>
+            </View>
+          )}
+
+          {displayStep === 5 && (
+            <View style={styles.form}>
+              <ScheduleEditor value={form.schedule} onChange={(next) => update('schedule', next)} />
             </View>
           )}
         </Animated.View>
