@@ -530,7 +530,7 @@ export default function ManagerDashboard() {
                   return withSheetSwipeDelete(item.key, () => deleteSlot(item.slot.id), (
                     <Pressable
                       style={({ pressed }) => [styles.sheetRow, { backgroundColor: colors.background, gap: 12, opacity: pressed ? 0.7 : 1 }]}
-                      onPress={() => { setSheetTarget(null); router.push(('/(manager)/assign-artist?slotId=' + item.slot.id) as Href); }}
+                      onPress={() => router.push(('/(manager)/assign-artist?slotId=' + item.slot.id) as Href)}
                     >
                       <View style={[styles.sheetDashedCircle, { borderColor: colors.primary }]}>
                         <MaterialIcons name="add" size={20} color={colors.primary} />
@@ -544,7 +544,6 @@ export default function ManagerDashboard() {
                 }
                 const b = item.booking;
                 const onPress = () => {
-                  setSheetTarget(null);
                   router.push((item.kind === 'booking'
                     ? '/(manager)/booking-detail?id=' + b!.id
                     : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
