@@ -627,19 +627,14 @@ export default function AddSlotScreen() {
         )}
       </ScrollView>
 
-      {/* Footer — send all drafts at once. Absolute so the list scrolls behind it. */}
+      {/* Footer — a single coral "Send N" control, shown only while drafts exist. */}
       {!isPast && draftedIds.size > 0 && (
         <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.footerCount, { color: colors.foreground }]}>{draftedIds.size} draft{draftedIds.size > 1 ? 's' : ''}</Text>
-            <Text style={[styles.footerHint, { color: colors.muted }]}>Stays on your calendar</Text>
-          </View>
           <Pressable
             style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
             onPress={confirmSendAll}
           >
-            <MaterialIcons name="send" size={16} color="#fff" />
-            <Text style={styles.sendBtnText}>Send request</Text>
+            <Text style={styles.sendBtnText}>Send {draftedIds.size}</Text>
           </Pressable>
         </View>
       )}
@@ -674,9 +669,7 @@ const styles = StyleSheet.create({
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
-  footer: { marginHorizontal: -13, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
-  footerCount: { fontSize: 15, fontWeight: '700' },
-  footerHint: { fontSize: 12, marginTop: 1 },
-  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 13 },
-  sendBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  footer: { marginHorizontal: -13, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  sendBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
+  sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

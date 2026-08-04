@@ -623,19 +623,14 @@ export default function AssignDJScreen() {
         )}
       </ScrollView>
 
-      {/* Footer — send all drafts at once. */}
+      {/* Footer — a single coral "Send N" control, shown only while drafts exist. */}
       {!isPastSlot && draftCount > 0 && (
         <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.footerCount, { color: colors.foreground }]}>{draftCount} draft{draftCount > 1 ? 's' : ''}</Text>
-            <Text style={[styles.footerHint, { color: colors.muted }]}>Stays on your calendar</Text>
-          </View>
           <Pressable
             style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
             onPress={confirmSendAll}
           >
-            <MaterialIcons name="send" size={16} color="#fff" />
-            <Text style={styles.sendBtnText}>Send request</Text>
+            <Text style={styles.sendBtnText}>Send {draftCount}</Text>
           </Pressable>
         </View>
       )}
@@ -664,9 +659,7 @@ const styles = StyleSheet.create({
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyText: { fontSize: 14 },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
-  footerCount: { fontSize: 15, fontWeight: '700' },
-  footerHint: { fontSize: 12, marginTop: 1 },
-  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 13 },
-  sendBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  sendBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
+  sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
