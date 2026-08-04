@@ -1,22 +1,23 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, Alert, TextInput, Image } from '@/lib/rn';
-import { Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
-import { isPastStart, genreLabel, addDaysStr, firstName } from '@/lib/utils';
+import { isPastStart, addDaysStr, firstName } from '@/lib/utils';
 import { persistGigRequestBooking } from '@/lib/gig-requests';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
   const router = useRouter();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   // Support both slotId (slot assignment) and venueId (venue lineup assignment)
   const { slotId, venueId: venueIdParam } = useLocalSearchParams<{ slotId?: string; venueId?: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -29,7 +30,6 @@ export default function AssignDJScreen() {
   const globalLineup = useLineupStore((s) => s.globalLineup);
   const venueAssignments = useLineupStore((s) => s.venueAssignments);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
-  const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
   const assignToVenue = useLineupStore((s) => s.assignToVenue);
 
   const getVenueById = useVenueStore((s) => s.getVenueById);
@@ -75,9 +75,6 @@ export default function AssignDJScreen() {
   // ── Cross-manager conflict detection ─────────────────────────────────────
   // Fetch confirmed bookings + blocks from OTHER managers for lineup artists on this slot's date
   const [crossConflicts, setCrossConflicts] = useState<Map<string, ConflictInfo[]>>(new Map());
-  // Fixed top (header + past-slot note) height; the list is capped below it so it scrolls
-  // in place — flex:1 doesn't bound a list inside the native formSheet.
-  const [topH, setTopH] = useState(0);
 
   useEffect(() => {
     if (!slot || !currentUser || isVenueLineupMode) return;
@@ -172,11 +169,10 @@ export default function AssignDJScreen() {
       .map((entry) => ({
         entry,
         user: getArtistUser(entry.artistId),
-        profile: getArtistProfile(entry.artistId),
       }))
       .filter((item) => !!item.user)
       .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? '')),
-    [myGlobalLineup, activeVenueAssignmentIds, getArtistUser, getArtistProfile]
+    [myGlobalLineup, activeVenueAssignmentIds, getArtistUser]
   );
 
   const handleAddToVenueLineup = (artistId: string) => {
@@ -260,10 +256,9 @@ export default function AssignDJScreen() {
             >
               <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
               <View style={styles.djInfo}>
-              <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                <Text style={[styles.djGenre, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
+                <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
               </View>
-              <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
+              <MaterialIcons name="add-circle-outline" size={22} color={colors.primary} />
             </Pressable>
           )}
         />
@@ -307,7 +302,6 @@ export default function AssignDJScreen() {
 
   const djsWithConflicts = venueAssignmentsForSlot.map((a) => {
     const user = getArtistUser(a.artistId);
-    const profile = getArtistProfile(a.artistId);
     if (!user) return null;
     const localConflicts = detectConflicts(
       a.artistId, slot!, confirmedBookings, blocks,
@@ -319,24 +313,13 @@ export default function AssignDJScreen() {
     // Merge with cross-manager conflicts from Supabase
     const external = crossConflicts.get(a.artistId) ?? [];
     const allConflicts = [...localConflicts, ...external];
-    return { user, profile, hasConflict: allConflicts.length > 0, conflicts: allConflicts, assignment: a };
+    return { user, hasConflict: allConflicts.length > 0, conflicts: allConflicts, assignment: a };
   }).filter(Boolean) as Array<{
     user: NonNullable<ReturnType<typeof getArtistUser>>;
-    profile: ReturnType<typeof getArtistProfile>;
     hasConflict: boolean;
     conflicts: ReturnType<typeof detectConflicts>;
     assignment: typeof venueAssignmentsForSlot[0];
   }>;
-
-  // Was a useMemo here — changed to plain computation because its dependency chain
-  // includes values defined below early-return branches, which broke rules-of-hooks.
-  // The filter runs on a small artist list, so losing memoization is imperceptible.
-  const available = djsWithConflicts
-    .filter((d) => !d.hasConflict)
-    .sort((a, b) => (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase()));
-  const withConflict = djsWithConflicts
-    .filter((d) => d.hasConflict)
-    .sort((a, b) => (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase()));
 
   // Roster (global-lineup) artists NOT on this venue's lineup yet. The manager can
   // add them to the venue right here; once added they move up into Available /
@@ -344,9 +327,39 @@ export default function AssignDJScreen() {
   const venueLineupIds = new Set(venueAssignmentsForSlot.map((a) => a.artistId));
   const notInLineup = myGlobalLineup
     .filter((entry) => !venueLineupIds.has(entry.artistId))
-    .map((entry) => ({ entry, user: getArtistUser(entry.artistId), profile: getArtistProfile(entry.artistId) }))
+    .map((entry) => ({ entry, user: getArtistUser(entry.artistId) }))
     .filter((item) => !!item.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
+
+  // One unified, alphabetical list (mirrors add-slot). Each artist carries a single state that
+  // drives the whole row; already-settled artists (pending/booked/completed) sink to the bottom.
+  type RowState = 'available' | 'conflict' | 'drafted' | 'pending' | 'booked' | 'completed' | 'notInRoster';
+  const SETTLED: RowState[] = ['pending', 'booked', 'completed'];
+  const assignRows = (() => {
+    const rows = djsWithConflicts.map((d) => {
+      const artistId = d.user.id;
+      const booking = slotBookings.find((b) => b.artistId === artistId && b.status !== 'cancelled' && b.status !== 'declined');
+      let state: RowState;
+      if (isPastSlot) {
+        state = booking?.isCompleted ? 'completed' : booking ? 'pending' : 'available';
+      } else {
+        state = booking?.status === 'confirmed' ? 'booked'
+          : booking ? 'pending'
+          : assignedDJIds.has(artistId) ? 'drafted'
+          : d.hasConflict ? 'conflict'
+          : 'available';
+      }
+      return { artistId, user: d.user, conflicts: d.conflicts, state };
+    });
+    const roster = notInLineup.map((x) => ({ artistId: x.entry.artistId, user: x.user!, conflicts: [] as ConflictInfo[], state: 'notInRoster' as RowState }));
+    return [...rows, ...roster].sort((a, b) => {
+      const as = SETTLED.includes(a.state) ? 1 : 0;
+      const bs = SETTLED.includes(b.state) ? 1 : 0;
+      if (as !== bs) return as - bs;                 // settled last
+      return (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase());
+    });
+  })();
+  const draftCount = currentDrafts.length;
 
   // For past slots: tapping a DJ sends a past-gig confirmation request to the artist
   const handleTapDJPast = (artistId: string) => {
@@ -445,14 +458,20 @@ export default function AssignDJScreen() {
     });
   };
 
-  // Confirm before firing a gig request from the assign screen (send is not undoable).
-  const confirmSend = (artistId: string, name: string) => {
+  // Send every drafted artist their gig request at once (footer "Send request"). Confirmed
+  // first — sending is not undoable — then closes the sheet.
+  const confirmSendAll = () => {
+    const ids = currentDrafts.map((d) => d.artistId);
+    if (ids.length === 0) return;
     Alert.alert(
       'Send Gig Request',
-      `Send ${name} a gig request for "${slot!.name}" on ${formatDate(slot!.date)}?`,
+      `Send a gig request to ${ids.length} artist${ids.length > 1 ? 's' : ''} for "${slot!.name}" on ${formatDate(slot!.date)}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Send', onPress: () => sendNow(artistId) },
+        { text: 'Send', onPress: async () => {
+          for (const id of ids) { await sendNow(id); }
+          router.back();
+        } },
       ]
     );
   };
@@ -507,226 +526,147 @@ export default function AssignDJScreen() {
     });
   };
 
-  const StatusPill = ({ tone, icon, label }: { tone: string; icon: any; label: string }) => (
-    <View style={[styles.statusPill, { backgroundColor: tone + '20' }]}>
-      <MaterialIcons name={icon} size={11} color={tone} />
-      <Text style={[styles.statusPillText, { color: tone }]}>{label}</Text>
-    </View>
-  );
-
-  const renderDJ = (item: typeof djsWithConflicts[0], index = 0) => {
-    const isAssigned = assignedDJIds.has(item.user.id);
-    // Real booking on this slot for this DJ (any non-cancelled/declined status).
-    const bookingForDJ = slotBookings.find((b) => b.artistId === item.user.id);
-    // For past slots: show pending if past_confirmation request sent, completed if confirmed
-    const isPastPending = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && (b.status === 'requested' || b.status === 'past_confirmation'));
-    const isCompleted = isPastSlot && slotBookings.some((b) => b.artistId === item.user.id && b.isCompleted);
-    // Upcoming slots: reflect a real booking's status instead of "Drafted".
-    const isConfirmed = !isPastSlot && bookingForDJ?.status === 'confirmed';
-    const isPending = !isPastSlot && (bookingForDJ?.status === 'requested' || bookingForDJ?.status === 'past_confirmation');
-    // "Drafted" only when it's an actual draft (no real booking on this slot).
-    const isDrafted = !isPastSlot && isAssigned && !bookingForDJ;
-
+  const renderRow = (
+    item: { artistId: string; user: any; conflicts: ConflictInfo[]; state: RowState },
+    index: number,
+  ) => {
+    const { artistId, user, conflicts, state } = item;
+    const settled = state === 'pending' || state === 'booked' || state === 'completed';
+    const tappable = state === 'available' || state === 'conflict' || state === 'drafted';
+    const subtitle =
+      state === 'conflict' && conflicts[0] ? { text: conflicts[0].description, color: colors.error }
+      : state === 'drafted' ? { text: 'Draft', color: colors.primary }
+      : state === 'notInRoster' ? { text: "Not in this venue's roster", color: colors.muted }
+      : null;
     return (
-      <Fragment key={item.user.id}>
+      <Fragment key={artistId}>
         {index > 0 ? <Divider full /> : null}
-      <Pressable
-        style={({ pressed }) => [styles.djRow, { opacity: pressed ? 0.6 : 1 }]}
-        onPress={() => handleTapDJ(item.user.id)}
-      >
-        <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={item.user.avatarId} seed={item.user.id} name={item.user.fullName} size={48} />
-        <View style={styles.djInfo}>
-          <View style={styles.djNameRow}>
-            <Text style={[styles.djName, { color: colors.foreground }]}>{item.user.fullName}</Text>
-            {isCompleted && (
-              <View style={[styles.draftBadge, { backgroundColor: colors.success }]}>
-                <MaterialIcons name="check-circle" size={10} color="#fff" />
-                <Text style={styles.draftBadgeText}>Completed</Text>
-              </View>
-            )}
-            {isPastPending && (
-              <View style={[styles.draftBadge, { backgroundColor: colors.warning }]}>
-                <MaterialIcons name="schedule" size={10} color="#fff" />
-                <Text style={styles.draftBadgeText}>Pending</Text>
-              </View>
-            )}
-            {isConfirmed && (
-              <View style={[styles.draftBadge, { backgroundColor: colors.success }]}>
-                <MaterialIcons name="check-circle" size={10} color="#fff" />
-                <Text style={styles.draftBadgeText}>Booked</Text>
-              </View>
-            )}
-            {isPending && (
-              <View style={[styles.draftBadge, { backgroundColor: colors.warning }]}>
-                <MaterialIcons name="schedule" size={10} color="#fff" />
-                <Text style={styles.draftBadgeText}>Pending</Text>
-              </View>
-            )}
-            {isDrafted && (
-              <View style={[styles.draftBadge, { backgroundColor: colors.primary }]}>
-                <MaterialIcons name="edit" size={10} color="#fff" />
-                <Text style={styles.draftBadgeText}>Drafted</Text>
-              </View>
-            )}
-            {!isCompleted && !isConfirmed && !isPending && !isPastPending && !isDrafted && (
-              item.hasConflict
-                ? <StatusPill tone={colors.warning} icon="warning" label="Conflict" />
-                : <StatusPill tone={colors.success} icon="check-circle" label="Available" />
-            )}
+        <Pressable
+          disabled={!tappable}
+          style={({ pressed }) => [styles.djRow, { opacity: pressed && tappable ? 0.6 : 1 }]}
+          onPress={tappable ? () => handleTapDJ(artistId) : undefined}
+        >
+          <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={user.avatarId} seed={user.id} name={user.fullName} size={48} />
+          <View style={styles.djInfo}>
+            <Text style={[styles.djName, { color: settled ? colors.muted : colors.foreground }]}>{user.fullName}</Text>
+            {subtitle && <Text style={[styles.djSub, { color: subtitle.color }]} numberOfLines={2}>{subtitle.text}</Text>}
           </View>
-          <Text style={[styles.djGenre, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
-          {item.hasConflict && item.conflicts[0] && (
-            <View style={styles.conflictBanner}>
-              <MaterialIcons name="warning" size={12} color={colors.error} />
-              <Text style={[styles.conflictText, { color: colors.error }]} numberOfLines={2}>{item.conflicts[0].description}</Text>
-            </View>
-          )}
-        </View>
-        {isCompleted
-          ? <MaterialIcons name="check-circle" size={20} color={colors.success} />
-          : isConfirmed
-          ? <MaterialIcons name="check-circle" size={20} color={colors.success} />
-          : isPastPending || isPending
-          ? <MaterialIcons name="schedule" size={20} color={colors.warning} />
-          : isDrafted
-          ? (
-            // Drafted: tap the row to deselect; tap this coral send button to send now.
+          {state === 'notInRoster' ? (
             <Pressable
-              onPress={() => confirmSend(item.user.id, item.user.fullName)}
-              hitSlop={8}
-              style={({ pressed }) => [styles.rowSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+              onPress={() => handleAddToVenueFromSlot(artistId)}
+              hitSlop={6}
             >
-              <MaterialIcons name="send" size={15} color="#fff" />
+              <MaterialIcons name="add" size={15} color={colors.primary} />
+              <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
             </Pressable>
-          )
-          : <MaterialIcons name="add-circle-outline" size={20} color={colors.muted} />
-        }
-      </Pressable>
+          ) : state === 'pending' ? (
+            <Text style={[styles.trailingText, { color: colors.muted }]}>Requested</Text>
+          ) : state === 'booked' ? (
+            <Text style={[styles.trailingText, { color: colors.success }]}>Booked</Text>
+          ) : state === 'completed' ? (
+            <Text style={[styles.trailingText, { color: colors.success }]}>Completed</Text>
+          ) : state === 'drafted' ? (
+            <MaterialIcons name="check-circle" size={26} color={colors.primary} />
+          ) : (
+            <MaterialIcons name="add-circle-outline" size={26} color={colors.muted} />
+          )}
+        </Pressable>
       </Fragment>
     );
   };
 
   return (
     <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Fixed top (header + note) — stays on screen; only the list below scrolls. */}
-      <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerInfo}>
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-              {isPastSlot ? 'Add to Completed Gigs' : 'Assign Artist'}
-            </Text>
-            <Text style={[styles.headerSub, { color: colors.muted }]}>
-              {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
-            </Text>
-          </View>
+      {/* Fixed top — header + past note stay put; only the list scrolls. */}
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            {isPastSlot ? 'Add to Completed Gigs' : 'Assign Artist'}
+          </Text>
+          <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
+            {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
+          </Text>
         </View>
-
-        {/* Past slots still warn: tapping fires a real request, not a draft. */}
-        {isPastSlot && (
-          <View style={[styles.infoNote, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
-            <MaterialIcons name="history" size={14} color={colors.warning} />
-            <Text style={[styles.infoNoteText, { color: colors.warning }]}>
-              This slot is in the past. Tapping an artist will send them a completed gig request — they must confirm or decline the completed gig.
-            </Text>
-          </View>
-        )}
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={[styles.doneBtn, { color: colors.primary }]}>Done</Text>
+        </Pressable>
       </View>
 
-      <FlatList
-        style={[{ backgroundColor: colors.background }, topH ? { maxHeight: Dimensions.get('window').height - topH - 30 } : { flex: 1 }]}
-        contentContainerStyle={{ flexGrow: 1 }}
-        removeClippedSubviews={true}
-        windowSize={5}
-        maxToRenderPerBatch={10}
-        initialNumToRender={10}
-        updateCellsBatchingPeriod={50}
-        data={[]}
-        renderItem={() => null}
-        ListHeaderComponent={
-          <View style={styles.listContent}>
-            <View style={styles.listHeaderRow}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>
-                {isPastSlot ? 'SEND COMPLETED GIG TO' : 'ASSIGN GIG TO'}
-              </Text>
-            </View>
+      {isPastSlot && (
+        <View style={[styles.infoNote, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
+          <MaterialIcons name="history" size={14} color={colors.warning} />
+          <Text style={[styles.infoNoteText, { color: colors.warning }]}>
+            This slot is in the past. Tapping an artist sends them a completed gig request — they must confirm or decline it.
+          </Text>
+        </View>
+      )}
 
-            {[...available, ...withConflict].map((dj, i) => renderDJ(dj, i))}
-
-            {notInLineup.length > 0 && (
-              <>
-                {notInLineup.map((item, i) => (
-                  <Fragment key={item.entry.artistId}>
-                  {(i > 0 || available.length > 0 || withConflict.length > 0) ? <Divider full /> : null}
-                  <View style={styles.djRow}>
-                    <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={item.user!.avatarId} seed={item.user!.id} name={item.user!.fullName} size={48} />
-                    <View style={styles.djInfo}>
-                      <Text style={[styles.djName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                      <Text style={[styles.djGenre, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
-                    </View>
-                    <StatusPill tone={colors.muted} icon="group-add" label="Not in lineup" />
-                    <Pressable
-                      style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
-                      onPress={() => handleAddToVenueFromSlot(item.entry.artistId)}
-                      hitSlop={6}
-                    >
-                      <MaterialIcons name="add" size={15} color={colors.primary} />
-                      <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
-                    </Pressable>
-                  </View>
-                  </Fragment>
-                ))}
-              </>
-            )}
-
-            {djsWithConflicts.length === 0 && notInLineup.length === 0 && (
-              <View style={styles.emptyState}>
-                <MaterialIcons name="group" size={40} color={colors.muted} />
-                <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in your lineup yet</Text>
-              </View>
-            )}
-          </View>
-        }
-        ListFooterComponent={<View style={{ flexGrow: 1, minHeight: 300, backgroundColor: colors.background }} />}
-        ListFooterComponentStyle={{ flexGrow: 1 }}
-        keyExtractor={(_, i) => String(i)}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-      />
+      >
+        <View style={styles.listHeaderRow}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>
+            {isPastSlot ? 'SEND COMPLETED GIG TO' : 'ASSIGN GIG TO'}
+          </Text>
+        </View>
+        {assignRows.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="group" size={40} color={colors.muted} />
+            <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in your roster yet</Text>
+          </View>
+        ) : (
+          assignRows.map((item, i) => renderRow(item, i))
+        )}
+      </ScrollView>
+
+      {/* Footer — send all drafts at once. */}
+      {!isPastSlot && draftCount > 0 && (
+        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.footerCount, { color: colors.foreground }]}>{draftCount} draft{draftCount > 1 ? 's' : ''}</Text>
+            <Text style={[styles.footerHint, { color: colors.muted }]}>Stays on your calendar</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={confirmSendAll}
+          >
+            <MaterialIcons name="send" size={16} color="#fff" />
+            <Text style={styles.sendBtnText}>Send request</Text>
+          </Pressable>
+        </View>
+      )}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
   headerInfo: { flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: '800' },
   headerSub: { fontSize: 13, marginTop: 2 },
-  infoNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginTop: 10, borderRadius: 10, borderWidth: 1, padding: 10 },
+  doneBtn: { fontSize: 16, fontWeight: '700', marginTop: 2 },
+  infoNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginTop: 4, borderRadius: 10, borderWidth: 1, padding: 10 },
   infoNoteText: { flex: 1, fontSize: 12, lineHeight: 18 },
-  listContent: { padding: 20, flexGrow: 1 },
+  listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
   listHeaderRow: { marginBottom: 6 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
-  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  statusPillText: { fontSize: 10, fontWeight: '700' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  rowSendBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  artistPhoto: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
   djInfo: { flex: 1 },
-  djNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  djName: { fontSize: 15, fontWeight: '700' },
-  draftBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  draftBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  djName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  djSub: { fontSize: 12, marginTop: 2 },
+  trailingText: { fontSize: 13, fontWeight: '600' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
-  djGenre: { fontSize: 13, marginBottom: 3 },
-  conflictBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
-  conflictText: { fontSize: 12, flex: 1, lineHeight: 16 },
   emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyText: { fontSize: 14 },
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 12, marginBottom: 4,
-    borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-  },
-  searchInput: { flex: 1, fontSize: 14 },
+  footer: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footerCount: { fontSize: 15, fontWeight: '700' },
+  footerHint: { fontSize: 12, marginTop: 1 },
+  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 13 },
+  sendBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
