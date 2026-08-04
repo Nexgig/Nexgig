@@ -1524,7 +1524,7 @@ export default function CalendarScreen() {
                       style={styles.calendarCell}
                       onPress={() => setSelectedDate(dateStr)}
                     >
-                      <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null]}>
+                      <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null, isToday ? { borderWidth: 2, borderColor: colors.primary } : null]}>
                         <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                     </Pressable>
