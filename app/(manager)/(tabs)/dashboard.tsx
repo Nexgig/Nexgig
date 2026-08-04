@@ -110,6 +110,7 @@ export default function ManagerDashboard() {
   // strongest state among that venue's slots that night. "Needs you" = a slot with no booking
   // (empty OR draft-only) — it wants the manager's action, so it outranks Sent/Booked.
   // Priority: cancelled > needs-you > sent > booked > none.
+  const drafts = useDraftStore((s) => s.drafts);
   const coverage = useMemo(() => {
     const start = todayLocalStr();
     const nights = Array.from({ length: 7 }, (_, i) => addDaysStr(start, i));
@@ -120,23 +121,28 @@ export default function ManagerDashboard() {
       const arr = bySlot.get(b.slotId);
       if (arr) arr.push(b); else bySlot.set(b.slotId, [b]);
     }
+    const draftSlotIds = new Set(drafts.map((d) => d.slotId));
     const rows = stripVenues.map((v) => ({
       venue: v,
+      // Priority (strongest wins): cancelled > drafted > empty > sent > booked.
       cells: nights.map((date) => {
         const daySlots = slots.filter((s) => s.venueId === v.id && s.date === date);
-        let cancelled = false, needsYou = false, sent = false, booked = false;
+        let cancelled = false, drafted = false, empty = false, sent = false, booked = false;
         for (const s of daySlots) {
           const bs = bySlot.get(s.id) ?? [];               // non-hidden manager bookings for this slot
-          if (bs.length === 0) { needsYou = true; continue; }   // empty or draft-only slot
+          if (bs.length === 0) {                            // no booking → drafted or empty
+            if (draftSlotIds.has(s.id)) drafted = true; else empty = true;
+            continue;
+          }
           if (bs.some((b) => b.status === 'cancelled' || b.status === 'declined')) cancelled = true;
           if (bs.some((b) => b.status === 'requested' || b.status === 'past_confirmation')) sent = true;
           if (bs.some((b) => b.status === 'confirmed')) booked = true;
         }
-        return cancelled ? 'cancelled' : needsYou ? 'needsYou' : sent ? 'sent' : booked ? 'booked' : 'empty';
+        return cancelled ? 'cancelled' : drafted ? 'drafted' : empty ? 'empty' : sent ? 'sent' : booked ? 'booked' : 'none';
       }),
     }));
     return { nights, rows };
-  }, [venues, slots, bookings, bookingVenueId]);
+  }, [venues, slots, bookings, drafts, bookingVenueId]);
 
   // Tapping a coverage square opens a bottom sheet of that day's bookings, scoped to whatever
   // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
@@ -164,7 +170,6 @@ export default function ManagerDashboard() {
   // Slot-based, mirroring the calendar day list: for the tapped venue+night, each slot shows its
   // bookings, its drafts, or a "Needs artist" row when empty — so tapping a grey (needs-you)
   // square actually shows the empty/draft slots, not "nothing".
-  const drafts = useDraftStore((s) => s.drafts);
   const sheetItems = useMemo(() => {
     if (!renderTarget) return [];
     const SHOWN = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'cancelled', 'declined', 'expired']);
@@ -466,7 +471,8 @@ export default function ManagerDashboard() {
                     style={[
                       styles.cellBox,
                       state === 'cancelled' ? { backgroundColor: colors.cancelled }
-                        : state === 'needsYou' ? { backgroundColor: colors.surface }   // beige fill — empty/draft slot
+                        : state === 'drafted' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — artist drafted
+                        : state === 'empty' ? { backgroundColor: colors.surface }   // beige fill — empty slot, no artist
                         : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
                         : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
                         : { backgroundColor: colors.background },   // no slot at all — blends into the page
@@ -578,10 +584,11 @@ export default function ManagerDashboard() {
           <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
             {[
-              { label: 'Draft', swatch: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border } },
+              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
+              { label: 'Draft', swatch: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' as const } },
+              { label: 'Empty', swatch: { backgroundColor: colors.surface } },
               { label: 'Sent', swatch: { backgroundColor: STATUS_COLORS.pending } },
               { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
-              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
             ].map((row) => (
               <View key={row.label} style={styles.legendCardRow}>
                 <View style={[styles.legendSwatch, row.swatch]} />
