@@ -1370,7 +1370,12 @@ export default function CalendarScreen() {
     const venueName = getVenueById(slot.venueId)?.name ?? 'Venue';
     const time = `${fmtTime(slot.startTime)}–${fmtTime(slot.endTime)}`;
     const bs = getBookingsBySlot(slot.id);   // already excludes hidden-from-manager
-    if (bs.length === 0) {
+    // Drafts (staged, not sent) on this slot, minus anyone who already has a booking here.
+    const bookedIds = new Set(bs.map((b) => b.artistId));
+    const drafts = getDraftsBySlot(slot.id).filter((d) => !bookedIds.has(d.artistId));
+
+    // Truly empty — no booking, no draft → prompt to add an artist.
+    if (bs.length === 0 && drafts.length === 0) {
       return [(
         <Pressable
           key={slot.id}
@@ -1388,27 +1393,31 @@ export default function CalendarScreen() {
         </Pressable>
       )];
     }
-    return bs.map((b) => {
-      const artist = getArtistUser(b.artistId);
-      const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
-      return (
-        <Pressable
-          key={b.id}
-          style={({ pressed }) => [styles.dayRow, { opacity: pressed ? 0.6 : 1 }]}
-          onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
-        >
-          <AvatarImage uri={artist?.profilePhotoUrl || undefined} avatarId={(artist as any)?.avatarId} seed={artist?.id} name={artist?.fullName ?? 'Former Artist'} size={44} />
-          <View style={styles.dayRowInfo}>
-            <View style={styles.dayNameRow}>
-              <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{artist?.fullName ?? 'Former Artist'}</Text>
-              {shown !== 'confirmed' && <StatusBadge status={shown as any} />}
-            </View>
-            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+
+    const dayRow = (key: string, artist: any, badge: React.ReactNode, onPress: () => void) => (
+      <Pressable key={key} style={({ pressed }) => [styles.dayRow, { opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
+        <AvatarImage uri={artist?.profilePhotoUrl || undefined} avatarId={(artist as any)?.avatarId} seed={artist?.id} name={artist?.fullName ?? 'Former Artist'} size={44} />
+        <View style={styles.dayRowInfo}>
+          <View style={styles.dayNameRow}>
+            <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{artist?.fullName ?? 'Former Artist'}</Text>
+            {badge}
           </View>
-          <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
-        </Pressable>
-      );
-    });
+          <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+        </View>
+        <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+      </Pressable>
+    );
+
+    return [
+      ...bs.map((b) => {
+        const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
+        return dayRow(b.id, getArtistUser(b.artistId), shown !== 'confirmed' ? <StatusBadge status={shown as any} /> : null,
+          () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href));
+      }),
+      ...drafts.map((d) =>
+        dayRow('draft-' + d.artistId, getArtistUser(d.artistId), <StatusBadge status="draft" />,
+          () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href))),
+    ];
   };
 
   const renderSlotCard = (slot: Slot) => {
