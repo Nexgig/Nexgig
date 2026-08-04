@@ -428,6 +428,24 @@ export default function ManagerDashboard() {
               ))}
             </View>
           ))}
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Draft</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Sent</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Booked</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendSwatch, { backgroundColor: colors.cancelled }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>Cancelled</Text>
+            </View>
+          </View>
         </View>
         <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
@@ -540,6 +558,10 @@ const styles = StyleSheet.create({
   section: { marginTop: 0 },
   sectionTitle: { fontSize: 22, fontWeight: '700' },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 20 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 14, marginTop: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendText: { fontSize: 12 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   // Bookings — date-grouped rows with a status bar + stacked avatars

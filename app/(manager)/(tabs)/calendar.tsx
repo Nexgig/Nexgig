@@ -1534,26 +1534,6 @@ export default function CalendarScreen() {
                 })}
               </View>
 
-              {/* Legend — matches the day-cell fills */}
-              <View style={styles.calLegendRow}>
-                <View style={styles.calLegendItem}>
-                  <View style={[styles.calLegendSwatch, { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
-                  <Text style={[styles.calLegendText, { color: colors.muted }]}>Draft</Text>
-                </View>
-                <View style={styles.calLegendItem}>
-                  <View style={[styles.calLegendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
-                  <Text style={[styles.calLegendText, { color: colors.muted }]}>Sent</Text>
-                </View>
-                <View style={styles.calLegendItem}>
-                  <View style={[styles.calLegendSwatch, { backgroundColor: STATUS_COLORS.confirmed }]} />
-                  <Text style={[styles.calLegendText, { color: colors.muted }]}>Booked</Text>
-                </View>
-                <View style={styles.calLegendItem}>
-                  <View style={[styles.calLegendSwatch, { backgroundColor: colors.cancelled }]} />
-                  <Text style={[styles.calLegendText, { color: colors.muted }]}>Cancelled</Text>
-                </View>
-              </View>
-
               {/* Selected Date Slots */}
               {!selectedDate ? (
                 <View style={[styles.noSlotsCard, { borderColor: colors.border }]}>
@@ -2012,10 +1992,6 @@ const styles = StyleSheet.create({
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 0 },
-  calLegendRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 14, paddingHorizontal: 20, paddingTop: 12 },
-  calLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  calLegendSwatch: { width: 14, height: 14, borderRadius: 4 },
-  calLegendText: { fontSize: 12 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
