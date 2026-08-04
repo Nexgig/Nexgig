@@ -431,7 +431,7 @@ export default function ManagerDashboard() {
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
-              <Text style={[styles.legendText, { color: colors.muted }]}>Needs you</Text>
+              <Text style={[styles.legendText, { color: colors.muted }]}>Draft</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendSwatch, { backgroundColor: STATUS_COLORS.pending }]} />
