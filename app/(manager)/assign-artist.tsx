@@ -553,7 +553,7 @@ export default function AssignDJScreen() {
             {isConfirmed && (
               <View style={[styles.draftBadge, { backgroundColor: colors.success }]}>
                 <MaterialIcons name="check-circle" size={10} color="#fff" />
-                <Text style={styles.draftBadgeText}>Confirmed</Text>
+                <Text style={styles.draftBadgeText}>Booked</Text>
               </View>
             )}
             {isPending && (

@@ -11,7 +11,7 @@ type Tone = 'success' | 'warning' | 'error' | 'muted' | 'completed';
 const BADGE_MAP: Record<string, { tone: Tone; label: string }> = {
   draft:             { tone: 'muted',     label: 'Draft' },
   requested:         { tone: 'warning',   label: 'Pending' },
-  confirmed:         { tone: 'success',   label: 'Confirmed' },
+  confirmed:         { tone: 'success',   label: 'Booked' },
   completed:         { tone: 'completed', label: 'Completed' },
   past_confirmation: { tone: 'warning',   label: 'Pending' },
   declined:          { tone: 'error',     label: 'Declined' },

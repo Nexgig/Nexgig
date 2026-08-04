@@ -61,7 +61,7 @@ export default function ConfirmedBookingsScreen() {
         >
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.foreground }]}>Confirmed Bookings</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Booked Gigs</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -76,8 +76,8 @@ export default function ConfirmedBookingsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <MaterialIcons name="event-available" size={48} color={colors.muted} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Confirmed Bookings</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.muted }]}>Upcoming confirmed bookings will appear here</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Booked Gigs</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.muted }]}>Upcoming booked gigs will appear here</Text>
           </View>
         }
         renderItem={({ item: booking }) => {
