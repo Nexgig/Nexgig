@@ -11,21 +11,10 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { isPastStart, genreLabel, addDaysStr, firstName } from '@/lib/utils';
+import { isPastStart, addDaysStr, firstName } from '@/lib/utils';
 import { formatDate, detectConflicts, timesOverlap } from '@/lib/conflict-detection';
 import { persistGigRequestBooking } from '@/lib/gig-requests';
 import type { Slot, Booking, ConflictInfo, VenueAssignment } from '@/lib/types';
-
-const SLOT_PRESETS = [
-  { name: 'Day', start: '13:00', end: '17:00' },
-  { name: 'Sunset', start: '17:00', end: '21:00' },
-  { name: 'Night', start: '21:00', end: '01:00' },
-] as const;
-
-/** A preset reads as selected when the TIMES match — the name is no longer written. */
-function isPresetActive(form: { startTime: string; endTime: string }, preset: { start: string; end: string }) {
-  return form.startTime === preset.start && form.endTime === preset.end;
-}
 
 const TIME_OPTIONS: string[] = [];
 for (let h = 0; h < 24; h++) {
@@ -95,6 +84,7 @@ export default function AddSlotScreen() {
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
   const [createdSlotId, setCreatedSlotId] = useState<string | null>(null);
+  const [footerH, setFooterH] = useState(0);
 
   const assignedRef = useRef(false);
   const startTimeScrollRef = useRef<ScrollView>(null);
@@ -254,8 +244,6 @@ export default function AddSlotScreen() {
     })
     .filter(Boolean) as Array<{ artistId: string; user: NonNullable<ReturnType<typeof getArtistUser>>; profile: ReturnType<typeof getArtistProfile>; hasConflict: boolean; conflicts: ConflictInfo[] }>;
 
-  const available = lineupWithConflicts.filter((d) => !d.hasConflict).sort((a, b) => (a.user.fullName ?? '').localeCompare(b.user.fullName ?? ''));
-  const withConflict = lineupWithConflicts.filter((d) => d.hasConflict).sort((a, b) => (a.user.fullName ?? '').localeCompare(b.user.fullName ?? ''));
 
   const myGlobalLineup = globalLineup.filter((r) => r.managerId === currentUser?.id && r.status === 'active');
   const venueLineupIds = new Set(venueAssignments.filter((a) => a.venueId === createSlotVenueId && a.status === 'active').map((a) => a.artistId));
@@ -264,6 +252,28 @@ export default function AddSlotScreen() {
     .map((entry) => ({ artistId: entry.artistId, user: getArtistUser(entry.artistId), profile: getArtistProfile(entry.artistId) }))
     .filter((x) => !!x.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
+
+  // One unified, alphabetical list for the picker. Each artist carries a single state that
+  // drives the whole row (subtitle + trailing control). Already-requested artists sink to the
+  // bottom; everyone else sorts by name.
+  type RowState = 'available' | 'conflict' | 'drafted' | 'requested' | 'notInRoster';
+  const assignRows = (() => {
+    const lineup = lineupWithConflicts.map((d) => {
+      const state: RowState = bookedIds.has(d.artistId) ? 'requested'
+        : draftedIds.has(d.artistId) ? 'drafted'
+        : d.hasConflict ? 'conflict' : 'available';
+      return { artistId: d.artistId, user: d.user, conflicts: d.conflicts, state };
+    });
+    const roster = notInLineup.map((x) => ({
+      artistId: x.artistId, user: x.user!, conflicts: [] as ConflictInfo[], state: 'notInRoster' as RowState,
+    }));
+    return [...lineup, ...roster].sort((a, b) => {
+      const ar = a.state === 'requested' ? 1 : 0;
+      const br = b.state === 'requested' ? 1 : 0;
+      if (ar !== br) return ar - br;                 // requested last
+      return (a.user.fullName ?? '').localeCompare(b.user.fullName ?? '');
+    });
+  })();
 
   // Past mode: flat lineup list (send completed-gig requests), no conflicts.
   const pastLineup = venueAssignments
@@ -324,15 +334,22 @@ export default function AddSlotScreen() {
     });
   };
 
-  // Confirm before firing a gig request from the pick screen (send is not undoable).
-  const confirmSend = (artistId: string, name: string) => {
+  // Send every drafted artist their gig request at once (footer "Send request"). Confirmed
+  // first — sending is not undoable — then closes the sheet.
+  const confirmSendAll = () => {
+    const ids = [...draftedIds];
+    if (ids.length === 0) return;
     const venueName = venues.find((v) => v.id === createSlotVenueId)?.name ?? 'this venue';
     Alert.alert(
       'Send Gig Request',
-      `Send ${name} a gig request for ${venueName} on ${formatDate(targetDate)}?`,
+      `Send a gig request to ${ids.length} artist${ids.length > 1 ? 's' : ''} for ${venueName} on ${formatDate(targetDate)}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Send', onPress: () => sendNow(artistId) },
+        { text: 'Send', onPress: async () => {
+          Keyboard.dismiss();
+          for (const id of ids) { await sendNow(id); }
+          router.back();
+        } },
       ]
     );
   };
@@ -392,21 +409,54 @@ export default function AddSlotScreen() {
     });
   };
 
-  const StatusPill = ({ tone, icon, label }: { tone: string; icon: any; label: string }) => (
-    <View style={[styles.statusPill, { backgroundColor: tone + '20' }]}>
-      <MaterialIcons name={icon} size={11} color={tone} />
-      <Text style={[styles.statusPillText, { color: tone }]}>{label}</Text>
-    </View>
-  );
-
-  const renderAssignRow = (item: { artistId: string; user: any; profile: any; hasConflict?: boolean; conflicts?: ConflictInfo[] }, index = 0) => {
-    const drafted = !isPast && draftedIds.has(item.artistId);
-    const booked = !isPast && bookedIds.has(item.artistId);
-    // Card-free: no tint, no state border. Drafted reads from the trailing coral
-    // check-circle; a conflict reads from the inline red banner below the name.
+  const renderRow = (
+    item: { artistId: string; user: any; conflicts: ConflictInfo[]; state: RowState },
+    index: number,
+  ) => {
+    const { artistId, user, conflicts, state } = item;
+    const tappable = state === 'available' || state === 'conflict' || state === 'drafted';
+    const subtitle =
+      state === 'conflict' && conflicts[0] ? { text: conflicts[0].description, color: colors.error }
+      : state === 'drafted' ? { text: 'Draft', color: colors.primary }
+      : state === 'notInRoster' ? { text: "Not in this venue's roster", color: colors.muted }
+      : null;
     return (
-      <Fragment key={item.artistId}>
+      <Fragment key={artistId}>
         {index > 0 ? <Divider full /> : null}
+        <Pressable
+          disabled={!tappable}
+          style={({ pressed }) => [styles.artistRow, { opacity: pressed && tappable ? 0.6 : 1 }]}
+          onPress={tappable ? () => handleTapArtist(artistId) : undefined}
+        >
+          <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId} seed={user.id} name={user.fullName} size={42} variant="artist" />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.artistName, { color: state === 'requested' ? colors.muted : colors.foreground }]}>{user.fullName}</Text>
+            {subtitle && <Text style={[styles.artistSub, { color: subtitle.color }]} numberOfLines={2}>{subtitle.text}</Text>}
+          </View>
+          {state === 'requested' ? (
+            <Text style={[styles.requestedText, { color: colors.muted }]}>Requested</Text>
+          ) : state === 'notInRoster' ? (
+            <Pressable
+              style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+              onPress={() => handleAddToVenue(artistId)}
+              hitSlop={6}
+            >
+              <MaterialIcons name="add" size={15} color={colors.primary} />
+              <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
+            </Pressable>
+          ) : state === 'drafted' ? (
+            <MaterialIcons name="check-circle" size={26} color={colors.primary} />
+          ) : (
+            <MaterialIcons name="add-circle-outline" size={26} color={colors.muted} />
+          )}
+        </Pressable>
+      </Fragment>
+    );
+  };
+
+  const renderPastRow = (item: { artistId: string; user: any }, index: number) => (
+    <Fragment key={item.artistId}>
+      {index > 0 ? <Divider full /> : null}
       <Pressable
         style={({ pressed }) => [styles.artistRow, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => handleTapArtist(item.artistId)}
@@ -414,54 +464,18 @@ export default function AddSlotScreen() {
         <AvatarImage uri={item.user.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user.id} name={item.user.fullName} size={42} variant="artist" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user.fullName}</Text>
-          <Text style={[styles.artistSub, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
-          {item.hasConflict && item.conflicts && item.conflicts[0] && (
-            <View style={styles.conflictBanner}>
-              <MaterialIcons name="warning" size={12} color={colors.error} />
-              <Text style={[styles.conflictText, { color: colors.error }]} numberOfLines={2}>{item.conflicts[0].description}</Text>
-            </View>
-          )}
         </View>
-        {isPast ? (
-          <StatusPill tone={colors.warning} icon="history" label="Past gig" />
-        ) : booked ? (
-          <StatusPill tone={colors.primary} icon="schedule" label="Requested" />
-        ) : item.hasConflict ? (
-          <StatusPill tone={colors.warning} icon="warning" label="Conflict" />
-        ) : (
-          <StatusPill tone={colors.success} icon="check-circle" label="Available" />
-        )}
-        {isPast ? (
-          <MaterialIcons name="send" size={20} color={colors.muted} />
-        ) : booked ? (
-          <MaterialIcons name="check-circle" size={20} color={colors.primary} />
-        ) : drafted ? (
-          // Drafted: tap the row to deselect; tap this coral send button to send the request now.
-          <Pressable
-            onPress={() => confirmSend(item.artistId, item.user.fullName)}
-            hitSlop={8}
-            style={({ pressed }) => [styles.rowSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
-          >
-            <MaterialIcons name="send" size={15} color="#fff" />
-          </Pressable>
-        ) : (
-          <MaterialIcons name="add-circle-outline" size={20} color={colors.muted} />
-        )}
+        <MaterialIcons name="send" size={20} color={colors.muted} />
       </Pressable>
-      </Fragment>
-    );
-  };
+    </Fragment>
+  );
 
   return (
     <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
       <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
-        <Pressable
-          style={[styles.closeBtn, { borderWidth: 1, borderColor: colors.border }]}
-          onPress={() => { Keyboard.dismiss(); router.back(); }}
-          hitSlop={8}
-        >
-          <MaterialIcons name="close" size={16} color={colors.muted} />
+        <Pressable onPress={() => { Keyboard.dismiss(); router.back(); }} hitSlop={8}>
+          <Text style={[styles.doneBtn, { color: colors.primary }]}>Done</Text>
         </Pressable>
       </View>
 
@@ -588,7 +602,7 @@ export default function AddSlotScreen() {
           ScrollView inside the native formSheet (its onLayout reports content height). */}
       <ScrollView
         style={[{ backgroundColor: colors.background }, headerH && topH ? { maxHeight: Dimensions.get('window').height - headerH - topH - 30 } : { flex: 1 }]}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 + (!isPast && draftedIds.size > 0 ? footerH : 0) }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -598,9 +612,9 @@ export default function AddSlotScreen() {
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>SEND COMPLETED GIG TO</Text>
             </View>
             {pastLineup.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's roster yet.</Text>
             ) : (
-              pastLineup.map((item, i) => renderAssignRow(item, i))
+              pastLineup.map((item, i) => renderPastRow(item, i))
             )}
           </>
         ) : (
@@ -608,46 +622,35 @@ export default function AddSlotScreen() {
             <View style={styles.listHeaderRow}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>ASSIGN GIG TO</Text>
             </View>
-
-            {available.length === 0 && withConflict.length === 0 && notInLineup.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
-            ) : null}
-
-            {[...available, ...withConflict].map((item, i) => renderAssignRow(item, i))}
-
-            {notInLineup.length > 0 && (
-              <>
-                {notInLineup.map((item, i) => (
-                  <Fragment key={item.artistId}>
-                  {(i > 0 || available.length > 0 || withConflict.length > 0) ? <Divider full /> : null}
-                  <View style={styles.artistRow}>
-                    <AvatarImage uri={item.user!.profilePhotoUrl || undefined} avatarId={(item.user as any).avatarId} seed={item.user!.id} name={item.user!.fullName} size={42} variant="artist" />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.artistName, { color: colors.foreground }]}>{item.user!.fullName}</Text>
-                      <Text style={[styles.artistSub, { color: colors.muted }]}>{genreLabel(item.profile?.primaryGenre, item.profile?.instruments)}</Text>
-                    </View>
-                    <StatusPill tone={colors.muted} icon="group-add" label="Not in lineup" />
-                    <Pressable
-                      style={({ pressed }) => [styles.addPill, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
-                      onPress={() => handleAddToVenue(item.artistId)}
-                      hitSlop={6}
-                    >
-                      <MaterialIcons name="add" size={15} color={colors.primary} />
-                      <Text style={[styles.addPillText, { color: colors.primary }]}>Add</Text>
-                    </Pressable>
-                  </View>
-                  </Fragment>
-                ))}
-              </>
-            )}
-
-            {available.length === 0 && withConflict.length === 0 && notInLineup.length === 0 && (
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's lineup yet.</Text>
+            {assignRows.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's roster yet.</Text>
+            ) : (
+              assignRows.map((item, i) => renderRow(item, i))
             )}
           </>
         )}
         <View style={{ flexGrow: 1, minHeight: 200, backgroundColor: colors.background }} />
       </ScrollView>
+
+      {/* Footer — send all drafts at once. Absolute so the list scrolls behind it. */}
+      {!isPast && draftedIds.size > 0 && (
+        <View
+          style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}
+          onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.footerCount, { color: colors.foreground }]}>{draftedIds.size} draft{draftedIds.size > 1 ? 's' : ''}</Text>
+            <Text style={[styles.footerHint, { color: colors.muted }]}>Stays on your calendar</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={confirmSendAll}
+          >
+            <MaterialIcons name="send" size={16} color="#fff" />
+            <Text style={styles.sendBtnText}>Send request</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -656,15 +659,12 @@ const styles = StyleSheet.create({
   sheet: { paddingHorizontal: 13, paddingTop: 8, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 12 },
   sheetTitle: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4, marginBottom: 1 },
-  closeBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  doneBtn: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   pillRow: { flexDirection: 'row', gap: 6, paddingRight: 4, alignItems: 'center' },
   venuePill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 7, minHeight: 34 },
   venuePillText: { fontSize: 12, fontWeight: '600', includeFontPadding: false },
-  presetRow: { flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' },
-  presetChip: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5, minHeight: 30, justifyContent: 'center', alignItems: 'center' },
-  presetChipText: { fontSize: 12, includeFontPadding: false },
   timeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 4 },
   timeSep: { paddingTop: 28 },
   timeDropdownBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, minHeight: 42 },
@@ -677,13 +677,14 @@ const styles = StyleSheet.create({
   listHeaderRow: { marginTop: 8, marginBottom: 6 },
   artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   artistName: { fontSize: 15, fontWeight: '700' },
-  artistSub: { fontSize: 12, marginTop: 1 },
-  conflictBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 3 },
-  conflictText: { fontSize: 12, flex: 1, lineHeight: 16 },
-  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  statusPillText: { fontSize: 10, fontWeight: '700' },
-  rowSendBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  artistSub: { fontSize: 12, marginTop: 2 },
+  requestedText: { fontSize: 13, fontWeight: '600' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footerCount: { fontSize: 15, fontWeight: '700' },
+  footerHint: { fontSize: 12, marginTop: 1 },
+  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 13 },
+  sendBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
