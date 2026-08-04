@@ -1374,12 +1374,29 @@ export default function CalendarScreen() {
     const bookedIds = new Set(bs.map((b) => b.artistId));
     const drafts = getDraftsBySlot(slot.id).filter((d) => !bookedIds.has(d.artistId));
 
-    // Truly empty — no booking, no draft → prompt to add an artist.
+    // Swipe-left reveals a delete action. Used for draft rows (remove the draft) and empty
+    // slots (delete the slot) — not for real bookings (those are cancelled from the booking).
+    const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => (
+      <Swipeable
+        key={key}
+        friction={2}
+        rightThreshold={40}
+        overshootRight={false}
+        renderRightActions={() => (
+          <Pressable style={[styles.swipeDeleteAction, { backgroundColor: colors.error }]} onPress={onDelete}>
+            <MaterialIcons name="delete" size={22} color="#fff" />
+          </Pressable>
+        )}
+      >
+        {child}
+      </Swipeable>
+    );
+
+    // Truly empty — no booking, no draft → prompt to add an artist (swipe to delete the slot).
     if (bs.length === 0 && drafts.length === 0) {
-      return [(
+      return [withSwipeDelete(slot.id, () => deleteSlotNow(slot), (
         <Pressable
-          key={slot.id}
-          style={({ pressed }) => [styles.dayRow, { opacity: pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
           onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
         >
           <View style={[styles.dayDashedCircle, { borderColor: colors.primary }]}>
@@ -1391,11 +1408,11 @@ export default function CalendarScreen() {
           </View>
           <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
         </Pressable>
-      )];
+      ))];
     }
 
-    const dayRow = (key: string, artist: any, badge: React.ReactNode, onPress: () => void) => (
-      <Pressable key={key} style={({ pressed }) => [styles.dayRow, { opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
+    const dayRow = (artist: any, badge: React.ReactNode, onPress: () => void) => (
+      <Pressable style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
         <AvatarImage uri={artist?.profilePhotoUrl || undefined} avatarId={(artist as any)?.avatarId} seed={artist?.id} name={artist?.fullName ?? 'Former Artist'} size={44} />
         <View style={styles.dayRowInfo}>
           <View style={styles.dayNameRow}>
@@ -1411,12 +1428,17 @@ export default function CalendarScreen() {
     return [
       ...bs.map((b) => {
         const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
-        return dayRow(b.id, getArtistUser(b.artistId), shown !== 'confirmed' ? <StatusBadge status={shown as any} /> : null,
-          () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href));
+        return (
+          <View key={b.id}>
+            {dayRow(getArtistUser(b.artistId), shown !== 'confirmed' ? <StatusBadge status={shown as any} /> : null,
+              () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href))}
+          </View>
+        );
       }),
       ...drafts.map((d) =>
-        dayRow('draft-' + d.artistId, getArtistUser(d.artistId), <StatusBadge status="draft" />,
-          () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href))),
+        withSwipeDelete('draft-' + d.artistId, () => removeDraftByDJ(slot.id, d.artistId),
+          dayRow(getArtistUser(d.artistId), <StatusBadge status="draft" />,
+            () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)))),
     ];
   };
 
@@ -2372,6 +2394,7 @@ const styles = StyleSheet.create({
   dayRowSub: { fontSize: 13 },
   dayRowTime: { fontSize: 13, fontWeight: '500' },
   dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  swipeDeleteAction: { justifyContent: 'center', alignItems: 'center', width: 72 },
   slotsSection: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
   slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
