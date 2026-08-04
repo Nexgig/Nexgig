@@ -1,7 +1,8 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal } from '@/lib/rn';
+import { useWindowDimensions } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -9,6 +10,7 @@ import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { Divider } from '@/components/ui/card-free';
 import { MaterialIcons } from '@expo/vector-icons';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore, useDraftStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -127,6 +129,18 @@ export default function ManagerDashboard() {
     }));
     return { nights, rows };
   }, [venues, slots, bookings, drafts, bookingVenueId]);
+
+  // Tapping a coverage square opens a bottom sheet of that day's bookings, scoped to whatever
+  // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
+  const [sheetDate, setSheetDate] = useState<string | null>(null);
+  const { height: winH } = useWindowDimensions();
+  const sheetBookings = useMemo(() => {
+    if (!sheetDate) return [];
+    return dashboardBookings
+      .filter((b) => (b.slot?.date ?? b.slotDate) === sheetDate)
+      .filter((b) => !bookingVenueId || b.venueId === bookingVenueId)
+      .sort((a, b) => (a.slot?.startTime ?? a.slotStartTime ?? '').localeCompare(b.slot?.startTime ?? b.slotStartTime ?? ''));
+  }, [sheetDate, dashboardBookings, bookingVenueId]);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -312,11 +326,13 @@ export default function ManagerDashboard() {
               ))}
             </View>
             <View style={styles.gigInfo}>
-              <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+              <View style={styles.gigNameRow}>
+                <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+                {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
+              </View>
               <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
             </View>
             <View style={styles.gigRight}>
-              {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
               <Text style={[styles.gigTime, { color: colors.muted }]}>
                 {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
               </Text>
@@ -403,7 +419,11 @@ export default function ManagerDashboard() {
                 <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
               </View>
               {r.cells.map((state, i) => (
-                <View key={i} style={styles.stripCell}>
+                <Pressable
+                  key={i}
+                  style={({ pressed }) => [styles.stripCell, { opacity: pressed ? 0.5 : 1 }]}
+                  onPress={() => setSheetDate(coverage.nights[i])}
+                >
                   <View
                     style={[
                       styles.cellBox,
@@ -412,7 +432,7 @@ export default function ManagerDashboard() {
                         : { backgroundColor: colors.surface },
                     ]}
                   />
-                </View>
+                </Pressable>
               ))}
             </View>
           ))}
@@ -452,6 +472,52 @@ export default function ManagerDashboard() {
 
       </ScrollView>
 
+      {/* Day sheet — opened by tapping an Overview square. Lists that day's bookings, scoped
+          to the active venue filter (All Venues → all; one venue → that one). */}
+      <Modal visible={!!sheetDate} transparent animationType="slide" onRequestClose={() => setSheetDate(null)}>
+        <Pressable style={styles.sheetOverlay} onPress={() => setSheetDate(null)}>
+          <Pressable style={[styles.sheetPanel, { backgroundColor: colors.background }]} onPress={() => {}}>
+            <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
+              {sheetDate ? new Date(sheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
+            </Text>
+            <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>
+              {bookingVenueId ? (venues.find((v) => v.id === bookingVenueId)?.name ?? 'Venue') : 'All venues'}
+            </Text>
+            <ScrollView style={[styles.sheetScroll, { maxHeight: winH * 0.6 }]} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+              {sheetBookings.length === 0 ? (
+                <View style={styles.sheetEmpty}>
+                  <MaterialIcons name="event-busy" size={28} color={colors.muted} />
+                  <Text style={[styles.sheetEmptyText, { color: colors.muted }]}>No bookings this day</Text>
+                </View>
+              ) : (
+                sheetBookings.map((b) => {
+                  const time = b.slot ? `${fmtTime(b.slot.startTime)}–${fmtTime(b.slot.endTime)}` : '';
+                  return (
+                    <Pressable
+                      key={b.id}
+                      style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
+                      onPress={() => { setSheetDate(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
+                    >
+                      <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
+                      <View style={styles.sheetRowInfo}>
+                        <View style={styles.gigNameRow}>
+                          <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
+                          <StatusBadge status={b.status as any} />
+                        </View>
+                        <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>
+                          {[bookingVenueName(b, b.venue?.name), time].filter(Boolean).join(' · ')}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
     </ScreenContainer>
   );
 }
@@ -487,12 +553,26 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 14, height: 14, borderRadius: 4 },
   legendText: { fontSize: 12 },
-  gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  gigName: { fontSize: 16, fontWeight: '700', flexShrink: 1 },
   gigVenue: { fontSize: 13 },
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
   gigStatus: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
   gigTime: { fontSize: 13, fontWeight: '500' },
   gigInfo: { flex: 1 },
+  // Day sheet (Overview square tap)
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheetPanel: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32, maxHeight: '75%' },
+  sheetHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginBottom: 14 },
+  sheetTitle: { fontSize: 20, fontWeight: '700' },
+  sheetSubtitle: { fontSize: 13, marginTop: 2, marginBottom: 12 },
+  sheetScroll: { flexGrow: 0 },
+  sheetEmpty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
+  sheetEmptyText: { fontSize: 14 },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  sheetRowInfo: { flex: 1 },
+  sheetRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  sheetRowSub: { fontSize: 13, marginTop: 1 },
   laterDivider: { marginTop: 12 },
   laterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 18 },
   laterLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
