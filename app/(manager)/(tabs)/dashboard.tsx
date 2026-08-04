@@ -11,7 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore, useDraftStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -149,31 +149,39 @@ export default function ManagerDashboard() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheetTarget]);
-  // The sheet resolves from the raw bookings (NOT dashboardBookings, which drops cancelled/declined)
-  // so cancelled rows appear here and can be dismissed. Hidden (already-dismissed) ones stay out.
-  const sheetBookings = useMemo(() => {
+  // Slot-based, mirroring the calendar day list: for the tapped venue+night, each slot shows its
+  // bookings, its drafts, or a "Needs artist" row when empty — so tapping a grey (needs-you)
+  // square actually shows the empty/draft slots, not "nothing".
+  const drafts = useDraftStore((s) => s.drafts);
+  const sheetItems = useMemo(() => {
     if (!renderTarget) return [];
     const SHOWN = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'cancelled', 'declined', 'expired']);
-    return bookings
-      .filter((b) => b.venueId === renderTarget.venueId && !b.hiddenFromManagerCalendar && (SHOWN.has(b.status) || b.isCompleted))
-      .map((b) => {
-        const slot = slots.find((s) => s.id === b.slotId);
-        const dj = b.artistId == null
-          ? { fullName: 'Former Artist', profilePhotoUrl: undefined as string | undefined }
-          : artistUsers.find((u) => u.id === b.artistId);
-        const resolvedSlot = slot ?? (b.slotDate ? {
-          id: b.slotId, venueId: b.venueId, date: b.slotDate,
-          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
-          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
-        } : undefined);
-        return { ...b, slot: resolvedSlot, dj };
-      })
-      .filter((b) => (b.slot?.date ?? b.slotDate) === renderTarget.date)
-      .sort((a, b) => (a.slot?.startTime ?? a.slotStartTime ?? '').localeCompare(b.slot?.startTime ?? b.slotStartTime ?? ''));
-  }, [renderTarget, bookings, slots, artistUsers]);
+    const daySlots = slots
+      .filter((s) => s.venueId === renderTarget.venueId && s.date === renderTarget.date)
+      .sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''));
+    type Item = { key: string; kind: 'booking' | 'draft' | 'empty'; slot: typeof daySlots[number]; booking?: (typeof bookings)[number]; dj?: any };
+    const items: Item[] = [];
+    for (const slot of daySlots) {
+      const bs = bookings.filter((b) => b.slotId === slot.id && !b.hiddenFromManagerCalendar && (SHOWN.has(b.status) || b.isCompleted));
+      const bookedIds = new Set(bs.map((b) => b.artistId));
+      const slotDrafts = drafts.filter((d) => d.slotId === slot.id && !bookedIds.has(d.artistId));
+      if (bs.length === 0 && slotDrafts.length === 0) {
+        items.push({ key: 'empty-' + slot.id, kind: 'empty', slot });
+        continue;
+      }
+      bs.forEach((b) => {
+        const dj = b.artistId == null ? { fullName: 'Former Artist', profilePhotoUrl: undefined } : artistUsers.find((u) => u.id === b.artistId);
+        items.push({ key: b.id, kind: 'booking', slot, booking: b, dj });
+      });
+      slotDrafts.forEach((d) => {
+        items.push({ key: 'draft-' + slot.id + '-' + d.artistId, kind: 'draft', slot, dj: artistUsers.find((u) => u.id === d.artistId) });
+      });
+    }
+    return items;
+  }, [renderTarget, slots, bookings, drafts, artistUsers]);
   // Dismiss a cancelled/declined/expired booking straight from the sheet — same effect as the
   // calendar's X: hide it from the manager (and from the artist too if the artist cancelled).
-  const dismissSheetBooking = (b: (typeof sheetBookings)[number]) => {
+  const dismissSheetBooking = (b: (typeof bookings)[number]) => {
     hideFromManagerCalendar(b.id);
     const syncFields: any = { hiddenFromManagerCalendar: true };
     if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
@@ -477,32 +485,53 @@ export default function ManagerDashboard() {
             </Pressable>
           </View>
           <ScrollView style={styles.sheetScroll} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
-            {sheetBookings.length === 0 ? (
+            {sheetItems.length === 0 ? (
               <View style={styles.sheetEmpty}>
                 <MaterialIcons name="event-busy" size={28} color={colors.muted} />
-                <Text style={[styles.sheetEmptyText, { color: colors.muted }]}>No bookings this day</Text>
+                <Text style={[styles.sheetEmptyText, { color: colors.muted }]}>No sets this day</Text>
               </View>
             ) : (
-              sheetBookings.map((b) => {
-                const time = b.slot ? `${fmtTime(b.slot.startTime)}–${fmtTime(b.slot.endTime)}` : '';
-                const dismissable = b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired';
-                return (
-                  <View key={b.id} style={styles.sheetRow}>
+              sheetItems.map((item) => {
+                const time = `${fmtTime(item.slot.startTime)}–${fmtTime(item.slot.endTime)}`;
+                if (item.kind === 'empty') {
+                  return (
                     <Pressable
-                      style={({ pressed }) => [styles.sheetRowMain, { opacity: pressed ? 0.7 : 1 }]}
-                      onPress={() => { setSheetTarget(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
+                      key={item.key}
+                      style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
+                      onPress={() => { setSheetTarget(null); router.push(('/(manager)/assign-artist?slotId=' + item.slot.id) as Href); }}
                     >
-                      <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
+                      <View style={[styles.sheetDashedCircle, { borderColor: colors.primary }]}>
+                        <MaterialIcons name="add" size={20} color={colors.primary} />
+                      </View>
+                      <View style={styles.sheetRowInfo}>
+                        <Text style={[styles.sheetRowName, { color: colors.primary }]}>Needs artist</Text>
+                        <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                }
+                const b = item.booking;
+                const dismissable = item.kind === 'booking' && (b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired');
+                const onPress = () => {
+                  setSheetTarget(null);
+                  router.push((item.kind === 'booking'
+                    ? '/(manager)/booking-detail?id=' + b!.id
+                    : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
+                };
+                return (
+                  <View key={item.key} style={styles.sheetRow}>
+                    <Pressable style={({ pressed }) => [styles.sheetRowMain, { opacity: pressed ? 0.7 : 1 }]} onPress={onPress}>
+                      <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={(item.dj as any)?.id} name={item.dj?.fullName} size={40} />
                       <View style={styles.sheetRowInfo}>
                         <View style={styles.gigNameRow}>
-                          <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
-                          <StatusBadge status={b.status as any} />
+                          <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{item.dj?.fullName ?? 'Unknown Artist'}</Text>
+                          <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
                         </View>
                         <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
                       </View>
                     </Pressable>
                     {dismissable && (
-                      <Pressable hitSlop={8} style={styles.sheetDismiss} onPress={() => dismissSheetBooking(b)}>
+                      <Pressable hitSlop={8} style={styles.sheetDismiss} onPress={() => dismissSheetBooking(b!)}>
                         <MaterialIcons name="close" size={18} color={colors.muted} />
                       </Pressable>
                     )}
@@ -576,6 +605,7 @@ const styles = StyleSheet.create({
   sheetRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   sheetDismiss: { padding: 6, marginLeft: 8 },
   sheetRowInfo: { flex: 1 },
+  sheetDashedCircle: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   sheetRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   sheetRowSub: { fontSize: 13, marginTop: 1 },
 });

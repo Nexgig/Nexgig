@@ -1860,8 +1860,7 @@ export default function CalendarScreen() {
                   if (dCancelled) fill = colors.error;
                   else if (dPending) fill = STATUS_COLORS.pending;
                   else if (dConfirmed) fill = STATUS_COLORS.confirmed;
-                  else if (dDrafted) ring = STATUS_COLORS.pending;   // amber ring
-                  else if (dEmpty) ring = colors.border;             // grey ring
+                  else if (dDrafted || dEmpty) ring = colors.border;   // grey ring — empty OR drafted
                   const numColor = fill ? '#fff' : (isToday && !ring ? colors.primary : colors.foreground);
                   return (
                     <Pressable
