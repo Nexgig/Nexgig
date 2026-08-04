@@ -8,6 +8,8 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
@@ -160,7 +162,7 @@ export default function ManagerDashboard() {
     const daySlots = slots
       .filter((s) => s.venueId === renderTarget.venueId && s.date === renderTarget.date)
       .sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''));
-    type Item = { key: string; kind: 'booking' | 'draft' | 'empty'; slot: typeof daySlots[number]; booking?: (typeof bookings)[number]; dj?: any };
+    type Item = { key: string; kind: 'booking' | 'draft' | 'empty'; slot: typeof daySlots[number]; booking?: (typeof bookings)[number]; dj?: any; artistId?: string };
     const items: Item[] = [];
     for (const slot of daySlots) {
       const bs = bookings.filter((b) => b.slotId === slot.id && !b.hiddenFromManagerCalendar && (SHOWN.has(b.status) || b.isCompleted));
@@ -175,7 +177,7 @@ export default function ManagerDashboard() {
         items.push({ key: b.id, kind: 'booking', slot, booking: b, dj });
       });
       slotDrafts.forEach((d) => {
-        items.push({ key: 'draft-' + slot.id + '-' + d.artistId, kind: 'draft', slot, dj: artistUsers.find((u) => u.id === d.artistId) });
+        items.push({ key: 'draft-' + slot.id + '-' + d.artistId, kind: 'draft', slot, dj: artistUsers.find((u) => u.id === d.artistId), artistId: d.artistId });
       });
     }
     return items;
@@ -187,6 +189,32 @@ export default function ManagerDashboard() {
     const syncFields: any = { hiddenFromManagerCalendar: true };
     if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
     syncBookingStatus(b.id, b.status as any, syncFields);
+  };
+
+  // Swipe-left → Remove, mirroring the calendar day list. Used for empty slots (delete the
+  // slot), drafts (drop the draft), and dead bookings (dismiss). Live gigs don't swipe —
+  // those are cancelled from the booking screen.
+  const withSheetSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
+    const doDelete = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDelete(); };
+    return (
+      <Swipeable
+        key={key}
+        friction={1.4}
+        rightThreshold={56}
+        overshootRight={false}
+        onSwipeableOpen={(dir) => { if (dir === 'right') doDelete(); }}
+        renderRightActions={() => (
+          <View style={styles.swipeDeleteAction}>
+            <Pressable style={[styles.swipeDeleteBtn, { backgroundColor: colors.error }]} onPress={doDelete}>
+              <MaterialIcons name="delete" size={17} color="#fff" />
+              <Text style={styles.swipeDeleteText}>Remove</Text>
+            </Pressable>
+          </View>
+        )}
+      >
+        {child}
+      </Swipeable>
+    );
   };
 
   // Group bookings by slot so a slot with several artists shows as ONE row
@@ -252,6 +280,8 @@ export default function ManagerDashboard() {
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
   const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
+  const deleteSlot = useSlotStore((s) => s.deleteSlot);
+  const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -482,10 +512,9 @@ export default function ManagerDashboard() {
               sheetItems.map((item) => {
                 const time = `${fmtTime(item.slot.startTime)}–${fmtTime(item.slot.endTime)}`;
                 if (item.kind === 'empty') {
-                  return (
+                  return withSheetSwipeDelete(item.key, () => deleteSlot(item.slot.id), (
                     <Pressable
-                      key={item.key}
-                      style={({ pressed }) => [styles.sheetRow, { gap: 12, opacity: pressed ? 0.7 : 1 }]}
+                      style={({ pressed }) => [styles.sheetRow, { backgroundColor: colors.background, gap: 12, opacity: pressed ? 0.7 : 1 }]}
                       onPress={() => { setSheetTarget(null); router.push(('/(manager)/assign-artist?slotId=' + item.slot.id) as Href); }}
                     >
                       <View style={[styles.sheetDashedCircle, { borderColor: colors.primary }]}>
@@ -496,35 +525,35 @@ export default function ManagerDashboard() {
                         <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
                       </View>
                     </Pressable>
-                  );
+                  ));
                 }
                 const b = item.booking;
-                const dismissable = item.kind === 'booking' && (b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired');
                 const onPress = () => {
                   setSheetTarget(null);
                   router.push((item.kind === 'booking'
                     ? '/(manager)/booking-detail?id=' + b!.id
                     : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
                 };
-                return (
-                  <View key={item.key} style={styles.sheetRow}>
-                    <Pressable style={({ pressed }) => [styles.sheetRowMain, { opacity: pressed ? 0.7 : 1 }]} onPress={onPress}>
-                      <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={(item.dj as any)?.id} name={item.dj?.fullName} size={40} />
-                      <View style={styles.sheetRowInfo}>
-                        <View style={styles.gigNameRow}>
-                          <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{item.dj?.fullName ?? 'Unknown Artist'}</Text>
-                          <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
-                        </View>
-                        <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
+                const row = (
+                  <Pressable style={({ pressed }) => [styles.sheetRow, { backgroundColor: colors.background, gap: 12, opacity: pressed ? 0.7 : 1 }]} onPress={onPress}>
+                    <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={(item.dj as any)?.id} name={item.dj?.fullName} size={40} />
+                    <View style={styles.sheetRowInfo}>
+                      <View style={styles.gigNameRow}>
+                        <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{item.dj?.fullName ?? 'Unknown Artist'}</Text>
+                        <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
                       </View>
-                    </Pressable>
-                    {dismissable && (
-                      <Pressable hitSlop={8} style={styles.sheetDismiss} onPress={() => dismissSheetBooking(b!)}>
-                        <MaterialIcons name="close" size={18} color={colors.muted} />
-                      </Pressable>
-                    )}
-                  </View>
+                      <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
+                    </View>
+                  </Pressable>
                 );
+                // Drafts drop the draft; dead bookings dismiss; live gigs don't swipe.
+                if (item.kind === 'draft') {
+                  return withSheetSwipeDelete(item.key, () => removeDraftByDJ(item.slot.id, item.artistId!), row);
+                }
+                const dead = b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired';
+                return dead
+                  ? withSheetSwipeDelete(item.key, () => dismissSheetBooking(b!), row)
+                  : <View key={item.key}>{row}</View>;
               })
             )}
           </ScrollView>
@@ -614,6 +643,9 @@ const styles = StyleSheet.create({
   sheetEmptyText: { fontSize: 14 },
   sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   sheetRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  swipeDeleteAction: { justifyContent: 'center', paddingVertical: 8, paddingLeft: 16, paddingRight: 8 },
+  swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   sheetDismiss: { padding: 6, marginLeft: 8 },
   sheetRowInfo: { flex: 1 },
   sheetDashedCircle: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
