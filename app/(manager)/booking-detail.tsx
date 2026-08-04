@@ -88,6 +88,19 @@ export default function DJBookingDetailScreen() {
   const allDrafts = useDraftStore((s) => s.drafts);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
 
+  // Dashed "+ Add Artist" row — opens the picker (assign-artist) for this slot.
+  const AddArtistRow = ({ slotId }: { slotId: string }) => (
+    <Pressable
+      style={({ pressed }) => [styles.addArtistRow, { opacity: pressed ? 0.6 : 1 }]}
+      onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slotId) as Href)}
+    >
+      <View style={[styles.addArtistCircle, { borderColor: colors.primary }]}>
+        <MaterialIcons name="add" size={22} color={colors.primary} />
+      </View>
+      <Text style={[styles.addArtistText, { color: colors.primary }]}>Add Artist</Text>
+    </Pressable>
+  );
+
   // ── Slot-only mode: an empty set (no bookings) opened from the calendar ──────
   if (!booking) {
     const emptySlot = getSlotById(slotIdParam ?? '');
@@ -120,17 +133,12 @@ export default function DJBookingDetailScreen() {
                       title={dArtist?.fullName ?? 'Artist'}
                       subtitle="Not sent yet"
                       trailing={<StatusBadge status="draft" />}
-                      divider={i < slotDrafts.length - 1}
+                      divider
                     />
                   );
                 })
               )}
-              <SoftButton
-                tone="primary"
-                icon="add"
-                label="Assign Artist"
-                onPress={() => router.push(('/(manager)/assign-artist?slotId=' + emptySlot.id) as Href)}
-              />
+              <AddArtistRow slotId={emptySlot.id} />
             </Section>
 
             {emptyVenue ? (
@@ -351,7 +359,7 @@ export default function DJBookingDetailScreen() {
                     booking.status === 'expired'
                       ? () => dismissExpiredBooking(booking.id)
                       : cancellableStatus(booking.status) ? () => cancelOneBooking(booking.id) : undefined} />}
-                  divider={coBookings.length > 0 || draftArtists.length > 0}
+                  divider
                 />
                 {coBookings.map((cb, i) => {
                   const coArtist = getArtistUser(cb.artistId);
@@ -366,7 +374,7 @@ export default function DJBookingDetailScreen() {
                           ? () => dismissExpiredBooking(cb.id)
                           : cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
                       onPress={coArtist?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + cb.artistId + '&name=' + encodeURIComponent(coArtist.fullName ?? '')) as Href) : undefined}
-                      divider={i < coBookings.length - 1 || draftArtists.length > 0}
+                      divider
                     />
                   );
                 })}
@@ -379,10 +387,11 @@ export default function DJBookingDetailScreen() {
                       title={dArtist?.fullName ?? 'Artist'}
                       subtitle="Not sent yet"
                       trailing={<StatusWithX status="draft" onX={() => removeOneDraft(d.artistId)} />}
-                      divider={i < draftArtists.length - 1}
+                      divider
                     />
                   );
                 })}
+                <AddArtistRow slotId={booking.slotId} />
               </Section>
             </>
           )}
@@ -547,6 +556,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '800' },
+  addArtistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  addArtistCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  addArtistText: { fontSize: 15, fontWeight: '700' },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   detailLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 92 },
   detailValueWrap: { flex: 1 },

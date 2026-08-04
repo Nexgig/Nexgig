@@ -582,7 +582,7 @@ export default function AssignDJScreen() {
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {isPastSlot ? 'Add to Completed Gigs' : 'Assign Artist'}
+            {isPastSlot ? 'Add to Completed Gigs' : 'Add Artist'}
           </Text>
           <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
             {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
