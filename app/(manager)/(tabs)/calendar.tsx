@@ -12,6 +12,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore, useCalendarSelectionStore, useCalendarBulkStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
@@ -1362,6 +1363,54 @@ export default function CalendarScreen() {
     );
   };
 
+  // Month-view day list: dashboard-style rows. A slot with bookings shows one row per artist
+  // (avatar + status pill + venue + time -> booking-detail); a slot with none shows a dashed
+  // "Needs artist" row -> Add Artist picker.
+  const renderDaySlot = (slot: Slot) => {
+    const venueName = getVenueById(slot.venueId)?.name ?? 'Venue';
+    const time = `${fmtTime(slot.startTime)}–${fmtTime(slot.endTime)}`;
+    const bs = getBookingsBySlot(slot.id);   // already excludes hidden-from-manager
+    if (bs.length === 0) {
+      return [(
+        <Pressable
+          key={slot.id}
+          style={({ pressed }) => [styles.dayRow, { opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
+        >
+          <View style={[styles.dayDashedCircle, { borderColor: colors.primary }]}>
+            <MaterialIcons name="add" size={22} color={colors.primary} />
+          </View>
+          <View style={styles.dayRowInfo}>
+            <Text style={[styles.dayRowName, { color: colors.primary }]}>Needs artist</Text>
+            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+          </View>
+          <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+        </Pressable>
+      )];
+    }
+    return bs.map((b) => {
+      const artist = getArtistUser(b.artistId);
+      const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
+      return (
+        <Pressable
+          key={b.id}
+          style={({ pressed }) => [styles.dayRow, { opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
+        >
+          <AvatarImage uri={artist?.profilePhotoUrl || undefined} avatarId={(artist as any)?.avatarId} seed={artist?.id} name={artist?.fullName ?? 'Former Artist'} size={44} />
+          <View style={styles.dayRowInfo}>
+            <View style={styles.dayNameRow}>
+              <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{artist?.fullName ?? 'Former Artist'}</Text>
+              {shown !== 'confirmed' && <StatusBadge status={shown as any} />}
+            </View>
+            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+          </View>
+          <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+        </Pressable>
+      );
+    });
+  };
+
   const renderSlotCard = (slot: Slot) => {
     const slotBookings = getBookingsBySlot(slot.id);
     const slotDrafts = getDraftsBySlot(slot.id).filter(
@@ -1759,59 +1808,37 @@ export default function CalendarScreen() {
                   const daySlots = getSlotsForDate(dateStr);
                   const isToday = dateStr === todayStr;
                   const isSelected = dateStr === selectedDate;
-                  // Dot colours: no dot = empty, grey = draft, orange = requested, green = confirmed
-                  // Dot logic (max 2 dots) — same for All-venues and individual venue views:
-                  //   grey + orange  → both drafts AND requested exist on this day
-                  //   orange only    → requested bookings, no drafts
-                  //   grey only      → only drafts, no requested
-                  //   green only     → all confirmed, no drafts
-                  //   none           → no slots
-                  let dots: string[];
-                  // Also include past bookings that still have pending status (slotDate snapshot)
+                  // Filled square per day, coloured by the strongest status among its slots —
+                  // matches the dashboard Overview: cancelled(red) > pending(amber) > booked(green)
+                  // > open(grey, a slot with no live booking yet) > none. Past unanswered requests
+                  // (slotDate snapshot) count as pending too.
                   const pastPendingOnDay = allBookings.filter(
                     (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
                       (venueFilter === 'all' || b.venueId === venueFilter) &&
                       (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
                   );
-                  if (daySlots.length > 0 || pastPendingOnDay.length > 0) {
-                    const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
-                    const hasRequested = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation')
-                      || pastPendingOnDay.length > 0;
-                    const hasDeclined = allDayBookings.some((b) => b.status === 'declined' || b.status === 'cancelled');
-                    const hasDraft = daySlots.some((s) => allDrafts.find((d) => d.slotId === s.id));
-                    const allConfirmed = allDayBookings.length > 0 && allDayBookings.every((b) => b.status === 'confirmed') && !hasDraft && pastPendingOnDay.length === 0;
-                    // No completed dot: the calendar is for PLANNING, and a completed gig is
-                    // done — not actionable, and still in Dashboard History / Completed Gigs /
-                    // the venue page. A day that's only completed gets no dot; a cancellation
-                    // on it still shows red below.
-                    if (hasRequested && hasDraft) dots = [colors.muted, colors.warning]; // grey + orange
-                    else if (hasRequested) dots = [colors.warning];                       // orange only
-                    else if (hasDraft) dots = [colors.muted];                             // grey only
-                    else if (allConfirmed) dots = [colors.success];                       // green only
-                    else dots = [];
-                    if (hasDeclined) dots = [...dots.filter((d) => d !== colors.error), colors.error]; // red for declined/cancelled
-                  } else {
-                    dots = [];
-                  }
+                  const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
+                  const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
+                  const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
+                  const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
+                  const dOpen = daySlots.some((s) => getBookingsBySlot(s.id).filter((b) => b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation').length === 0);
+                  const cellColor = dCancelled ? colors.error
+                    : dPending ? STATUS_COLORS.pending
+                    : dConfirmed ? STATUS_COLORS.confirmed
+                    : dOpen ? colors.border
+                    : null;
+                  const numColor = !cellColor ? (isToday ? colors.primary : colors.foreground)
+                    : cellColor === colors.border ? colors.foreground   // dark number on light grey
+                    : '#fff';                                            // white on green/amber/red
                   return (
                     <Pressable
                       key={day}
                       style={styles.calendarCell}
                       onPress={() => setSelectedDate(dateStr === selectedDate ? '' : dateStr)}
                     >
-                      <View style={[
-                        styles.dayCircle,
-                        isSelected && { backgroundColor: colors.surface },
-                      ]}>
-                        <Text style={[styles.dayNumber, { color: isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                      <View style={[styles.dayCircle, cellColor ? { backgroundColor: cellColor } : null]}>
+                        <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
-                      {dots.length > 0 && (
-                        <View style={styles.dotRow}>
-                          {dots.map((dotColor, idx) => (
-                            <View key={idx} style={[styles.dot, { backgroundColor: dotColor }]} />
-                          ))}
-                        </View>
-                      )}
                     </Pressable>
                   );
                 })}
@@ -1825,10 +1852,11 @@ export default function CalendarScreen() {
                 </View>
               ) : (
               <View style={styles.slotsSection}>
-                <View style={styles.slotsSectionHeader}>
-                  <Text style={[styles.slotsSectionTitle, { color: colors.foreground }]}>
-                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                <View style={styles.dayHeaderRow}>
+                  <Text style={[styles.dayHeaderLabel, { color: colors.muted }]}>
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()}
                   </Text>
+                  <View style={[styles.dayHeaderLine, { backgroundColor: colors.border }]} />
                 </View>
 
                 {selectedSlots.length === 0 ? (
@@ -1837,7 +1865,7 @@ export default function CalendarScreen() {
                     <Text style={[styles.noSlotsText, { color: colors.muted }]}>No sets for this day</Text>
                   </View>
                 ) : (
-                  selectedSlots.map(renderSlotCard)
+                  selectedSlots.flatMap(renderDaySlot)
                 )}
               </View>
               )}
@@ -2318,9 +2346,17 @@ const styles = StyleSheet.create({
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
-  dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
-  dot: { width: 4, height: 4, borderRadius: 2 },
   // Slots section
+  dayHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  dayHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  dayHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  dayRowInfo: { flex: 1 },
+  dayNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  dayRowSub: { fontSize: 13 },
+  dayRowTime: { fontSize: 13, fontWeight: '500' },
+  dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   slotsSection: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
   slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
