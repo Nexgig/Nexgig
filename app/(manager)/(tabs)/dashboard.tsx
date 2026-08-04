@@ -373,7 +373,7 @@ export default function ManagerDashboard() {
             <View style={styles.gigInfo}>
               <View style={styles.gigNameRow}>
                 <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
-                {isPending && <Text style={[styles.gigStatus, { color: STATUS_COLORS.pending }]}>PENDING</Text>}
+                {isPending && <StatusBadge status="pending" />}
               </View>
               <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
             </View>
@@ -616,7 +616,6 @@ const styles = StyleSheet.create({
   gigName: { fontSize: 16, fontWeight: '700', flexShrink: 1 },
   gigVenue: { fontSize: 13 },
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
-  gigStatus: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
   gigTime: { fontSize: 13, fontWeight: '500' },
   gigInfo: { flex: 1 },
   // Day sheet (Overview square tap)
