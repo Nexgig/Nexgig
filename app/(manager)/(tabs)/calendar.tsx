@@ -22,7 +22,7 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
 import { persistGigRequestBooking } from '@/lib/gig-requests';
-import type { Slot } from '@/lib/types';
+import type { Slot, Booking } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
 import { useFocusEffect } from 'expo-router';
@@ -962,6 +962,15 @@ export default function CalendarScreen() {
     deleteSlot(slot.id);
   };
 
+  // Dismiss a cancelled / declined / expired booking (swipe-to-delete on a dead row) — hides it
+  // from the manager, and from the artist too if the artist cancelled. Same as the day sheet's X.
+  const dismissBooking = (b: Booking) => {
+    hideFromManagerCalendar(b.id);
+    const syncFields: any = { hiddenFromManagerCalendar: true };
+    if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
+    syncBookingStatus(b.id, b.status as any, syncFields);
+  };
+
   // Send all drafts on a slot (one confirmation, then send each). Used by the Send button on the card.
   const sendSlotDrafts = (slot: Slot) => {
     if (!currentUser) return;
@@ -1433,12 +1442,13 @@ export default function CalendarScreen() {
     return [
       ...bs.map((b) => {
         const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
-        return (
-          <View key={b.id}>
-            {dayRow(getArtistUser(b.artistId), shown !== 'confirmed' ? <StatusBadge status={shown as any} /> : null,
-              () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href))}
-          </View>
-        );
+        const row = dayRow(getArtistUser(b.artistId), shown !== 'confirmed' ? <StatusBadge status={shown as any} /> : null,
+          () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href));
+        // Dead statuses (cancelled / declined / expired) swipe to dismiss; live gigs don't.
+        const dismissable = b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired';
+        return dismissable
+          ? withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row)
+          : <View key={b.id}>{row}</View>;
       }),
       ...drafts.map((d) =>
         withSwipeDelete('draft-' + d.artistId, () => removeDraftByDJ(slot.id, d.artistId),
