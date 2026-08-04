@@ -1426,22 +1426,19 @@ export default function CalendarScreen() {
           <View style={styles.header}>
             <VenueFilterHeader />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-            <Pressable
-              style={({ pressed }) => [styles.headerSendBtn, { opacity: pressed ? 0.6 : 1 }]}
-              onPress={() => {
-                setSendVenueFilter(null);
-                setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
-                setShowSendSheet(true);
-              }}
-              hitSlop={8}
-            >
-              <MaterialIcons name="send" size={26} color={colors.foreground} />
-              {totalPeriodDraftCount > 0 && (
-                <View style={styles.headerSendBadge}>
-                  <Text style={styles.headerSendBadgeText}>{totalPeriodDraftCount}</Text>
-                </View>
-              )}
-            </Pressable>
+            {totalPeriodDraftCount > 0 && (
+              <Pressable
+                style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => {
+                  setSendVenueFilter(null);
+                  setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
+                  setShowSendSheet(true);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.headerSendText}>Send {totalPeriodDraftCount}</Text>
+              </Pressable>
+            )}
             </View>
           </View>
 
@@ -2020,9 +2017,8 @@ const styles = StyleSheet.create({
   // Sticky Send All bottom bar
   // Send action sheet
   // Header Send button
-  headerSendBtn: { padding: 2, position: 'relative' as const },
-  headerSendBadge: { position: 'absolute' as const, top: -4, right: -6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#FF6B35', alignItems: 'center' as const, justifyContent: 'center' as const, paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' },
-  headerSendBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' as const },
+  headerSendBtn: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  headerSendText: { color: '#fff', fontSize: 15, fontWeight: '700' as const },
   // Send FAB (kept for style reference, no longer rendered)
   // Lineup Balance panel
   lineupPanel: { marginHorizontal: 20, marginTop: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
