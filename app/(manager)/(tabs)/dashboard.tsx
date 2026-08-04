@@ -189,8 +189,9 @@ export default function ManagerDashboard() {
   // (stacked avatars + joined names). Status dot uses the highest-priority
   // status among the slot's artists: pending > confirmed > completed.
   const groupedBookingsPreview = useMemo(() => {
-    // Dashboard shows only live bookings — completed ones live on the Completed page.
-    const active = dashboardBookings.filter((b) => !b.isDone);
+    // Bookings list shows only confirmed (Booked) gigs — pending shows in the Overview strip
+    // (amber) and the day sheet; completed live on the Completed page.
+    const active = dashboardBookings.filter((b) => b.statusKey === 'confirmed');
     const venueScoped = bookingVenueId
       ? active.filter((b) => b.venueId === bookingVenueId)
       : active;
