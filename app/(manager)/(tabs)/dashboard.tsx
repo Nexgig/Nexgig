@@ -476,7 +476,7 @@ export default function ManagerDashboard() {
           to the active venue filter (All Venues → all; one venue → that one). */}
       <Modal visible={!!sheetDate} transparent animationType="slide" onRequestClose={() => setSheetDate(null)}>
         <Pressable style={styles.sheetOverlay} onPress={() => setSheetDate(null)}>
-          <Pressable style={[styles.sheetPanel, { backgroundColor: colors.background }]} onPress={() => {}}>
+          <Pressable style={[styles.sheetPanel, { backgroundColor: colors.background, height: winH * 0.5 }]} onPress={() => {}}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
               {sheetDate ? new Date(sheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
@@ -484,7 +484,7 @@ export default function ManagerDashboard() {
             <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>
               {bookingVenueId ? (venues.find((v) => v.id === bookingVenueId)?.name ?? 'Venue') : 'All venues'}
             </Text>
-            <ScrollView style={[styles.sheetScroll, { maxHeight: winH * 0.6 }]} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.sheetScroll} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
               {sheetBookings.length === 0 ? (
                 <View style={styles.sheetEmpty}>
                   <MaterialIcons name="event-busy" size={28} color={colors.muted} />
@@ -562,11 +562,11 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   // Day sheet (Overview square tap)
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheetPanel: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32, maxHeight: '75%' },
+  sheetPanel: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32 },
   sheetHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginBottom: 14 },
   sheetTitle: { fontSize: 20, fontWeight: '700' },
   sheetSubtitle: { fontSize: 13, marginTop: 2, marginBottom: 12 },
-  sheetScroll: { flexGrow: 0 },
+  sheetScroll: { flex: 1 },
   sheetEmpty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   sheetEmptyText: { fontSize: 14 },
   sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
