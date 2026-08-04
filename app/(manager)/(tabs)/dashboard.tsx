@@ -118,7 +118,7 @@ export default function ManagerDashboard() {
         let cancelled = false, confirmed = false, pending = false;
         for (const s of daySlots) {
           const bs = bySlot.get(s.id) ?? [];               // non-hidden manager bookings for this slot
-          if (bs.some((b) => b.status === 'cancelled')) cancelled = true;
+          if (bs.some((b) => b.status === 'cancelled' || b.status === 'declined')) cancelled = true;
           const active = bs.filter(
             (b) => b.status === 'confirmed' || b.status === 'requested' || b.status === 'past_confirmation'
           );
