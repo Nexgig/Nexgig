@@ -4,7 +4,7 @@ import { useRoleSwitching } from '@/lib/roles';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 // react-native-reanimated Animated not used in this file (using RNAnimated from react-native instead)
 // TimeSelector removed — using dropdown time picker instead
 import { useRouter } from 'expo-router';
