@@ -76,9 +76,11 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
 }
 
 /**
- * After a programme edit, remove the schedule-generated FUTURE slots that no longer match
- * the new programme — but ONLY when they're empty (no booking, no draft). A night that
- * already has an artist is never touched. New nights get filled by ensureScheduleSlots.
+ * After a programme edit, remove EVERY future slot for this venue that no longer matches the
+ * new programme AND has no artist (no booking, no draft) — including manual one-off empty
+ * slots. A night that already has an artist is never touched. New nights get filled by
+ * ensureScheduleSlots. Runs only on a programme save, never on plain calendar viewing, so a
+ * freshly-added one-off slot isn't wiped out from under the manager.
  */
 export async function reconcileScheduleSlots(venueId: string): Promise<void> {
   const venue = useVenueStore.getState().venues.find((v) => v.id === venueId);
@@ -94,11 +96,11 @@ export async function reconcileScheduleSlots(venueId: string): Promise<void> {
   const toDelete = useSlotStore
     .getState()
     .slots.filter((s) => {
-      if (s.venueId !== venueId || !s.scheduleGenerated || s.date < today) return false;
+      if (s.venueId !== venueId || s.date < today) return false;       // this venue, future only
       if (valid.has(`${weekdayOf(s.date)}|${s.startTime}|${s.endTime}`)) return false; // still scheduled
       const hasBooking = bookings.some((b) => b.slotId === s.id && !b.hiddenFromManagerCalendar);
       const hasDraft = drafts.some((d) => d.slotId === s.id);
-      return !hasBooking && !hasDraft; // empty only
+      return !hasBooking && !hasDraft; // empty only — no artist booked or drafted
     })
     .map((s) => s.id);
 
