@@ -365,7 +365,7 @@ export default function DJBookingDetailScreen() {
                         cb.status === 'expired'
                           ? () => dismissExpiredBooking(cb.id)
                           : cancellableStatus(cb.status) ? () => cancelOneBooking(cb.id) : undefined} />}
-                      onPress={() => router.replace(('/(manager)/booking-detail?id=' + cb.id) as Href)}
+                      onPress={coArtist?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + cb.artistId + '&name=' + encodeURIComponent(coArtist.fullName ?? '')) as Href) : undefined}
                       divider={i < coBookings.length - 1 || draftArtists.length > 0}
                     />
                   );
