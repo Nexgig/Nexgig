@@ -132,32 +132,32 @@ export default function ManagerDashboard() {
 
   // Tapping a coverage square opens a bottom sheet of that day's bookings, scoped to whatever
   // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
-  const [sheetDate, setSheetDate] = useState<string | null>(null);
+  // Each square is a (venue, night); the sheet shows just that venue's bookings that night.
+  const [sheetTarget, setSheetTarget] = useState<{ venueId: string; name: string; date: string } | null>(null);
   const { height: winH } = useWindowDimensions();
-  const panelH = winH * 0.45;
-  // Slide + mount lifecycle. `renderDate` keeps the panel mounted (and its content stable) while
-  // it slides down to close; `sheetDate` is the open target — tapping another square just changes
+  const panelH = winH * 0.55;
+  // Slide + mount lifecycle. `renderTarget` keeps the panel mounted (and its content stable) while
+  // it slides down to close; `sheetTarget` is the open target — tapping another square just changes
   // it, so the content swaps in place with no re-animation.
   const sheetY = useRef(new Animated.Value(panelH)).current;
-  const [renderDate, setRenderDate] = useState<string | null>(null);
+  const [renderTarget, setRenderTarget] = useState<{ venueId: string; name: string; date: string } | null>(null);
   useEffect(() => {
-    if (sheetDate) {
-      setRenderDate(sheetDate);
+    if (sheetTarget) {
+      setRenderTarget(sheetTarget);
       Animated.timing(sheetY, { toValue: 0, duration: 220, useNativeDriver: true }).start();
-    } else if (renderDate) {
+    } else if (renderTarget) {
       Animated.timing(sheetY, { toValue: panelH, duration: 200, useNativeDriver: true }).start(({ finished }) => {
-        if (finished) setRenderDate(null);
+        if (finished) setRenderTarget(null);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sheetDate]);
+  }, [sheetTarget]);
   const sheetBookings = useMemo(() => {
-    if (!renderDate) return [];
+    if (!renderTarget) return [];
     return dashboardBookings
-      .filter((b) => (b.slot?.date ?? b.slotDate) === renderDate)
-      .filter((b) => !bookingVenueId || b.venueId === bookingVenueId)
+      .filter((b) => (b.slot?.date ?? b.slotDate) === renderTarget.date && b.venueId === renderTarget.venueId)
       .sort((a, b) => (a.slot?.startTime ?? a.slotStartTime ?? '').localeCompare(b.slot?.startTime ?? b.slotStartTime ?? ''));
-  }, [renderDate, dashboardBookings, bookingVenueId]);
+  }, [renderTarget, dashboardBookings]);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -439,7 +439,7 @@ export default function ManagerDashboard() {
                 <Pressable
                   key={i}
                   style={({ pressed }) => [styles.stripCell, { opacity: pressed ? 0.5 : 1 }]}
-                  onPress={() => setSheetDate(coverage.nights[i])}
+                  onPress={() => setSheetTarget({ venueId: r.venue.id, name: r.venue.name, date: coverage.nights[i] })}
                 >
                   <View
                     style={[
@@ -492,19 +492,17 @@ export default function ManagerDashboard() {
       {/* Day sheet — a custom in-app panel (no backdrop) so the Overview squares stay tappable:
           tap another square to SWAP the day in place. Snaps in/out (no slide yet). Lists that
           day's bookings, scoped to the venue filter (All Venues → all; one venue → that one). */}
-      {renderDate && (
+      {renderTarget && (
         <Animated.View style={[styles.sheetPanel, { backgroundColor: colors.background, borderTopColor: colors.border, height: panelH, transform: [{ translateY: sheetY }] }]}>
           <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
           <View style={styles.sheetHeaderRow}>
             <View style={styles.sheetHeaderText}>
               <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
-                {new Date(renderDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {new Date(renderTarget.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
               </Text>
-              <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>
-                {bookingVenueId ? (venues.find((v) => v.id === bookingVenueId)?.name ?? 'Venue') : 'All venues'}
-              </Text>
+              <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>{renderTarget.name}</Text>
             </View>
-            <Pressable hitSlop={10} style={styles.sheetClose} onPress={() => setSheetDate(null)}>
+            <Pressable hitSlop={10} style={styles.sheetClose} onPress={() => setSheetTarget(null)}>
               <MaterialIcons name="close" size={22} color={colors.muted} />
             </Pressable>
           </View>
@@ -521,7 +519,7 @@ export default function ManagerDashboard() {
                   <Pressable
                     key={b.id}
                     style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
-                    onPress={() => { setSheetDate(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
+                    onPress={() => { setSheetTarget(null); router.push(('/(manager)/booking-detail?id=' + b.id) as Href); }}
                   >
                     <AvatarImage uri={b.dj?.profilePhotoUrl || undefined} avatarId={(b.dj as any)?.avatarId} seed={(b.dj as any)?.id} name={b.dj?.fullName} size={40} />
                     <View style={styles.sheetRowInfo}>
@@ -529,9 +527,7 @@ export default function ManagerDashboard() {
                         <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{b.dj?.fullName ?? 'Unknown Artist'}</Text>
                         <StatusBadge status={b.status as any} />
                       </View>
-                      <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>
-                        {[bookingVenueName(b, b.venue?.name), time].filter(Boolean).join(' · ')}
-                      </Text>
+                      <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
                     </View>
                   </Pressable>
                 );
