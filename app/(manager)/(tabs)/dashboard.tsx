@@ -7,7 +7,6 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
-import { Divider } from '@/components/ui/card-free';
 import { MaterialIcons } from '@expo/vector-icons';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -232,34 +231,6 @@ export default function ManagerDashboard() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [groupedBookingsPreview]);
 
-  // First section = the next 7 days, shown inline. After that, group by calendar month:
-  // the current month's leftovers read "Later in August", each following month by its name
-  // ("September", and "January 2027" once the year rolls over).
-  const { inlineGroups, monthBuckets } = useMemo(() => {
-    const today = todayLocalStr();
-    const inlineEnd = addDaysStr(today, 7);          // exclusive — today + the next 6 days
-    const currentMonthKey = today.slice(0, 7);       // "YYYY-MM"
-    const currentYear = today.slice(0, 4);
-    const inline: typeof bookingsByDate = [];
-    const byMonth = new Map<string, typeof bookingsByDate>();
-    const order: string[] = [];
-    for (const grp of bookingsByDate) {
-      if (!grp.date || grp.date < inlineEnd) { inline.push(grp); continue; }
-      const mk = grp.date.slice(0, 7);
-      if (!byMonth.has(mk)) { byMonth.set(mk, []); order.push(mk); }
-      byMonth.get(mk)!.push(grp);
-    }
-    const buckets = order.map((mk) => {
-      const groups = byMonth.get(mk)!;
-      const [y, m] = mk.split('-').map(Number);
-      const monthName = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long' });
-      const label = mk === currentMonthKey
-        ? `Later in ${monthName}`
-        : (mk.slice(0, 4) === currentYear ? monthName : `${monthName} ${y}`);
-      return { key: mk, label, groups, count: groups.reduce((n, g) => n + g.gigs.length, 0) };
-    });
-    return { inlineGroups: inline, monthBuckets: buckets };
-  }, [bookingsByDate]);
 
   const formatDateHeader = (dateStr: string) => {
     if (!dateStr) return '';
@@ -277,7 +248,6 @@ export default function ManagerDashboard() {
   const addBooking = useBookingStore((s) => s.addBooking);
   const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
 
   const handleRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -388,35 +358,6 @@ export default function ManagerDashboard() {
     </View>
   );
 
-  const renderCollapsible = (
-    label: string,
-    groups: typeof bookingsByDate,
-    count: number,
-    expanded: boolean,
-    onToggle: () => void,
-  ) => (
-    <View key={label}>
-      <View style={styles.laterDivider}><Divider full /></View>
-      <Pressable
-        style={({ pressed }) => [styles.laterRow, { opacity: pressed ? 0.6 : 1 }]}
-        onPress={onToggle}
-      >
-        <View style={styles.laterLeft}>
-          <Text style={[styles.laterLabel, { color: colors.foreground }]}>{label}</Text>
-          <View style={[styles.laterCountPill, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.laterCountText, { color: colors.muted }]}>{count}</Text>
-          </View>
-        </View>
-        <MaterialIcons
-          name={expanded ? 'keyboard-arrow-down' : 'keyboard-arrow-right'}
-          size={24}
-          color={colors.muted}
-        />
-      </Pressable>
-      {expanded && groups.map(renderDateGroup)}
-    </View>
-  );
-
   return (
     <ScreenContainer>
       <ScrollView
@@ -509,12 +450,7 @@ export default function ManagerDashboard() {
             </View>
           ) : (
             <View>
-            {inlineGroups.map(renderDateGroup)}
-            {monthBuckets.map((b) => renderCollapsible(
-              b.label, b.groups, b.count,
-              !!expandedMonths[b.key],
-              () => setExpandedMonths((m) => ({ ...m, [b.key]: !m[b.key] })),
-            ))}
+            {bookingsByDate.map(renderDateGroup)}
             </View>
           )}
         </View>
@@ -640,10 +576,4 @@ const styles = StyleSheet.create({
   sheetRowInfo: { flex: 1 },
   sheetRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   sheetRowSub: { fontSize: 13, marginTop: 1 },
-  laterDivider: { marginTop: 12 },
-  laterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 18 },
-  laterLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  laterLabel: { fontSize: 16, fontWeight: '700' },
-  laterCountPill: { minWidth: 26, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3, alignItems: 'center' },
-  laterCountText: { fontSize: 13, fontWeight: '700' },
 });
