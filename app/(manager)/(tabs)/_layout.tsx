@@ -136,17 +136,6 @@ export default function ManagerTabsLayout() {
     <View style={[tabStyles.bar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 8) }]}>
       {state.routes.map((route: any, index: number) => {
         const focused = state.index === index;
-
-        if (route.name === 'create-action') {
-          return (
-            <Pressable key={route.key} onPress={openQuickActions} style={tabStyles.item} accessibilityRole="button" accessibilityLabel="Quick actions">
-              <View style={[tabStyles.fabCircle, { backgroundColor: colors.primary }]}>
-                <MaterialIcons name="add" size={30} color="#fff" />
-              </View>
-            </Pressable>
-          );
-        }
-
         const meta = TAB_META[route.name];
         if (!meta) return null;
         const badge = route.name === 'network' ? pendingCount : route.name === 'profile' ? invoiceBadge : 0;
@@ -188,7 +177,7 @@ export default function ManagerTabsLayout() {
     <Tabs tabBar={renderTabBar} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="dashboard" />
       <Tabs.Screen name="calendar" />
-      <Tabs.Screen name="create-action" />
+      <Tabs.Screen name="create-action" options={{ href: null }} />
       <Tabs.Screen name="network" />
       <Tabs.Screen name="profile" />
     </Tabs>
