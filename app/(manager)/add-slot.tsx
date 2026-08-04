@@ -471,7 +471,7 @@ export default function AddSlotScreen() {
   );
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: Dimensions.get('window').height }]}>
       <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         <Pressable onPress={() => { Keyboard.dismiss(); router.back(); }} hitSlop={8}>
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   footerCount: { fontSize: 15, fontWeight: '700' },
   footerHint: { fontSize: 12, marginTop: 1 },
   sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 13 },
