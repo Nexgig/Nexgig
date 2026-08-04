@@ -135,7 +135,7 @@ export default function ManagerDashboard() {
   // Each square is a (venue, night); the sheet shows just that venue's bookings that night.
   const [sheetTarget, setSheetTarget] = useState<{ venueId: string; name: string; date: string } | null>(null);
   const { height: winH } = useWindowDimensions();
-  const panelH = winH * 0.55;
+  const panelH = winH * 0.53;
   // Slide + mount lifecycle. `renderTarget` keeps the panel mounted (and its content stable) while
   // it slides down to close; `sheetTarget` is the open target — tapping another square just changes
   // it, so the content swaps in place with no re-animation.
