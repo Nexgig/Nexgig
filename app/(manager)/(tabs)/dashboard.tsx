@@ -476,7 +476,7 @@ export default function ManagerDashboard() {
           to the active venue filter (All Venues → all; one venue → that one). */}
       <Modal visible={!!sheetDate} transparent animationType="slide" onRequestClose={() => setSheetDate(null)}>
         <Pressable style={styles.sheetOverlay} onPress={() => setSheetDate(null)}>
-          <Pressable style={[styles.sheetPanel, { backgroundColor: colors.background, height: winH * 0.5 }]} onPress={() => {}}>
+          <Pressable style={[styles.sheetPanel, { backgroundColor: colors.background, height: winH * 0.6 }]} onPress={() => {}}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
               {sheetDate ? new Date(sheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
