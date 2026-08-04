@@ -11,7 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore, useDraftStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore } from '@/lib/store';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -96,9 +96,9 @@ export default function ManagerDashboard() {
   const bookingVenueId = useVenueFilterStore((s) => s.venueId);
 
   // Coverage strip: manager's venues (rows) × the next 7 nights (columns). Each cell shows the
-  // strongest state among that venue's slots that night: booked (a confirmed booking) > pending
-  // (a request out, or an artist drafted) > open (a slot with nobody on it) > empty (no slot).
-  const drafts = useDraftStore((s) => s.drafts);
+  // strongest state among that venue's slots that night: cancelled > pending (a real request
+  // out) > booked (confirmed) > empty. Drafts DON'T count — nothing has been sent to the artist
+  // yet, so a drafted-only slot stays empty until the request is actually sent.
   const coverage = useMemo(() => {
     const start = todayLocalStr();
     const nights = Array.from({ length: 7 }, (_, i) => addDaysStr(start, i));
@@ -109,7 +109,6 @@ export default function ManagerDashboard() {
       const arr = bySlot.get(b.slotId);
       if (arr) arr.push(b); else bySlot.set(b.slotId, [b]);
     }
-    const draftSlotIds = new Set(drafts.map((d) => d.slotId));
     const rows = stripVenues.map((v) => ({
       venue: v,
       cells: nights.map((date) => {
@@ -123,14 +122,13 @@ export default function ManagerDashboard() {
           );
           if (active.some((b) => b.status === 'confirmed')) confirmed = true;
           if (active.some((b) => b.status !== 'confirmed')) pending = true;
-          if (active.length === 0 && draftSlotIds.has(s.id)) pending = true;
         }
         // Priority: cancelled needs attention first, then pending, then confirmed.
         return cancelled ? 'cancelled' : pending ? 'pending' : confirmed ? 'booked' : 'empty';
       }),
     }));
     return { nights, rows };
-  }, [venues, slots, bookings, drafts, bookingVenueId]);
+  }, [venues, slots, bookings, bookingVenueId]);
 
   // Tapping a coverage square opens a bottom sheet of that day's bookings, scoped to whatever
   // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
