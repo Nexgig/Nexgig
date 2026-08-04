@@ -1991,7 +1991,7 @@ const styles = StyleSheet.create({
   // Calendar grid
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 0 },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: -6 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
@@ -2009,7 +2009,7 @@ const styles = StyleSheet.create({
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
   swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  slotsSection: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20 },
+  slotsSection: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 20 },
   noSlotsCard: { borderRadius: 12, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
   noSlotsText: { fontSize: 14 },
   // Slot cards
