@@ -497,14 +497,14 @@ export default function ManagerDashboard() {
                   return (
                     <Pressable
                       key={item.key}
-                      style={({ pressed }) => [styles.sheetRow, { opacity: pressed ? 0.7 : 1 }]}
+                      style={({ pressed }) => [styles.sheetRow, { gap: 12, opacity: pressed ? 0.7 : 1 }]}
                       onPress={() => { setSheetTarget(null); router.push(('/(manager)/assign-artist?slotId=' + item.slot.id) as Href); }}
                     >
                       <View style={[styles.sheetDashedCircle, { borderColor: colors.primary }]}>
                         <MaterialIcons name="add" size={20} color={colors.primary} />
                       </View>
                       <View style={styles.sheetRowInfo}>
-                        <Text style={[styles.sheetRowName, { color: colors.primary }]}>Needs artist</Text>
+                        <Text style={[styles.sheetRowName, { color: colors.primary, marginBottom: 2 }]}>Needs artist</Text>
                         <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
                       </View>
                     </Pressable>
