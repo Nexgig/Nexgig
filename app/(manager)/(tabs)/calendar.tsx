@@ -1517,10 +1517,9 @@ export default function CalendarScreen() {
                   else if (dEmpty) fill = colors.surface;   // beige fill — empty slot, no artist
                   else if (dPending) fill = STATUS_COLORS.pending;
                   else if (dConfirmed) fill = STATUS_COLORS.confirmed;
-                  // Today's number is always coral (font, not an outline). Otherwise dark on
-                  // light beige, white on the strong status colours.
-                  const numColor = isToday ? colors.primary
-                    : !fill ? colors.foreground
+                  // Today gets no special treatment (the "Today" button jumps there). Dark on
+                  // no/beige fill, white on the strong status colours.
+                  const numColor = !fill ? colors.foreground
                     : fill === colors.surface ? colors.foreground
                     : '#fff';
                   return (
