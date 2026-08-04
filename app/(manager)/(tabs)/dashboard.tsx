@@ -522,10 +522,7 @@ export default function ManagerDashboard() {
           </View>
           <ScrollView style={styles.sheetScroll} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
             {sheetItems.length === 0 ? (
-              <View style={styles.sheetEmpty}>
-                <MaterialIcons name="event-busy" size={28} color={colors.muted} />
-                <Text style={[styles.sheetEmptyText, { color: colors.muted }]}>No sets this day</Text>
-              </View>
+              <Text style={[styles.sheetNoSlots, { color: colors.muted }]}>No slots on this night.</Text>
             ) : (
               sheetItems.map((item) => {
                 const time = `${fmtTime(item.slot.startTime)}–${fmtTime(item.slot.endTime)}`;
@@ -658,8 +655,7 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 20, fontWeight: '700' },
   sheetSubtitle: { fontSize: 13, marginTop: 2 },
   sheetScroll: { flex: 1 },
-  sheetEmpty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-  sheetEmptyText: { fontSize: 14 },
+  sheetNoSlots: { fontSize: 16, paddingTop: 4, paddingBottom: 8 },
   sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   sheetRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 8, paddingLeft: 16, paddingRight: 8 },
