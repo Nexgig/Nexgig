@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   legendSwatch: { width: 14, height: 14, borderRadius: 4 },
   legendText: { fontSize: 12 },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  gigName: { fontSize: 16, fontWeight: '700', flexShrink: 1 },
+  gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   gigVenue: { fontSize: 13 },
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
   gigTime: { fontSize: 13, fontWeight: '500' },
