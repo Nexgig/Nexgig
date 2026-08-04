@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '@/lib/rn';
-import { Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -48,8 +47,6 @@ export default function AddSlotScreen() {
   // Header + fixed-top heights measured; only the artist list scrolls, capped at
   // window − header − fixed top − grabber. (window IS the sheet's height here, not the
   // full screen — multiplying by the 0.78 detent was double-counting and left a gap.)
-  const [headerH, setHeaderH] = useState(0);
-  const [topH, setTopH] = useState(0);
   const { date, venueId } = useLocalSearchParams<{ date?: string; venueId?: string }>();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -84,7 +81,6 @@ export default function AddSlotScreen() {
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
   const [createdSlotId, setCreatedSlotId] = useState<string | null>(null);
-  const [footerH, setFooterH] = useState(0);
 
   const assignedRef = useRef(false);
   const startTimeScrollRef = useRef<ScrollView>(null);
@@ -471,8 +467,8 @@ export default function AddSlotScreen() {
   );
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, height: Dimensions.get('window').height }]}>
-      <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
+      <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         <Pressable onPress={() => { Keyboard.dismiss(); router.back(); }} hitSlop={8}>
           <Text style={[styles.doneBtn, { color: colors.primary }]}>Done</Text>
@@ -480,7 +476,7 @@ export default function AddSlotScreen() {
       </View>
 
       {/* Fixed top — venue + time pickers stay on screen; only the artist list scrolls. */}
-      <View onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
+      <View>
         <View style={styles.fieldBlock}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>
             VENUE{venueLocked ? '  ·  LOCKED (artist assigned)' : ''}
@@ -601,8 +597,8 @@ export default function AddSlotScreen() {
       {/* Only the artist list scrolls. Bounded height because flex:1 doesn't bound a
           ScrollView inside the native formSheet (its onLayout reports content height). */}
       <ScrollView
-        style={[{ backgroundColor: colors.background }, headerH && topH ? { maxHeight: Dimensions.get('window').height - headerH - topH - 30 } : { flex: 1 }]}
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 + (!isPast && draftedIds.size > 0 ? footerH : 0) }}
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -629,15 +625,11 @@ export default function AddSlotScreen() {
             )}
           </>
         )}
-        <View style={{ flexGrow: 1, minHeight: 200, backgroundColor: colors.background }} />
       </ScrollView>
 
       {/* Footer — send all drafts at once. Absolute so the list scrolls behind it. */}
       {!isPast && draftedIds.size > 0 && (
-        <View
-          style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}
-          onLayout={(e) => setFooterH(e.nativeEvent.layout.height)}
-        >
+        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.footerCount, { color: colors.foreground }]}>{draftedIds.size} draft{draftedIds.size > 1 ? 's' : ''}</Text>
             <Text style={[styles.footerHint, { color: colors.muted }]}>Stays on your calendar</Text>
@@ -682,7 +674,7 @@ const styles = StyleSheet.create({
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { marginHorizontal: -13, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   footerCount: { fontSize: 15, fontWeight: '700' },
   footerHint: { fontSize: 12, marginTop: 1 },
   sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 13 },
