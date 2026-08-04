@@ -470,9 +470,11 @@ export default function AddSlotScreen() {
     <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
-        <Pressable onPress={() => { Keyboard.dismiss(); router.back(); }} hitSlop={8}>
-          <Text style={[styles.doneBtn, { color: colors.primary }]}>Done</Text>
-        </Pressable>
+        {!isPast && draftedIds.size > 0 && (
+          <Pressable onPress={confirmSendAll} hitSlop={8}>
+            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {draftedIds.size}</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Fixed top — venue + time pickers stay on screen; only the artist list scrolls. */}
@@ -627,17 +629,15 @@ export default function AddSlotScreen() {
         )}
       </ScrollView>
 
-      {/* Footer — a single coral "Send N" control, shown only while drafts exist. */}
-      {!isPast && draftedIds.size > 0 && (
-        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Pressable
-            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-            onPress={confirmSendAll}
-          >
-            <Text style={styles.sendBtnText}>Send {draftedIds.size}</Text>
-          </Pressable>
-        </View>
-      )}
+      {/* Footer — a single coral "Done" control (always visible). */}
+      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <Pressable
+          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => { Keyboard.dismiss(); router.back(); }}
+        >
+          <Text style={styles.sendBtnText}>Done</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

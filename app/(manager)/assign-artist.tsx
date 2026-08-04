@@ -588,9 +588,11 @@ export default function AssignDJScreen() {
             {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
           </Text>
         </View>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={[styles.doneBtn, { color: colors.primary }]}>Done</Text>
-        </Pressable>
+        {!isPastSlot && draftCount > 0 && (
+          <Pressable onPress={confirmSendAll} hitSlop={8}>
+            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {draftCount}</Text>
+          </Pressable>
+        )}
       </View>
 
       {isPastSlot && (
@@ -623,17 +625,15 @@ export default function AssignDJScreen() {
         )}
       </ScrollView>
 
-      {/* Footer — a single coral "Send N" control, shown only while drafts exist. */}
-      {!isPastSlot && draftCount > 0 && (
-        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Pressable
-            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-            onPress={confirmSendAll}
-          >
-            <Text style={styles.sendBtnText}>Send {draftCount}</Text>
-          </Pressable>
-        </View>
-      )}
+      {/* Footer — a single coral "Done" control (always visible). */}
+      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <Pressable
+          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.sendBtnText}>Done</Text>
+        </Pressable>
+      </View>
     </ScreenContainer>
   );
 }
