@@ -655,7 +655,9 @@ export default function CalendarScreen() {
   }, [currentUser, allDrafts, allSlots, calendarMode, weekDays, venueFilter, standardMonthBounds, nowDT, viewedDayStr]);
   const managerDraftCount = periodDraftSlotIds.length;
 
-  // Total draft count across ALL venues in the period (ignores venue filter) — used for FAB visibility
+  // Total draft count across ALL venues and ALL (future) months — drives the header
+  // "Send N" button. Not scoped to the visible month: sending should clear every pending
+  // draft, not just the ones on screen. Past slots are excluded (auto-cleaned up).
   const totalPeriodDraftCount = useMemo(() => {
     if (!currentUser) return 0;
     const managerDrafts = allDrafts.filter((d) => d.managerId === currentUser.id);
@@ -663,17 +665,12 @@ export default function CalendarScreen() {
       const slot = allSlots.find((s) => s.id === d.slotId);
       if (!slot) return false;
       if (isPastStart(slot.date, slot.startTime)) return false; // exclude past slots
-      if (calendarMode === 'week') {
-        const weekStartStr = weekDays[0]?.dateStr ?? '';
-        const weekEndStr = weekDays[6]?.dateStr ?? '';
-        return slot.date >= weekStartStr && slot.date <= weekEndStr;
-      }
-      if (calendarMode === 'today') return slot.date === viewedDayStr;
-      return slot.date >= standardMonthBounds.start && slot.date <= standardMonthBounds.end;
+      return true;
     }).length;
-  }, [currentUser, allDrafts, allSlots, calendarMode, weekDays, standardMonthBounds, nowDT, viewedDayStr]);
+  }, [currentUser, allDrafts, allSlots, nowDT]);
 
-  // Context-aware draft list for the new bulk send modal — scoped to current period + venue filter
+  // Draft list for the bulk send modal — ALL future drafts (every month), narrowed only by
+  // the calendar's venue filter. The header button pre-selects this whole set.
   const periodScopedDrafts = useMemo(() => {
     if (!currentUser) return [];
     return allDrafts
@@ -683,14 +680,7 @@ export default function CalendarScreen() {
         if (!slot) return false;
         if (isPastStart(slot.date, slot.startTime)) return false; // exclude past slots — they are auto-cleaned up
         if (venueFilter !== 'all' && slot.venueId !== venueFilter) return false;
-        if (calendarMode === 'week') {
-          const weekStartStr = weekDays[0]?.dateStr ?? '';
-          const weekEndStr = weekDays[6]?.dateStr ?? '';
-          return slot.date >= weekStartStr && slot.date <= weekEndStr;
-        }
-        if (calendarMode === 'today') return slot.date === viewedDayStr;
-        // month mode
-        return slot.date >= standardMonthBounds.start && slot.date <= standardMonthBounds.end;
+        return true;
       })
       .map((d) => {
         const slot = allSlots.find((s) => s.id === d.slotId)!;
@@ -1426,7 +1416,7 @@ export default function CalendarScreen() {
           <View style={styles.header}>
             <VenueFilterHeader />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-            {totalPeriodDraftCount > 0 && (
+            {periodScopedDrafts.length > 0 && (
               <Pressable
                 style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
                 onPress={() => {
@@ -1436,7 +1426,7 @@ export default function CalendarScreen() {
                 }}
                 hitSlop={8}
               >
-                <Text style={styles.headerSendText}>Send {totalPeriodDraftCount}</Text>
+                <Text style={styles.headerSendText}>Send {periodScopedDrafts.length}</Text>
               </Pressable>
             )}
             </View>
