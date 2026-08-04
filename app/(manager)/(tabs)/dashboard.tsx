@@ -450,9 +450,12 @@ export default function ManagerDashboard() {
           </View>
           {coverage.rows.map((r) => (
             <View key={r.venue.id} style={styles.stripRow}>
-              <View style={styles.stripVenueCol}>
+              <Pressable
+                style={({ pressed }) => [styles.stripVenueCol, { opacity: pressed ? 0.5 : 1 }]}
+                onPress={() => router.push(('/(manager)/venue-detail?id=' + r.venue.id) as Href)}
+              >
                 <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
-              </View>
+              </Pressable>
               {r.cells.map((state, i) => (
                 <Pressable
                   key={i}
@@ -573,7 +576,7 @@ export default function ManagerDashboard() {
       <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
         <Pressable style={styles.legendBackdrop} onPress={() => setShowLegend(false)}>
           <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colours mean</Text>
+            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
             {[
               { label: 'Draft', swatch: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border } },
               { label: 'Sent', swatch: { backgroundColor: STATUS_COLORS.pending } },
