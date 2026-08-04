@@ -9,7 +9,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { venueImage } from '@/lib/venue-images';
-import { setDaysLabel } from '@/lib/venue-schedule';
+import { setsForDay, DAY_SHORT } from '@/lib/venue-schedule';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -423,19 +423,25 @@ export default function VenueDetailScreen() {
             <Text style={[styles.scheduleIntro, { color: colors.muted }]}>
               The nights this venue books artists. Open nights appear on your calendar automatically.
             </Text>
-            {(venue.schedule ?? []).filter((s) => s.days.length > 0).length === 0 ? (
+            {(venue.schedule ?? []).length === 0 ? (
               <View style={[styles.scheduleEmpty, { borderColor: colors.border }]}>
                 <MaterialIcons name="event-repeat" size={30} color={colors.muted} />
                 <Text style={[styles.scheduleEmptyText, { color: colors.muted }]}>No programme yet.</Text>
               </View>
             ) : (
               <View style={{ gap: 10 }}>
-                {(venue.schedule ?? []).filter((s) => s.days.length > 0).map((s) => (
-                  <View key={s.id} style={[styles.scheduleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={[styles.scheduleTime, { color: colors.foreground }]}>{s.startTime} – {s.endTime}</Text>
-                    <Text style={[styles.scheduleDays, { color: colors.muted }]}>{setDaysLabel(s.days)}</Text>
-                  </View>
-                ))}
+                {[0, 1, 2, 3, 4, 5, 6].map((d) => {
+                  const sets = setsForDay(venue.schedule, d);
+                  if (sets.length === 0) return null;
+                  return (
+                    <View key={d} style={[styles.scheduleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text style={[styles.scheduleDayLabel, { color: colors.foreground }]}>{DAY_SHORT[d]}</Text>
+                      <Text style={[styles.scheduleTimes, { color: colors.muted }]} numberOfLines={2}>
+                        {sets.map((s) => `${s.startTime}–${s.endTime}`).join('   ·   ')}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             )}
             <Pressable
@@ -444,7 +450,7 @@ export default function VenueDetailScreen() {
             >
               <MaterialIcons name="edit-calendar" size={18} color="#fff" />
               <Text style={styles.scheduleEditText}>
-                {(venue.schedule ?? []).some((s) => s.days.length > 0) ? 'Edit programme' : 'Set up programme'}
+                {(venue.schedule ?? []).length > 0 ? 'Edit programme' : 'Set up programme'}
               </Text>
             </Pressable>
           </View>
@@ -474,9 +480,9 @@ const styles = StyleSheet.create({
   scheduleIntro: { fontSize: 14, lineHeight: 20 },
   scheduleEmpty: { borderRadius: 14, borderWidth: 1, paddingVertical: 28, alignItems: 'center', gap: 8 },
   scheduleEmptyText: { fontSize: 14 },
-  scheduleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12 },
-  scheduleTime: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  scheduleDays: { fontSize: 14 },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12 },
+  scheduleDayLabel: { fontSize: 15, fontWeight: '700', width: 40 },
+  scheduleTimes: { flex: 1, fontSize: 14, fontVariant: ['tabular-nums'] },
   scheduleEditBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, marginTop: 4 },
   scheduleEditText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   scroll: { paddingTop: 16, paddingBottom: 40 },

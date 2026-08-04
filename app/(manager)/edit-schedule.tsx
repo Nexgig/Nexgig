@@ -43,13 +43,11 @@ export default function EditSchedule() {
 
   const handleSave = async () => {
     if (saving) return;
-    // Drop sets with no days — they produce no nights and would just be noise.
-    const clean = schedule.filter((s) => s.days.length > 0);
     setSaving(true);
-    updateVenue(venue.id, { schedule: clean });
+    updateVenue(venue.id, { schedule });
     const { error } = await supabase
       .from('venues')
-      .update({ schedule: clean, updated_at: new Date().toISOString() })
+      .update({ schedule, updated_at: new Date().toISOString() })
       .eq('id', venue.id);
     setSaving(false);
     if (error) {

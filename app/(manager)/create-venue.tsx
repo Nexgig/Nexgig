@@ -220,7 +220,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     billing_company_name: form.billingCompanyName || null,
     billing_company_address: form.billingCompanyAddress || null,
     billing_trn_number: form.billingTrnNumber || null,
-    schedule: form.schedule.filter((s) => s.days.length > 0),
+    schedule: form.schedule,
     is_hidden: false,
   }).select().single();
 
@@ -257,7 +257,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       trnNumber: form.billingTrnNumber.trim(),
     } : undefined,
     color: form.color,
-    schedule: form.schedule.filter((s) => s.days.length > 0),
+    schedule: form.schedule,
     isHidden: false,
     isComplete: true,
     createdAt: new Date().toISOString(),

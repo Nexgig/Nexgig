@@ -233,14 +233,14 @@ export interface VenueAssignment {
 
 // ─── Venue Schedule (weekly programme) ────────────────────────────────────────
 
-/** One recurring set in a venue's weekly programme. `days` are Monday-first indices
- *  (0=Mon … 6=Sun); a weekday may appear in several sets (e.g. an early + a late set on
- *  the same night). The calendar auto-fills a real Slot for every future date matching a
- *  set's days/time — see lib/venue-schedule.ts. */
+/** One recurring set in a venue's weekly programme. Each set belongs to ONE weekday
+ *  (`day`, Monday-first: 0=Mon … 6=Sun); a weekday can hold several sets (an early + a
+ *  late set). The calendar auto-fills a real Slot for every future date matching a set's
+ *  day/time — see lib/venue-schedule.ts. */
 export interface VenueScheduleSet {
   id: string;
   name?: string;
-  days: number[];      // Monday-first: 0=Mon … 6=Sun
+  day: number;         // Monday-first: 0=Mon … 6=Sun
   startTime: string;   // HH:MM
   endTime: string;     // HH:MM
 }
