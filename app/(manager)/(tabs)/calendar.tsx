@@ -1859,25 +1859,24 @@ export default function CalendarScreen() {
                   const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
                   const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
                   const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
-                  // fill = a real booking colour; ring = an outline colour (transparent inside)
+                  // Colour fills: real bookings get their status colour; empty/draft slots get a
+                  // beige fill; a day with no slot at all stays plain (blends into the background).
                   let fill: string | null = null;
-                  let ring: string | null = null;
                   if (dCancelled) fill = colors.cancelled;
                   else if (dPending) fill = STATUS_COLORS.pending;
                   else if (dConfirmed) fill = STATUS_COLORS.confirmed;
-                  else if (dDrafted || dEmpty) ring = colors.border;   // grey ring — empty OR drafted
-                  const numColor = fill ? '#fff' : (isToday && !ring ? colors.primary : colors.foreground);
+                  else if (dDrafted || dEmpty) fill = colors.surface;   // beige fill — empty OR drafted
+                  // Dark number on a light beige fill; white on the strong status colours.
+                  const numColor = !fill ? (isToday ? colors.primary : colors.foreground)
+                    : fill === colors.surface ? colors.foreground
+                    : '#fff';
                   return (
                     <Pressable
                       key={day}
                       style={styles.calendarCell}
                       onPress={() => setSelectedDate(dateStr === selectedDate ? '' : dateStr)}
                     >
-                      <View style={[
-                        styles.dayCircle,
-                        fill ? { backgroundColor: fill } : null,
-                        ring ? { borderWidth: 1.5, borderColor: ring } : null,
-                      ]}>
+                      <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null]}>
                         <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                     </Pressable>

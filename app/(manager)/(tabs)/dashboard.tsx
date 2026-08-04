@@ -418,10 +418,10 @@ export default function ManagerDashboard() {
                     style={[
                       styles.cellBox,
                       state === 'cancelled' ? { backgroundColor: colors.cancelled }
-                        : state === 'needsYou' ? { borderWidth: 1.5, borderColor: colors.border }   // grey outline
+                        : state === 'needsYou' ? { backgroundColor: colors.surface }   // beige fill — empty/draft slot
                         : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
                         : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
-                        : { backgroundColor: colors.surface },
+                        : { backgroundColor: colors.background },   // no slot at all — blends into the page
                     ]}
                   />
                 </Pressable>
@@ -430,7 +430,7 @@ export default function ManagerDashboard() {
           ))}
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, styles.legendSwatchRing, { borderColor: colors.border }]} />
+              <View style={[styles.legendSwatch, { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]} />
               <Text style={[styles.legendText, { color: colors.muted }]}>Needs you</Text>
             </View>
             <View style={styles.legendItem}>
@@ -577,7 +577,6 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 14, marginTop: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 14, height: 14, borderRadius: 4 },
-  legendSwatchRing: { borderWidth: 1.5, backgroundColor: 'transparent' },
   legendText: { fontSize: 12 },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
