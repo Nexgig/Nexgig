@@ -5,6 +5,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import * as Haptics from 'expo-haptics';
 // react-native-reanimated Animated not used in this file (using RNAnimated from react-native instead)
 // TimeSelector removed — using dropdown time picker instead
 import { useRouter } from 'expo-router';
@@ -1376,21 +1377,25 @@ export default function CalendarScreen() {
 
     // Swipe-left reveals a delete action. Used for draft rows (remove the draft) and empty
     // slots (delete the slot) — not for real bookings (those are cancelled from the booking).
-    const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => (
-      <Swipeable
-        key={key}
-        friction={2}
-        rightThreshold={40}
-        overshootRight={false}
-        renderRightActions={() => (
-          <Pressable style={[styles.swipeDeleteAction, { backgroundColor: colors.error }]} onPress={onDelete}>
-            <MaterialIcons name="delete" size={22} color="#fff" />
-          </Pressable>
-        )}
-      >
-        {child}
-      </Swipeable>
-    );
+    const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
+      const doDelete = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDelete(); };
+      return (
+        <Swipeable
+          key={key}
+          friction={1.4}
+          rightThreshold={56}                 // a decisive swipe past this deletes (full-swipe)
+          overshootRight={false}
+          onSwipeableOpen={(dir) => { if (dir === 'right') doDelete(); }}
+          renderRightActions={() => (
+            <Pressable style={[styles.swipeDeleteAction, { backgroundColor: colors.error }]} onPress={doDelete}>
+              <MaterialIcons name="delete" size={22} color="#fff" />
+            </Pressable>
+          )}
+        >
+          {child}
+        </Swipeable>
+      );
+    };
 
     // Truly empty — no booking, no draft → prompt to add an artist (swipe to delete the slot).
     if (bs.length === 0 && drafts.length === 0) {
