@@ -1,7 +1,8 @@
 import { Tabs, useFocusEffect, useRouter, usePathname } from 'expo-router';
 import type { Href } from 'expo-router';
-import { View, Pressable, StyleSheet } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet } from '@/lib/rn';
 import { ActionSheetIOS } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -9,8 +10,17 @@ import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useVenu
 import { supabase } from '@/lib/supabase';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 
+// Icon + label per tab. `create-action` is the center + and is rendered specially.
+const TAB_META: Record<string, { icon: any; label: string }> = {
+  dashboard: { icon: 'dashboard', label: 'Dashboard' },
+  calendar: { icon: 'calendar-today', label: 'Calendar' },
+  network: { icon: 'people', label: 'Roster' },
+  profile: { icon: 'person', label: 'Profile' },
+};
+
 export default function ManagerTabsLayout() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const currentUser = useAuthStore((s) => s.currentUser);
   const pendingCount = usePendingAppsStore((s) => s.count);
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
@@ -120,74 +130,77 @@ export default function ManagerTabsLayout() {
     return invoiceSentDates.filter((d) => new Date(d).getTime() > seen).length;
   }, [invoiceSentDates, profileSeenAt]);
 
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <MaterialIcons name="dashboard" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: 'Calendar',
-          tabBarIcon: ({ color }) => <MaterialIcons name="calendar-today" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="create-action"
-        options={{
-          title: '',
-          tabBarButton: () => (
-            <Pressable
-              onPress={openQuickActions}
-              style={fabStyles.btn}
-              accessibilityRole="button"
-              accessibilityLabel="Quick actions"
-            >
-              <View style={[fabStyles.circle, { backgroundColor: colors.primary }]}>
+  // Custom, flat tab bar (no shadow): active tab = coral 12%-tint capsule with icon + label;
+  // inactive = 25px icon only. Center + keeps the quick-actions FAB.
+  const renderTabBar = ({ state, navigation }: any) => (
+    <View style={[tabStyles.bar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {state.routes.map((route: any, index: number) => {
+        const focused = state.index === index;
+
+        if (route.name === 'create-action') {
+          return (
+            <Pressable key={route.key} onPress={openQuickActions} style={tabStyles.item} accessibilityRole="button" accessibilityLabel="Quick actions">
+              <View style={[tabStyles.fabCircle, { backgroundColor: colors.primary }]}>
                 <MaterialIcons name="add" size={30} color="#fff" />
               </View>
             </Pressable>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="network"
-        options={{
-          title: 'Roster',
-          tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
-          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={24} color={color} />,
-          tabBarBadge: invoiceBadge > 0 ? invoiceBadge : undefined,
-        }}
-        listeners={{
-          tabPress: () => { if (currentUser?.id) markProfileInvoicesSeen(currentUser.id); },
-        }}
-      />
+          );
+        }
+
+        const meta = TAB_META[route.name];
+        if (!meta) return null;
+        const badge = route.name === 'network' ? pendingCount : route.name === 'profile' ? invoiceBadge : 0;
+
+        const onPress = () => {
+          if (route.name === 'profile' && currentUser?.id) markProfileInvoicesSeen(currentUser.id);
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+        };
+
+        const icon = (
+          <View>
+            <MaterialIcons name={meta.icon} size={25} color={focused ? colors.primary : colors.muted} />
+            {badge > 0 && (
+              <View style={[tabStyles.badge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
+                <Text style={tabStyles.badgeText}>{badge}</Text>
+              </View>
+            )}
+          </View>
+        );
+
+        return (
+          <Pressable key={route.key} onPress={onPress} style={tabStyles.item} accessibilityRole="button" accessibilityState={{ selected: focused }}>
+            {focused ? (
+              <View style={[tabStyles.pill, { backgroundColor: colors.primary + '1F' }]}>
+                {icon}
+                <Text style={[tabStyles.pillLabel, { color: colors.primary }]}>{meta.label}</Text>
+              </View>
+            ) : (
+              icon
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
+  return (
+    <Tabs tabBar={renderTabBar} screenOptions={{ headerShown: false }}>
+      <Tabs.Screen name="dashboard" />
+      <Tabs.Screen name="calendar" />
+      <Tabs.Screen name="create-action" />
+      <Tabs.Screen name="network" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
 
-const fabStyles = StyleSheet.create({
-  btn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  circle: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+const tabStyles = StyleSheet.create({
+  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  item: { alignItems: 'center', justifyContent: 'center' },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999 },
+  pillLabel: { fontSize: 15, fontWeight: '700' },
+  fabCircle: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: -6, right: -10, minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 1.5 },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
 });
