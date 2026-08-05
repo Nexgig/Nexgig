@@ -583,11 +583,11 @@ export default function AssignDJScreen() {
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {isPastSlot ? 'Add to Completed Gigs' : 'Add Artist'}
+          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+            {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
           </Text>
-          <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
-            {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
+          <Text style={[styles.headerSub, { color: colors.muted }]}>
+            {isPastSlot ? 'Add to Completed Gigs' : 'Add Artists'}
           </Text>
         </View>
         {!isPastSlot && draftCount > 0 && (
