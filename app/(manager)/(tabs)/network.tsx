@@ -520,7 +520,7 @@ export default function NetworkScreen() {
             <View style={[styles.inviteFooter, { borderTopColor: colors.border }]}>
               <Pressable style={({ pressed }) => [styles.inviteRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push('/(manager)/invite-artists' as Href)}>
                 <MaterialIcons name="person-add-alt-1" size={22} color={colors.primary} />
-                <Text style={[styles.inviteText, { color: colors.primary }]}>Invite artists</Text>
+                <Text style={[styles.inviteText, { color: colors.primary }]}>Add artists</Text>
               </Pressable>
             </View>
           }

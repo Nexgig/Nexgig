@@ -103,7 +103,7 @@ export default function InviteArtists() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Invite Artist</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Add Artist</Text>
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={[styles.cancel, { color: colors.muted }]}>Cancel</Text>
         </Pressable>
@@ -144,7 +144,7 @@ export default function InviteArtists() {
           onPress={handleSend}
           disabled={submitting}
         >
-          <Text style={styles.sendBtnText}>{submitting ? 'Sending…' : 'Send invite'}</Text>
+          <Text style={styles.sendBtnText}>{submitting ? 'Adding…' : 'Add artist'}</Text>
         </Pressable>
       </ScrollView>
     </View>
