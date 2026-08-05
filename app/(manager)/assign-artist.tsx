@@ -604,6 +604,10 @@ export default function AssignDJScreen() {
         </View>
       )}
 
+      {/* A ScrollView with flex:1 doesn't bound inside the native formSheet (it reports its
+          content height, pushing the footer off-screen). Wrapping it in a plain flex:1 View
+          — which DOES bound — makes the list fill only the free space so the footer stays in view. */}
+      <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={styles.listContent}
@@ -624,6 +628,7 @@ export default function AssignDJScreen() {
           assignRows.map((item, i) => renderRow(item, i))
         )}
       </ScrollView>
+      </View>
 
       {/* Footer — closes the sheet (same as tapping outside). Reads "Ready" when artists are
           drafted, so the manager knows they're saved as drafts (just not sent yet). */}

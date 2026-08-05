@@ -596,8 +596,10 @@ export default function AddSlotScreen() {
         </View>
       </View>
 
-      {/* Only the artist list scrolls. Bounded height because flex:1 doesn't bound a
-          ScrollView inside the native formSheet (its onLayout reports content height). */}
+      {/* A ScrollView with flex:1 doesn't bound inside the native formSheet (it reports its
+          content height, pushing the footer off-screen). Wrapping it in a plain flex:1 View
+          — which DOES bound — makes the list fill only the free space so the footer stays in view. */}
+      <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -628,6 +630,7 @@ export default function AddSlotScreen() {
           </>
         )}
       </ScrollView>
+      </View>
 
       {/* Footer — closes the sheet (same as tapping outside). Reads "Ready" when artists are
           drafted, so the manager knows they're saved as drafts (just not sent yet). */}
