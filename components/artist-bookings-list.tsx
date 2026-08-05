@@ -22,7 +22,7 @@ type Tab = 'pending' | 'upcoming' | 'completed';
  * VirtualizedList nested in one breaks scrolling and warns. One artist's (or one venue's)
  * gigs with one manager is short — virtualisation buys nothing.
  */
-export function ArtistBookingsList({ artistId, venueId }: { artistId?: string; venueId?: string }) {
+export function ArtistBookingsList({ artistId, venueId, bookedCompletedOnly }: { artistId?: string; venueId?: string; bookedCompletedOnly?: boolean }) {
   const router = useRouter();
   const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -88,12 +88,15 @@ export function ArtistBookingsList({ artistId, venueId }: { artistId?: string; v
     { key: 'completed', label: 'Completed', count: completedBookings.length, color: STATUS_COLORS.completed },
   ];
 
-  const activeData =
+  // Booked (upcoming/confirmed) + completed, no pending — used on the artist profile.
+  const combinedData = useMemo(() => [...upcomingBookings, ...completedBookings], [upcomingBookings, completedBookings]);
+
+  const activeData = bookedCompletedOnly ? combinedData :
     activeTab === 'pending' ? pendingBookings :
     activeTab === 'upcoming' ? upcomingBookings :
     completedBookings;
 
-  const emptyIcon = activeTab === 'pending' ? 'schedule' : activeTab === 'upcoming' ? 'event-available' : 'check-circle';
+  const emptyIcon = bookedCompletedOnly ? 'event-note' : activeTab === 'pending' ? 'schedule' : activeTab === 'upcoming' ? 'event-available' : 'check-circle';
 
   const primaryLabel = (item: typeof enriched[number]): string => {
     if (byVenue) {
@@ -110,7 +113,9 @@ export function ArtistBookingsList({ artistId, venueId }: { artistId?: string; v
   return (
     <View>
       {/* Status filter. Chips, not a second tab bar — the host already has one above,
-          and two stacked bordered bars read as a mistake. */}
+          and two stacked bordered bars read as a mistake. Hidden on the artist profile,
+          which shows a single booked+completed list. */}
+      {!bookedCompletedOnly && (
       <View style={styles.chipRow}>
         {tabs.map((tab) => {
           const on = activeTab === tab.key;
@@ -135,11 +140,12 @@ export function ArtistBookingsList({ artistId, venueId }: { artistId?: string; v
           );
         })}
       </View>
+      )}
 
       {activeData.length === 0 ? (
         <View style={styles.emptyWrap}>
           <MaterialIcons name={emptyIcon} size={40} color={colors.muted} />
-          <Text style={[styles.emptyText, { color: colors.muted }]}>No {activeTab} bookings</Text>
+          <Text style={[styles.emptyText, { color: colors.muted }]}>{bookedCompletedOnly ? 'No bookings yet' : `No ${activeTab} bookings`}</Text>
         </View>
       ) : (
         activeData.map((item) => {

@@ -41,7 +41,7 @@ export default function SettingsScreen() {
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [monthStartDay, setMonthStartDay] = useState(1);
-  const [showLineupBalance, setShowLineupBalance] = useState(true);
+  const [showLineupBalance, setShowLineupBalance] = useState(false);   // off by default; managers opt in
   const [emailMarketing, setEmailMarketing] = useState(true);
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   // Push preferences live in Supabase, not on the device: a notification is created by the

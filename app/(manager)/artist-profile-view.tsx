@@ -466,7 +466,7 @@ export default function ArtistProfileViewScreen() {
         )}
 
         {activeTab === 'bookings' && isConnected && (
-          <ArtistBookingsList artistId={artistId ?? ''} />
+          <ArtistBookingsList artistId={artistId ?? ''} bookedCompletedOnly />
         )}
 
         {activeTab === 'invoices' && isConnected && (

@@ -319,7 +319,7 @@ export default function CalendarScreen() {
 
   // Lineup Balance panel state
   const [lineupBalanceOpen, setLineupBalanceOpen] = useState(false);
-  const [showLineupBalance, setShowLineupBalance] = useState(true);
+  const [showLineupBalance, setShowLineupBalance] = useState(false);   // off by default; managers opt in
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   // Custom month-cycle start day — loaded from AsyncStorage (set in Settings screen)
   const [monthStartDay, setMonthStartDay] = useState(1);
