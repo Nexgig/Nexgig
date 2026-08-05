@@ -387,6 +387,11 @@ if (!lineupError && lineupData) {
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
+          // flex:1 bounds the sheet's content to the detent height so a flex:1 root + ScrollView
+          // fills it and the footer pins to the bottom. Without it the RN-screens formSheet
+          // content wrapper is auto-height and the footer floats mid-sheet / falls off the bottom.
+          // (backgroundColor repeated because a per-screen contentStyle replaces the global one.)
+          contentStyle: { flex: 1, backgroundColor: colors.background },
         }}
       />
       <Stack.Screen
@@ -397,6 +402,7 @@ if (!lineupError && lineupData) {
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
+          contentStyle: { flex: 1, backgroundColor: colors.background },
         }}
       />
       <Stack.Screen name="create-venue" />
