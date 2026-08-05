@@ -633,7 +633,7 @@ export default function AddSlotScreen() {
 
       {/* Pinned footer — the root now has a real height, so this sibling stays at the bottom
           while the list scrolls between it and the header. */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 16 }]}>
         <Pressable
           style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
           onPress={() => { Keyboard.dismiss(); router.back(); }}
