@@ -8,6 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
@@ -587,7 +588,7 @@ export default function AssignDJScreen() {
             {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
           </Text>
           <Text style={[styles.headerSub, { color: colors.muted }]}>
-            {isPastSlot ? 'Add to Completed Gigs' : 'Add Artists'}
+            {isPastSlot ? 'Add to Completed Gigs' : 'Add Artist'}
           </Text>
         </View>
         {!isPastSlot && draftCount > 0 && (
@@ -646,7 +647,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
   headerInfo: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '800' },
+  headerTitle: { fontSize: 18, fontFamily: fonts.bodyBold, letterSpacing: -0.4 },
   headerSub: { fontSize: 13, marginTop: 2 },
   doneBtn: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   infoNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginTop: 4, borderRadius: 10, borderWidth: 1, padding: 10 },

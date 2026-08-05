@@ -11,6 +11,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
+import { fonts } from '@/lib/fonts';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupStore, useNotificationStore, useInvoiceStore, useVenueFilterStore, useDraftStore } from '@/lib/store';
@@ -651,7 +652,7 @@ const styles = StyleSheet.create({
   sheetHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   sheetHeaderText: { flex: 1 },
   sheetClose: { padding: 2 },
-  sheetTitle: { fontSize: 20, fontWeight: '700' },
+  sheetTitle: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4 },
   sheetSubtitle: { fontSize: 13, marginTop: 2 },
   sheetScroll: { flex: 1 },
   sheetNoSlots: { fontSize: 16, paddingTop: 4, paddingBottom: 8 },

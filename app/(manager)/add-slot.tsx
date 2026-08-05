@@ -471,7 +471,10 @@ export default function AddSlotScreen() {
   return (
     <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.8 }]}>
       <View style={styles.header}>
-        <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
+          <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>Add Slot</Text>
+        </View>
         {!isPast && draftedIds.size > 0 && (
           <Pressable onPress={confirmSendAll} hitSlop={8}>
             <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {draftedIds.size}</Text>
@@ -649,6 +652,7 @@ const styles = StyleSheet.create({
   sheet: { paddingHorizontal: 13, paddingTop: 8, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 12 },
   sheetTitle: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4, marginBottom: 1 },
+  sheetSubtitle: { fontSize: 13, marginTop: 2 },
   doneBtn: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
