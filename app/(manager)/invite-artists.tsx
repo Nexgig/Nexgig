@@ -101,7 +101,7 @@ export default function InviteArtists() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
+    <View style={{ backgroundColor: colors.background, paddingTop: 8 }}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Add Artist</Text>
         <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -109,7 +109,7 @@ export default function InviteArtists() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
         <Text style={[styles.label, { color: colors.muted }]}>ARTIST EMAIL</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
@@ -146,7 +146,7 @@ export default function InviteArtists() {
         >
           <Text style={styles.sendBtnText}>{submitting ? 'Adding…' : 'Add artist'}</Text>
         </Pressable>
-      </ScrollView>
+      </View>
     </View>
   );
 }
