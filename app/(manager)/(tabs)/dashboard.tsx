@@ -125,7 +125,7 @@ export default function ManagerDashboard() {
     const draftSlotIds = new Set(drafts.map((d) => d.slotId));
     const rows = stripVenues.map((v) => ({
       venue: v,
-      // Priority (strongest wins): cancelled > drafted > empty > sent > booked.
+      // Priority (strongest wins): cancelled > empty > drafted > sent > booked.
       cells: nights.map((date) => {
         const daySlots = slots.filter((s) => s.venueId === v.id && s.date === date);
         let cancelled = false, drafted = false, empty = false, sent = false, booked = false;
@@ -139,7 +139,7 @@ export default function ManagerDashboard() {
           if (bs.some((b) => b.status === 'requested' || b.status === 'past_confirmation')) sent = true;
           if (bs.some((b) => b.status === 'confirmed')) booked = true;
         }
-        return cancelled ? 'cancelled' : drafted ? 'drafted' : empty ? 'empty' : sent ? 'sent' : booked ? 'booked' : 'none';
+        return cancelled ? 'cancelled' : empty ? 'empty' : drafted ? 'drafted' : sent ? 'sent' : booked ? 'booked' : 'none';
       }),
     }));
     return { nights, rows };
@@ -472,8 +472,8 @@ export default function ManagerDashboard() {
                     style={[
                       styles.cellBox,
                       state === 'cancelled' ? { backgroundColor: colors.cancelled }
-                        : state === 'drafted' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — artist drafted
-                        : state === 'empty' ? { backgroundColor: colors.surface }   // beige fill — empty slot, no artist
+                        : state === 'empty' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — empty slot, needs attention
+                        : state === 'drafted' ? { backgroundColor: colors.surface }   // beige fill — artist drafted, not sent yet
                         : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
                         : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
                         : { backgroundColor: colors.background },   // no slot at all — blends into the page
@@ -582,8 +582,8 @@ export default function ManagerDashboard() {
             <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
             {[
               { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
-              { label: 'Draft', swatch: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' as const } },
-              { label: 'Empty', swatch: { backgroundColor: colors.surface } },
+              { label: 'Empty', swatch: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' as const } },
+              { label: 'Draft', swatch: { backgroundColor: colors.surface } },
               { label: 'Sent', swatch: { backgroundColor: STATUS_COLORS.pending } },
               { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
             ].map((row) => (

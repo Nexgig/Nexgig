@@ -1509,12 +1509,12 @@ export default function CalendarScreen() {
                   const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
                   // Colour fills: real bookings get their status colour; empty/draft slots get a
                   // beige fill; a day with no slot at all stays plain (blends into the background).
-                  // Priority (strongest wins): cancelled > drafted > empty > sent > booked.
+                  // Priority (strongest wins): cancelled > empty > drafted > sent > booked.
                   let fill: string | null = null;
-                  let draftRing = false;   // drafted-only day: beige fill + coral dashed outline
+                  let dashedRing = false;   // empty-only day: beige fill + coral dashed outline
                   if (dCancelled) fill = colors.cancelled;
-                  else if (dDrafted) { fill = colors.surface; draftRing = true; }   // artist drafted, not sent
-                  else if (dEmpty) fill = colors.surface;   // beige fill — empty slot, no artist
+                  else if (dEmpty) { fill = colors.surface; dashedRing = true; }   // empty slot, no artist — needs attention
+                  else if (dDrafted) fill = colors.surface;   // beige fill — artist drafted, not sent yet
                   else if (dPending) fill = STATUS_COLORS.pending;
                   else if (dConfirmed) fill = STATUS_COLORS.confirmed;
                   // Today gets no special treatment (the "Today" button jumps there). Dark on
@@ -1529,7 +1529,7 @@ export default function CalendarScreen() {
                       onPress={() => setSelectedDate(dateStr)}
                     >
                       <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
-                        draftRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
+                        dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
                         <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                     </Pressable>
