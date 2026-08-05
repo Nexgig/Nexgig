@@ -627,18 +627,17 @@ export default function AddSlotScreen() {
             )}
           </>
         )}
-      </ScrollView>
 
-      {/* Footer — closes the sheet. Reads "Ready" when artists are drafted (so the manager
-          knows they're saved as drafts, just not sent), else "Done". */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+        {/* Close button lives INSIDE the scroll list. A pinned footer sibling keeps getting
+            pushed off the bottom of the native form sheet; a scroll child can't be. Says
+            "Draft" when artists are drafted (saved, not sent), else "Done". */}
         <Pressable
-          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1, marginTop: 20, marginHorizontal: 13, marginBottom: Math.max(insets.bottom, 12) }]}
           onPress={() => { Keyboard.dismiss(); router.back(); }}
         >
           <Text style={styles.sendBtnText}>{draftedIds.size > 0 ? 'Draft' : 'Done'}</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </View>
   );
 }
