@@ -48,7 +48,7 @@ const SUB_VIBES: SubVibe[] = [
   'Melodic', 'Groovy', 'Underground', 'Commercial', 'High Energy',
   'Chill', 'Dark', 'Tribal', 'Percussive', 'Urban', 'Soul',
 ];
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3;
 
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -326,10 +326,8 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>
           {displayStep === 1 && 'Venue Basics'}
-          {displayStep === 2 && 'Vibe & Music'}
-          {displayStep === 3 && 'Rules & Links'}
-          {displayStep === 4 && 'Billing Details'}
-          {displayStep === 5 && 'Schedule'}
+          {displayStep === 2 && 'Billing Details'}
+          {displayStep === 3 && 'Schedule'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
       </View>
@@ -400,148 +398,47 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 </View>
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Preferred Energy (optional)</Text>
-                <View style={styles.chipGrid}>
-                  {VENUE_ENERGY_OPTIONS.map((e) => (
-                    <Pressable key={e} style={[styles.chip, { borderColor: form.preferredEnergy.includes(e) ? colors.primary : colors.border, backgroundColor: form.preferredEnergy.includes(e) ? colors.primary : colors.surface }]} onPress={() => toggleItem('preferredEnergy', e, form.preferredEnergy)}>
-                      <Text style={[styles.chipText, { color: form.preferredEnergy.includes(e) ? '#fff' : colors.foreground }]}>{e}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Venue Color (optional)</Text>
-                <Text style={[{ color: colors.muted, fontSize: 12, marginBottom: 4 }]}>This color will identify your venue on the calendar</Text>
-                <View style={styles.chipGrid}>
-                  {VENUE_COLORS.map((c) => (
-                    <Pressable
-                      key={c.hex}
-                      style={[styles.colorSwatch, { backgroundColor: c.hex, borderColor: form.color === c.hex ? '#fff' : 'transparent', borderWidth: form.color === c.hex ? 2.5 : 0 }]}
-                      onPress={() => update('color', c.hex)}
-                    >
-                      {form.color === c.hex && <MaterialIcons name="check" size={16} color="#fff" />}
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Capacity (optional)</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 500" placeholderTextColor={colors.muted} value={form.capacity} onChangeText={(v) => update('capacity', v)} keyboardType="number-pad" returnKeyType="done" />
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Instagram (optional)</Text>
+                <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
+                  <TextInput
+                    style={[styles.instagramInput, { color: colors.foreground }]}
+                    placeholder="username"
+                    placeholderTextColor={colors.muted}
+                    value={form.instagramUrl.replace(/^@/, '')}
+                    onChangeText={(v) => update('instagramUrl', v.replace('@', '').replace(/\s/g, '').toLowerCase())}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                  />
+                </View>
               </View>
             </View>
           )}
 
           {displayStep === 2 && (
             <View style={styles.form}>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Vibe Description (optional)</Text>
-                <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="Describe the atmosphere and what makes your venue unique..." placeholderTextColor={colors.muted} value={form.vibeDescription} onChangeText={(v) => update('vibeDescription', v)} multiline numberOfLines={3} maxLength={300} />
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Audience Type (optional)</Text>
-                <View style={styles.chipGrid}>
-                  {AUDIENCE_TYPES.map((a) => (
-                    <Pressable key={a} style={[styles.chip, { borderColor: form.audienceType.includes(a) ? colors.primary : colors.border, backgroundColor: form.audienceType.includes(a) ? colors.primary : colors.surface }]} onPress={() => toggleItem('audienceType', a, form.audienceType)}>
-                      <Text style={[styles.chipText, { color: form.audienceType.includes(a) ? '#fff' : colors.foreground }]}>{a}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Genre Preferences (optional)</Text>
-                <View style={styles.chipGrid}>
-                  {GENRE_PREFS.map((g) => (
-                    <Pressable key={g} style={[styles.chip, { borderColor: form.genrePreferences.includes(g) ? colors.primary : colors.border, backgroundColor: form.genrePreferences.includes(g) ? colors.primary : colors.surface }]} onPress={() => toggleItem('genrePreferences', g, form.genrePreferences)}>
-                      <Text style={[styles.chipText, { color: form.genrePreferences.includes(g) ? '#fff' : colors.foreground }]}>{g}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Sub-Vibe (optional)</Text>
-                <View style={styles.chipGrid}>
-                  {SUB_VIBES.map((v) => (
-                    <Pressable key={v} style={[styles.chip, { borderColor: form.subVibe.includes(v) ? colors.primary : colors.border, backgroundColor: form.subVibe.includes(v) ? colors.primary : colors.surface }]} onPress={() => toggleItem('subVibe', v, form.subVibe)}>
-                      <Text style={[styles.chipText, { color: form.subVibe.includes(v) ? '#fff' : colors.foreground }]}>{v}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </View>
-          )}
-
-          {displayStep === 3 && (
-  <View style={styles.form}>
-    <View style={styles.fieldGroup}>
-      <Text style={[styles.label, { color: colors.foreground }]}>Venue Rules (optional)</Text>
-      <Text style={{ fontSize: 12, color: colors.muted, marginTop: -4, marginBottom: 8, lineHeight: 16 }}>
-        Rules are sent to artists when they join your lineup or accept a booking at this venue.
-      </Text>
-      <TextInput
-        style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-        placeholder="e.g. No explicit lyrics, slot ends at 3am..."
-        placeholderTextColor={colors.muted}
-        value={form.rulesTemplate}
-        onChangeText={(v) => update('rulesTemplate', v)}
-        multiline numberOfLines={4} maxLength={500}
-      />
-    </View>
-
-    {/* Instagram */}
-    <View style={styles.fieldGroup}>
-      <Text style={[styles.label, { color: colors.foreground }]}>Instagram (optional)</Text>
-      <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
-        <TextInput
-          style={[styles.instagramInput, { color: colors.foreground }]}
-          placeholder="username"
-          placeholderTextColor={colors.muted}
-          value={form.instagramUrl.replace(/^@/, '')}
-          onChangeText={(v) => update('instagramUrl', v.replace('@', '').replace(/\s/g, '').toLowerCase())}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="done"
-        />
-      </View>
-    </View>
-
-    {/* Music link */}
-    <View style={styles.fieldGroup}>
-      <Text style={[styles.label, { color: colors.foreground }]}>Spotify / SoundCloud / Mixcloud (optional)</Text>
-      <Text style={[{ color: colors.muted, fontSize: 12 }]}>Paste the full link</Text>
-      <TextInput
-        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-        placeholder="https://open.spotify.com/..."
-        placeholderTextColor={colors.muted}
-        value={form.musicLink}
-        onChangeText={(v) => update('musicLink', v)}
-        autoCapitalize="none"
-        keyboardType="url"
-        returnKeyType="done"
-      />
-    </View>
-  </View>
-)}
-
-          {displayStep === 4 && (
-            <View style={styles.form}>
               <Text style={[{ color: colors.muted, fontSize: 13, marginBottom: 8 }]}>These details will appear on invoices sent by artists for this venue.</Text>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Company / Legal Name (optional)</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Company / Legal Name</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. Beach Club LLC" placeholderTextColor={colors.muted} value={form.billingCompanyName} onChangeText={(v) => update('billingCompanyName', v)} returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Company Address (optional)</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Company Address</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. Dubai Marina, Dubai" placeholderTextColor={colors.muted} value={form.billingCompanyAddress} onChangeText={(v) => update('billingCompanyAddress', v)} returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>TRN Number (optional)</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>TRN Number</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={form.billingTrnNumber} onChangeText={(v) => update('billingTrnNumber', v)} keyboardType="number-pad" returnKeyType="done" />
               </View>
             </View>
           )}
 
-          {displayStep === 5 && (
+          {displayStep === 3 && (
             <View style={styles.form}>
               <ScheduleEditor value={form.schedule} onChange={(next) => update('schedule', next)} />
             </View>
@@ -551,7 +448,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       {/* Fixed Continue button — always visible above keyboard */}
       <View style={[styles.fixedBtnContainer, { backgroundColor: colors.background, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 10 : 16 }]}>
         <Pressable style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]} onPress={handleNext} disabled={isLoading || isAnimating}>
-          <Text style={styles.nextBtnText}>{isLoading ? 'Creating...' : step < TOTAL_STEPS ? 'Continue' : 'Create Venue'}</Text>
+          <Text style={styles.nextBtnText}>{isLoading ? 'Creating...' : step === TOTAL_STEPS ? 'Create Venue' : step === 2 ? 'Add later' : 'Continue'}</Text>
         </Pressable>
       </View>
     </ScreenContainer>
