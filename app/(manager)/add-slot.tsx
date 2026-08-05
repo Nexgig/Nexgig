@@ -469,7 +469,7 @@ export default function AddSlotScreen() {
   );
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.8 }]}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.7 }]}>
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         {!isPast && draftedIds.size > 0 && (

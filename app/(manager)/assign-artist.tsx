@@ -579,7 +579,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <View style={{ height: winH * 0.8, backgroundColor: colors.background, paddingTop: 8 }}>
+    <View style={{ height: winH * 0.7, backgroundColor: colors.background, paddingTop: 8 }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
