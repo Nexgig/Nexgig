@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert } from '@/lib/rn';
+import { useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ export default function AssignDJScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   // Support both slotId (slot assignment) and venueId (venue lineup assignment)
   const { slotId, venueId: venueIdParam } = useLocalSearchParams<{ slotId?: string; venueId?: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -577,7 +579,10 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8 }}>
+    // Fixed height to the sheet's detent (0.78) — the form sheet otherwise shrinks to fit
+    // a short list, so flex:1 has no bounded height and Done can't pin. This gives the column
+    // a definite height: the list scrolls when long, Done stays at the bottom when short.
+    <View style={{ height: winH * 0.78, backgroundColor: colors.background, paddingTop: 8 }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
