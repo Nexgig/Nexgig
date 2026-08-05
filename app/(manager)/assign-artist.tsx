@@ -579,7 +579,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <View style={{ height: winH * 0.7, backgroundColor: colors.background, paddingTop: 8 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8 }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
@@ -607,10 +607,10 @@ export default function AssignDJScreen() {
       )}
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
+        style={{ maxHeight: winH * 0.55, backgroundColor: colors.background }}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       >
         <View style={styles.listHeaderRow}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>
@@ -630,7 +630,7 @@ export default function AssignDJScreen() {
       {/* Pinned footer — the root now has a real height, so this sibling stays at the bottom
           while the list scrolls between it and the header. Says "Draft" when artists are
           drafted (saved, not sent), else "Done". */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
+      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
         <Pressable
           style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.back()}
