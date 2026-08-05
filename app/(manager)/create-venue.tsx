@@ -448,7 +448,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       {/* Fixed Continue button — always visible above keyboard */}
       <View style={[styles.fixedBtnContainer, { backgroundColor: colors.background, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 10 : 16 }]}>
         <Pressable style={({ pressed }) => [styles.nextBtn, { opacity: pressed || isLoading ? 0.8 : 1 }]} onPress={handleNext} disabled={isLoading || isAnimating}>
-          <Text style={styles.nextBtnText}>{isLoading ? 'Creating...' : step === TOTAL_STEPS ? 'Create Venue' : step === 2 ? 'Add later' : 'Continue'}</Text>
+          <Text style={styles.nextBtnText}>{isLoading ? 'Creating...' : step === TOTAL_STEPS ? 'Create Venue' : 'Continue'}</Text>
         </Pressable>
       </View>
     </ScreenContainer>

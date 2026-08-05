@@ -33,7 +33,9 @@ export default function MyArtistsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>My Artists</Text>
-        <View style={styles.iconBtn} />
+        <Pressable style={({ pressed }) => [styles.iconBtn, { alignItems: 'flex-end', opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push('/(manager)/invite-artists' as Href)} hitSlop={8}>
+          <MaterialIcons name="add-circle-outline" size={26} color={colors.primary} />
+        </Pressable>
       </View>
 
       <FlatList

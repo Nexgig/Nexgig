@@ -1,4 +1,4 @@
-import { ArtistBookingsList } from '@/components/artist-bookings-list';
+import { VenueInvoicesList } from '@/components/venue-invoices-list';
 import { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -62,7 +62,7 @@ export default function VenueDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'bookings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invoices'>('overview');
   const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
@@ -287,10 +287,10 @@ export default function VenueDetailScreen() {
             an artist's venues. */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'schedule', 'bookings'] as const).map((tab) => (
+            {(['overview', 'schedule', 'invoices'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : tab === 'schedule' ? 'Schedule' : 'Bookings'}
+                  {tab === 'overview' ? 'Overview' : tab === 'schedule' ? 'Schedule' : 'Invoices'}
                 </Text>
               </Pressable>
             ))}
@@ -450,11 +450,10 @@ export default function VenueDetailScreen() {
           </View>
         )}
 
-        {/* Bookings Tab — owner only. Same list as the artist profile's bookings, scoped
-            to this venue: Pending / Upcoming / Completed with the artist named per row.
-            (The old Sets listing, including unassigned sets, is managed on the calendar.) */}
-        {isOwner && activeTab === 'bookings' && (
-          <ArtistBookingsList venueId={venue.id} />
+        {/* Invoices Tab — owner only. Every invoice sent for this venue, grouped by the
+            month it was sent, with the invoice count per month and the artist named per row. */}
+        {isOwner && activeTab === 'invoices' && (
+          <VenueInvoicesList venueId={venue.id} />
         )}
 
       </ScrollView>
