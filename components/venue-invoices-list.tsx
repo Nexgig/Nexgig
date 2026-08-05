@@ -23,14 +23,17 @@ export function VenueInvoicesList({ venueId }: { venueId: string }) {
   );
 
   // Group by month (newest month first — `list` is already sorted newest-first).
+  // `total` is the summed AED of that month's invoices; cancelled invoices don't count
+  // toward it (they're struck through per-row and represent no real charge).
   const months = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; items: typeof list }>();
+    const map = new Map<string, { key: string; label: string; items: typeof list; total: number }>();
     list.forEach((inv) => {
       const d = new Date(inv.sentAt);
       const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
       let e = map.get(key);
-      if (!e) { e = { key, label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), items: [] }; map.set(key, e); }
+      if (!e) { e = { key, label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), items: [], total: 0 }; map.set(key, e); }
       e.items.push(inv);
+      if (inv.status !== 'cancelled') e.total += inv.totalAmount;
     });
     return Array.from(map.values());
   }, [list]);
@@ -45,9 +48,7 @@ export function VenueInvoicesList({ venueId }: { venueId: string }) {
         <View key={m.key} style={{ marginBottom: 8 }}>
           <View style={styles.monthHeader}>
             <Text style={[styles.monthLabel, { color: colors.muted }]}>{m.label}</Text>
-            <View style={[styles.monthCount, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.monthCountText, { color: colors.foreground }]}>{m.items.length}</Text>
-            </View>
+            <Text style={[styles.monthTotal, { color: colors.foreground }]}>AED {m.total.toLocaleString()}</Text>
           </View>
           {m.items.map((inv) => {
             const sentDate = new Date(inv.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
@@ -83,10 +84,9 @@ export function VenueInvoicesList({ venueId }: { venueId: string }) {
 }
 
 const styles = StyleSheet.create({
-  monthHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2, paddingTop: 6, paddingBottom: 8 },
+  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 2, paddingTop: 6, paddingBottom: 8 },
   monthLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
-  monthCount: { minWidth: 22, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  monthCountText: { fontSize: 12, fontWeight: '700' },
+  monthTotal: { fontSize: 13, fontWeight: '700' },
   card: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 10 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
