@@ -577,7 +577,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8 }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
@@ -634,7 +634,7 @@ export default function AssignDJScreen() {
           <Text style={styles.sendBtnText}>Done</Text>
         </Pressable>
       </View>
-    </ScreenContainer>
+    </View>
   );
 }
 
