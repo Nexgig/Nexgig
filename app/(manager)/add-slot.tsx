@@ -629,13 +629,14 @@ export default function AddSlotScreen() {
         )}
       </ScrollView>
 
-      {/* Footer — a single coral "Done" control (always visible). */}
+      {/* Footer — closes the sheet (same as tapping outside). Reads "Ready" when artists are
+          drafted, so the manager knows they're saved as drafts (just not sent yet). */}
       <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable
           style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
           onPress={() => { Keyboard.dismiss(); router.back(); }}
         >
-          <Text style={styles.sendBtnText}>Done</Text>
+          <Text style={styles.sendBtnText}>{draftedIds.size > 0 ? 'Ready' : 'Done'}</Text>
         </Pressable>
       </View>
     </View>
