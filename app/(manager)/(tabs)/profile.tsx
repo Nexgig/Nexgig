@@ -259,19 +259,12 @@ function InvoicesSection({ colors, currentUserId, router }: {
   return (
     <View style={invStyles.container}>
       <Pressable
-        style={({ pressed }) => [invStyles.collapseHeader, { borderBottomColor: expanded ? colors.border : 'transparent', opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [invStyles.collapseHeader, { opacity: pressed ? 0.7 : 1 }]}
         onPress={() => setExpanded((v) => !v)}
+        hitSlop={6}
       >
-        <View style={invStyles.collapseHeaderLeft}>
-          <MaterialIcons name="receipt-long" size={20} color={colors.foreground} />
-          <Text style={[invStyles.collapseTitle, { color: colors.foreground }]}>Invoices</Text>
-          {totalUnread > 0 && (
-            <View style={[invStyles.unreadBadge, { backgroundColor: colors.error }]}>
-              <Text style={invStyles.unreadBadgeText}>{totalUnread}</Text>
-            </View>
-          )}
-        </View>
-        <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
+        <Text style={[invStyles.collapseTitle, { color: colors.muted }]}>INVOICES</Text>
+        <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
       </Pressable>
       {expanded && (
         <ScrollView style={{ maxHeight: 360 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
@@ -286,19 +279,15 @@ function InvoicesSection({ colors, currentUserId, router }: {
               >
                 <AvatarImage uri={artist?.profilePhotoUrl} avatarId={artist?.avatarId} seed={a.artistId} name={a.name} size={40} variant="artist" />
                 <View style={{ flex: 1 }}>
-                  <View style={invStyles.nameRow}>
-                    <Text style={[invStyles.artistName, { color: colors.foreground }]} numberOfLines={1}>{a.name}</Text>
-                    {a.unread > 0 && <View style={[invStyles.unreadDot, { backgroundColor: colors.error }]} />}
-                  </View>
-                  <Text style={[invStyles.subLabel, { color: colors.muted }]}>{a.invoiceCount > 0 ? `${a.invoiceCount} invoice${a.invoiceCount !== 1 ? 's' : ''}` : 'No invoices yet'}</Text>
+                  <Text style={[invStyles.artistName, { color: colors.foreground }]} numberOfLines={1}>{a.name}</Text>
+                  {a.uninvoiced > 0 && (
+                    <Text style={[invStyles.subLabel, { color: colors.warning }]}>
+                      {a.uninvoiced} gig{a.uninvoiced !== 1 ? 's' : ''} not invoiced
+                    </Text>
+                  )}
                 </View>
-                {a.uninvoiced > 0 && (
-                  <View style={[invStyles.pendingPill, { backgroundColor: STATUS_COLORS.pending + '20' }]}>
-                    <Text style={[invStyles.pendingCount, { color: STATUS_COLORS.pending }]}>{a.uninvoiced}</Text>
-                    <Text style={[invStyles.pendingLabel, { color: STATUS_COLORS.pending }]}>to invoice</Text>
-                  </View>
-                )}
-                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                {/* Coral dot = a newly-received invoice the manager hasn't opened yet. No chevron. */}
+                {a.unread > 0 && <View style={[invStyles.coralDot, { backgroundColor: colors.primary }]} />}
               </Pressable>
             );
           })}
@@ -310,9 +299,10 @@ function InvoicesSection({ colors, currentUserId, router }: {
 
 const invStyles = StyleSheet.create({
   container: {},
-  collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0.5 },
+  collapseHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 14 },
   collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  collapseTitle: { fontSize: 16, fontWeight: '700' },
+  collapseTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  coralDot: { width: 10, height: 10, borderRadius: 5, marginLeft: 8 },
   unreadBadge: { borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
