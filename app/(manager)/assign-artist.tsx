@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   doneBtn: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   infoNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginTop: 4, borderRadius: 10, borderWidth: 1, padding: 10 },
   infoNoteText: { flex: 1, fontSize: 12, lineHeight: 18 },
-  listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
+  listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
   listHeaderRow: { marginBottom: 6 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
