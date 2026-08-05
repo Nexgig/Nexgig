@@ -625,17 +625,19 @@ export default function AssignDJScreen() {
         ) : (
           assignRows.map((item, i) => renderRow(item, i))
         )}
+      </ScrollView>
 
-        {/* Close button lives INSIDE the scroll list. A pinned footer sibling keeps getting
-            pushed off the bottom of the native form sheet; a scroll child can't be. Says
-            "Draft" when artists are drafted (saved, not sent), else "Done". */}
+      {/* Pinned footer — the root now has a real height, so this sibling stays at the bottom
+          while the list scrolls between it and the header. Says "Draft" when artists are
+          drafted (saved, not sent), else "Done". */}
+      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable
-          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1, marginTop: 20, marginBottom: Math.max(insets.bottom, 12) }]}
+          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.back()}
         >
           <Text style={styles.sendBtnText}>{draftCount > 0 ? 'Draft' : 'Done'}</Text>
         </Pressable>
-      </ScrollView>
+      </View>
     </View>
   );
 }
