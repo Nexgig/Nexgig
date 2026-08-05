@@ -581,11 +581,11 @@ export default function ManagerDashboard() {
           <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
             {[
-              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
-              { label: 'Empty', swatch: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' as const } },
+              { label: 'Unfilled', swatch: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' as const } },
               { label: 'Draft', swatch: { backgroundColor: colors.surface } },
               { label: 'Sent', swatch: { backgroundColor: STATUS_COLORS.pending } },
               { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
+              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
             ].map((row) => (
               <View key={row.label} style={styles.legendCardRow}>
                 <View style={[styles.legendSwatch, row.swatch]} />
