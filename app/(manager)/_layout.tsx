@@ -410,12 +410,11 @@ if (!lineupError && lineupData) {
         name="invite-artists"
         options={{
           presentation: 'formSheet',
-          // Size the sheet to its content so a short form doesn't leave a huge gap above
-          // the keyboard — the sheet hugs the fields and sits right on top of the keyboard.
-          sheetAllowedDetents: 'fitToContents' as any,
+          sheetAllowedDetents: [0.7],
+          sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
-          contentStyle: { backgroundColor: colors.background },
+          contentStyle: { flex: 1, backgroundColor: colors.background },
         }}
       />
       <Stack.Screen name="artist-profile-view" />
