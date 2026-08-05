@@ -585,10 +585,10 @@ export default function AssignDJScreen() {
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-            {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
+            {new Date(slot!.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </Text>
           <Text style={[styles.headerSub, { color: colors.muted }]}>
-            {isPastSlot ? 'Add to Completed Gigs' : 'Add Artist'}
+            {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
           </Text>
         </View>
         {!isPastSlot && draftCount > 0 && (

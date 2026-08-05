@@ -11,6 +11,7 @@ import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotSt
 import { fonts } from '@/lib/fonts';
 import { SHOW_ARTIST_HISTORY } from '@/lib/features';
 import { ArtistBookingsList } from '@/components/artist-bookings-list';
+import { ArtistInvoicesList } from '@/components/artist-invoices-list';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
@@ -71,7 +72,7 @@ export default function ArtistProfileViewScreen() {
 
   // Bookings lives here rather than on its own screen (the old artist-bookings route).
   // Only meaningful for a connected artist — see the tab bar's isConnected gate.
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'invoices'>('overview');
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const myVenues = useMemo(
@@ -450,14 +451,14 @@ export default function ArtistProfileViewScreen() {
             connected to has no bookings with you, so the tab would always be empty. */}
         {isConnected && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'bookings'] as const).map((tab) => (
+            {(['overview', 'bookings', 'invoices'] as const).map((tab) => (
               <Pressable
                 key={tab}
                 onPress={() => setActiveTab(tab)}
                 style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
               >
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : 'Bookings'}
+                  {tab === 'overview' ? 'Overview' : tab === 'bookings' ? 'Bookings' : 'Invoices'}
                 </Text>
               </Pressable>
             ))}
@@ -466,6 +467,10 @@ export default function ArtistProfileViewScreen() {
 
         {activeTab === 'bookings' && isConnected && (
           <ArtistBookingsList artistId={artistId ?? ''} />
+        )}
+
+        {activeTab === 'invoices' && isConnected && (
+          <ArtistInvoicesList artistId={artistId ?? ''} />
         )}
 
         {(activeTab === 'overview' || !isConnected) && (
