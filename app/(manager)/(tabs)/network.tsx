@@ -1,12 +1,13 @@
 import { useRoleSwitching } from '@/lib/roles';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl, ScrollView } from '@/lib/rn';
+import { Modal } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, mapVenueRow } from '@/lib/store';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -20,6 +21,8 @@ import { sendEmail } from '@/lib/send-email';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
 type NetworkTab = 'artists' | 'venues';
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 type Application = {
   id: string;
@@ -53,6 +56,30 @@ export default function NetworkScreen() {
   const setPendingCount = usePendingAppsStore((s) => s.setCount);
 
   const [activeTab] = useState<NetworkTab>('artists');  // Roster = artists only (venues tab removed)
+
+  // ── Month picker (plain calendar months) — drives the per-artist gig count ──
+  const [monthAnchor, setMonthAnchor] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const monthPrefix = `${monthAnchor.year}-${String(monthAnchor.month + 1).padStart(2, '0')}`;   // 'YYYY-MM'
+  // 13 months back → current → 2 forward, newest first.
+  const monthOptions = useMemo(() => {
+    const out: { year: number; month: number }[] = [];
+    const base = new Date();
+    for (let i = 2; i >= -13; i--) {
+      const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+      out.push({ year: d.getFullYear(), month: d.getMonth() });
+    }
+    return out;
+  }, []);
+
+  // Per-artist COMPLETED-gig count for the picked calendar month (1st→last, live).
+  const bookings = useBookingStore((s) => s.bookings);
+  const gigCount = useCallback((artistId: string) => bookings.filter((b) =>
+    b.artistId === artistId &&
+    b.managerId === currentUser?.id &&
+    (b.isCompleted || b.status === 'completed') &&
+    (b.slotDate ?? '').startsWith(monthPrefix)
+  ).length, [bookings, currentUser?.id, monthPrefix]);
 
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -238,18 +265,13 @@ export default function NetworkScreen() {
 
   const filteredArtists = useMemo(() => {
     const q = search.trim().toLowerCase();
-    // A dual-role user IS an artist, and self-booking is allowed — a venue owner who
-    // also performs can put themselves on their own set. With the flag off they stay
-    // filtered out, as before.
+    // Roster = ONLY the manager's own artists (in their active lineup). Still narrowed by
+    // the shared venue filter (a selected venue → only that venue's assigned artists).
     return [...sbArtists.filter((u) => ALLOW_DUAL_ROLE || u.id !== currentUser?.id)]
+      .filter((u) => isInMyLineup(u.id))
       .filter((u) => !venueArtistIds || venueArtistIds.has(u.id))
       .filter((u) => !q || (u.fullName ?? '').toLowerCase().includes(q))
-      .sort((a, b) => {
-        const aMine = isInMyLineup(a.id);
-        const bMine = isInMyLineup(b.id);
-        if (aMine !== bMine) return aMine ? -1 : 1;
-        return (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase());
-      });
+      .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
   }, [sbArtists, currentUser?.id, search, isInMyLineup, venueArtistIds]);
 
   const filteredVenues = useMemo(() => {
@@ -463,125 +485,116 @@ export default function NetworkScreen() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
-      {/* Header */}
+      {/* Venue filter */}
       <View style={styles.header}>
         <VenueFilterHeader />
       </View>
 
-      {/* Search hidden — few enough artists/venues to scan by eye. The `search` state and
-          both filters are left wired up, so restoring it is uncommenting this block.
-      <View style={[styles.searchWrap, { borderColor: colors.border }]}>
-        <MaterialIcons name="search" size={18} color={colors.muted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
-          placeholderTextColor={colors.muted}
-          value={search}
-          onChangeText={setSearch}
-          returnKeyType="search"
-          autoCapitalize="none"
-        />
-        {search.length > 0 && (
-          <Pressable onPress={() => setSearch('')} hitSlop={8}>
-            <MaterialIcons name="close" size={16} color={colors.muted} />
-          </Pressable>
-        )}
+      {/* ROSTER label + month picker (the per-artist gig count is for this month) */}
+      <View style={styles.rosterBar}>
+        <Text style={[styles.rosterLabel, { color: colors.muted }]}>ROSTER</Text>
+        <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
+          <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
+          <MaterialIcons name="expand-more" size={18} color={colors.muted} />
+        </Pressable>
       </View>
-      */}
 
-      {/* Artists tab */}
-      {activeTab === 'artists' && (
-        artistsLoading ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={filteredArtists}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListEmptyComponent={
-              // "No artists have signed up yet" is a lie when the list is empty because
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="people" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  {search ? 'Try a different search term' : 'No artists have signed up yet'}
-                </Text>
-              </View>
-            }
-            renderItem={({ item: user, index }) => {
-              const profile = getProfile(user.id);
-              const pendingApp = appByArtistId.get(user.id);
-              const isConnected = isInMyLineup(user.id);
-              // The list is sorted mine-first, so a group header belongs above the first
-              // row and wherever the mine/not-mine flag flips — one boundary, at most.
-              const prevMine = index > 0 ? isInMyLineup(filteredArtists[index - 1].id) : null;
-              const showHeader = prevMine === null || prevMine !== isConnected;
-              const rowContent = (
-                <Pressable
-                  style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: pendingApp ? colors.primary + '40' : colors.border, opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
-                >
-                  <View style={styles.cardLeft}>
-                    <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId ?? undefined} seed={user.id} name={user.fullName} size={48} />
-                    <View style={styles.cardInfo}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>
-                        {profile?.hasCompletedBooking && (
-                          <MaterialIcons name="verified" size={15} color={colors.primary} />
-                        )}
-                      </View>
-                      <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                        {pendingApp ? 'Wants to join your lineup' : genreLabel(profile?.primaryGenre, profile?.instruments)}
-                      </Text>
+      {artistsLoading ? (
+        <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
+      ) : (
+        <FlatList
+          data={filteredArtists}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+          ItemSeparatorComponent={() => <View style={[styles.rowSep, { backgroundColor: colors.border }]} />}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <MaterialIcons name="people" size={44} color={colors.muted} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No artists in your roster</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.muted }]}>Invite artists to build your roster.</Text>
+            </View>
+          }
+          ListFooterComponent={
+            <View style={[styles.inviteFooter, { borderTopColor: colors.border }]}>
+              <Pressable style={({ pressed }) => [styles.inviteRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push('/(manager)/invite-artists' as Href)}>
+                <MaterialIcons name="person-add-alt-1" size={22} color={colors.primary} />
+                <Text style={[styles.inviteText, { color: colors.primary }]}>Invite artists</Text>
+              </Pressable>
+            </View>
+          }
+          renderItem={({ item: user }) => {
+            const profile = getProfile(user.id);
+            const count = gigCount(user.id);
+            return (
+              <Pressable
+                style={({ pressed }) => [styles.rowCard, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
+              >
+                <View style={styles.cardLeft}>
+                  <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId ?? undefined} seed={user.id} name={user.fullName} size={48} />
+                  <View style={styles.cardInfo}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>
+                      {profile?.hasCompletedBooking && (
+                        <MaterialIcons name="verified" size={15} color={colors.primary} />
+                      )}
                     </View>
+                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                      {genreLabel(profile?.primaryGenre, profile?.instruments)}
+                    </Text>
                   </View>
-                  {pendingApp ? (
-                    processingId === pendingApp.id ? (
-                      <View style={[styles.respondBtn, { backgroundColor: colors.primary }]}>
-                        <ActivityIndicator size="small" color="#fff" />
-                      </View>
-                    ) : (
-                      <View style={styles.respondRow}>
-                        <Pressable
-                          style={({ pressed }) => [styles.respondBtn, { backgroundColor: '#EF4444', opacity: pressed ? 0.85 : 1 }]}
-                          onPress={(e) => { e.stopPropagation?.(); handleDecline(pendingApp); }}
-                          hitSlop={6}
-                        >
-                          <MaterialIcons name="close" size={18} color="#fff" />
-                        </Pressable>
-                        <Pressable
-                          style={({ pressed }) => [styles.respondBtn, { backgroundColor: colors.success, opacity: pressed ? 0.85 : 1 }]}
-                          onPress={(e) => { e.stopPropagation?.(); handleAccept(pendingApp); }}
-                          hitSlop={6}
-                        >
-                          <MaterialIcons name="check" size={18} color="#fff" />
-                        </Pressable>
-                      </View>
-                    )
-                  ) : null /* Connect / Connected moved to the artist profile header (± button). */}
-                </Pressable>
-              );
-              return (
-                <View>
-                  {showHeader && (
-                    <SectionSeparator label={isConnected ? 'Roster' : 'Invite Artists'} color={colors.muted} borderColor={colors.border} />
-                  )}
-                  {rowContent}
                 </View>
-              );
-            }}
-          />
-        )
+                <View style={styles.gigWrap}>
+                  <Text style={[styles.gigNum, { color: colors.foreground }]}>{count}</Text>
+                  <Text style={[styles.gigLabel, { color: colors.muted }]}>{count === 1 ? 'gig' : 'gigs'}</Text>
+                </View>
+              </Pressable>
+            );
+          }}
+        />
       )}
 
+      {/* Month picker — tap outside to dismiss */}
+      <Modal visible={monthPickerOpen} transparent animationType="fade" onRequestClose={() => setMonthPickerOpen(false)}>
+        <Pressable style={styles.monthBackdrop} onPress={() => setMonthPickerOpen(false)}>
+          <View style={[styles.monthCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              {monthOptions.map((o) => {
+                const sel = o.year === monthAnchor.year && o.month === monthAnchor.month;
+                return (
+                  <Pressable key={`${o.year}-${o.month}`} style={styles.monthOption} onPress={() => { setMonthAnchor(o); setMonthPickerOpen(false); }}>
+                    <Text style={[styles.monthOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{MONTHS[o.month]} {o.year}</Text>
+                    {sel && <MaterialIcons name="check" size={18} color={colors.primary} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
+  rosterBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 },
+  rosterLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  monthBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  monthBtnText: { fontSize: 15, fontWeight: '600' },
+  rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
+  gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
+  gigNum: { fontSize: 18, fontWeight: '800' },
+  gigLabel: { fontSize: 12, marginTop: -1 },
+  inviteFooter: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 4 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  inviteText: { fontSize: 16, fontWeight: '700' },
+  monthBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  monthCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 6, minWidth: 220, overflow: 'hidden' },
+  monthOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12 },
+  monthOptionText: { fontSize: 15 },
   headerAddBtn: { alignItems: 'flex-end' },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   subtitle: { fontSize: 12, marginTop: 2 },

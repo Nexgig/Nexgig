@@ -406,6 +406,17 @@ if (!lineupError && lineupData) {
         }}
       />
       <Stack.Screen name="create-venue" />
+      <Stack.Screen
+        name="invite-artists"
+        options={{
+          presentation: 'formSheet',
+          sheetAllowedDetents: [0.7],
+          sheetExpandsWhenScrolledToEdge: false,
+          sheetGrabberVisible: true,
+          sheetCornerRadius: 20,
+          contentStyle: { flex: 1, backgroundColor: colors.background },
+        }}
+      />
       <Stack.Screen name="artist-profile-view" />
       <Stack.Screen name="my-venues" />
       <Stack.Screen name="my-artists" />
