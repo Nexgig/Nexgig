@@ -1,6 +1,5 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert } from '@/lib/rn';
-import { useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -19,7 +18,6 @@ export default function AssignDJScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { height: winH } = useWindowDimensions();
   // Support both slotId (slot assignment) and venueId (venue lineup assignment)
   const { slotId, venueId: venueIdParam } = useLocalSearchParams<{ slotId?: string; venueId?: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -579,9 +577,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    // Explicit height = the sheet's own height (inside this formSheet, the window height IS the
-    // sheet height). flex:1 doesn't bound here, so without this the footer falls off the bottom.
-    <View style={{ height: winH, backgroundColor: colors.background, paddingTop: 8 }}>
+    <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
@@ -608,10 +604,6 @@ export default function AssignDJScreen() {
         </View>
       )}
 
-      {/* A ScrollView with flex:1 doesn't bound inside the native formSheet (it reports its
-          content height, pushing the footer off-screen). Wrapping it in a plain flex:1 View
-          — which DOES bound — makes the list fill only the free space so the footer stays in view. */}
-      <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={styles.listContent}
@@ -632,19 +624,17 @@ export default function AssignDJScreen() {
           assignRows.map((item, i) => renderRow(item, i))
         )}
       </ScrollView>
-      </View>
 
-      {/* Footer — closes the sheet (same as tapping outside). Reads "Ready" when artists are
-          drafted, so the manager knows they're saved as drafts (just not sent yet). */}
+      {/* Footer — a single coral "Done" control (always visible). */}
       <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable
           style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
           onPress={() => router.back()}
         >
-          <Text style={styles.sendBtnText}>{draftCount > 0 ? 'Ready' : 'Done'}</Text>
+          <Text style={styles.sendBtnText}>Done</Text>
         </Pressable>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
