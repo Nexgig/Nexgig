@@ -579,10 +579,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    // Fixed height to the sheet's detent (0.78) — the form sheet otherwise shrinks to fit
-    // a short list, so flex:1 has no bounded height and Done can't pin. This gives the column
-    // a definite height: the list scrolls when long, Done stays at the bottom when short.
-    <View style={{ height: winH * 0.78, backgroundColor: colors.background, paddingTop: 8 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8 }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
@@ -593,11 +590,9 @@ export default function AssignDJScreen() {
             {slot!.name} · {formatDate(slot!.date)} · {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
           </Text>
         </View>
-        {!isPastSlot && draftCount > 0 && (
-          <Pressable onPress={confirmSendAll} hitSlop={8}>
-            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {draftCount}</Text>
-          </Pressable>
-        )}
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={[styles.doneBtn, { color: colors.primary }]}>Done</Text>
+        </Pressable>
       </View>
 
       {isPastSlot && (
@@ -630,15 +625,17 @@ export default function AssignDJScreen() {
         )}
       </ScrollView>
 
-      {/* Footer — a single coral "Done" control (always visible). */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Pressable
-          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.sendBtnText}>Done</Text>
-        </Pressable>
-      </View>
+      {/* Footer — a single coral "Send N" control, shown only while drafts exist. */}
+      {!isPastSlot && draftCount > 0 && (
+        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <Pressable
+            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={confirmSendAll}
+          >
+            <Text style={styles.sendBtnText}>Send {draftCount}</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
