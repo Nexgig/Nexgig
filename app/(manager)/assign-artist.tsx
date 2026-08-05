@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert } from '@/lib/rn';
+import { useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ export default function AssignDJScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   // Support both slotId (slot assignment) and venueId (venue lineup assignment)
   const { slotId, venueId: venueIdParam } = useLocalSearchParams<{ slotId?: string; venueId?: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -577,7 +579,9 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <ScreenContainer style={{ flex: 1, backgroundColor: colors.background }}>
+    // Explicit height = the sheet's own height (inside this formSheet, the window height IS the
+    // sheet height). flex:1 doesn't bound here, so without this the footer falls off the bottom.
+    <View style={{ height: winH, backgroundColor: colors.background, paddingTop: 8 }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
@@ -640,7 +644,7 @@ export default function AssignDJScreen() {
           <Text style={styles.sendBtnText}>{draftCount > 0 ? 'Ready' : 'Done'}</Text>
         </Pressable>
       </View>
-    </ScreenContainer>
+    </View>
   );
 }
 

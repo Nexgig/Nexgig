@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '@/lib/rn';
+import { useWindowDimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -44,6 +45,7 @@ export default function AddSlotScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   // Header + fixed-top heights measured; only the artist list scrolls, capped at
   // window − header − fixed top − grabber. (window IS the sheet's height here, not the
   // full screen — multiplying by the 0.78 detent was double-counting and left a gap.)
@@ -467,7 +469,9 @@ export default function AddSlotScreen() {
   );
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
+    // Explicit height = the sheet's own height (inside this formSheet, the window height IS the
+    // sheet height). flex:1 doesn't bound here, so without this the footer falls off the bottom.
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH }]}>
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
         {!isPast && draftedIds.size > 0 && (
