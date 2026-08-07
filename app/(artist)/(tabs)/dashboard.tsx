@@ -6,7 +6,6 @@ import { LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
-import { Divider, StatRow } from '@/components/ui/card-free';
 import { MaterialIcons } from '@expo/vector-icons';
 import { fonts } from '@/lib/fonts';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
@@ -157,10 +156,10 @@ export default function DJHomeScreen() {
     });
   }, [bookings, slots, allVenues, allInvoices, currentUser?.id]);
 
-  // Bookings list — active (pending/confirmed) gigs, grouped by date under a header
-  // ("TODAY" / "TOMORROW" / "FRI 14 AUG"), mirroring the manager dashboard.
+  // Bookings list — BOOKED (confirmed) gigs only, grouped by date under a header
+  // ("TODAY" / "TOMORROW" / "FRI 14 AUG"). Pending requests live in "Needs your reply".
   const bookingsByDate = useMemo(() => {
-    const active = dashboardBookings.filter((b) => !b.isDone);
+    const active = dashboardBookings.filter((b) => b.statusKey === 'confirmed');
     const map = new Map<string, typeof active>();
     const order: string[] = [];
     for (const b of active) {
@@ -171,25 +170,8 @@ export default function DJHomeScreen() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [dashboardBookings]);
 
-  const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
+  // Booked-gigs count — shown next to the Bookings title.
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
-
-  const completedBookings = useMemo(() => bookings
-    .filter((b) => b.status === 'completed' || b.isCompleted)
-    .map((b) => {
-      const slot = slots.find((s) => s.id === b.slotId);
-      const venue = allVenues.find((v) => v.id === b.venueId);
-      const resolvedSlot = slot ?? (b.slotDate ? {
-        id: b.slotId, venueId: b.venueId, date: b.slotDate,
-        name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
-        endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
-      } : undefined);
-      const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as unknown as typeof venue : undefined);
-      return { ...b, slot: resolvedSlot, venue: resolvedVenue };
-    })
-    .sort((a, b) => (a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1),
-    [bookings, slots, allVenues]
-  );
 
   // ── Overview strip: the artist's own schedule across the next 31 nights ───────────────
   // One row of days, each colored by that day's winning status (pending > booked > cancelled).
@@ -525,21 +507,17 @@ export default function DJHomeScreen() {
           </View>
         )}
 
-        {/* Stats — Booked / Pending / Completed. */}
-        <View style={styles.statsWrap}>
-          <StatRow
-            items={[
-              { value: confirmedCount, label: 'Booked', color: STATUS_COLORS.confirmed, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
-              { value: pendingCount, label: 'Pending', color: STATUS_COLORS.pending, onPress: () => router.push('/(artist)/pending-requests' as Href) },
-              { value: completedBookings.length, label: 'Completed', color: STATUS_COLORS.completed, onPress: () => router.push('/(artist)/completed-gigs' as Href) },
-            ]}
-          />
-        </View>
-        <Divider full />
-
-        {/* Bookings — date-grouped (TODAY / FRI 14 AUG), venue avatar + name + time, maps on right. */}
+        {/* Bookings — booked (confirmed) gigs only, date-grouped (TODAY / FRI 14 AUG), venue
+            avatar + name + time, maps on right. The count of booked gigs sits by the title. */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
+          <View style={styles.bookingsHead}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
+            {confirmedCount > 0 && (
+              <View style={[styles.bookingsCount, { backgroundColor: STATUS_COLORS.confirmed }]}>
+                <Text style={styles.bookingsCountText}>{confirmedCount}</Text>
+              </View>
+            )}
+          </View>
           {bookingsByDate.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
@@ -622,12 +600,14 @@ const styles = StyleSheet.create({
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   replyBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 
-  statsWrap: { marginTop: 20 },
   section: { marginTop: 24 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
 
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
+  bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bookingsCount: { minWidth: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
+  bookingsCountText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
