@@ -1,15 +1,13 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
-import { useWindowDimensions, Animated, Modal } from 'react-native';
+import { LayoutAnimation, Modal } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { fonts } from '@/lib/fonts';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -145,37 +143,35 @@ export default function ManagerDashboard() {
     return { nights, rows };
   }, [venues, slots, bookings, drafts, bookingVenueId]);
 
-  // Tapping a coverage square opens a bottom sheet of that day's bookings, scoped to whatever
-  // the venue filter is: All Venues → every venue's bookings that day; one venue → just that one.
-  // Each square is a (venue, night); the sheet shows just that venue's bookings that night.
-  const [sheetTarget, setSheetTarget] = useState<{ venueId: string; name: string; date: string } | null>(null);
+  // Tapping a coverage square expands an inline panel directly beneath that venue's row (no
+  // modal, no navigation): the date, its slot count, and each gig as time · artist · status.
+  // Tapping another square swaps the panel in place — moving it to the new row if the venue
+  // differs; tapping the same square closes it. Expand/collapse animates via LayoutAnimation.
+  const [selected, setSelected] = useState<{ venueId: string; date: string } | null>(null);
   const [showLegend, setShowLegend] = useState(false);
-  const { height: winH } = useWindowDimensions();
-  const panelH = winH * 0.53;
-  // Slide + mount lifecycle. `renderTarget` keeps the panel mounted (and its content stable) while
-  // it slides down to close; `sheetTarget` is the open target — tapping another square just changes
-  // it, so the content swaps in place with no re-animation.
-  const sheetY = useRef(new Animated.Value(panelH)).current;
-  const [renderTarget, setRenderTarget] = useState<{ venueId: string; name: string; date: string } | null>(null);
-  useEffect(() => {
-    if (sheetTarget) {
-      setRenderTarget(sheetTarget);
-      Animated.timing(sheetY, { toValue: 0, duration: 220, useNativeDriver: true }).start();
-    } else if (renderTarget) {
-      Animated.timing(sheetY, { toValue: panelH, duration: 200, useNativeDriver: true }).start(({ finished }) => {
-        if (finished) setRenderTarget(null);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sheetTarget]);
-  // Slot-based, mirroring the calendar day list: for the tapped venue+night, each slot shows its
-  // bookings, its drafts, or a "Needs artist" row when empty — so tapping a grey (needs-you)
-  // square actually shows the empty/draft slots, not "nothing".
-  const sheetItems = useMemo(() => {
-    if (!renderTarget) return [];
+  const toggleDay = (venueId: string, date: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelected((cur) => (cur && cur.venueId === venueId && cur.date === date) ? null : { venueId, date });
+  };
+
+  // The selected night's date label ("Wed 12 August") and its slot count, for the panel header.
+  const panelDateLabel = useMemo(() => {
+    if (!selected) return '';
+    const d = new Date(selected.date + 'T00:00:00');
+    return `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'long' })}`;
+  }, [selected]);
+  const panelSlotCount = useMemo(
+    () => selected ? slots.filter((s) => s.venueId === selected.venueId && s.date === selected.date).length : 0,
+    [selected, slots]
+  );
+  // Slot-based, mirroring the calendar day list: for the selected venue+night, each slot shows its
+  // bookings, its drafts, or a "Needs artist" row when empty — so an empty (coral-dashed) square
+  // still lists its slot rather than reading as "nothing".
+  const panelItems = useMemo(() => {
+    if (!selected) return [];
     const SHOWN = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'cancelled', 'declined', 'expired']);
     const daySlots = slots
-      .filter((s) => s.venueId === renderTarget.venueId && s.date === renderTarget.date)
+      .filter((s) => s.venueId === selected.venueId && s.date === selected.date)
       .sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? ''));
     type Item = { key: string; kind: 'booking' | 'draft' | 'empty'; slot: typeof daySlots[number]; booking?: (typeof bookings)[number]; dj?: any; artistId?: string };
     const items: Item[] = [];
@@ -196,41 +192,7 @@ export default function ManagerDashboard() {
       });
     }
     return items;
-  }, [renderTarget, slots, bookings, drafts, artistUsers]);
-  // Dismiss a cancelled/declined/expired booking straight from the sheet — same effect as the
-  // calendar's X: hide it from the manager (and from the artist too if the artist cancelled).
-  const dismissSheetBooking = (b: (typeof bookings)[number]) => {
-    hideFromManagerCalendar(b.id);
-    const syncFields: any = { hiddenFromManagerCalendar: true };
-    if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
-    syncBookingStatus(b.id, b.status as any, syncFields);
-  };
-
-  // Swipe-left → Remove, mirroring the calendar day list. Used for empty slots (delete the
-  // slot), drafts (drop the draft), and dead bookings (dismiss). Live gigs don't swipe —
-  // those are cancelled from the booking screen.
-  const withSheetSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
-    const doDelete = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDelete(); };
-    return (
-      <Swipeable
-        key={key}
-        friction={1.4}
-        rightThreshold={56}
-        overshootRight={false}
-        onSwipeableOpen={(dir) => { if (dir === 'right') doDelete(); }}
-        renderRightActions={() => (
-          <View style={styles.swipeDeleteAction}>
-            <Pressable style={[styles.swipeDeleteBtn, { backgroundColor: colors.error }]} onPress={doDelete}>
-              <MaterialIcons name="delete" size={17} color="#fff" />
-              <Text style={styles.swipeDeleteText}>Remove</Text>
-            </Pressable>
-          </View>
-        )}
-      >
-        {child}
-      </Swipeable>
-    );
-  };
+  }, [selected, slots, bookings, drafts, artistUsers]);
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -294,9 +256,6 @@ export default function ManagerDashboard() {
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
-  const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
-  const deleteSlot = useSlotStore((s) => s.deleteSlot);
-  const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -455,32 +414,71 @@ export default function ManagerDashboard() {
             ))}
           </View>
           {coverage.rows.map((r) => (
-            <View key={r.venue.id} style={styles.stripRow}>
-              <Pressable
-                style={({ pressed }) => [styles.stripVenueCol, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={() => router.push(('/(manager)/venue-detail?id=' + r.venue.id) as Href)}
-              >
-                <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
-              </Pressable>
-              {r.cells.map((state, i) => (
+            <View key={r.venue.id}>
+              <View style={styles.stripRow}>
                 <Pressable
-                  key={i}
-                  style={({ pressed }) => [styles.stripCell, { opacity: pressed ? 0.5 : 1 }]}
-                  onPress={() => setSheetTarget({ venueId: r.venue.id, name: r.venue.name, date: coverage.nights[i] })}
+                  style={({ pressed }) => [styles.stripVenueCol, { opacity: pressed ? 0.5 : 1 }]}
+                  onPress={() => router.push(('/(manager)/venue-detail?id=' + r.venue.id) as Href)}
                 >
-                  <View
-                    style={[
-                      styles.cellBox,
-                      state === 'cancelled' ? { backgroundColor: colors.cancelled }
-                        : state === 'empty' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — empty slot, needs attention
-                        : state === 'drafted' ? { backgroundColor: colors.surface }   // beige fill — artist drafted, not sent yet
-                        : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
-                        : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
-                        : { backgroundColor: colors.background },   // no slot at all — blends into the page
-                    ]}
-                  />
+                  <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
                 </Pressable>
-              ))}
+                {r.cells.map((state, i) => {
+                  const isSel = selected?.venueId === r.venue.id && selected?.date === coverage.nights[i];
+                  return (
+                    <Pressable
+                      key={i}
+                      style={({ pressed }) => [styles.stripCell, { opacity: pressed ? 0.5 : 1 }]}
+                      onPress={() => toggleDay(r.venue.id, coverage.nights[i])}
+                    >
+                      {/* Ring wrapper: when selected it insets the square by a 2px background gap and
+                          draws a 2px coral ring around it, without changing the cell's footprint. */}
+                      <View style={[styles.cellRingWrap, isSel && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 14 }]}>
+                        <View
+                          style={[
+                            styles.cellBox,
+                            state === 'cancelled' ? { backgroundColor: colors.cancelled }
+                              : state === 'empty' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — empty slot, needs attention
+                              : state === 'drafted' ? { backgroundColor: colors.surface }   // beige fill — artist drafted, not sent yet
+                              : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
+                              : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
+                              : { backgroundColor: colors.background },   // no slot at all — blends into the page
+                          ]}
+                        />
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Inline panel — expands directly beneath the selected venue's row. Read-only peek:
+                  date, slot count, and each gig as time · artist · status badge. */}
+              {selected?.venueId === r.venue.id && (
+                <View style={[styles.inlinePanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.inlinePanelHead}>
+                    <Text style={[styles.inlinePanelDate, { color: colors.foreground }]}>{panelDateLabel}</Text>
+                    <Text style={[styles.inlinePanelCount, { color: colors.muted }]}>{panelSlotCount} slot{panelSlotCount === 1 ? '' : 's'}</Text>
+                  </View>
+                  <View style={[styles.inlinePanelDivider, { backgroundColor: colors.border }]} />
+                  {panelItems.length === 0 ? (
+                    <Text style={[styles.inlinePanelEmpty, { color: colors.muted }]}>No slots on this night.</Text>
+                  ) : (
+                    panelItems.map((item) => (
+                      <View key={item.key} style={styles.inlineRow}>
+                        <Text style={[styles.inlineTime, { color: colors.muted }]}>{fmtTime(item.slot.startTime)}</Text>
+                        <Text
+                          style={[styles.inlineName, { color: item.kind === 'empty' ? colors.primary : colors.foreground }]}
+                          numberOfLines={1}
+                        >
+                          {item.kind === 'empty' ? 'Needs artist' : (item.dj?.fullName ?? 'Unknown Artist')}
+                        </Text>
+                        {item.kind !== 'empty' && (
+                          <StatusBadge status={item.kind === 'draft' ? 'draft' : (item.booking!.status as any)} />
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
             </View>
           ))}
         </View>
@@ -503,77 +501,6 @@ export default function ManagerDashboard() {
 
 
       </ScrollView>
-
-      {/* Day sheet — a custom in-app panel (no backdrop) so the Overview squares stay tappable:
-          tap another square to SWAP the day in place. Snaps in/out (no slide yet). Lists that
-          day's bookings, scoped to the venue filter (All Venues → all; one venue → that one). */}
-      {renderTarget && (
-        <Animated.View style={[styles.sheetPanel, { backgroundColor: colors.background, borderTopColor: colors.border, height: panelH, transform: [{ translateY: sheetY }] }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
-          <View style={styles.sheetHeaderRow}>
-            <View style={styles.sheetHeaderText}>
-              <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
-                {new Date(renderTarget.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </Text>
-              <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>{renderTarget.name}</Text>
-            </View>
-            <Pressable hitSlop={10} style={styles.sheetClose} onPress={() => setSheetTarget(null)}>
-              <MaterialIcons name="close" size={22} color={colors.muted} />
-            </Pressable>
-          </View>
-          <ScrollView style={styles.sheetScroll} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
-            {sheetItems.length === 0 ? (
-              <Text style={[styles.sheetNoSlots, { color: colors.muted }]}>No slots on this night.</Text>
-            ) : (
-              sheetItems.map((item) => {
-                const time = `${fmtTime(item.slot.startTime)}–${fmtTime(item.slot.endTime)}`;
-                if (item.kind === 'empty') {
-                  return withSheetSwipeDelete(item.key, () => deleteSlot(item.slot.id), (
-                    <Pressable
-                      style={({ pressed }) => [styles.sheetRow, { backgroundColor: colors.background, gap: 12, opacity: pressed ? 0.7 : 1 }]}
-                      onPress={() => router.push(('/(manager)/assign-artist?slotId=' + item.slot.id) as Href)}
-                    >
-                      <View style={[styles.sheetDashedCircle, { borderColor: colors.primary }]}>
-                        <MaterialIcons name="add" size={20} color={colors.primary} />
-                      </View>
-                      <View style={styles.sheetRowInfo}>
-                        <Text style={[styles.sheetRowName, { color: colors.primary, marginBottom: 2 }]}>Needs artist</Text>
-                        <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
-                      </View>
-                    </Pressable>
-                  ));
-                }
-                const b = item.booking;
-                const onPress = () => {
-                  router.push((item.kind === 'booking'
-                    ? '/(manager)/booking-detail?id=' + b!.id
-                    : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
-                };
-                const row = (
-                  <Pressable style={({ pressed }) => [styles.sheetRow, { backgroundColor: colors.background, gap: 12, opacity: pressed ? 0.7 : 1 }]} onPress={onPress}>
-                    <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={(item.dj as any)?.id} name={item.dj?.fullName} size={40} />
-                    <View style={styles.sheetRowInfo}>
-                      <View style={styles.gigNameRow}>
-                        <Text style={[styles.sheetRowName, { color: colors.foreground }]} numberOfLines={1}>{item.dj?.fullName ?? 'Unknown Artist'}</Text>
-                        <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
-                      </View>
-                      <Text style={[styles.sheetRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
-                    </View>
-                  </Pressable>
-                );
-                // Drafts drop the draft; dead bookings dismiss; live gigs don't swipe.
-                if (item.kind === 'draft') {
-                  return withSheetSwipeDelete(item.key, () => removeDraftByDJ(item.slot.id, item.artistId!), row);
-                }
-                const dead = b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired';
-                return dead
-                  ? withSheetSwipeDelete(item.key, () => dismissSheetBooking(b!), row)
-                  : <View key={item.key}>{row}</View>;
-              })
-            )}
-          </ScrollView>
-        </Animated.View>
-      )}
 
       {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
       <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
@@ -634,6 +561,7 @@ const styles = StyleSheet.create({
   stripVenueName: { fontSize: 15, fontWeight: '600' },
   stripDow: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
   stripCell: { flex: 1, paddingHorizontal: 3 },
+  cellRingWrap: { width: '100%' },
   cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
@@ -641,29 +569,14 @@ const styles = StyleSheet.create({
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
   gigTime: { fontSize: 13, fontWeight: '500' },
   gigInfo: { flex: 1 },
-  // Day sheet (Overview square tap)
-  sheetPanel: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 50, elevation: 24,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 24,
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: -4 },
-  },
-  sheetHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginBottom: 14 },
-  sheetHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  sheetHeaderText: { flex: 1 },
-  sheetClose: { padding: 2 },
-  sheetTitle: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4 },
-  sheetSubtitle: { fontSize: 13, marginTop: 2 },
-  sheetScroll: { flex: 1 },
-  sheetNoSlots: { fontSize: 16, paddingTop: 4, paddingBottom: 8 },
-  sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  sheetRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  swipeDeleteAction: { justifyContent: 'center', paddingVertical: 8, paddingLeft: 16, paddingRight: 8 },
-  swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  sheetDismiss: { padding: 6, marginLeft: 8 },
-  sheetRowInfo: { flex: 1 },
-  sheetDashedCircle: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  sheetRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
-  sheetRowSub: { fontSize: 13, marginTop: 1 },
+  // Inline panel (expands beneath the selected Overview row)
+  inlinePanel: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, marginBottom: 12 },
+  inlinePanelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  inlinePanelDate: { fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.3 },
+  inlinePanelCount: { fontSize: 13, fontWeight: '600' },
+  inlinePanelDivider: { height: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 4 },
+  inlinePanelEmpty: { fontSize: 14, paddingVertical: 10 },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
+  inlineTime: { fontSize: 13, fontWeight: '600', width: 46 },
+  inlineName: { fontSize: 15, fontWeight: '600', flex: 1 },
 });
