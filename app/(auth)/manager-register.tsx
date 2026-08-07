@@ -302,7 +302,7 @@ export default function ManagerRegisterScreen() {
                 label="Display Name"
                 value={form.fullName}
                 onChangeText={(v) => update('fullName', v)}
-                placeholder="Alex Thompson"
+                placeholder="Alex"
                 colors={colors}
               />
               {!hasSession && (

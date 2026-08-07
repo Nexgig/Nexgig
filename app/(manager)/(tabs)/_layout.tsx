@@ -164,8 +164,17 @@ export default function ManagerTabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={24} color={color} />,
-          tabBarBadge: invoiceBadge > 0 ? invoiceBadge : undefined,
+          // Custom coral badge beside the icon — same style as the Calendar tab (not the default red).
+          tabBarIcon: ({ color }) => (
+            <View>
+              <MaterialIcons name="person" size={24} color={color} />
+              {invoiceBadge > 0 && (
+                <View style={{ position: 'absolute', top: -5, right: -15, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{invoiceBadge}</Text>
+                </View>
+              )}
+            </View>
+          ),
         }}
         listeners={{
           tabPress: () => { if (currentUser?.id) markProfileInvoicesSeen(currentUser.id); },

@@ -63,14 +63,14 @@ export function VenueInvoicesList({ venueId }: { venueId: string }) {
                 <View style={{ flex: 1 }}>
                   <View style={styles.nameRow}>
                     <Text style={[styles.name, { color: colors.foreground, textDecorationLine: cancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{artistName}</Text>
-                    {!inv.isReadByManager && <View style={[styles.unreadDot, { backgroundColor: colors.error }]} />}
+                    {!inv.isReadByManager && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
                   </View>
                   <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
                     {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}{inv.invoiceNumber ? ` · ${inv.invoiceNumber}` : ''}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                  <Text style={[styles.amount, { color: cancelled ? colors.muted : colors.error, textDecorationLine: cancelled ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
+                  <Text style={[styles.amount, { color: cancelled ? colors.muted : colors.primary, textDecorationLine: cancelled ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
                   {cancelled && <Text style={[styles.cancelled, { color: colors.error }]}>CANCELLED</Text>}
                 </View>
                 <MaterialIcons name="chevron-right" size={20} color={colors.muted} />

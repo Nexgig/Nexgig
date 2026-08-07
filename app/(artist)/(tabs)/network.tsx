@@ -141,7 +141,7 @@ export default function ArtistVenuesScreen() {
 
 const styles = StyleSheet.create({
   // Sizing mirrors the manager Roster tab (app/(manager)/(tabs)/network.tsx).
-  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 6, paddingBottom: 12, borderBottomWidth: 0.5 },
+  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   count: { fontSize: 13, fontWeight: '600', marginBottom: 3 },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
