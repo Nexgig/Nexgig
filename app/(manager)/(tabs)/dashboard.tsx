@@ -256,7 +256,19 @@ export default function ManagerDashboard() {
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const clearBookings = useBookingStore((s) => s.clearBookings);
   const addBooking = useBookingStore((s) => s.addBooking);
+  const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Dismiss a cancelled/declined/expired booking straight from the inline panel — same effect as
+  // the calendar's X: hide it from the manager (and from the artist too if the artist cancelled).
+  // Animate so the row collapses out of the panel.
+  const dismissBooking = (b: (typeof bookings)[number]) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    hideFromManagerCalendar(b.id);
+    const syncFields: any = { hiddenFromManagerCalendar: true };
+    if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
+    syncBookingStatus(b.id, b.status as any, syncFields);
+  };
 
   const handleRefresh = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -462,20 +474,40 @@ export default function ManagerDashboard() {
                   {panelItems.length === 0 ? (
                     <Text style={[styles.inlinePanelEmpty, { color: colors.muted }]}>No slots on this night.</Text>
                   ) : (
-                    panelItems.map((item) => (
-                      <View key={item.key} style={styles.inlineRow}>
-                        <Text style={[styles.inlineTime, { color: colors.muted }]}>{fmtTime(item.slot.startTime)}</Text>
-                        <Text
-                          style={[styles.inlineName, { color: item.kind === 'empty' ? colors.primary : colors.foreground }]}
-                          numberOfLines={1}
+                    panelItems.map((item) => {
+                      // Empty / draft → assign-artist for that slot; booking (any status, incl.
+                      // cancelled) → the booking detail. Dead bookings also get an X to dismiss.
+                      const b = item.booking;
+                      const dead = item.kind === 'booking' && (b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired');
+                      const onPress = () => router.push((item.kind === 'booking'
+                        ? '/(manager)/booking-detail?id=' + b!.id
+                        : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
+                      return (
+                        <Pressable
+                          key={item.key}
+                          onPress={onPress}
+                          style={({ pressed }) => [styles.inlineRow, { opacity: pressed ? 0.6 : 1 }]}
                         >
-                          {item.kind === 'empty' ? 'Needs artist' : (item.dj?.fullName ?? 'Unknown Artist')}
-                        </Text>
-                        {item.kind !== 'empty' && (
-                          <StatusBadge status={item.kind === 'draft' ? 'draft' : (item.booking!.status as any)} />
-                        )}
-                      </View>
-                    ))
+                          <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{fmtTime(item.slot.startTime)}</Text>
+                          <Text
+                            style={[styles.inlineName, { color: item.kind === 'empty' ? colors.primary : colors.foreground }]}
+                            numberOfLines={1}
+                          >
+                            {item.kind === 'empty' ? 'Needs artist' : (item.dj?.fullName ?? 'Unknown Artist')}
+                          </Text>
+                          <View style={styles.inlineRight}>
+                            {item.kind !== 'empty' && (
+                              <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
+                            )}
+                            {dead && (
+                              <Pressable hitSlop={8} onPress={() => dismissBooking(b!)} style={styles.inlineDismiss}>
+                                <MaterialIcons name="close" size={18} color={colors.muted} />
+                              </Pressable>
+                            )}
+                          </View>
+                        </Pressable>
+                      );
+                    })
                   )}
                 </View>
               )}
@@ -577,6 +609,8 @@ const styles = StyleSheet.create({
   inlinePanelDivider: { height: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 4 },
   inlinePanelEmpty: { fontSize: 14, paddingVertical: 10 },
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
-  inlineTime: { fontSize: 13, fontWeight: '600', width: 46 },
+  inlineTime: { fontSize: 13, fontWeight: '600', width: 66 },
   inlineName: { fontSize: 15, fontWeight: '600', flex: 1 },
+  inlineRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  inlineDismiss: { padding: 2 },
 });
