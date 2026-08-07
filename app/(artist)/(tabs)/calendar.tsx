@@ -206,19 +206,6 @@ export default function DJAvailabilityScreen() {
     }, [])
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      AsyncStorage.getItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW).then((val) => {
-        const saved: ViewMode = (val === 'week' || val === 'month' || val === 'today') ? val : 'month';
-        setDefaultViewMode(saved);
-        if (!defaultViewApplied.current) {
-          setViewMode(saved);
-          defaultViewApplied.current = true;
-        }
-      });
-    }, [])
-  );
-
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -711,12 +698,18 @@ export default function DJAvailabilityScreen() {
     return (
       <Pressable
         key={b.id}
-        style={({ pressed }) => [styles.bookingCard, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [styles.bookingCard, { opacity: pressed ? 0.6 : 1 }]}
         onPress={() => !isCancelled && !isDeclined && router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
       >
         {b.isArtistCreated ? (
-          <View style={[styles.bookingThumb, styles.bookingThumbPrivate, { backgroundColor: statusColor }]}>
-            <MaterialIcons name="event" size={22} color="#fff" />
+          // Private events (the artist's own) get a neutral date tile, not a venue image.
+          <View style={[styles.privateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.privateTileShort, { color: colors.muted }]}>
+              {new Date((b.resolvedDate ?? b.slotDate ?? todayStr) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
+            </Text>
+            <Text style={[styles.privateTileNum, { color: colors.foreground }]}>
+              {new Date((b.resolvedDate ?? b.slotDate ?? todayStr) + 'T00:00:00').getDate()}
+            </Text>
           </View>
         ) : (
           <Image source={venueImageFor(undefined, b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
@@ -808,179 +801,6 @@ export default function DJAvailabilityScreen() {
           </View>
         </View>
 
-        {/* View Mode Toggle — 3 buttons matching manager style */}
-        {(() => {
-          const allModes: { mode: ViewMode; label: string; icon: 'calendar-month' | 'view-week' | 'today' }[] = [
-            { mode: 'month', label: 'Month', icon: 'calendar-month' },
-            { mode: 'week', label: 'Week', icon: 'view-week' },
-            { mode: 'today', label: 'Day', icon: 'today' },
-          ];
-          // Put saved default first, keep the rest in original order
-          const ordered = [
-            ...allModes.filter((m) => m.mode === defaultViewMode),
-            ...allModes.filter((m) => m.mode !== defaultViewMode),
-          ];
-          return (
-            <View style={styles.viewToggleContainer}>
-              <View style={[styles.viewToggle, { backgroundColor: colors.surface }]}>
-                {ordered.map(({ mode, label, icon }) => (
-                  <Pressable
-                    key={mode}
-                    style={[styles.toggleBtn, viewMode === mode && styles.toggleBtnActive, viewMode === mode && [styles.toggleBtnActive, { backgroundColor: colors.background }]]}
-                    onPress={() => { setViewMode(mode); if (mode === 'today') setViewedDayStr(todayStr); }}
-                  >
-                    {viewMode === mode ? <MaterialIcons name={icon} size={15} color={colors.foreground} /> : null}
-                    <Text style={[styles.toggleBtnText, { color: viewMode === mode ? colors.foreground : colors.muted }]}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          );
-        })()}
-
-        {/* ─── WEEK VIEW ─── */}
-        {viewMode === 'week' && (
-          <View>
-            {/* Week Navigation */}
-            <View style={styles.weekNav}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64 }}>
-                <Pressable onPress={prevWeek} style={styles.monthNavBtn}>
-                  <MaterialIcons name="chevron-left" size={28} color={colors.foreground} />
-                </Pressable>
-              </View>
-              <Text style={[styles.weekLabel, { color: colors.foreground, flex: 1, textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>{weekLabel}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
-                <Pressable onPress={nextWeek} style={styles.monthNavBtn}>
-                  <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Week Days */}
-            <View style={styles.weekDaysContainer}>
-              {weekDays.map((dateStr, idx) => {
-                const dayDate = new Date(dateStr + 'T00:00:00');
-                const isToday = dateStr === todayStr;
-                const dayBookings = bookingsByDate.get(dateStr) ?? [];
-                const dayBlocks = blocks.filter((b) => b.date === dateStr);
-
-                return (
-                  <View key={dateStr} style={[styles.weekDaySection, { borderBottomColor: colors.border }]}>
-                    <View style={styles.weekDayHeader}>
-                      <View style={[styles.weekDayBadge, { backgroundColor: isToday ? colors.primary : 'transparent' }]}>
-                        <Text style={[styles.weekDayShort, { color: isToday ? '#fff' : colors.muted }]}>{DAYS_SHORT[idx]}</Text>
-                        <Text style={[styles.weekDayNum, { color: isToday ? '#fff' : colors.foreground }]}>{dayDate.getDate()}</Text>
-                      </View>
-                      <View style={styles.weekDayMeta}>
-                        <Text style={[styles.weekDayFull, { color: colors.foreground }]}>{DAYS_FULL[idx]}</Text>
-                        {(dayBookings.length > 0 || dayBlocks.length > 0) && (
-                          <Text style={[styles.weekDaySlotCount, { color: colors.muted }]}>
-                            {dayBookings.length > 0 ? `${dayBookings.length} gig${dayBookings.length !== 1 ? 's' : ''}` : ''}
-                            {dayBookings.length > 0 && dayBlocks.length > 0 ? ' · ' : ''}
-                            {dayBlocks.length > 0 ? `${dayBlocks.length} blocked` : ''}
-                          </Text>
-                        )}
-                      </View>
-                      <Pressable style={({ pressed }) => [styles.weekAddBtn, { opacity: pressed ? 0.7 : 1 }]} onPress={() => { setSelectedDate(dateStr); openAddModal(dateStr); }}>
-                        <MaterialIcons name="add" size={18} color={colors.primary} />
-                      </Pressable>
-                    </View>
-
-                    {/* Booking cards */}
-                    {dayBookings.length > 0 && (
-                      <View style={styles.weekSlotsContainer}>
-                        {dayBookings.map((b) => renderBookingCard(b, true))}
-                      </View>
-                    )}
-
-                    {/* Block cards */}
-                    {dayBlocks.length > 0 && (
-                      <View style={[styles.weekSlotsContainer, { marginTop: dayBookings.length > 0 ? 4 : 0 }]}>
-                        {dayBlocks.map((b) => renderBlockCard(b))}
-                      </View>
-                    )}
-
-                    {dayBookings.length === 0 && dayBlocks.length === 0 && (
-                      <View style={styles.weekEmptyDay}>
-                        <Text style={[styles.weekEmptyText, { color: colors.muted }]}>No gigs or blocks</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* ─── TODAY VIEW ─── */}
-        {viewMode === 'today' && (() => {
-          const viewedDate = new Date(viewedDayStr + 'T00:00:00');
-          const mondayIdx = toMondayIndex(viewedDate.getDay());
-          const dayBookings = bookingsByDate.get(viewedDayStr) ?? [];
-          const dayBlocks = blocks.filter((b) => b.date === viewedDayStr);
-          const hasItems = dayBookings.length > 0 || dayBlocks.length > 0;
-          const isActualToday = viewedDayStr === todayStr;
-          const badgeBg = isActualToday ? colors.primary : 'transparent';
-          const badgeTextColor = isActualToday ? '#fff' : colors.foreground;
-          const dayNavLabel = viewedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-          return (
-            <View>
-              {/* Day navigation bar — same pattern as month nav */}
-              <View style={styles.monthNav}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64 }}>
-                  <Pressable onPress={prevDay} style={styles.monthNavBtn}>
-                    <MaterialIcons name="chevron-left" size={28} color={colors.foreground} />
-                  </Pressable>
-                </View>
-                <Text style={[styles.weekLabel, { color: colors.foreground, flex: 1, textAlign: 'center' }]} numberOfLines={1} adjustsFontSizeToFit>{dayNavLabel}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
-                  <Pressable onPress={nextDay} style={styles.monthNavBtn}>
-                    <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
-                  </Pressable>
-                </View>
-              </View>
-              <View style={styles.weekDaysContainer}>
-                <View style={[styles.weekDaySection, { borderBottomColor: colors.border }]}>
-                  <View style={styles.weekDayHeader}>
-                    <View style={[styles.weekDayBadge, { backgroundColor: badgeBg, borderWidth: isActualToday ? 0 : 1, borderColor: colors.border }]}>
-                      <Text style={[styles.weekDayShort, { color: badgeTextColor }]}>{DAYS_SHORT[mondayIdx]}</Text>
-                      <Text style={[styles.weekDayNum, { color: badgeTextColor }]}>{viewedDate.getDate()}</Text>
-                    </View>
-                    <View style={styles.weekDayMeta}>
-                      <Text style={[styles.weekDayFull, { color: colors.foreground }]}>{DAYS_FULL[mondayIdx]}</Text>
-                      {hasItems && (
-                        <Text style={[styles.weekDaySlotCount, { color: colors.muted }]}>
-                          {dayBookings.length > 0 ? `${dayBookings.length} gig${dayBookings.length !== 1 ? 's' : ''}` : ''}
-                          {dayBookings.length > 0 && dayBlocks.length > 0 ? ' · ' : ''}
-                          {dayBlocks.length > 0 ? `${dayBlocks.length} blocked` : ''}
-                        </Text>
-                      )}
-                    </View>
-                    <Pressable style={({ pressed }) => [styles.weekAddBtn, { opacity: pressed ? 0.7 : 1 }]} onPress={() => openAddModal(viewedDayStr)}>
-                      <MaterialIcons name="add" size={18} color={colors.primary} />
-                    </Pressable>
-                  </View>
-                  {dayBookings.length > 0 && (
-                    <View style={styles.weekSlotsContainer}>
-                      {dayBookings.map((b) => renderBookingCard(b, true))}
-                    </View>
-                  )}
-                  {dayBlocks.length > 0 && (
-                    <View style={[styles.weekSlotsContainer, { marginTop: dayBookings.length > 0 ? 4 : 0 }]}>
-                      {dayBlocks.map((b) => renderBlockCard(b))}
-                    </View>
-                  )}
-                  {!hasItems && (
-                    <View style={styles.weekEmptyDay}>
-                      <Text style={[styles.weekEmptyText, { color: colors.muted }]}>No gigs or blocks {isActualToday ? 'today' : 'on this day'}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          );
-        })()}
-
         {/* ─── MONTH VIEW ─── */}
         {viewMode === 'month' && (
           <View>
@@ -1047,14 +867,15 @@ export default function DJAvailabilityScreen() {
                     style={styles.calendarCell}
                     onPress={() => handleDayPress(date)}
                   >
-                    {/* Ring wrapper: fixed footprint; when selected it insets the square with a
-                        2px gap and a 2px coral ring, so the row height never shifts. */}
-                    <View style={[styles.dayCellRing, isSelected && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 14 }]}>
+                    {/* Selection = a bigger, bolder number (like the manager). Today gets no
+                        special treatment — it reads like any other day. */}
+                    <View style={styles.dayCellRing}>
                       <View style={[styles.dayCell, dayColor ? { backgroundColor: dayColor } : null]}>
                         <Text style={[
                           styles.dayNumber,
                           {
-                            color: dayColor ? '#fff' : (isToday ? colors.primary : colors.foreground),
+                            color: dayColor ? '#fff' : colors.foreground,
+                            fontSize: isSelected ? 20 : 16,
                             fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,
                           },
                         ]}>{dayNum}</Text>
@@ -1296,13 +1117,15 @@ const styles = StyleSheet.create({
   slotsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   slotsSectionLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginHorizontal: 12 },
 
-  // Booking cards — venue thumbnail (squircle) + name + status pill + time
-  bookingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 10, marginBottom: 8 },
+  // Booking rows — CARDLESS (no border), like the manager: thumbnail + name + status badge + time
+  bookingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   bookingThumb: { width: 48, height: 48, borderRadius: 12 },
-  bookingThumbPrivate: { alignItems: 'center', justifyContent: 'center' },
+  privateTile: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  privateTileShort: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  privateTileNum: { fontSize: 18, fontFamily: fonts.bodySemibold },
   bookingInfo: { flex: 1, gap: 3 },
   bookingTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bookingTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
+  bookingTitle: { fontSize: 15, fontWeight: '700', flexShrink: 1 },   // badge sits right after the name (manager placement)
   bookingSub: { fontSize: 13, fontWeight: '500' },
   statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
   statusPillText: { fontSize: 11, fontWeight: '700' },
