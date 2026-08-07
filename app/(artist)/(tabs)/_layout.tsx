@@ -60,7 +60,7 @@ function NetworkTabIcon({ color }: { color: string; focused: boolean }) {
 
   return (
     <View style={styles.iconWrap}>
-      <IconSymbol size={26} name="person.2.fill" color={color} />
+      <IconSymbol size={26} name="storefront" color={color} />
       {hasNew && <View style={[styles.dot, { backgroundColor: colors.primary }]} />}
     </View>
   );
@@ -106,8 +106,8 @@ export default function DJTabLayout() {
         name="network"
         options={{
           // The route file stays `network.tsx` (renaming it would break every push
-          // deep-link and router.push in the app); only the label changes.
-          title: SHOW_ARTIST_DIRECTORY ? 'Network' : 'Venues',
+          // deep-link and router.push in the app); it now renders the Venues list.
+          title: 'Venues',
           tabBarIcon: ({ color, focused }) => <NetworkTabIcon color={color} focused={focused} />,
         }}
       />

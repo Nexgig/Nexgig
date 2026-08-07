@@ -1,522 +1,156 @@
-import { useRoleSwitching } from '@/lib/roles';
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl } from '@/lib/rn';
+import { useMemo, useState, useCallback } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, Image, RefreshControl } from '@/lib/rn';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { AvatarImage } from '@/components/ui/avatar-image';
-import { useAuthStore, useNotificationStore, useLineupStore, useNetworkSeenStore, useArtistDirectoryStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
-import type { Venue } from '@/lib/types';
-import { SHOW_ARTIST_DIRECTORY, ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
-import { SectionSeparator } from '@/components/ui/month-separator';
-import { fonts } from '@/lib/fonts';
+import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useInvoiceStore } from '@/lib/store';
+import { Divider } from '@/components/ui/card-free';
 import { venueImage } from '@/lib/venue-images';
+import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
-import { genreLabel, firstName } from '@/lib/utils';
+import { useRoleSwitching } from '@/lib/roles';
 import { supabase } from '@/lib/supabase';
-import { reportError } from '@/lib/observability';
 
-type NetworkTab = 'venues' | 'artists';
+const ROSTER_HINT = 'Venues appear here once a manager invites you to their roster.';
 
-type VenueItem = {
-  id: string;
-  name: string;
-  venue_type: string;
-  address: string | null;
-  genre_preferences: string[];
-  manager_id: string;
-  verification_status: string | null;
-};
-
-/** Venue (camelCase, as cached in the directory store) -> the raw-ish row shape this
- *  screen renders. Lets the cached list seed the UI without a round trip. */
-function venueToItem(v: Venue): VenueItem {
-  return {
-    id: v.id,
-    name: v.name,
-    venue_type: v.venueType,
-    address: v.googleMapsLocation?.address ?? null,
-    genre_preferences: v.genrePreferences ?? [],
-    manager_id: v.managerId,
-    verification_status: v.verificationStatus ?? null,
-  };
-}
-
-type ArtistItem = {
-  id: string;
-  full_name: string;
-  primary_genre: string;
-  based_in: string;
-  profile_photo_url: string;
-  secondary_genres: string[];
-  instruments?: string[];
-  has_completed_booking?: boolean;
-};
-
-/** "night_club" -> "Night club" */
-function venueTypeLabel(t?: string | null): string {
-  if (!t) return '';
-  const s = t.replace(/_/g, ' ');
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-export default function ArtistNetworkScreen() {
-  const colors = useColors();
-  // Drops the RefreshControl during a role switch — unmounting one with the group
-  // crashes natively. See useRoleSwitching.
-  const roleSwitching = useRoleSwitching((s) => s.switching);
+/**
+ * The artist's Venues tab — the venues they're on the roster of, each with its invoicing
+ * state. The document icon on the right opens the send-invoice flow when there are gigs to
+ * invoice (coral), or the venue's sent-invoices tab when there's nothing outstanding (grey).
+ */
+export default function ArtistVenuesScreen() {
   const router = useRouter();
+  const colors = useColors();
+  const roleSwitching = useRoleSwitching((s) => s.switching);
   const currentUser = useAuthStore((s) => s.currentUser);
-
-  const addNotification = useNotificationStore((s) => s.addNotification);
-  const notifications = useNotificationStore((s) => s.notifications);
+  const allVenues = useVenueStore((s) => s.venues);
   const venueAssignments = useLineupStore((s) => s.venueAssignments);
-  const removeFromVenue = useLineupStore((s) => s.removeFromVenue);
-  const markNetworkSeen = useNetworkSeenStore((s) => s.markNetworkSeen);
-  const isFocused = useIsFocused();
-
-  // Derive assigned venue IDs reactively from the store — updates instantly when manager removes artist
-  const assignedVenueIds = useMemo(() =>
-    new Set(
-      venueAssignments
-        .filter((a) => a.artistId === currentUser?.id && a.status === 'active')
-        .map((a) => a.venueId)
-    ),
-    [venueAssignments, currentUser?.id]
-  );
-  const [activeTab, setActiveTab] = useState<NetworkTab>('venues');
-  const [search, setSearch] = useState('');
-
-  // ── Venues state ───────────────────────────────────────────────────────────
-  // Seeded from the PERSISTED venue directory so the list paints on first frame.
-  // Without this the screen sat on a spinner until the network answered — reported
-  // at ~30s. The DB holds a handful of venues, so it's never worth waiting for:
-  // show what we had, refresh underneath (fetchVenues still runs below).
-  const [venues, setVenues] = useState<VenueItem[]>(() =>
-    useVenueDirectoryStore.getState().listVenues().map(venueToItem)
-  );
-  const [appliedVenueIds, setAppliedVenueIds] = useState<Set<string>>(new Set());
-  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const allBookings = useBookingStore((s) => s.bookings);
+  const invoices = useInvoiceStore((s) => s.invoices);
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    if (activeTab === 'venues') await fetchVenues();
-    else await fetchArtists();
-    setRefreshing(false);
-  }, [activeTab]);
-  const [venuesLoading, setVenuesLoading] = useState(false);
-  const [venuesFetched, setVenuesFetched] = useState(false);
-
-  // ── Artists state ──────────────────────────────────────────────────────────
-  const [artists, setArtists] = useState<ArtistItem[]>([]);
-  const [artistsLoading, setArtistsLoading] = useState(false);
-  const [artistsFetched, setArtistsFetched] = useState(false);
-
-  // ── Clear the Network dot on focus (no re-fetch on back-navigation) ────────
-  // Venues/artists are fetched once on first tab open + via pull-to-refresh.
-  useFocusEffect(useCallback(() => {
-    if (currentUser?.id) markNetworkSeen(currentUser.id);
-  }, [currentUser?.id]));
-
-  // ── Also clear the dot if a notification arrives while already on this tab ──
-  useEffect(() => {
-    if (isFocused && currentUser?.id) markNetworkSeen(currentUser.id);
-  }, [notifications, isFocused, currentUser?.id]);
-
-  // ── Lazy-fetch venues/artists on first tab open ────────────────────────────
-  useEffect(() => {
-    if (activeTab === 'venues' && !venuesFetched) fetchVenues();
-    if (SHOW_ARTIST_DIRECTORY && activeTab === 'artists' && !artistsFetched) fetchArtists();
-  }, [activeTab]);
-
-  const fetchVenues = async () => {
-    if (!currentUser) return;
-    // Only block on the spinner when there's nothing cached to show (first ever
-    // launch). Otherwise the stale list stays up and swaps when the fetch lands.
-    if (venues.length === 0) setVenuesLoading(true);
-    const [venuesRes, appsRes] = await Promise.all([
-      supabase.from('venues').select('*').neq('is_hidden', true),
-      supabase.from('applications').select('venue_id').eq('artist_id', currentUser.id).eq('status', 'pending'),
-    ]);
-    if (venuesRes.data) {
-      setVenues(venuesRes.data.map((v: any) => ({
-        id: v.id,
-        name: v.name,
-        venue_type: v.venue_type,
-        address: v.google_maps_location?.address ?? v.address ?? null,
-        genre_preferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
-        manager_id: v.manager_id,
-        verification_status: v.verification_status ?? null,
-      })) as VenueItem[]);
-      // Cache full venue data so tapping a venue opens its detail complete (no fetch-on-open).
-      useVenueDirectoryStore.getState().setVenues(venuesRes.data.map((v: any) => mapVenueRow(v)));
+  // Pull the artist's active venue assignments from Supabase and hydrate any venue rows the
+  // store is missing — mirrors app/(artist)/my-venues.tsx.
+  const fetchVenues = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const { data: assignments } = await supabase
+      .from('venue_assignments').select('*').eq('artist_id', currentUser.id).eq('status', 'active');
+    if (!assignments || assignments.length === 0) {
+      useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, []);
+      return;
     }
-    setAppliedVenueIds(new Set((appsRes.data ?? []).map((a: any) => a.venue_id)));
-    setVenuesFetched(true);
-    setVenuesLoading(false);
-  };
-
-  const fetchArtists = async () => {
-    setArtistsLoading(true);
-    const { data } = await supabase
-      .from('artists')
-      .select('*');
-    if (data) {
-      setArtists(data as ArtistItem[]);
-      // Cache the FULL artist data so tapping an artist opens their profile complete on
-      // the first frame (no fetch-on-open second pass) — same pattern as the manager side.
-      useArtistDirectoryStore.getState().setArtists(data.map((a: any) => ({
-        user: {
-          id: a.id, email: '', phone: '', accountType: 'artist' as const,
-          fullName: a.full_name, profilePhotoUrl: a.profile_photo_url ?? undefined, avatarId: a.avatar_id ?? undefined, bio: a.bio ?? undefined,
-          location: a.based_in ?? undefined, yearsOfExperience: a.years_of_experience ?? undefined,
-          isPhoneVerified: false, isEmailVerified: false,
-          createdAt: a.created_at, updatedAt: a.updated_at,
-        },
-        profile: {
-          userId: a.id, primaryGenre: a.primary_genre,
-          secondaryGenres: Array.isArray(a.secondary_genres) ? a.secondary_genres : [],
-          instruments: Array.isArray(a.instruments) ? a.instruments : [],
-          minRate: a.min_rate ?? undefined, gender: a.gender ?? undefined,
-          basedIn: a.based_in ?? undefined, nationality: a.nationality ?? undefined,
-          isHistoryHidden: a.is_history_hidden ?? false,
-          instagramUrl: a.instagram_url ?? undefined, soundcloudUrl: a.soundcloud_url ?? undefined,
-          mixcloudUrl: a.mixcloud_url ?? undefined, spotifyUrl: a.spotify_url ?? undefined,
-        },
-      })));
+    const known = new Set(allVenues.map((v) => v.id));
+    const missing = assignments.map((a: any) => a.venue_id).filter((id: string) => !known.has(id));
+    if (missing.length > 0) {
+      const { data: venuesData } = await supabase.from('venues').select('*').in('id', missing);
+      venuesData?.forEach((v: any) => {
+        useVenueStore.getState().addVenue({
+          id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
+          genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
+          googleMapsLocation: { address: v.address ?? '', lat: v.lat ?? 0, lng: v.lng ?? 0, placeId: v.place_id ?? undefined }, color: v.color ?? '#2563EB',
+          isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
+          createdAt: v.created_at, updatedAt: v.updated_at,
+        });
+      });
     }
-    setArtistsFetched(true);
-    setArtistsLoading(false);
-  };
+    const fresh = assignments.map((a: any) => ({
+      id: a.id, globalLineupId: `${a.manager_id}-${currentUser.id}`,
+      venueId: a.venue_id, artistId: currentUser.id, assignedAt: a.created_at, status: 'active' as const,
+    }));
+    useLineupStore.getState().resetVenueAssignmentsForArtist(currentUser.id, fresh);
+  }, [currentUser?.id]);
 
-  const handleJoin = async (venue: VenueItem) => {
-    if (!currentUser) return;
-    Alert.alert('Join Venue', `Send a request to join ${venue.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Join',
-        onPress: async () => {
-          setApplyingId(venue.id);
-          const { error } = await supabase.from('applications').insert({
-            artist_id: currentUser.id,
-            manager_id: venue.manager_id,
-            venue_id: venue.id,
-            status: 'pending',
-          });
-          if (error) {
-            setApplyingId(null);
-            reportError(error, { at: 'artist-join-venue', venueId: venue.id, managerId: venue.manager_id });
-            Alert.alert('Could not send request', 'Something went wrong sending your join request. Please try again in a moment.');
-            return;
-          }
-          // Notify manager
-          const notifId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-          addNotification({
-            id: notifId,
-            userId: venue.manager_id,
-            type: 'lineup_request',
-            title: 'New Join Request',
-            body: `${firstName(currentUser.fullName, 'An artist')} wants to join your lineup`,
-            isRead: false,
-            relatedId: venue.id,
-            relatedType: 'venue',
-            createdAt: new Date().toISOString(),
-          });
-          setApplyingId(null);
-          setAppliedVenueIds((prev) => new Set([...prev, venue.id]));
-        },
-      },
-    ]);
-  };
+  useFocusEffect(useCallback(() => { fetchVenues(); }, [fetchVenues]));
+  const handleRefresh = useCallback(async () => { setRefreshing(true); await fetchVenues(); setRefreshing(false); }, [fetchVenues]);
 
-  const handleLeaveVenue = (venue: VenueItem) => {
-    if (!currentUser) return;
-    // The warning changes with ALLOW_ARTIST_VENUE_APPLICATIONS: with applying off,
-    // leaving is a ONE-WAY DOOR — the artist can't re-apply, so only the manager can
-    // add them back. Saying "you can request to join again later" would be a lie.
-    Alert.alert(
-      'Leave Venue',
-      ALLOW_ARTIST_VENUE_APPLICATIONS
-        ? `Leave the lineup at ${venue.name}? You can request to join again later.`
-        : `Leave the lineup at ${venue.name}? You won't be able to rejoin yourself — only ${venue.name} can add you back.`,
-      [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Leave', style: 'destructive',
-        onPress: async () => {
-          const { error, count } = await supabase
-            .from('venue_assignments')
-            .delete({ count: 'exact' })
-            .eq('artist_id', currentUser.id)
-            .eq('venue_id', venue.id);
-          if (error) {
-            reportError(error, { at: 'artist-leave-venue', venueId: venue.id });
-            Alert.alert('Could not leave', 'Something went wrong. Please try again in a moment.');
-            return;
-          }
-          if (!count) { Alert.alert('Could not leave', 'You were not removed — please try again.'); return; }
-          removeFromVenue(venue.id, currentUser.id);
-          const notifId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-          addNotification({
-            id: notifId,
-            userId: venue.manager_id,
-            type: 'artist_left_venue' as any,
-            title: 'Artist Left Venue',
-            body: `${firstName(currentUser.fullName, 'An artist')} left ${venue.name}`,
-            isRead: false,
-            relatedId: venue.id,
-            relatedType: 'venue',
-            createdAt: new Date().toISOString(),
-          });
-        },
-      },
-      ]
-    );
-  };
-
-  const filteredVenues = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const results = q
-      ? venues.filter((v) =>
-          v.name.toLowerCase().includes(q) ||
-          v.venue_type?.toLowerCase().includes(q) ||
-          v.address?.toLowerCase().includes(q)
-        )
-      : venues;
-    // All venues, connected ones first (they carry a grey "connected" tick in the row).
-    return [...results].sort((a, b) => {
-      const aMine = assignedVenueIds.has(a.id);
-      const bMine = assignedVenueIds.has(b.id);
-      if (aMine !== bMine) return aMine ? -1 : 1;
-      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    });
-  }, [venues, search, assignedVenueIds]);
-
-  const filteredArtists = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const results = q
-      ? artists.filter((a) =>
-          a.full_name?.toLowerCase().includes(q) ||
-          a.primary_genre?.toLowerCase().includes(q) ||
-          a.based_in?.toLowerCase().includes(q)
-        )
-      : artists;
-    return [...results].sort((a, b) => (a.full_name ?? '').toLowerCase().localeCompare((b.full_name ?? '').toLowerCase()));
-  }, [artists, search]);
+  const rows = useMemo(() => {
+    const venueIds = [...new Set(
+      venueAssignments.filter((a) => a.artistId === currentUser?.id && a.status === 'active').map((a) => a.venueId)
+    )];
+    const venues = venueIds
+      .map((id) => allVenues.find((v) => v.id === id))
+      .filter((v): v is NonNullable<typeof v> => !!v && !v.isHidden);
+    // A gig is invoiceable when completed and not already in a non-cancelled invoice for the venue.
+    const invoiceable = allBookings.filter((b) => b.artistId === currentUser?.id && b.isCompleted && b.status === 'completed');
+    return venues.map((venue) => {
+      const invoicedIds = new Set(
+        invoices
+          .filter((inv) => inv.venueId === venue.id && inv.artistId === currentUser?.id && inv.status !== 'cancelled')
+          .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+      );
+      const uninvoiced = invoiceable.filter((b) => b.venueId === venue.id && !invoicedIds.has(b.id)).length;
+      return { venue, uninvoiced };
+    }).sort((a, b) => (a.venue.name ?? '').toLowerCase().localeCompare((b.venue.name ?? '').toLowerCase()));
+  }, [venueAssignments, allVenues, allBookings, invoices, currentUser?.id]);
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']}>
-      {/* Header */}
-      <View style={styles.header}>
-        {/* "Venues", not "Network" — the artists sub-tab is gone (SHOW_ARTIST_DIRECTORY),
-            so this screen only lists venues. Restore "Network" if that flag goes back on. */}
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          {SHOW_ARTIST_DIRECTORY ? 'Network' : 'Venues'}
-        </Text>
+    <ScreenContainer>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.foreground }]}>Venues</Text>
+        <Text style={[styles.count, { color: colors.muted }]}>{rows.length} venue{rows.length === 1 ? '' : 's'}</Text>
       </View>
 
-      {/* Sub-tabs — hidden entirely when the artist directory is off, since venues
-          would be the only tab and a one-tab bar is just a label. */}
-      {SHOW_ARTIST_DIRECTORY && (
-        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-          {(['venues', 'artists'] as NetworkTab[]).map((tab) => (
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => item.venue.id}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        ItemSeparatorComponent={() => <Divider full />}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <MaterialIcons name="storefront" size={44} color={colors.muted} />
+            <Text style={[styles.emptyText, { color: colors.muted }]}>{ROSTER_HINT}</Text>
+          </View>
+        }
+        ListFooterComponent={rows.length > 0
+          ? <Text style={[styles.footerText, { color: colors.muted }]}>{ROSTER_HINT}</Text>
+          : null}
+        renderItem={({ item }) => {
+          const hasUninvoiced = item.uninvoiced > 0;
+          return (
             <Pressable
-              key={tab}
-              style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-              onPress={() => { setActiveTab(tab); setSearch(''); }}
+              style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => router.push(('/(artist)/venue-detail?id=' + item.venue.id) as Href)}
             >
-              <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
-      {/* Search bar for venues and artists */}
-      {/* Search hidden while the directory is small (same as the manager's network tab).
-          Gated on `false` rather than deleted: the state and filter stay wired up, so
-          restoring it is dropping the `false &&`. */}
-      {false && (activeTab === 'venues' || activeTab === 'artists') && (
-        <View style={[styles.searchWrap, { borderColor: colors.border }]}>
-          <MaterialIcons name="search" size={18} color={colors.muted} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder={activeTab === 'venues' ? 'Search venues...' : 'Search artists...'}
-            placeholderTextColor={colors.muted}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-            autoCapitalize="none"
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch('')} hitSlop={8}>
-              <MaterialIcons name="close" size={16} color={colors.muted} />
-            </Pressable>
-          )}
-        </View>
-      )}
-
-      {/* Venues tab */}
-      {activeTab === 'venues' && (
-        venuesLoading ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={filteredVenues}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="place" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Venues Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  {search ? 'Try a different search term' : 'No venues available yet'}
+              <Image source={venueImage(item.venue.venueType)} style={[styles.thumb, { borderColor: colors.border }]} resizeMode="cover" />
+              <View style={styles.info}>
+                <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>{item.venue.name}</Text>
+                <Text style={[styles.sub, { color: hasUninvoiced ? colors.primary : colors.muted }]} numberOfLines={1}>
+                  {hasUninvoiced ? `${item.uninvoiced} gig${item.uninvoiced === 1 ? '' : 's'} to invoice` : 'Up to date'}
                 </Text>
               </View>
-            }
-            renderItem={({ item: venue, index }) => {
-              const isConnected = assignedVenueIds.has(venue.id);
-              // Sorted connected-first, so the header goes above the first row and on the
-              // one boundary where the flag flips. A row opening a group draws the header
-              // INSTEAD of a divider, otherwise the two stack into a double line.
-              const prevMine = index > 0 ? assignedVenueIds.has(filteredVenues[index - 1].id) : null;
-              const showHeader = prevMine === null || prevMine !== isConnected;
-              const rowContent = (
-                <Pressable
-                  style={({ pressed }) => [styles.rowCard, {
-                    backgroundColor: 'transparent',
-                    borderColor: colors.border,
-                    opacity: pressed ? 0.85 : 1,
-                  }]}
-                  onPress={() => router.push((`/(artist)/venue-detail?id=` + venue.id) as Href)}
-                >
-                  <View style={styles.cardLeft}>
-                    <Image source={venueImage(venue.venue_type)} style={styles.thumb} resizeMode="cover" />
-                    <View style={styles.cardInfo}>
-                      <View style={styles.titleRow}>
-                        <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1, marginBottom: 0 }]} numberOfLines={1}>{venue.name}</Text>
-                        {venue.verification_status === 'verified' && (
-                          <MaterialIcons name="verified" size={15} color={colors.primary} />
-                        )}
-                      </View>
-                      {venue.venue_type ? (
-                        <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                          {venueTypeLabel(venue.venue_type)}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                </Pressable>
-              );
-              return (
-                <View>
-                  {showHeader && (
-                    <SectionSeparator label={isConnected ? 'My Venues' : 'Discover'} color={colors.muted} borderColor={colors.border} />
-                  )}
-                  {rowContent}
-                </View>
-              );
-            }}
-          />
-        )
-      )}
-
-      {/* Artists tab */}
-      {SHOW_ARTIST_DIRECTORY && activeTab === 'artists' && (
-        artistsLoading ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={filteredArtists}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <MaterialIcons name="people" size={48} color={colors.muted} />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No Artists Found</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                  {search ? 'Try a different search term' : 'No artists available yet'}
-                </Text>
-              </View>
-            }
-            renderItem={({ item: artist }) => (
+              {/* Uninvoiced → coral, opens the send-invoice flow. None → grey, opens sent invoices. */}
               <Pressable
-                style={({ pressed }) => [styles.rowCard, { backgroundColor: 'transparent', borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push((`/(artist)/artist-profile-view?artistId=` + artist.id) as Href)}
+                hitSlop={8}
+                style={({ pressed }) => [styles.invoiceBtn, { backgroundColor: hasUninvoiced ? colors.primary + '1A' : colors.surface, opacity: pressed ? 0.6 : 1 }]}
+                onPress={() => router.push((hasUninvoiced
+                  ? `/(artist)/invoice-gigs?venueId=${item.venue.id}`
+                  : `/(artist)/venue-detail?id=${item.venue.id}&tab=invoices`) as Href)}
               >
-                <View style={styles.cardLeft}>
-                  <AvatarImage uri={artist.profile_photo_url || undefined} avatarId={(artist as any).avatar_id ?? undefined} seed={artist.id} name={artist.full_name} size={48} />
-                  <View style={styles.cardInfo}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{artist.full_name}</Text>
-                      {artist.has_completed_booking && (
-                        <MaterialIcons name="verified" size={15} color={colors.primary} />
-                      )}
-                    </View>
-                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {genreLabel(artist.primary_genre, artist.instruments)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.rightWrap}>
-                  {artist.id === currentUser?.id && (
-                    <View style={[styles.youPill, { backgroundColor: colors.primary + '15' }]}>
-                      <Text style={[styles.youPillText, { color: colors.primary }]}>You</Text>
-                    </View>
-                  )}
-                </View>
+                <MaterialIcons name="description" size={24} color={hasUninvoiced ? colors.primary : colors.muted} />
               </Pressable>
-            )}
-          />
-        )
-      )}
+            </Pressable>
+          );
+        }}
+      />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
-  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
-  subtitle: { fontSize: 12, marginTop: 2 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabText: { fontSize: 13, fontWeight: '600' },
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 12, marginBottom: 4,
-    borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-  },
-  searchInput: { flex: 1, fontSize: 14 },
-  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
-  verifiedPillText: { fontSize: 10, fontWeight: '700' },
-  cardSub: { fontSize: 13, marginBottom: 0 },
-  cardMeta: { fontSize: 12 },
-  rightWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  youPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  youPillText: { fontSize: 10, fontWeight: '700' },
-  connectedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  connectedText: { fontSize: 11, fontWeight: '700' },
-  applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, minWidth: 72 },
-  applyBtnText: { fontSize: 12, fontWeight: '700' },
-  statusBadge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  statusText: { fontSize: 12, fontWeight: '700' },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '700' },
-  emptySubtitle: { fontSize: 14, textAlign: 'center' },
+  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14, borderBottomWidth: 0.5 },
+  title: { fontSize: 30, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
+  count: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  list: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  thumb: { width: 56, height: 56, borderRadius: 16, borderWidth: 1 },
+  info: { flex: 1 },
+  venueName: { fontSize: 17, fontWeight: '700', marginBottom: 3 },
+  sub: { fontSize: 14, fontWeight: '600' },
+  invoiceBtn: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 40, gap: 12 },
+  emptyText: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  footerText: { fontSize: 14, lineHeight: 21, marginTop: 20 },
 });

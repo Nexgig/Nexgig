@@ -18,6 +18,8 @@ import { cityFromAddress } from '@/lib/places';
 import { firstName } from '@/lib/utils';
 import { reportError } from '@/lib/observability';
 import { ReportModal } from '@/components/report-modal';
+import { ArtistVenueInvoicesList } from '@/components/artist-venue-invoices-list';
+import { ArtistVenueCompletedList } from '@/components/artist-venue-completed-list';
 
 function MapsBadge({ onPress }: { onPress: () => void }) {
   const colors = useColors();
@@ -35,7 +37,7 @@ function MapsBadge({ onPress }: { onPress: () => void }) {
 
 export default function ArtistVenueDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const colors = useColors();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -54,7 +56,9 @@ export default function ArtistVenueDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'slots' | 'lineup'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'completed' | 'invoices'>(
+    tab === 'invoices' ? 'invoices' : tab === 'completed' ? 'completed' : 'overview'
+  );
   const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
@@ -204,7 +208,16 @@ export default function ArtistVenueDetailScreen() {
 
         <Divider />
 
-        {/* Tab Bar — Overview only for artists viewing any venue */}
+        {/* Tab Bar — Overview / Completed / Invoices sent */}
+        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+          {(['overview', 'completed', 'invoices'] as const).map((t) => (
+            <Pressable key={t} onPress={() => setActiveTab(t)} style={[styles.tab, activeTab === t && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
+              <Text style={[styles.tabText, { color: activeTab === t ? colors.primary : colors.muted }]}>
+                {t === 'overview' ? 'Overview' : t === 'completed' ? 'Completed' : 'Invoices'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
@@ -326,8 +339,11 @@ export default function ArtistVenueDetailScreen() {
           </View>
         )}
 
+        {activeTab === 'completed' && <ArtistVenueCompletedList venueId={venue.id} />}
 
-        {isConnected && (
+        {activeTab === 'invoices' && <ArtistVenueInvoicesList venueId={venue.id} />}
+
+        {isConnected && activeTab === 'overview' && (
           <Pressable
             onPress={handleLeaveVenue}
             style={({ pressed }) => [styles.leaveBtn, { borderColor: colors.error, opacity: pressed ? 0.7 : 1 }]}
