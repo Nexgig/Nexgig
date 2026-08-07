@@ -44,7 +44,7 @@ export default function ManagerDashboard() {
   const scheduleSig = useMemo(() => JSON.stringify(venues.map((v) => [v.id, v.schedule ?? []])), [venues]);
   useEffect(() => {
     const today = todayLocalStr();
-    ensureScheduleSlots(today, addDaysStr(today, 20));
+    ensureScheduleSlots(today, addDaysStr(today, 31));
   }, [scheduleSig]);
 
   const bookings = useMemo(
@@ -112,7 +112,7 @@ export default function ManagerDashboard() {
   const drafts = useDraftStore((s) => s.drafts);
   const coverage = useMemo(() => {
     const start = todayLocalStr();
-    const nights = Array.from({ length: 7 }, (_, i) => addDaysStr(start, i));
+    const nights = Array.from({ length: 31 }, (_, i) => addDaysStr(start, i));
     const stripVenues = bookingVenueId ? venues.filter((v) => v.id === bookingVenueId) : venues;
     const bySlot = new Map<string, typeof bookings>();
     for (const b of bookings) {
@@ -163,6 +163,10 @@ export default function ManagerDashboard() {
   const panelSlotCount = useMemo(
     () => selected ? slots.filter((s) => s.venueId === selected.venueId && s.date === selected.date).length : 0,
     [selected, slots]
+  );
+  const panelVenueName = useMemo(
+    () => selected ? (venues.find((v) => v.id === selected.venueId)?.name ?? '') : '',
+    [selected, venues]
   );
   // Slot-based, mirroring the calendar day list: for the selected venue+night, each slot shows its
   // bookings, its drafts, or a "Needs artist" row when empty — so an empty (coral-dashed) square
@@ -406,8 +410,9 @@ export default function ManagerDashboard() {
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        {/* Coverage strip — venues (down) × the next 7 nights (across). Sits where the stat
-            row used to. STATUS_COLORS, not theme tokens: same statuses as the badges below. */}
+        {/* Coverage strip — venues (down) × the next 31 nights (across). The venue-name column is
+            pinned; the day header row and every venue's cell row share ONE horizontal ScrollView,
+            so the days scroll together while the venue names stay put. */}
         <View style={styles.strip}>
           <View style={styles.overviewHead}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
@@ -415,104 +420,132 @@ export default function ManagerDashboard() {
               <MaterialIcons name="info-outline" size={18} color={colors.muted} />
             </Pressable>
           </View>
-          <View style={styles.stripRow}>
-            <View style={styles.stripVenueCol} />
-            {coverage.nights.map((date) => (
-              <View key={date} style={styles.stripCell}>
-                <Text style={[styles.stripDow, { color: colors.muted }]}>
-                  {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}
-                </Text>
-              </View>
-            ))}
-          </View>
-          {coverage.rows.map((r) => (
-            <View key={r.venue.id}>
-              <View style={styles.stripRow}>
+
+          <View style={styles.stripBody}>
+            {/* Pinned venue-name column — a sibling OUTSIDE the horizontal scroll, so it stays put. */}
+            <View style={styles.pinnedCol}>
+              <View style={styles.pinnedHeadSpacer} />
+              {coverage.rows.map((r) => (
                 <Pressable
-                  style={({ pressed }) => [styles.stripVenueCol, { opacity: pressed ? 0.5 : 1 }]}
+                  key={r.venue.id}
+                  style={({ pressed }) => [styles.pinnedNameRow, { opacity: pressed ? 0.5 : 1 }]}
                   onPress={() => router.push(('/(manager)/venue-detail?id=' + r.venue.id) as Href)}
                 >
                   <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
                 </Pressable>
-                {r.cells.map((state, i) => {
-                  const isSel = selected?.venueId === r.venue.id && selected?.date === coverage.nights[i];
+              ))}
+            </View>
+
+            {/* Scrollable days: the weekday/date header row + all venue cell rows, moving together.
+                flex:1 bounds the viewport width in the row so the 31-day content actually scrolls. */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.daysScroll}>
+              <View>
+                {/* Day header — weekday letter over the date number; today's number in coral. */}
+                <View style={styles.stripHeaderRow}>
+                  {coverage.nights.map((date) => {
+                    const d = new Date(date + 'T00:00:00');
+                    const isToday = date === coverage.nights[0];
+                    return (
+                      <View key={date} style={styles.dayCol}>
+                        <Text style={[styles.stripDow, { color: isToday ? colors.primary : colors.muted }]}>
+                          {d.toLocaleDateString('en-US', { weekday: 'narrow' })}
+                        </Text>
+                        <Text style={[styles.stripDayNum, { color: isToday ? colors.primary : colors.foreground }]}>
+                          {d.getDate()}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Venue cell rows. */}
+                {coverage.rows.map((r) => (
+                  <View key={r.venue.id} style={styles.cellsRow}>
+                    {r.cells.map((state, i) => {
+                      const isSel = selected?.venueId === r.venue.id && selected?.date === coverage.nights[i];
+                      return (
+                        <View key={i} style={styles.dayCol}>
+                          <Pressable
+                            style={({ pressed }) => [styles.cellPress, { opacity: pressed ? 0.5 : 1 }]}
+                            onPress={() => toggleDay(r.venue.id, coverage.nights[i])}
+                          >
+                            {/* Ring wrapper: when selected it insets the square by a 2px background
+                                gap and draws a 2px coral ring, without changing the cell footprint. */}
+                            <View style={[styles.cellRingWrap, isSel && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 12 }]}>
+                              <View
+                                style={[
+                                  styles.cellBox,
+                                  state === 'cancelled' ? { backgroundColor: colors.cancelled }
+                                    : state === 'empty' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — empty slot, needs attention
+                                    : state === 'drafted' ? { backgroundColor: colors.surface }   // beige fill — artist drafted, not sent yet
+                                    : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
+                                    : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
+                                    : { backgroundColor: colors.background },   // no slot at all — blends into the page
+                                ]}
+                              />
+                            </View>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Inline panel — full-width, below the grid (the grid is now scrollable, so the panel
+              can't sit inline). Names the venue + night, its slot count, and each gig. */}
+          {selected && (
+            <View style={[styles.inlinePanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.inlinePanelHead}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.inlinePanelDate, { color: colors.foreground }]}>{panelDateLabel}</Text>
+                  {!!panelVenueName && <Text style={[styles.inlinePanelVenue, { color: colors.muted }]} numberOfLines={1}>{panelVenueName}</Text>}
+                </View>
+                <Text style={[styles.inlinePanelCount, { color: colors.muted }]}>{panelSlotCount} slot{panelSlotCount === 1 ? '' : 's'}</Text>
+              </View>
+              <View style={[styles.inlinePanelDivider, { backgroundColor: colors.border }]} />
+              {panelItems.length === 0 ? (
+                <Text style={[styles.inlinePanelEmpty, { color: colors.muted }]}>No slots on this night.</Text>
+              ) : (
+                panelItems.map((item) => {
+                  // Empty / draft → assign-artist for that slot; booking (any status, incl.
+                  // cancelled) → the booking detail. Dead bookings also get an X to dismiss.
+                  const b = item.booking;
+                  const dead = item.kind === 'booking' && (b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired');
+                  const onPress = () => router.push((item.kind === 'booking'
+                    ? '/(manager)/booking-detail?id=' + b!.id
+                    : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
                   return (
                     <Pressable
-                      key={i}
-                      style={({ pressed }) => [styles.stripCell, { opacity: pressed ? 0.5 : 1 }]}
-                      onPress={() => toggleDay(r.venue.id, coverage.nights[i])}
+                      key={item.key}
+                      onPress={onPress}
+                      style={({ pressed }) => [styles.inlineRow, { opacity: pressed ? 0.6 : 1 }]}
                     >
-                      {/* Ring wrapper: when selected it insets the square by a 2px background gap and
-                          draws a 2px coral ring around it, without changing the cell's footprint. */}
-                      <View style={[styles.cellRingWrap, isSel && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 14 }]}>
-                        <View
-                          style={[
-                            styles.cellBox,
-                            state === 'cancelled' ? { backgroundColor: colors.cancelled }
-                              : state === 'empty' ? { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' }   // beige + coral dashed — empty slot, needs attention
-                              : state === 'drafted' ? { backgroundColor: colors.surface }   // beige fill — artist drafted, not sent yet
-                              : state === 'sent' ? { backgroundColor: STATUS_COLORS.pending }
-                              : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
-                              : { backgroundColor: colors.background },   // no slot at all — blends into the page
-                          ]}
-                        />
+                      <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{fmtTime(item.slot.startTime)}</Text>
+                      <Text
+                        style={[styles.inlineName, { color: item.kind === 'empty' ? colors.primary : colors.foreground }]}
+                        numberOfLines={1}
+                      >
+                        {item.kind === 'empty' ? 'Needs artist' : (item.dj?.fullName ?? 'Unknown Artist')}
+                      </Text>
+                      <View style={styles.inlineRight}>
+                        {item.kind !== 'empty' && (
+                          <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
+                        )}
+                        {dead && (
+                          <Pressable hitSlop={8} onPress={() => dismissBooking(b!)} style={styles.inlineDismiss}>
+                            <MaterialIcons name="close" size={18} color={colors.muted} />
+                          </Pressable>
+                        )}
                       </View>
                     </Pressable>
                   );
-                })}
-              </View>
-
-              {/* Inline panel — expands directly beneath the selected venue's row. Read-only peek:
-                  date, slot count, and each gig as time · artist · status badge. */}
-              {selected?.venueId === r.venue.id && (
-                <View style={[styles.inlinePanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <View style={styles.inlinePanelHead}>
-                    <Text style={[styles.inlinePanelDate, { color: colors.foreground }]}>{panelDateLabel}</Text>
-                    <Text style={[styles.inlinePanelCount, { color: colors.muted }]}>{panelSlotCount} slot{panelSlotCount === 1 ? '' : 's'}</Text>
-                  </View>
-                  <View style={[styles.inlinePanelDivider, { backgroundColor: colors.border }]} />
-                  {panelItems.length === 0 ? (
-                    <Text style={[styles.inlinePanelEmpty, { color: colors.muted }]}>No slots on this night.</Text>
-                  ) : (
-                    panelItems.map((item) => {
-                      // Empty / draft → assign-artist for that slot; booking (any status, incl.
-                      // cancelled) → the booking detail. Dead bookings also get an X to dismiss.
-                      const b = item.booking;
-                      const dead = item.kind === 'booking' && (b!.status === 'cancelled' || b!.status === 'declined' || b!.status === 'expired');
-                      const onPress = () => router.push((item.kind === 'booking'
-                        ? '/(manager)/booking-detail?id=' + b!.id
-                        : '/(manager)/assign-artist?slotId=' + item.slot.id) as Href);
-                      return (
-                        <Pressable
-                          key={item.key}
-                          onPress={onPress}
-                          style={({ pressed }) => [styles.inlineRow, { opacity: pressed ? 0.6 : 1 }]}
-                        >
-                          <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{fmtTime(item.slot.startTime)}</Text>
-                          <Text
-                            style={[styles.inlineName, { color: item.kind === 'empty' ? colors.primary : colors.foreground }]}
-                            numberOfLines={1}
-                          >
-                            {item.kind === 'empty' ? 'Needs artist' : (item.dj?.fullName ?? 'Unknown Artist')}
-                          </Text>
-                          <View style={styles.inlineRight}>
-                            {item.kind !== 'empty' && (
-                              <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
-                            )}
-                            {dead && (
-                              <Pressable hitSlop={8} onPress={() => dismissBooking(b!)} style={styles.inlineDismiss}>
-                                <MaterialIcons name="close" size={18} color={colors.muted} />
-                              </Pressable>
-                            )}
-                          </View>
-                        </Pressable>
-                      );
-                    })
-                  )}
-                </View>
+                })
               )}
             </View>
-          ))}
+          )}
         </View>
         <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
@@ -588,12 +621,19 @@ const styles = StyleSheet.create({
   avatarStack: { flexDirection: 'row', alignItems: 'center' },
   avatarRing: { borderRadius: 24, borderWidth: 2 },
   strip: { marginBottom: 4 },
-  stripRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  stripVenueCol: { width: 92, paddingRight: 8 },
+  stripBody: { flexDirection: 'row' },
+  pinnedCol: { width: 92, paddingRight: 8 },                                  // frozen venue-name column
+  pinnedHeadSpacer: { height: 34, marginBottom: 8 },                          // aligns names with the day rows (below the header)
+  pinnedNameRow: { height: 34, marginBottom: 8, justifyContent: 'center' },
   stripVenueName: { fontSize: 15, fontWeight: '600' },
-  stripDow: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
-  stripCell: { flex: 1, paddingHorizontal: 3 },
-  cellRingWrap: { width: '100%' },
+  daysScroll: { paddingRight: 4 },
+  stripHeaderRow: { flexDirection: 'row', height: 34, marginBottom: 8 },
+  cellsRow: { flexDirection: 'row', height: 34, marginBottom: 8 },
+  dayCol: { width: 44, alignItems: 'center', justifyContent: 'center' },      // one day: fixed width so 31 columns scroll
+  stripDow: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  stripDayNum: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 1 },
+  cellPress: { alignItems: 'center', justifyContent: 'center' },
+  cellRingWrap: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
@@ -603,8 +643,9 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   // Inline panel (expands beneath the selected Overview row)
   inlinePanel: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, marginBottom: 12 },
-  inlinePanelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  inlinePanelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   inlinePanelDate: { fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.3 },
+  inlinePanelVenue: { fontSize: 12, marginTop: 1 },
   inlinePanelCount: { fontSize: 13, fontWeight: '600' },
   inlinePanelDivider: { height: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 4 },
   inlinePanelEmpty: { fontSize: 14, paddingVertical: 10 },
