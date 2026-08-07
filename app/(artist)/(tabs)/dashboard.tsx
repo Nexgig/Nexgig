@@ -397,7 +397,7 @@ export default function DJHomeScreen() {
       {/* Frozen header — "Overview" + legend + notifications, stays put while content scrolls. */}
       <View style={styles.header}>
         <View style={styles.overviewHead}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
+          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
           <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
             <MaterialIcons name="info-outline" size={18} color={colors.muted} />
           </Pressable>
@@ -475,6 +475,7 @@ export default function DJHomeScreen() {
             </View>
           )}
         </View>
+        <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
         {/* Needs your reply — only when there are live requests to answer. */}
         {needsReply.length > 0 && (
@@ -513,8 +514,8 @@ export default function DJHomeScreen() {
           <View style={styles.bookingsHead}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
             {confirmedCount > 0 && (
-              <View style={[styles.bookingsCount, { backgroundColor: STATUS_COLORS.confirmed }]}>
-                <Text style={styles.bookingsCountText}>{confirmedCount}</Text>
+              <View style={[styles.bookingsCount, { backgroundColor: colors.foreground }]}>
+                <Text style={[styles.bookingsCountText, { color: colors.background }]}>{confirmedCount}</Text>
               </View>
             )}
           </View>
@@ -559,8 +560,10 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   sectionTitle: { fontSize: 22, fontWeight: '700' },
+  overviewTitle: { fontSize: 24, fontFamily: fonts.displayBold, letterSpacing: -0.5 },   // matches the manager's "All Venues"
   overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   overviewInfo: { padding: 2 },
+  sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 4 },      // thick full-bleed divider under Overview
 
   // Overview strip
   strip: { marginBottom: 4 },
@@ -607,7 +610,7 @@ const styles = StyleSheet.create({
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bookingsCount: { minWidth: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
-  bookingsCountText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  bookingsCountText: { fontSize: 13, fontWeight: '700' },
   dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
