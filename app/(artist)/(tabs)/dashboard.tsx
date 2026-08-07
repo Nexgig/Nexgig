@@ -202,7 +202,9 @@ export default function DJHomeScreen() {
     const rank = { cancelled: 0, booked: 1, pending: 2 } as const;
     const winner = new Map<string, 'pending' | 'booked' | 'cancelled'>();
     for (const b of bookings) {
-      if (b.hiddenFromCalendar) continue;
+      // hiddenFromCalendar = artist dismissed it; cancelledAsRequest = manager withdrew a request
+      // the artist never answered (a silent withdrawal, hidden like on the calendar).
+      if (b.hiddenFromCalendar || b.cancelledAsRequest) continue;
       const date = dateOf(b);
       if (!date) continue;
       let s: 'pending' | 'booked' | 'cancelled' | null = null;
@@ -234,7 +236,7 @@ export default function DJHomeScreen() {
   const panelGigs = useMemo(() => {
     if (!selected) return [];
     return bookings
-      .filter((b) => !b.hiddenFromCalendar && dateOf(b) === selected && (PANEL_STATUSES.has(b.status) || b.isCompleted))
+      .filter((b) => !b.hiddenFromCalendar && !b.cancelledAsRequest && dateOf(b) === selected && (PANEL_STATUSES.has(b.status) || b.isCompleted))
       .map((b) => ({
         id: b.id,
         startTime: slots.find((s) => s.id === b.slotId)?.startTime ?? b.slotStartTime ?? '',

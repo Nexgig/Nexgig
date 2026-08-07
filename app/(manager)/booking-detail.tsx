@@ -6,13 +6,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
-import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore, useDraftStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore, useDraftStore, useNotificationStore } from '@/lib/store';
 import type { Href } from 'expo-router';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
-import { displayStatus, bookingVenueName } from '@/lib/utils';
+import { displayStatus, bookingVenueName, firstName } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchReviews } from '@/lib/reviews';
 import type { Booking } from '@/lib/types';
@@ -82,6 +82,7 @@ export default function DJBookingDetailScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
@@ -230,12 +231,40 @@ export default function DJBookingDetailScreen() {
   // rather than a cancellation the artist has to acknowledge.
   const isRequest = booking.status === 'requested' || booking.status === 'past_confirmation';
 
+  // Cancel ONE booking with the correct semantics + notify the artist. A REQUEST the artist
+  // hasn't answered is a silent WITHDRAWAL — `cancelledAsRequest` hides it from the artist's
+  // calendar and auto-acknowledges it ("Request Withdrawn"). A CONFIRMED booking is a real
+  // cancellation the artist MUST see (slate on their calendar/overview, with a dismiss X) — so
+  // those flags are NOT set, and they get a "Gig Cancelled" notification. Mirrors venue-detail.
+  const cancelBookingWrite = (b: Booking) => {
+    const bReq = b.status === 'requested' || b.status === 'past_confirmation';
+    const nowIso = new Date().toISOString();
+    updateBookingStatus(b.id, 'cancelled', {
+      cancelledAt: nowIso,
+      ...(bReq ? { cancelledAsRequest: true, cancellationAcknowledged: true } : {}),
+    });
+    if (b.artistId) {
+      addNotification({
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        userId: b.artistId,
+        type: bReq ? 'booking_request_cancelled' : 'booking_cancelled',
+        title: bReq ? 'Request Withdrawn' : 'Gig Cancelled',
+        body: `${firstName(currentUser?.fullName, 'The manager')} ${bReq ? 'withdrew the request for' : 'cancelled'} ${bookingVenueName(b, venue?.name)}, ${b.slotDate ? formatDate(b.slotDate) : ''}`,
+        isRead: false,
+        relatedId: b.id,
+        relatedType: 'booking',
+        createdAt: nowIso,
+      });
+    }
+  };
+
   // Per-artist cancel (X next to a live status) — cancels ONE artist and STAYS on the screen.
   // The row turns into a cancelled row with its own dismiss X; the rest of the set is untouched.
   const cancellableStatus = (s: string) => s === 'requested' || s === 'past_confirmation' || s === 'confirmed';
   const cancelOne = (targetId: string) => {
     const target = allBookings.find((b) => b.id === targetId);
-    const req = target?.status === 'requested' || target?.status === 'past_confirmation';
+    if (!target) return;
+    const req = target.status === 'requested' || target.status === 'past_confirmation';
     Alert.alert(
       req ? 'Cancel Request' : 'Cancel Booking',
       req ? "Withdraw this artist's request? The rest of the slot stays."
@@ -244,14 +273,8 @@ export default function DJBookingDetailScreen() {
         { text: 'No', style: 'cancel' },
         {
           text: req ? 'Withdraw' : 'Cancel', style: 'destructive',
-          onPress: () => {
-            updateBookingStatus(targetId, 'cancelled', {
-              cancelledAt: new Date().toISOString(),
-              cancellationAcknowledged: true,
-              cancelledAsRequest: true,
-            });
-            // Stay here — the row becomes a cancelled row with an X to dismiss.
-          },
+          // Stay here — the row becomes a cancelled row with an X to dismiss.
+          onPress: () => cancelBookingWrite(target),
         },
       ]
     );
@@ -299,14 +322,9 @@ export default function DJBookingDetailScreen() {
       { text: 'No', style: 'cancel' },
       {
         text: isRequest ? 'Yes, Withdraw' : 'Yes, Cancel', style: 'destructive', onPress: () => {
-          const extra = {
-            cancelledAt: new Date().toISOString(),
-            cancellationAcknowledged: true,
-            cancelledAsRequest: true,
-          };
-          // A set can hold multiple artists — cancel every live artist on the slot, so the
-          // whole set is cancelled. Stay here: each becomes a cancelled row with a dismiss X.
-          slotBookings.filter((b) => cancellableStatus(b.status)).forEach((b) => updateBookingStatus(b.id, 'cancelled', extra));
+          // A set can hold multiple artists — cancel every live artist on the slot, so the whole
+          // set is cancelled. Each is written with the right per-artist semantics + notified.
+          slotBookings.filter((b) => cancellableStatus(b.status)).forEach(cancelBookingWrite);
         }
       },
       ]
