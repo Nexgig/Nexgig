@@ -224,23 +224,25 @@ export default function DJHomeScreen() {
   );
 
   // ── Overview strip: the artist's own schedule across the next 31 nights ───────────────
-  // One row of days, each colored by that day's winning status (pending > booked > past).
-  // Numbers sit inside the squares (like the manager's single-venue mode). Tapping a day
-  // expands an inline panel below the strip listing that day's gigs.
+  // One row of days, each colored by that day's winning status (pending > booked > cancelled).
+  // Completed gigs are NOT colored on the strip (only the color goes away — the booking still
+  // shows in the panel and Bookings list). Numbers sit inside the squares (manager single-venue
+  // look). Tapping a day expands an inline panel below the strip listing that day's gigs.
   const stripDays = useMemo(() => {
     const start = todayLocalStr();
     const nights = Array.from({ length: 31 }, (_, i) => addDaysStr(start, i));
-    const rank = { past: 0, booked: 1, pending: 2 } as const;
-    const winner = new Map<string, 'pending' | 'booked' | 'past'>();
+    const rank = { cancelled: 0, booked: 1, pending: 2 } as const;
+    const winner = new Map<string, 'pending' | 'booked' | 'cancelled'>();
     for (const b of bookings) {
       if (b.hiddenFromCalendar) continue;
       const date = dateOf(b);
       if (!date) continue;
-      let s: 'pending' | 'booked' | 'past' | null = null;
+      let s: 'pending' | 'booked' | 'cancelled' | null = null;
       if ((b.status === 'requested' || b.status === 'past_confirmation') &&
           !isExpiredRequest(b.status, b.createdAt, date, b.slotStartTime, b.slotEndTime)) s = 'pending';
       else if (b.status === 'confirmed' && !b.isCompleted) s = 'booked';
-      else if (b.status === 'completed' || b.isCompleted || b.status === 'cancelled' || b.status === 'declined') s = 'past';
+      else if (b.status === 'cancelled' || b.status === 'declined') s = 'cancelled';
+      // completed / isCompleted → no color (the day reads as free)
       if (!s) continue;
       const cur = winner.get(date);
       if (!cur || rank[s] > rank[cur]) winner.set(date, s);
@@ -270,9 +272,20 @@ export default function DJHomeScreen() {
         startTime: slots.find((s) => s.id === b.slotId)?.startTime ?? b.slotStartTime ?? '',
         name: b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, allVenues.find((v) => v.id === b.venueId)?.name),
         shown: displayStatus(b.status, b.createdAt, selected, b.slotStartTime, b.slotEndTime),
+        dismissable: b.status === 'cancelled' || b.status === 'declined',
+        status: b.status,
       }))
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [selected, bookings, slots, allVenues, dateOf]);
+
+  // Dismiss a cancelled/declined booking from the strip + panel — mirrors the artist calendar's
+  // Dismiss (hide it from the artist's calendar + acknowledge the cancellation so it stops surfacing).
+  const dismissCancelled = (id: string, status: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    hideFromCalendar(id);
+    updateBookingStatus(id, status as any, { cancellationAcknowledged: true });
+    syncBookingStatus(id, status as any, { hiddenFromCalendar: true, cancellationAcknowledged: true });
+  };
 
   // ── "Needs your reply": live requests awaiting the artist's confirm/decline ───────────
   const needsReply = useMemo(() => bookings
@@ -364,7 +377,7 @@ export default function DJHomeScreen() {
   const stripFill = (state: string) =>
     state === 'pending' ? STATUS_COLORS.pending
     : state === 'booked' ? STATUS_COLORS.confirmed
-    : state === 'past' ? STATUS_COLORS.completed
+    : state === 'cancelled' ? colors.cancelled
     : colors.background;
 
   return (
@@ -436,7 +449,14 @@ export default function DJHomeScreen() {
                   <Pressable key={g.id} style={({ pressed }) => [styles.inlineRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as Href)}>
                     <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{g.startTime ? fmtTime(g.startTime) : ''}</Text>
                     <Text style={[styles.inlineName, { color: colors.foreground }]} numberOfLines={1}>{g.name}</Text>
-                    <StatusBadge status={g.shown as any} />
+                    <View style={styles.inlineRight}>
+                      <StatusBadge status={g.shown as any} />
+                      {g.dismissable && (
+                        <Pressable hitSlop={8} style={styles.inlineDismiss} onPress={() => dismissCancelled(g.id, g.status)}>
+                          <MaterialIcons name="close" size={18} color={colors.muted} />
+                        </Pressable>
+                      )}
+                    </View>
                   </Pressable>
                 ))
               )}
@@ -453,13 +473,15 @@ export default function DJHomeScreen() {
             </View>
             {needsReply.map((item) => (
               <View key={item.id} style={styles.replyCard}>
-                <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
-                <View style={styles.replyInfo}>
-                  <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
-                  <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
-                    {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
-                  </Text>
-                </View>
+                <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
+                  <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                  <View style={styles.replyInfo}>
+                    <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                    <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                      {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
+                    </Text>
+                  </View>
+                </Pressable>
                 <View style={styles.replyActions}>
                   <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
                     <MaterialIcons name="close" size={20} color={colors.muted} />
@@ -552,7 +574,7 @@ export default function DJHomeScreen() {
             {[
               { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
               { label: 'Pending', swatch: { backgroundColor: STATUS_COLORS.pending } },
-              { label: 'Completed', swatch: { backgroundColor: STATUS_COLORS.completed } },
+              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
             ].map((row) => (
               <View key={row.label} style={styles.legendCardRow}>
                 <View style={[styles.legendSwatch, row.swatch]} />
@@ -624,12 +646,15 @@ const styles = StyleSheet.create({
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
   inlineTime: { fontSize: 13, fontWeight: '600', width: 66 },
   inlineName: { fontSize: 15, fontWeight: '600', flex: 1 },
+  inlineRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  inlineDismiss: { padding: 2 },
 
   // Needs your reply
   replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   replyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   replyLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
   replyCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  replyMain: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   replyThumb: { width: 48, height: 48, borderRadius: 14 },
   replyInfo: { flex: 1 },
   replyName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
