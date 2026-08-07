@@ -129,7 +129,7 @@ export default function ArtistVenuesScreen() {
                   ? `/(artist)/invoice-gigs?venueId=${item.venue.id}`
                   : `/(artist)/venue-detail?id=${item.venue.id}&tab=invoices`) as Href)}
               >
-                <MaterialIcons name="description" size={24} color={hasUninvoiced ? colors.primary : colors.muted} />
+                <MaterialIcons name="description" size={22} color={hasUninvoiced ? colors.primary : colors.muted} />
               </Pressable>
             </Pressable>
           );
@@ -140,17 +140,18 @@ export default function ArtistVenuesScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14, borderBottomWidth: 0.5 },
-  title: { fontSize: 30, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
-  count: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
-  list: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
-  thumb: { width: 56, height: 56, borderRadius: 16, borderWidth: 1 },
+  // Sizing mirrors the manager Roster tab (app/(manager)/(tabs)/network.tsx).
+  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 6, paddingBottom: 12, borderBottomWidth: 0.5 },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
+  count: { fontSize: 13, fontWeight: '600', marginBottom: 3 },
+  list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  thumb: { width: 48, height: 48, borderRadius: 14, borderWidth: 1 },
   info: { flex: 1 },
-  venueName: { fontSize: 17, fontWeight: '700', marginBottom: 3 },
-  sub: { fontSize: 14, fontWeight: '600' },
-  invoiceBtn: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  venueName: { fontSize: 15, fontWeight: '700', marginBottom: 1 },
+  sub: { fontSize: 13, fontWeight: '600' },
+  invoiceBtn: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 40, gap: 12 },
-  emptyText: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
-  footerText: { fontSize: 14, lineHeight: 21, marginTop: 20 },
+  emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
+  footerText: { fontSize: 13, lineHeight: 20, marginTop: 18 },
 });

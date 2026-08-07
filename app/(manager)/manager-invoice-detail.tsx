@@ -5,7 +5,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
-import { useInvoiceStore } from '@/lib/store';
+import { useInvoiceStore, useAuthStore, useNotificationStore } from '@/lib/store';
 import * as Haptics from 'expo-haptics';
 import type { InvoiceGig } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
@@ -126,15 +126,22 @@ export default function ManagerInvoiceDetailScreen() {
   const { invoiceId } = useLocalSearchParams<{ invoiceId: string }>();
   const invoices = useInvoiceStore((s) => s.invoices);
   const markInvoiceReadByManager = useInvoiceStore((s) => s.markInvoiceReadByManager);
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const markNotifAsRead = useNotificationStore((s) => s.markAsRead);
 
   const invoice = invoices.find((inv) => inv.id === invoiceId);
 
-   // Mark as read when opened
+  // Mark as read when opened — the invoice's unread state AND the "Invoice Received"
+  // notification (so opening it clears both the badge/dot and the bell).
   useEffect(() => {
-    if (invoice && !invoice.isReadByManager) {
-      markInvoiceReadByManager(invoice.id);
-    }
-  }, [invoice?.id]);
+    if (!invoice) return;
+    if (!invoice.isReadByManager) markInvoiceReadByManager(invoice.id);
+    notifications
+      .filter((n) => n.userId === currentUser?.id && n.relatedId === invoice.id && n.type === 'invoice_received' && !n.isRead)
+      .forEach((n) => markNotifAsRead(n.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice?.id, notifications, currentUser?.id]);
 
   // Pre-generate HTML on mount so PDF is ready instantly when button is tapped
   const cachedHtmlRef = useRef<string | null>(null);

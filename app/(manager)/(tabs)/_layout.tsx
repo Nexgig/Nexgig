@@ -3,7 +3,7 @@ import { View, Text } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useDraftStore, useSlotStore } from '@/lib/store';
+import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useDraftStore, useSlotStore, useInvoiceStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { isPastStart } from '@/lib/utils';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
@@ -90,11 +90,13 @@ export default function ManagerTabsLayout() {
     return () => { cancelled = true; clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
   }, [currentUser?.id, fetchInvoiceDates]);
 
-  const invoiceBadge = useMemo(() => {
-    if (!profileSeenAt) return 0;
-    const seen = new Date(profileSeenAt).getTime();
-    return invoiceSentDates.filter((d) => new Date(d).getTime() > seen).length;
-  }, [invoiceSentDates, profileSeenAt]);
+  // Badge = invoices the manager RECEIVED but hasn't OPENED yet (clears per-invoice as each is
+  // opened), not "new since last profile visit". Reads the merged read-state from the store.
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoiceBadge = useMemo(
+    () => allInvoices.filter((inv) => inv.managerId === currentUser?.id && !inv.isReadByManager && inv.status !== 'cancelled' && !inv.isDeletedByManager).length,
+    [allInvoices, currentUser?.id]
+  );
 
   // ── Calendar tab badge: unsent gigs ───────────────────────────────────────
   // Count the manager's drafts (staged, not sent) on FUTURE slots — the same set

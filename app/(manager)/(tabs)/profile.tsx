@@ -249,7 +249,8 @@ function InvoicesSection({ colors, currentUserId, router }: {
       if (invoicedBookingIds.has(b.id)) return;
       ensure(b.artistId, 'Artist').uninvoiced += 1;
     });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    // Artists with an unopened invoice float to the TOP (until the manager opens it); then alphabetical.
+    return Array.from(map.values()).sort((a, b) => (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0) || a.name.localeCompare(b.name));
   }, [managerInvoices, allBookings, invoicedBookingIds, currentUserId, getArtistUser]);
 
   const totalUnread = useMemo(() => artistRows.reduce((n, a) => n + a.unread, 0), [artistRows]);
@@ -263,7 +264,14 @@ function InvoicesSection({ colors, currentUserId, router }: {
         onPress={() => setExpanded((v) => !v)}
         hitSlop={6}
       >
-        <Text style={[invStyles.collapseTitle, { color: colors.muted }]}>INVOICES</Text>
+        <View style={invStyles.collapseHeaderLeft}>
+          <Text style={[invStyles.collapseTitle, { color: colors.muted }]}>INVOICES</Text>
+          {totalUnread > 0 && (
+            <View style={[invStyles.unreadBadge, { backgroundColor: colors.primary }]}>
+              <Text style={invStyles.unreadBadgeText}>{totalUnread}</Text>
+            </View>
+          )}
+        </View>
         <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
       </Pressable>
       {expanded && (
