@@ -62,8 +62,11 @@ function formatDateStr(date: Date): string {
 }
 
 function formatDateLabel(dateStr: string) {
+  // Compact uppercase header, e.g. "FRI 7 AUG".
   const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-AE', { weekday: 'long', month: 'long', day: 'numeric' });
+  const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const mon = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `${wd} ${d.getDate()} ${mon}`;
 }
 
 // isPastEnd here must match how isCompleted is written in lib/private-events.ts and
@@ -465,6 +468,11 @@ export default function DJAvailabilityScreen() {
   const nextMonth = () => {
     if (currentMonth === 11) { setCurrentYear((y) => y + 1); setCurrentMonth(0); }
     else setCurrentMonth((m) => m + 1);
+  };
+  const goToday = () => {
+    setCurrentMonth(now.getMonth());
+    setCurrentYear(now.getFullYear());
+    setSelectedDate(todayStr);
   };
   const prevWeek = () => {
     const d = new Date(weekStart);
@@ -970,18 +978,18 @@ export default function DJAvailabilityScreen() {
           <View>
             {/* Month Navigation */}
             <View style={styles.monthNav}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64 }}>
-                <Pressable onPress={prevMonth} style={styles.monthNavBtn}>
-                  <MaterialIcons name="chevron-left" size={28} color={colors.foreground} />
+              <View style={styles.monthNavLeft}>
+                <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Pressable onPress={prevMonth} style={styles.monthNavBtn} hitSlop={6}>
+                  <MaterialIcons name="chevron-left" size={26} color={colors.foreground} />
+                </Pressable>
+                <Pressable onPress={nextMonth} style={styles.monthNavBtn} hitSlop={6}>
+                  <MaterialIcons name="chevron-right" size={26} color={colors.foreground} />
                 </Pressable>
               </View>
-              <Text style={[styles.monthTitle, { color: colors.foreground, flex: 1, textAlign: 'center' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: 64, justifyContent: 'flex-end' }}>
-                {/* Sync moved to the header. */}
-                <Pressable onPress={nextMonth} style={styles.monthNavBtn}>
-                  <MaterialIcons name="chevron-right" size={28} color={colors.foreground} />
-                </Pressable>
-              </View>
+              <Pressable onPress={goToday} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+                <Text style={[styles.todayBtnText, { color: colors.primary }]}>Today</Text>
+              </Pressable>
             </View>
 
             {/* Day Labels */}
@@ -1000,18 +1008,30 @@ export default function DJAvailabilityScreen() {
                 const isSelected = date === selectedDate;
                 const dayBookings = bookingsByDate.get(date) ?? [];
                 const isBlocked = blockedDates.has(date);
-
-                // One dot per booking, colored by status; red for blocks (future only)
-                // cancelled bookings always show red dot so artist sees the notification
                 const isFuture = date >= todayStr;
-                const dots: string[] = dayBookings
-                  .filter((b) => isFuture || b.status === 'past_confirmation' || b.status === 'cancelled' || b.status !== 'declined')
-                  .map((b) => getBookingStatusColor(b))
-                  // No completed dot — matches the manager calendar. Both real completed
-                  // bookings and past private events resolve to the completed colour; a
-                  // finished gig isn't actionable and still lives in Completed Gigs.
-                  .filter((c) => c !== STATUS_COLORS.completed);
-                if (isBlocked && isFuture && !dots.includes(STATUS_COLORS.cancelled)) dots.push(STATUS_COLORS.cancelled);
+
+                // The day fills with ONE winning colour: pending (gold) > booked (green) >
+                // cancelled (slate). Completed gigs don't colour a day (only the colour goes —
+                // the gig still lists below and in Completed Gigs). Blocked future days = slate.
+                // Branch on STATUS, not colour: STATUS_COLORS.completed === .cancelled (same slate
+                // hex), so a colour comparison can't keep completed uncoloured.
+                let hasPending = false, hasBooked = false, hasCancelled = false;
+                for (const b of dayBookings) {
+                  if (b.isArtistCreated) {
+                    // Private event: green while upcoming; a past one is "completed" → no colour.
+                    if (!isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime)) hasBooked = true;
+                    continue;
+                  }
+                  if (b.status === 'requested' || b.status === 'past_confirmation') hasPending = true;
+                  else if (b.status === 'confirmed') hasBooked = true;
+                  else if (b.status === 'cancelled' || b.status === 'declined') hasCancelled = true;
+                  // completed / expired → no colour
+                }
+                if (isBlocked && isFuture) hasCancelled = true;
+                const dayColor = hasPending ? STATUS_COLORS.pending
+                  : hasBooked ? STATUS_COLORS.confirmed
+                  : hasCancelled ? STATUS_COLORS.cancelled
+                  : null;
 
                 return (
                   <Pressable
@@ -1019,19 +1039,19 @@ export default function DJAvailabilityScreen() {
                     style={styles.calendarCell}
                     onPress={() => handleDayPress(date)}
                   >
-                    <View style={[
-                      styles.dayCircle,
-                      isSelected && { backgroundColor: colors.surface },
-                    ]}>
-                      <Text style={[styles.dayNumber, { color: isToday ? colors.primary : colors.foreground, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
-                    </View>
-                    {dots.length > 0 && (
-                      <View style={styles.dotRow}>
-                        {dots.slice(0, 4).map((dotColor, idx) => (
-                          <View key={idx} style={[styles.dot, { backgroundColor: dotColor }]} />
-                        ))}
+                    {/* Ring wrapper: fixed footprint; when selected it insets the square with a
+                        2px gap and a 2px coral ring, so the row height never shifts. */}
+                    <View style={[styles.dayCellRing, isSelected && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 14 }]}>
+                      <View style={[styles.dayCell, dayColor ? { backgroundColor: dayColor } : null]}>
+                        <Text style={[
+                          styles.dayNumber,
+                          {
+                            color: dayColor ? '#fff' : (isToday ? colors.primary : colors.foreground),
+                            fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,
+                          },
+                        ]}>{dayNum}</Text>
                       </View>
-                    )}
+                    </View>
                   </Pressable>
                 );
               })}
@@ -1058,15 +1078,16 @@ export default function DJAvailabilityScreen() {
             ) : (
             <View style={styles.slotsSection}>
               <View style={styles.slotsSectionHeader}>
-                <Text style={[styles.slotsSectionTitle, { color: colors.foreground }]}>
+                <Text style={[styles.slotsSectionTitle, { color: colors.muted }]}>
                   {formatDateLabel(selectedDate)}
                 </Text>
+                <View style={[styles.slotsSectionLine, { backgroundColor: colors.border }]} />
                 <Pressable
-                  style={({ pressed }) => [styles.addSlotBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
                   onPress={() => openAddModal(selectedDate)}
+                  hitSlop={8}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
                 >
-                  <MaterialIcons name="add" size={16} color="#fff" />
-                  <Text style={styles.addSetBtnText}>Create</Text>
+                  <MaterialIcons name="add" size={22} color={colors.primary} />
                 </Pressable>
               </View>
 
@@ -1248,22 +1269,24 @@ const styles = StyleSheet.create({
   weekEmptyDay: { paddingLeft: 54, paddingVertical: 4 },
   weekEmptyText: { fontSize: 12, fontStyle: 'italic' },
 
-  // Month view (matching manager)
+  // Month view — filled colour squares (green booked / gold pending / slate cancelled)
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
-  monthTitle: { fontSize: 17, fontWeight: '700' },
+  monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  monthTitle: { fontSize: 22, fontWeight: '700' },
+  todayBtnText: { fontSize: 15, fontWeight: '700' },
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 4 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-  dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  dayCellRing: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  dayCell: { width: '100%', aspectRatio: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
-  dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 2 },
-  dot: { width: 4, height: 4, borderRadius: 2 },
 
   // Selected date section
   slotsSection: { padding: 20 },
-  slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  slotsSectionTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
+  slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  slotsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  slotsSectionLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginHorizontal: 12 },
 
   // Slot cards (same design as manager calendar slot cards)
   slotCard: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, overflow: 'hidden', alignItems: 'center', marginBottom: 8 },
@@ -1276,9 +1299,6 @@ const styles = StyleSheet.create({
   slotCardStatus: { fontSize: 11, fontWeight: '700' },
   slotDeleteBtn: { padding: 12 },
 
-  // Add/Block button (matching manager Add Slot style)
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
-  addSetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   // Empty day
   emptyDay: { borderRadius: 14, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
