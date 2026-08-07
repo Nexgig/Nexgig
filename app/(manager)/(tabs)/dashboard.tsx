@@ -447,14 +447,13 @@ export default function ManagerDashboard() {
                 <View style={styles.stripHeaderRow}>
                   {coverage.nights.map((date) => {
                     const d = new Date(date + 'T00:00:00');
-                    const isToday = date === coverage.nights[0];
                     return (
                       <View key={date} style={styles.dayCol}>
-                        <Text style={[styles.stripDow, { color: isToday ? colors.primary : colors.muted }]}>
+                        <Text style={[styles.stripDow, { color: colors.muted }]}>
                           {d.toLocaleDateString('en-US', { weekday: 'narrow' })}
                         </Text>
                         {!singleVenue && (
-                          <Text style={[styles.stripDayNum, { color: isToday ? colors.primary : colors.foreground }]}>
+                          <Text style={[styles.stripDayNum, { color: colors.foreground }]}>
                             {d.getDate()}
                           </Text>
                         )}
@@ -468,12 +467,11 @@ export default function ManagerDashboard() {
                   <View key={r.venue.id} style={styles.cellsRow}>
                     {r.cells.map((state, i) => {
                       const isSel = selected?.venueId === r.venue.id && selected?.date === coverage.nights[i];
-                      const isToday = coverage.nights[i] === coverage.nights[0];
                       const filled = state === 'cancelled' || state === 'sent' || state === 'booked';
                       // In single-venue mode the square carries the date number; colour it for
-                      // contrast on the fill, coral for today/unfilled, muted on an empty day.
+                      // contrast on the fill, coral on an unfilled day, muted when there's no slot.
                       const numColor = filled ? '#fff'
-                        : (isToday || state === 'empty') ? colors.primary
+                        : state === 'empty' ? colors.primary
                         : state === 'drafted' ? colors.foreground
                         : colors.muted;
                       return (
