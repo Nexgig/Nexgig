@@ -381,31 +381,31 @@ export default function ManagerDashboard() {
 
   return (
     <ScreenContainer>
+      {/* Frozen header — stays fixed while the content below scrolls. */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <VenueFilterHeader />
+        </View>
+        <View style={styles.headerRight}>
+          <Pressable
+            style={styles.notifBtn}
+            onPress={() => router.push('/(manager)/notifications' as Href)}
+          >
+            <MaterialIcons name="notifications" size={22} color={colors.foreground} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+      </View>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <VenueFilterHeader />
-          </View>
-          <View style={styles.headerRight}>
-            <Pressable
-              style={styles.notifBtn}
-              onPress={() => router.push('/(manager)/notifications' as Href)}
-            >
-              <MaterialIcons name="notifications" size={22} color={colors.foreground} />
-              {unreadCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unreadCount}</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-        </View>
-
         {/* Coverage strip — venues (down) × the next 7 nights (across). Sits where the stat
             row used to. STATUS_COLORS, not theme tokens: same statuses as the badges below. */}
         <View style={styles.strip}>
@@ -560,8 +560,8 @@ export default function ManagerDashboard() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   headerLeft: {},
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

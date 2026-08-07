@@ -119,17 +119,17 @@ export default function ManagerProfileScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
-        {/* Header */}
-        <View style={styles.header}>
-          <RoleSwitcher role="manager" />
-          <Pressable
-            style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push('/(manager)/settings' as Href)}
-          >
-            <MaterialIcons name="settings" size={22} color={colors.foreground} />
-          </Pressable>
-        </View>
+      {/* Frozen header — stays fixed while the profile content scrolls. */}
+      <View style={styles.header}>
+        <RoleSwitcher role="manager" />
+        <Pressable
+          style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.7 : 1 }]}
+          onPress={() => router.push('/(manager)/settings' as Href)}
+        >
+          <MaterialIcons name="settings" size={22} color={colors.foreground} />
+        </Pressable>
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: keyboardHeight }} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
 
         {/* Hero — centred avatar + name */}
         <View style={styles.hero}>

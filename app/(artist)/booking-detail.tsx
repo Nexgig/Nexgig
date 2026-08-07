@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
@@ -65,6 +66,7 @@ export default function DJBookingDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const { formatTime: fmtTime } = useFormatTime();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const currentUser = useAuthStore((s) => s.currentUser);
 
@@ -304,9 +306,15 @@ export default function DJBookingDetailScreen() {
   };
 
 
+  // The request-action footer condition — also drives the ScrollView bottom padding so the
+  // pinned Confirm/Decline bar never covers the content.
+  const canActOnRequest = !booking.isArtistCreated
+    && (booking.status === 'requested' || booking.status === 'past_confirmation')
+    && !isExpiredRequest(booking.status, booking.createdAt, slot?.date ?? booking.slotDate, slot?.startTime ?? booking.slotStartTime, slot?.endTime ?? booking.slotEndTime);
+
   return (
     <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: canActOnRequest ? 168 : 24 }} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -441,20 +449,7 @@ export default function DJBookingDetailScreen() {
             </>
           ) : null}
 
-          {/* Actions — Accept/Decline for requested + past_confirmation (not private events) */}
-          {!booking.isArtistCreated && (booking.status === 'requested' || booking.status === 'past_confirmation')
-            && !isExpiredRequest(booking.status, booking.createdAt, slot?.date ?? booking.slotDate, slot?.startTime ?? booking.slotStartTime, slot?.endTime ?? booking.slotEndTime) && (
-            <View style={styles.actions}>
-              <Pressable
-                style={({ pressed }) => [styles.acceptBtn, { backgroundColor: colors.success, opacity: pressed ? 0.8 : 1 }]}
-                onPress={handleAccept}
-              >
-                <MaterialIcons name="check-circle" size={18} color="#000" />
-                <Text style={styles.acceptBtnText}>Confirm</Text>
-              </Pressable>
-              <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
-            </View>
-          )}
+          {/* Confirm/Decline moved to a pinned footer below (always visible, no scrolling). */}
 
           {/* Cancel — for confirmed bookings (not private events) */}
           {!booking.isArtistCreated && booking.status === 'confirmed' && (
@@ -579,6 +574,20 @@ export default function DJBookingDetailScreen() {
 
         </View>
       </ScrollView>
+
+      {/* Pinned Confirm/Decline — always visible so the artist doesn't have to scroll. */}
+      {canActOnRequest && (
+        <View style={[styles.pinnedActions, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <Pressable
+            style={({ pressed }) => [styles.acceptBtn, { backgroundColor: colors.success, opacity: pressed ? 0.8 : 1 }]}
+            onPress={handleAccept}
+          >
+            <MaterialIcons name="check-circle" size={18} color="#000" />
+            <Text style={styles.acceptBtnText}>Confirm</Text>
+          </Pressable>
+          <SoftButton tone="danger" icon="cancel" label="Decline" onPress={handleDecline} />
+        </View>
+      )}
     </ScreenContainer>
   );
 }
@@ -598,6 +607,7 @@ const styles = StyleSheet.create({
   mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
   mapsBadgeText: { fontSize: 13, fontWeight: '700' },
   actions: { gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
+  pinnedActions: { gap: 12, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   acceptBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14 },
   acceptBtnText: { color: '#000', fontSize: 15, fontWeight: '700' },
   reviewTitle: { fontSize: 16, fontWeight: '700' },

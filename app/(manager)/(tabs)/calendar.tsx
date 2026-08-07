@@ -1329,16 +1329,57 @@ export default function CalendarScreen() {
       </Pressable>
     );
 
+    // Stacked-avatar variant: several artists on ONE slot collapse into a single row (mirrors the
+    // dashboard) — overlapping avatars + joined names + one status badge.
+    const dayRowMulti = (artists: any[], badge: React.ReactNode, onPress: () => void) => {
+      const names = artists.map((a) => a?.fullName ?? 'Former Artist');
+      const title = artists.length === 1 ? names[0] : `${names.slice(0, 2).join(', ')}${artists.length > 2 ? ` +${artists.length - 2}` : ''}`;
+      return (
+        <Pressable style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
+          <View style={styles.dayAvatarStack}>
+            {artists.slice(0, 2).map((a, i) => (
+              <View key={i} style={[styles.dayAvatarRing, { borderColor: colors.background, marginLeft: i === 0 ? 0 : -18, zIndex: artists.length - i }]}>
+                <AvatarImage uri={a?.profilePhotoUrl || undefined} avatarId={(a as any)?.avatarId} seed={a?.id} name={a?.fullName ?? 'Former Artist'} size={44} />
+              </View>
+            ))}
+          </View>
+          <View style={styles.dayRowInfo}>
+            <View style={styles.dayNameRow}>
+              <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+              {badge}
+            </View>
+            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+          </View>
+          <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+        </Pressable>
+      );
+    };
+
+    // Split the slot's bookings: dead ones (cancelled/declined/expired) stay individual so each
+    // keeps its swipe-to-dismiss; the live ones collapse into ONE stacked row like the dashboard.
+    const dead = bs.filter((b) => b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired');
+    const live = bs.filter((b) => !(b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired'));
+    // One badge for the whole live group: highest-priority shown status (pending > confirmed >
+    // completed); a confirmed group shows no badge, mirroring the single-row rule.
+    const rankOf = (s: string) => (s === 'requested' || s === 'past_confirmation' || s === 'pending') ? 0 : s === 'confirmed' ? 1 : s === 'completed' ? 2 : 3;
+    const liveShown = live.map((b) => displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime));
+    const repShown = liveShown.reduce((acc, s) => (rankOf(s) < rankOf(acc) ? s : acc), liveShown[0] ?? 'confirmed');
+
     return [
-      ...bs.map((b) => {
+      ...(live.length > 0 ? [(
+        <View key={'live-' + slot.id}>
+          {dayRowMulti(
+            live.map((b) => getArtistUser(b.artistId)),
+            repShown !== 'confirmed' ? <StatusBadge status={repShown as any} /> : null,
+            () => router.push(('/(manager)/booking-detail?id=' + live[0].id) as Href),
+          )}
+        </View>
+      )] : []),
+      ...dead.map((b) => {
         const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
-        const row = dayRow(getArtistUser(b.artistId), shown !== 'confirmed' ? <StatusBadge status={shown as any} /> : null,
+        const row = dayRow(getArtistUser(b.artistId), <StatusBadge status={shown as any} />,
           () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href));
-        // Dead statuses (cancelled / declined / expired) swipe to dismiss; live gigs don't.
-        const dismissable = b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired';
-        return dismissable
-          ? withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row)
-          : <View key={b.id}>{row}</View>;
+        return withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row);
       }),
       ...drafts.map((d) =>
         withSwipeDelete('draft-' + d.artistId, () => removeDraftByDJ(slot.id, d.artistId),
@@ -1421,27 +1462,27 @@ export default function CalendarScreen() {
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <ScreenContainer>
-      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
+      {/* Frozen header — stays fixed while the calendar + day list scroll. */}
+      <View style={styles.header}>
+        <VenueFilterHeader />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+        {periodScopedDrafts.length > 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => {
+              setSendVenueFilter(null);
+              setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
+              setShowSendSheet(true);
+            }}
+            hitSlop={8}
+          >
+            <Text style={styles.headerSendText}>Send {periodScopedDrafts.length}</Text>
+          </Pressable>
+        )}
+        </View>
+      </View>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
-          {/* Header */}
-          <View style={styles.header}>
-            <VenueFilterHeader />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-            {periodScopedDrafts.length > 0 && (
-              <Pressable
-                style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => {
-                  setSendVenueFilter(null);
-                  setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
-                  setShowSendSheet(true);
-                }}
-                hitSlop={8}
-              >
-                <Text style={styles.headerSendText}>Send {periodScopedDrafts.length}</Text>
-              </Pressable>
-            )}
-            </View>
-          </View>
 
           {venues.length === 0 ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48 }}>
@@ -2004,6 +2045,8 @@ const styles = StyleSheet.create({
   dayHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12, marginRight: 12 },
   dayHeaderAdd: { padding: 2 },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  dayAvatarStack: { flexDirection: 'row', alignItems: 'center' },
+  dayAvatarRing: { borderRadius: 24, borderWidth: 2 },
   dayRowInfo: { flex: 1 },
   dayNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
