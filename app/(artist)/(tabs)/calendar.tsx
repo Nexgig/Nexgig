@@ -2,7 +2,8 @@ import { useRoleSwitching } from '@/lib/roles';
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform, RefreshControl } from '@/lib/rn';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform, RefreshControl, Image } from '@/lib/rn';
+import { venueImageFor } from '@/lib/venue-images';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -710,29 +711,36 @@ export default function DJAvailabilityScreen() {
     return (
       <Pressable
         key={b.id}
-        style={({ pressed }) => [styles.slotCard, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+        style={({ pressed }) => [styles.bookingCard, { borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
         onPress={() => !isCancelled && !isDeclined && router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
       >
-        <View style={[styles.slotColorBar, { backgroundColor: statusColor }]} />
-        <View style={styles.slotCardContent}>
-          <View style={styles.slotCardTop}>
-            <Text style={[styles.slotCardTitle, { color: colors.foreground }]} numberOfLines={1}>
+        {b.isArtistCreated ? (
+          <View style={[styles.bookingThumb, styles.bookingThumbPrivate, { backgroundColor: statusColor }]}>
+            <MaterialIcons name="event" size={22} color="#fff" />
+          </View>
+        ) : (
+          <Image source={venueImageFor(undefined, b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
+        )}
+        <View style={styles.bookingInfo}>
+          <View style={styles.bookingTop}>
+            <Text style={[styles.bookingTitle, { color: colors.foreground }]} numberOfLines={1}>
               {b.isArtistCreated ? (b.slotName ?? b.resolvedVenueName) : (b.resolvedVenueName)}
             </Text>
+            <View style={[styles.statusPill, { backgroundColor: statusColor + '22' }]}>
+              <Text style={[styles.statusPillText, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
+            </View>
           </View>
           {(b.resolvedStart || b.resolvedSlotName) && !b.isArtistCreated && (
-            <Text style={[styles.slotCardSub, { color: colors.muted }]}>
+            <Text style={[styles.bookingSub, { color: colors.muted }]}>
               {b.resolvedStart && b.resolvedEnd ? `${fmtTime(b.resolvedStart)} – ${fmtTime(b.resolvedEnd)}` : ''}
               {b.resolvedSlotName ? (b.resolvedStart ? ` · ${b.resolvedSlotName}` : b.resolvedSlotName) : ''}
             </Text>
           )}
           {b.isArtistCreated && b.slotStartTime && b.slotEndTime && (
-            <Text style={[styles.slotCardSub, { color: colors.muted }]}>
+            <Text style={[styles.bookingSub, { color: colors.muted }]}>
               {b.slotStartTime === '00:00' && b.slotEndTime === '23:59' ? 'Full Day' : `${fmtTime(b.slotStartTime)} – ${fmtTime(b.slotEndTime)}`}
             </Text>
           )}
-          <Text style={[styles.slotCardStatus, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
-          {/* Dismiss button moved to inline right side via renderActionBtn */}
         </View>
         {renderActionBtn()}
       </Pressable>
@@ -1288,7 +1296,18 @@ const styles = StyleSheet.create({
   slotsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   slotsSectionLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginHorizontal: 12 },
 
-  // Slot cards (same design as manager calendar slot cards)
+  // Booking cards — venue thumbnail (squircle) + name + status pill + time
+  bookingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, padding: 10, marginBottom: 8 },
+  bookingThumb: { width: 48, height: 48, borderRadius: 12 },
+  bookingThumbPrivate: { alignItems: 'center', justifyContent: 'center' },
+  bookingInfo: { flex: 1, gap: 3 },
+  bookingTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  bookingTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
+  bookingSub: { fontSize: 13, fontWeight: '500' },
+  statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+
+  // Block cards (availability blocks — unchanged color-bar layout)
   slotCard: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, overflow: 'hidden', alignItems: 'center', marginBottom: 8 },
   slotColorBar: { width: 4, alignSelf: 'stretch' },
   slotCardContent: { flex: 1, padding: 12, gap: 3 },
