@@ -603,22 +603,22 @@ export default function DJAvailabilityScreen() {
         );
       }
       if (isCancelled || isDeclined || isExpired) {
-        // Dismiss button shown inline on the right side (same position as other action buttons)
-        const dismissColor = isExpired ? colors.muted : colors.error;
+        // X to dismiss a cancelled/declined/expired row (declined never actually reaches the
+        // artist calendar — it's hidden on decline — so in practice this is the cancelled case).
         return (
-          <TouchableOpacity
-            style={[styles.slotMenuBtn, { borderWidth: 1, borderColor: dismissColor, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 12 }]}
-                        onPress={(e) => { 
-              e.stopPropagation?.(); 
+          <Pressable
+            hitSlop={8}
+            style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
+            onPress={(e) => {
+              e.stopPropagation?.();
               hideFromCalendar(b.id);
               updateBookingStatus(b.id, b.status as BookingStatus, { cancellationAcknowledged: true });
               markRelatedNotificationsRead(b.id);
               syncBookingStatus(b.id, b.status as any, { hiddenFromCalendar: true, cancellationAcknowledged: true });
             }}
-            activeOpacity={0.6}
           >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: dismissColor }}>Dismiss</Text>
-          </TouchableOpacity>
+            <MaterialIcons name="close" size={20} color={colors.muted} />
+          </Pressable>
         );
       }
       if (isRequested) {
