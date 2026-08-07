@@ -1,4 +1,5 @@
 import { Tabs, useFocusEffect } from 'expo-router';
+import { View, Text } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -134,8 +135,18 @@ export default function ManagerTabsLayout() {
         name="calendar"
         options={{
           title: 'Calendar',
-          tabBarIcon: ({ color }) => <MaterialIcons name="calendar-today" size={24} color={color} />,
-          tabBarBadge: draftBadge > 0 ? draftBadge : undefined,
+          // Custom coral badge sitting BESIDE the icon (offset right) instead of the default
+          // red one that hugs the corner and overlaps the glyph.
+          tabBarIcon: ({ color }) => (
+            <View>
+              <MaterialIcons name="calendar-today" size={24} color={color} />
+              {draftBadge > 0 && (
+                <View style={{ position: 'absolute', top: -5, right: -15, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{draftBadge}</Text>
+                </View>
+              )}
+            </View>
+          ),
         }}
       />
       <Tabs.Screen name="create-action" options={{ href: null }} />
