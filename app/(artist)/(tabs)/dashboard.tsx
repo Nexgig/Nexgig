@@ -1,22 +1,25 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert } from '@/lib/rn';
+import { LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { Divider, StatRow } from '@/components/ui/card-free';
-import { Wordmark } from '@/components/wordmark';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
-import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
 import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/lib/supabase';
+import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isUpcoming, nowLocalDateTimeStr, monthKey, monthLabel, bookingVenueName } from '@/lib/utils';
+import { isPastEnd, isExpiredRequest, displayStatus, firstName, nowLocalDateTimeStr, monthKey, monthLabel, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
 import { MonthSeparator } from '@/components/ui/month-separator';
 
 /**
@@ -25,6 +28,9 @@ import { MonthSeparator } from '@/components/ui/month-separator';
  * their own option rather than a venue id. Not a real venue id; never persisted.
  */
 const PRIVATE_GIGS_FILTER = '__private_gigs__';
+
+// Statuses the Overview panel and per-day strip consider "real" gigs for this artist.
+const PANEL_STATUSES = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'cancelled', 'declined']);
 
 export default function DJHomeScreen() {
   const router = useRouter();
@@ -37,10 +43,12 @@ export default function DJHomeScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const slots = useSlotStore((s) => s.slots);
   const allVenues = useVenueStore((s) => s.venues);
-  const allLineups = useLineupStore((s) => s.lineups);
-  const allVenueAssignments = useLineupStore((s) => s.venueAssignments);
   const unreadCount = useNotificationStore((s) => s.getUnreadCount(currentUser?.id ?? ''));
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
+  const hideFromCalendar = useBookingStore((s) => s.hideFromCalendar);
+  const addNotification = useNotificationStore((s) => s.addNotification);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const allNotifications = useNotificationStore((s) => s.notifications);
   const allInvoices = useInvoiceStore((s) => s.invoices);
 
   const clearBookings = useBookingStore((s) => s.clearBookings);
@@ -85,19 +93,14 @@ export default function DJHomeScreen() {
 
   const nowDT = nowLocalDateTimeStr();
 
-  // Auto-complete confirmed bookings whose END time has passed.
-  // End, not start: a gig isn't done when it begins, and completion is what triggers
-  // the review flow. isPastEnd handles the midnight cross (20:00–00:00 ends next day).
-  //
-  // The artist's store does NOT hold the manager's slots, so we fall back to the
-  // snapshot fields saved on the booking itself (slotDate/slotStartTime/slotEndTime,
-  // written at creation). Without this fallback the slot lookup always failed on the
-  // artist side, so a past confirmed gig never flipped to completed — it disappeared
-  // from the dashboard COMPLETED count, Completed Gigs, and profile History.
   // Retire requests nobody answered before the gig ended. Runs on both sides — the
   // write is idempotent, so whichever app opens first does it.
   useEffect(() => { sweepExpiredRequests(); }, [nowDT]);
 
+  // Auto-complete confirmed bookings whose END time has passed. End, not start: a gig
+  // isn't done when it begins, and completion is what triggers the review flow. isPastEnd
+  // handles the midnight cross. The artist store lacks the manager's slots, so fall back
+  // to the snapshot fields saved on the booking itself.
   useEffect(() => {
     bookings
       .filter((b) => b.status === 'confirmed' && !b.isCompleted && !b.isArtistCreated)
@@ -120,38 +123,15 @@ export default function DJHomeScreen() {
       });
   }, [bookings, slots, nowDT, updateBookingStatus, allVenues]);
 
-  const upcomingBookings = useMemo(() => {
-    const regular = bookings
-      .filter((b) => (b.status === 'confirmed' || b.status === 'requested') && !b.isArtistCreated)
-      .map((b) => {
-        const slot = slots.find((s) => s.id === b.slotId);
-        const venue = allVenues.find((v) => v.id === b.venueId);
-        // Fall back to snapshot when slot not in store
-        const resolvedSlot = slot ?? (b.slotDate ? {
-          id: b.slotId, venueId: b.venueId, date: b.slotDate,
-          name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
-          endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
-        } : undefined);
-        const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
-        return { ...b, slot: resolvedSlot, venue: resolvedVenue };
-      })
-      .filter((b) => b.slot && isUpcoming(b.slot.date, b.slot.startTime));
-    const privateConfirmed = bookings
-      .filter((b) => b.isArtistCreated && b.status === 'confirmed' && !b.isCompleted && isUpcoming(b.slotDate ?? '', b.slotStartTime))
-      .map((b) => ({ ...b, slot: undefined as typeof slots[number] | undefined, venue: undefined as typeof allVenues[number] | undefined }));
-    return [...regular, ...privateConfirmed]
-      .sort((a, b) => {
-        const dateA = a.slot?.date ?? a.slotDate ?? '';
-        const dateB = b.slot?.date ?? b.slotDate ?? '';
-        return dateA < dateB ? -1 : 1;
-      })
-      .slice(0, 6);
-  }, [bookings, slots, allVenues, nowDT]);
+  // Date of a booking, preferring the live slot then the snapshot saved on the booking.
+  const dateOf = useCallback(
+    (b: (typeof bookings)[number]) => slots.find((s) => s.id === b.slotId)?.date ?? b.slotDate ?? '',
+    [slots]
+  );
 
   // Combined "Bookings" list: confirmed + pending + completed, ALL dates.
-  // Mirrors the manager dashboard. Resolves slot/venue with snapshot fallback,
-  // handles artist-created private events, tags each with a status + dot color,
-  // and sorts active (pending/confirmed) first by soonest, completed most-recent.
+  // Resolves slot/venue with snapshot fallback, handles artist-created private events,
+  // tags each with a status + dot color, sorts active first (soonest), completed most-recent.
   const dashboardBookings = useMemo(() => {
     const invoicedIds = new Set(
       allInvoices
@@ -186,11 +166,10 @@ export default function DJHomeScreen() {
     });
   }, [bookings, slots, allVenues, allInvoices, currentUser?.id]);
 
-  // Venue filter for the Bookings section, mirroring the manager dashboard.
+  // Venue filter for the Bookings section.
   const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Distinct venues present in the artist's (non-private) bookings, for the filter popup.
   const bookingVenues = useMemo(() => {
     const seen = new Map<string, string>();
     dashboardBookings.forEach((b) => {
@@ -199,7 +178,6 @@ export default function DJHomeScreen() {
     return Array.from(seen, ([id, name]) => ({ id, name }));
   }, [dashboardBookings]);
 
-  // Hide completed bookings from the dashboard list; apply the venue filter.
   const dashboardBookingsPreviewFiltered = useMemo(() => {
     const active = dashboardBookings.filter((b) => !b.isDone);
     const scoped =
@@ -209,18 +187,12 @@ export default function DJHomeScreen() {
     return scoped;
   }, [dashboardBookings, bookingVenueId]);
 
-  // Private events carry no venueId, so they can never match a venue row — without
-  // their own option they're reachable only via "All venues".
   const hasPrivateGigs = useMemo(
     () => dashboardBookings.some((b) => b.isArtistCreated),
     [dashboardBookings]
   );
 
-  // Month headers for the Bookings window. The DateBadge shows weekday + day but no
-  // month, so a list crossing months is ambiguous without them — and a lone "June"
-  // header on an all-June list is just noise. Computed on the VISIBLE rows (after the
-  // venue filter AND the slice(0, 6)), not the raw data: a July gig below the cut must
-  // not put a "June" header on a list the user sees as all-June.
+  // Month headers for the Bookings window — only when the visible rows cross months.
   const bookingsSpanMonths = useMemo(() => {
     const months = new Set(
       dashboardBookingsPreviewFiltered
@@ -233,32 +205,16 @@ export default function DJHomeScreen() {
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
-  const venueCount = useMemo(() => {
-    // Count from venueAssignments (new system) + legacy lineups, deduplicated by venueId
-    const assignedVenueIds = new Set<string>();
-    allVenueAssignments
-      .filter((a) => a.artistId === currentUser?.id && a.status === 'active')
-      .forEach((a) => assignedVenueIds.add(a.venueId));
-    allLineups
-      .filter((r) => r.artistId === currentUser?.id && r.status === 'active')
-      .forEach((r) => assignedVenueIds.add(r.venueId));
-    return assignedVenueIds.size;
-  }, [allVenueAssignments, allLineups, currentUser?.id]);
 
-  // Completed gigs — with slot/venue snapshot fallback
   const completedBookings = useMemo(() => bookings
     .filter((b) => b.status === 'completed' || b.isCompleted)
     .map((b) => {
       const slot = slots.find((s) => s.id === b.slotId);
       const venue = allVenues.find((v) => v.id === b.venueId);
       const resolvedSlot = slot ?? (b.slotDate ? {
-        id: b.slotId,
-        venueId: b.venueId,
-        date: b.slotDate,
-        name: b.slotName ?? '',
-        startTime: b.slotStartTime ?? '',
-        endTime: b.slotEndTime ?? '',
-        createdAt: b.createdAt,
+        id: b.slotId, venueId: b.venueId, date: b.slotDate,
+        name: b.slotName ?? '', startTime: b.slotStartTime ?? '',
+        endTime: b.slotEndTime ?? '', createdAt: b.createdAt,
       } : undefined);
       const resolvedVenue = venue ?? (b.venueName ? { id: b.venueId, name: b.venueName } as unknown as typeof venue : undefined);
       return { ...b, slot: resolvedSlot, venue: resolvedVenue };
@@ -267,46 +223,266 @@ export default function DJHomeScreen() {
     [bookings, slots, allVenues]
   );
 
+  // ── Overview strip: the artist's own schedule across the next 31 nights ───────────────
+  // One row of days, each colored by that day's winning status (pending > booked > past).
+  // Numbers sit inside the squares (like the manager's single-venue mode). Tapping a day
+  // expands an inline panel below the strip listing that day's gigs.
+  const stripDays = useMemo(() => {
+    const start = todayLocalStr();
+    const nights = Array.from({ length: 31 }, (_, i) => addDaysStr(start, i));
+    const rank = { past: 0, booked: 1, pending: 2 } as const;
+    const winner = new Map<string, 'pending' | 'booked' | 'past'>();
+    for (const b of bookings) {
+      if (b.hiddenFromCalendar) continue;
+      const date = dateOf(b);
+      if (!date) continue;
+      let s: 'pending' | 'booked' | 'past' | null = null;
+      if ((b.status === 'requested' || b.status === 'past_confirmation') &&
+          !isExpiredRequest(b.status, b.createdAt, date, b.slotStartTime, b.slotEndTime)) s = 'pending';
+      else if (b.status === 'confirmed' && !b.isCompleted) s = 'booked';
+      else if (b.status === 'completed' || b.isCompleted || b.status === 'cancelled' || b.status === 'declined') s = 'past';
+      if (!s) continue;
+      const cur = winner.get(date);
+      if (!cur || rank[s] > rank[cur]) winner.set(date, s);
+    }
+    return nights.map((date) => ({ date, state: winner.get(date) ?? ('none' as const) }));
+  }, [bookings, dateOf]);
+
+  const [selected, setSelected] = useState<string | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
+  const toggleDay = (date: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelected((cur) => (cur === date ? null : date));
+  };
+
+  const panelDateLabel = useMemo(() => {
+    if (!selected) return '';
+    const d = new Date(selected + 'T00:00:00');
+    return `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'long' })}`;
+  }, [selected]);
+
+  const panelGigs = useMemo(() => {
+    if (!selected) return [];
+    return bookings
+      .filter((b) => !b.hiddenFromCalendar && dateOf(b) === selected && (PANEL_STATUSES.has(b.status) || b.isCompleted))
+      .map((b) => ({
+        id: b.id,
+        startTime: slots.find((s) => s.id === b.slotId)?.startTime ?? b.slotStartTime ?? '',
+        name: b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, allVenues.find((v) => v.id === b.venueId)?.name),
+        shown: displayStatus(b.status, b.createdAt, selected, b.slotStartTime, b.slotEndTime),
+      }))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [selected, bookings, slots, allVenues, dateOf]);
+
+  // ── "Needs your reply": live requests awaiting the artist's confirm/decline ───────────
+  const needsReply = useMemo(() => bookings
+    .filter((b) => !b.isArtistCreated && !b.hiddenFromCalendar
+      && (b.status === 'requested' || b.status === 'past_confirmation')
+      && !isExpiredRequest(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime))
+    .map((b) => {
+      const slot = slots.find((s) => s.id === b.slotId);
+      const venue = allVenues.find((v) => v.id === b.venueId) ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+      return {
+        ...b,
+        venue,
+        resolvedDate: slot?.date ?? b.slotDate,
+        resolvedStart: slot?.startTime ?? b.slotStartTime,
+        resolvedEnd: slot?.endTime ?? b.slotEndTime,
+        resolvedVenueName: venue?.name ?? b.venueName ?? 'Unknown Venue',
+        resolvedVenueType: venue?.venueType ?? b.venueType ?? '',
+      };
+    })
+    .sort((a, b) => (a.resolvedDate ?? '') < (b.resolvedDate ?? '') ? -1 : 1),
+    [bookings, slots, allVenues]
+  );
+
+  // Confirm/decline logic — mirrors app/(artist)/pending-requests.tsx so the inline cards
+  // behave identically to that screen.
+  const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined', bookingId: string, venueName: string, date: string) => {
+    const artistName = currentUser?.fullName ?? 'The artist';
+    const titles = { booking_confirmed: 'Gig Confirmed', booking_declined: 'Gig Declined' } as const;
+    const verbs = { booking_confirmed: 'accepted', booking_declined: 'declined' } as const;
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: managerId,
+      type,
+      title: titles[type],
+      body: `${firstName(artistName, 'An artist')} ${verbs[type]} ${venueName}, ${date}`,
+      isRead: false,
+      relatedId: bookingId,
+      relatedType: 'booking',
+      createdAt: new Date().toISOString(),
+    });
+  };
+  const markRelatedNotificationsRead = (bookingId: string) => {
+    allNotifications
+      .filter((n) => n.userId === currentUser?.id && !n.isRead && n.relatedId === bookingId && n.relatedType === 'booking')
+      .forEach((n) => markAsRead(n.id));
+  };
+  const handleConfirm = (item: (typeof needsReply)[number]) => {
+    const isPastConfirmation = item.status === 'past_confirmation' ||
+      (item.status === 'requested' && !!item.resolvedDate && isPastEnd(item.resolvedDate, item.resolvedStart, item.resolvedEnd));
+    Alert.alert(
+      isPastConfirmation ? 'Confirm Completed Gig' : 'Confirm Booking',
+      isPastConfirmation ? `Confirm that you played this gig at ${item.resolvedVenueName}?` : `Confirm your booking at ${item.resolvedVenueName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: () => {
+          const now = new Date().toISOString();
+          if (isPastConfirmation) {
+            updateBookingStatus(item.id, 'completed', { isCompleted: true, confirmedAt: now, updatedAt: now, artistRespondedFromRequests: true });
+            syncBookingStatus(item.id, 'completed', { isCompleted: true, confirmedAt: now });
+          } else {
+            updateBookingStatus(item.id, 'confirmed', { confirmedAt: now, artistRespondedFromRequests: true });
+            syncBookingStatus(item.id, 'confirmed', { confirmedAt: now });
+          }
+          markRelatedNotificationsRead(item.id);
+          notifyManager(item.managerId, 'booking_confirmed', item.id, item.resolvedVenueName, item.resolvedDate ? formatDate(item.resolvedDate) : '');
+        } },
+      ]
+    );
+  };
+  const handleDecline = (item: (typeof needsReply)[number]) => {
+    const isPastConfirmation = item.status === 'past_confirmation' ||
+      (item.status === 'requested' && !!item.resolvedDate && isPastEnd(item.resolvedDate, item.resolvedStart, item.resolvedEnd));
+    Alert.alert(
+      isPastConfirmation ? 'Decline Completed Gig' : 'Decline Booking',
+      isPastConfirmation ? `Confirm that you did NOT play this gig at ${item.resolvedVenueName}?` : `Decline your booking at ${item.resolvedVenueName}? This cannot be undone.`,
+      [
+        { text: 'Keep', style: 'cancel' },
+        { text: 'Decline', style: 'destructive', onPress: () => {
+          updateBookingStatus(item.id, 'declined', { updatedAt: new Date().toISOString(), artistRespondedFromRequests: true });
+          hideFromCalendar(item.id);
+          syncBookingStatus(item.id, 'declined', { hiddenFromCalendar: true });
+          markRelatedNotificationsRead(item.id);
+          notifyManager(item.managerId, 'booking_declined', item.id, item.resolvedVenueName, item.resolvedDate ? formatDate(item.resolvedDate) : '');
+        } },
+      ]
+    );
+  };
+
+  const stripFill = (state: string) =>
+    state === 'pending' ? STATUS_COLORS.pending
+    : state === 'booked' ? STATUS_COLORS.confirmed
+    : state === 'past' ? STATUS_COLORS.completed
+    : colors.background;
+
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Wordmark size={26} />
-          </View>
-          <View style={styles.headerRight}>
-            <Pressable
-              style={styles.notifBtn}
-              onPress={() => router.push('/(artist)/add-block' as Href)}
-              hitSlop={6}
-            >
-              <MaterialIcons name="add" size={26} color={colors.primary} />
-            </Pressable>
-            <Pressable
-              style={styles.notifBtn}
-              onPress={() => router.push('/(artist)/notifications' as Href)}
-            >
-              <MaterialIcons name="notifications" size={22} color={colors.foreground} />
-              {unreadCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unreadCount}</Text>
-                </View>
+      {/* Frozen header — "Overview" + legend + notifications, stays put while content scrolls. */}
+      <View style={styles.header}>
+        <View style={styles.overviewHead}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
+          <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
+            <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+          </Pressable>
+        </View>
+        <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
+          <MaterialIcons name="notifications" size={22} color={colors.foreground} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
+          )}
+        </Pressable>
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
+        {/* Overview strip — one horizontal row of the next 31 days, colored by status. */}
+        <View style={styles.strip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysScroll}>
+            <View>
+              <View style={styles.stripHeaderRow}>
+                {stripDays.map(({ date }) => (
+                  <View key={date} style={styles.dayCol}>
+                    <Text style={[styles.stripDow, { color: colors.muted }]}>
+                      {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.cellsRow}>
+                {stripDays.map(({ date, state }) => {
+                  const isSel = selected === date;
+                  const numColor = state === 'none' ? colors.muted : '#fff';
+                  return (
+                    <View key={date} style={styles.dayCol}>
+                      <Pressable style={({ pressed }) => [styles.cellPress, { opacity: pressed ? 0.5 : 1 }]} onPress={() => toggleDay(date)}>
+                        <View style={[styles.cellRingWrap, isSel && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 12 }]}>
+                          <View style={[styles.cellBox, { backgroundColor: stripFill(state) }]}>
+                            <Text style={[styles.cellNum, { color: numColor }]}>
+                              {new Date(date + 'T00:00:00').getDate()}
+                            </Text>
+                          </View>
+                        </View>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Inline panel — the selected day's gigs (time · venue · status). */}
+          {selected && (
+            <View style={[styles.inlinePanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.inlinePanelHead}>
+                <Text style={[styles.inlinePanelDate, { color: colors.foreground }]}>{panelDateLabel}</Text>
+                <Text style={[styles.inlinePanelCount, { color: colors.muted }]}>{panelGigs.length} gig{panelGigs.length === 1 ? '' : 's'}</Text>
+              </View>
+              <View style={[styles.inlinePanelDivider, { backgroundColor: colors.border }]} />
+              {panelGigs.length === 0 ? (
+                <Text style={[styles.inlinePanelEmpty, { color: colors.muted }]}>No gigs on this day.</Text>
+              ) : (
+                panelGigs.map((g) => (
+                  <Pressable key={g.id} style={({ pressed }) => [styles.inlineRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as Href)}>
+                    <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{g.startTime ? fmtTime(g.startTime) : ''}</Text>
+                    <Text style={[styles.inlineName, { color: colors.foreground }]} numberOfLines={1}>{g.name}</Text>
+                    <StatusBadge status={g.shown as any} />
+                  </Pressable>
+                ))
               )}
-            </Pressable>
-          </View>
+            </View>
+          )}
         </View>
 
-        {/* Summary — inline stat row, no boxes.
-            STATUS_COLORS, not theme tokens: these tiles label the same statuses as the
-            badges below them, so they must move together. */}
-        <StatRow
-          items={[
-            { value: confirmedCount, label: 'Confirmed', color: STATUS_COLORS.confirmed, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
-            { value: pendingCount, label: 'Pending', color: STATUS_COLORS.pending, onPress: () => router.push('/(artist)/pending-requests' as Href) },
-            { value: completedBookings.length, label: 'Completed', color: STATUS_COLORS.completed, onPress: () => router.push('/(artist)/completed-gigs' as Href) },
-          ]}
-        />
+        {/* Needs your reply — only when there are live requests to answer. */}
+        {needsReply.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.replyHead}>
+              <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>NEEDS YOUR REPLY</Text>
+              <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
+            </View>
+            {needsReply.map((item) => (
+              <View key={item.id} style={styles.replyCard}>
+                <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                <View style={styles.replyInfo}>
+                  <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                  <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                    {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
+                  </Text>
+                </View>
+                <View style={styles.replyActions}>
+                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
+                    <MaterialIcons name="close" size={20} color={colors.muted} />
+                  </Pressable>
+                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
+                    <MaterialIcons name="check" size={20} color="#fff" />
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Stats — Booked / Pending / Completed. */}
+        <View style={styles.statsWrap}>
+          <StatRow
+            items={[
+              { value: confirmedCount, label: 'Booked', color: STATUS_COLORS.confirmed, onPress: () => router.push('/(artist)/confirmed-gigs' as Href) },
+              { value: pendingCount, label: 'Pending', color: STATUS_COLORS.pending, onPress: () => router.push('/(artist)/pending-requests' as Href) },
+              { value: completedBookings.length, label: 'Completed', color: STATUS_COLORS.completed, onPress: () => router.push('/(artist)/completed-gigs' as Href) },
+            ]}
+          />
+        </View>
         <Divider full />
 
         {/* Bookings */}
@@ -368,6 +544,25 @@ export default function DJHomeScreen() {
 
       </ScrollView>
 
+      {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
+      <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
+        <Pressable style={styles.legendBackdrop} onPress={() => setShowLegend(false)}>
+          <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
+            {[
+              { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
+              { label: 'Pending', swatch: { backgroundColor: STATUS_COLORS.pending } },
+              { label: 'Completed', swatch: { backgroundColor: STATUS_COLORS.completed } },
+            ].map((row) => (
+              <View key={row.label} style={styles.legendCardRow}>
+                <View style={[styles.legendSwatch, row.swatch]} />
+                <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
       {/* Bookings venue filter popup */}
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
@@ -397,78 +592,75 @@ export default function DJHomeScreen() {
   );
 }
 
-function SummaryCard({ label, value, color, colors, onPress }: {
-  label: string; value: number; color: string;
-  colors: ReturnType<typeof import('@/hooks/use-colors').useColors>;
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed && onPress ? 0.75 : 1 }]}
-      onPress={onPress}
-    >
-      <Text style={[styles.summaryValue, { color }]}>{value}</Text>
-      <Text style={[styles.summaryLabel, { color: colors.muted }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-  headerLogo: { width: 24, height: 44 },
-  greeting: { fontSize: 13, marginBottom: 2 },
-  name: { fontSize: 22, fontWeight: '800' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  summaryRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  summaryCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 16, alignItems: 'center', gap: 4 },
-  summaryValue: { fontSize: 28, fontWeight: '800', fontFamily: fonts.bodyBold },
-  summaryLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  pendingBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 24 },
-  pendingBannerText: { flex: 1, fontSize: 13, fontWeight: '600' },
-  pendingBannerAction: { fontSize: 13, fontWeight: '700' },
+  sectionTitle: { fontSize: 22, fontWeight: '700' },
+  overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  overviewInfo: { padding: 2 },
+
+  // Overview strip
+  strip: { marginBottom: 4 },
+  daysScroll: { paddingRight: 4 },
+  stripHeaderRow: { flexDirection: 'row', height: 24, marginBottom: 6 },
+  cellsRow: { flexDirection: 'row', height: 40, marginBottom: 8 },
+  dayCol: { width: 44, alignItems: 'center', justifyContent: 'center' },
+  stripDow: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  cellPress: { alignItems: 'center', justifyContent: 'center' },
+  cellRingWrap: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  cellBox: { width: '100%', aspectRatio: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  cellNum: { fontSize: 14, fontWeight: '600' },
+
+  // Inline day panel
+  inlinePanel: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, marginTop: 4, marginBottom: 8 },
+  inlinePanelHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  inlinePanelDate: { fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.3 },
+  inlinePanelCount: { fontSize: 13, fontWeight: '600' },
+  inlinePanelDivider: { height: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 4 },
+  inlinePanelEmpty: { fontSize: 14, paddingVertical: 10 },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
+  inlineTime: { fontSize: 13, fontWeight: '600', width: 66 },
+  inlineName: { fontSize: 15, fontWeight: '600', flex: 1 },
+
+  // Needs your reply
+  replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  replyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  replyLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
+  replyCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  replyThumb: { width: 48, height: 48, borderRadius: 14 },
+  replyInfo: { flex: 1 },
+  replyName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  replySub: { fontSize: 13, fontWeight: '500' },
+  replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  replyBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+
+  statsWrap: { marginTop: 20 },
   section: { marginTop: 24 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   gigCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
-  gigPhoto: { width: 48, height: 48, borderRadius: 24 },
   gigInfo: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
+  gigVenue: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigSlot: { fontSize: 13, fontWeight: '500' },
   invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
   invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
+
+  // Bookings venue filter popup
   filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
   filterSheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, padding: 18, gap: 4 },
   filterTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
   filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 4 },
-  filterRowDot: { fontFamily: fonts.displayBold, fontSize: 30, lineHeight: 30, width: 18, transform: [{ translateY: -8 }] },
-  filterRowMark: { width: 11, height: 11, borderRadius: 5.5, marginRight: 6 },
   filterRowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
-  filterCheck: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  gigVenue: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
-  gigSlot: { fontSize: 13, fontWeight: '500' },
-  statusDot: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 40, marginLeft: 6, transform: [{ translateY: -10 }] },
-  statusMark: { width: 11, height: 11, borderRadius: 5.5, marginLeft: 6 },
-  // Completed Gigs section — mirrors manager dashboard styles
-  collapseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, marginBottom: 12 },
-  collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  collapseTitle: { fontSize: 16, fontWeight: '700' },
-  collapseBadge: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-  collapseBadgeText: { fontSize: 12, fontWeight: '600' },
-  monthTable: {},
-  monthRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 0.5 },
-  monthLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
-  monthBadge: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 3 },
-  monthBadgeText: { fontSize: 13, fontWeight: '700' },
-  bookingSubRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 0.5 },
-  bookingSubLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  bookingSubAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  bookingSubInfo: { flex: 1 },
-  bookingSubName: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
-  bookingSubDetail: { fontSize: 12 },
-  venueChipRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 2 },
-  venueChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6 },
-  venueChipText: { fontSize: 13, fontWeight: '600' },
+
+  // Legend popover
+  legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  legendCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, minWidth: 220, gap: 12 },
+  legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendCardText: { fontSize: 14 },
 });
