@@ -1,17 +1,16 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert, Linking } from '@/lib/rn';
 import { LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { Divider, StatRow } from '@/components/ui/card-free';
 import { MaterialIcons } from '@expo/vector-icons';
-import { SectionHeader } from '@/components/ui/section-header';
 import { fonts } from '@/lib/fonts';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
-import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
+import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/lib/supabase';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -19,15 +18,7 @@ import { fetchPrivateEventBookings } from '@/lib/private-events';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, isExpiredRequest, displayStatus, firstName, nowLocalDateTimeStr, monthKey, monthLabel, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
-import { MonthSeparator } from '@/components/ui/month-separator';
-
-/**
- * Sentinel for the Bookings venue filter. Private events live in availability_blocks
- * and are reconstructed with an empty venueId, so they match no venue row — they need
- * their own option rather than a venue id. Not a real venue id; never persisted.
- */
-const PRIVATE_GIGS_FILTER = '__private_gigs__';
+import { isPastEnd, isExpiredRequest, displayStatus, firstName, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
 
 // Statuses the Overview panel and per-day strip consider "real" gigs for this artist.
 const PANEL_STATUSES = new Set(['requested', 'past_confirmation', 'confirmed', 'completed', 'cancelled', 'declined']);
@@ -166,42 +157,19 @@ export default function DJHomeScreen() {
     });
   }, [bookings, slots, allVenues, allInvoices, currentUser?.id]);
 
-  // Venue filter for the Bookings section.
-  const [bookingVenueId, setBookingVenueId] = useState<string | null>(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-
-  const bookingVenues = useMemo(() => {
-    const seen = new Map<string, string>();
-    dashboardBookings.forEach((b) => {
-      if (b.venueId && !b.isArtistCreated) seen.set(b.venueId, b.venue?.name ?? b.venueName ?? 'Unknown Venue');
-    });
-    return Array.from(seen, ([id, name]) => ({ id, name }));
-  }, [dashboardBookings]);
-
-  const dashboardBookingsPreviewFiltered = useMemo(() => {
+  // Bookings list — active (pending/confirmed) gigs, grouped by date under a header
+  // ("TODAY" / "TOMORROW" / "FRI 14 AUG"), mirroring the manager dashboard.
+  const bookingsByDate = useMemo(() => {
     const active = dashboardBookings.filter((b) => !b.isDone);
-    const scoped =
-      bookingVenueId === PRIVATE_GIGS_FILTER ? active.filter((b) => b.isArtistCreated)
-      : bookingVenueId ? active.filter((b) => b.venueId === bookingVenueId)
-      : active;
-    return scoped;
-  }, [dashboardBookings, bookingVenueId]);
-
-  const hasPrivateGigs = useMemo(
-    () => dashboardBookings.some((b) => b.isArtistCreated),
-    [dashboardBookings]
-  );
-
-  // Month headers for the Bookings window — only when the visible rows cross months.
-  const bookingsSpanMonths = useMemo(() => {
-    const months = new Set(
-      dashboardBookingsPreviewFiltered
-        .map((b) => b.slot?.date ?? b.slotDate)
-        .filter(Boolean)
-        .map((d) => monthKey(d as string))
-    );
-    return months.size > 1;
-  }, [dashboardBookingsPreviewFiltered]);
+    const map = new Map<string, typeof active>();
+    const order: string[] = [];
+    for (const b of active) {
+      const d = b.slot?.date ?? b.slotDate ?? '';
+      if (!map.has(d)) { map.set(d, []); order.push(d); }
+      map.get(d)!.push(b);
+    }
+    return order.map((d) => ({ date: d, gigs: map.get(d)! }));
+  }, [dashboardBookings]);
 
   const pendingCount = useMemo(() => bookings.filter((b) => b.status === 'requested' || b.status === 'past_confirmation').length, [bookings]);
   const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
@@ -380,6 +348,66 @@ export default function DJHomeScreen() {
     : state === 'cancelled' ? colors.cancelled
     : colors.background;
 
+  // "TODAY" / "TOMORROW" / "FRI 14 AUG" — the Bookings date-group header.
+  const formatDateHeader = (dateStr: string) => {
+    if (!dateStr) return '';
+    const today = todayLocalStr();
+    if (dateStr === today) return 'TODAY';
+    if (dateStr === addDaysStr(today, 1)) return 'TOMORROW';
+    const d = new Date(dateStr + 'T00:00:00');
+    const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const mon = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    return `${wd} ${d.getDate()} ${mon}`;
+  };
+
+  // Open the venue in Google Maps (directions). Prefers saved coordinates, else the address
+  // or venue name. Mirrors app/(artist)/booking-detail.tsx.
+  const openVenueMaps = (b: (typeof dashboardBookings)[number]) => {
+    const venue = allVenues.find((v) => v.id === b.venueId);
+    const loc = venue?.googleMapsLocation;
+    const url = (loc?.lat && loc?.lng)
+      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || b.venueName || '')}`;
+    Linking.openURL(url);
+  };
+
+  const renderDateGroup = ({ date, gigs }: { date: string; gigs: (typeof dashboardBookings) }) => (
+    <View key={date}>
+      <View style={styles.dateHeader}>
+        {(() => {
+          const label = formatDateHeader(date);
+          const isSoon = label === 'TODAY' || label === 'TOMORROW';
+          return <Text style={[styles.dateHeaderLabel, { color: isSoon ? colors.foreground : colors.muted }]}>{label}</Text>;
+        })()}
+        <View style={[styles.dateHeaderLine, { backgroundColor: colors.border }]} />
+      </View>
+      {gigs.map((b) => {
+        const venueName = b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, b.venue?.name);
+        const time = (b.slotStartTime || b.slot?.startTime)
+          ? `${fmtTime(b.slot?.startTime ?? b.slotStartTime ?? '')}–${fmtTime(b.slot?.endTime ?? b.slotEndTime ?? '')}`
+          : '';
+        return (
+          <Pressable
+            key={b.id}
+            style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
+          >
+            <Image source={venueImageFor(b.venue, b.venueType)} style={styles.gigVenueAvatar} resizeMode="cover" />
+            <View style={styles.gigInfo}>
+              <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
+              <Text style={[styles.gigTime, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
+            </View>
+            {!b.isArtistCreated && (
+              <Pressable hitSlop={8} style={({ pressed }) => [styles.mapsBtn, { opacity: pressed ? 0.6 : 1 }]} onPress={() => openVenueMaps(b)}>
+                <MaterialIcons name="place" size={22} color={colors.primary} />
+              </Pressable>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
   return (
     <ScreenContainer>
       {/* Frozen header — "Overview" + legend + notifications, stays put while content scrolls. */}
@@ -507,60 +535,16 @@ export default function DJHomeScreen() {
         </View>
         <Divider full />
 
-        {/* Bookings */}
+        {/* Bookings — date-grouped (TODAY / FRI 14 AUG), venue avatar + name + time, maps on right. */}
         <View style={styles.section}>
-          <SectionHeader
-            title="Bookings"
-            titleSize={24}
-            rightAccessory={
-              <Pressable onPress={() => setFilterOpen(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <MaterialIcons name="tune" size={20} color={bookingVenueId ? colors.primary : colors.muted} />
-              </Pressable>
-            }
-          />
-          {dashboardBookingsPreviewFiltered.length === 0 ? (
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
+          {bookingsByDate.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
             </View>
           ) : (
-            dashboardBookingsPreviewFiltered.map((booking, idx) => {
-              const bDate = booking.slot?.date ?? booking.slotDate;
-              const prev = idx > 0 ? dashboardBookingsPreviewFiltered[idx - 1] : undefined;
-              const prevDate = prev ? (prev.slot?.date ?? prev.slotDate) : undefined;
-              const showMonth = bookingsSpanMonths && !!bDate &&
-                (!prevDate || monthKey(bDate) !== monthKey(prevDate));
-              return (
-              <View key={booking.id}>
-              {showMonth && (
-                <MonthSeparator label={monthLabel(bDate!)} color={colors.muted} borderColor={colors.border} />
-              )}
-              <Pressable
-                style={({ pressed }) => [styles.gigCard, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push(('/(artist)/booking-detail?id=' + booking.id) as Href)}
-              >
-                <DateBadge dateStr={bDate} color={booking.dotColor} />
-                <View style={styles.gigInfo}>
-                  <View style={styles.titleRow}>
-                    <Text style={[styles.gigVenue, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
-                      {booking.isArtistCreated ? (booking.slotName ?? 'Private Event') : bookingVenueName(booking, booking.venue?.name)}
-                    </Text>
-                  </View>
-                  <Text style={[styles.gigSlot, { color: colors.muted }]} numberOfLines={1}>
-                    {booking.slotStartTime || booking.slot?.startTime
-                      ? `${fmtTime(booking.slot?.startTime ?? booking.slotStartTime ?? '')}–${fmtTime(booking.slot?.endTime ?? booking.slotEndTime ?? '')}`
-                      : ''}
-                  </Text>
-                </View>
-                {booking.isInvoiced && (
-                  <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
-                    <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-                  </View>
-                )}
-              </Pressable>
-              </View>
-              );
-            })
+            <View>{bookingsByDate.map(renderDateGroup)}</View>
           )}
         </View>
 
@@ -582,32 +566,6 @@ export default function DJHomeScreen() {
               </View>
             ))}
           </View>
-        </Pressable>
-      </Modal>
-
-      {/* Bookings venue filter popup */}
-      <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
-        <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
-          <Pressable style={[styles.filterSheet, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => {}}>
-            <Text style={[styles.filterTitle, { color: colors.foreground }]}>Filter by venue</Text>
-            {[
-              { id: null as string | null, name: 'All venues' },
-              ...bookingVenues,
-              ...(hasPrivateGigs ? [{ id: PRIVATE_GIGS_FILTER as string | null, name: 'Private gigs' }] : []),
-            ].map((v) => {
-              const active = bookingVenueId === v.id;
-              return (
-                <Pressable
-                  key={v.id ?? 'all'}
-                  style={({ pressed }) => [styles.filterRow, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={() => { setBookingVenueId(v.id); setFilterOpen(false); }}
-                >
-                  <Text style={[styles.filterRowLabel, { color: colors.foreground, flex: 1 }]} numberOfLines={1}>{v.name}</Text>
-                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
-                </Pressable>
-              );
-            })}
-          </Pressable>
         </Pressable>
       </Modal>
     </ScreenContainer>
@@ -666,20 +624,17 @@ const styles = StyleSheet.create({
   section: { marginTop: 24 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
-  gigCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 2, gap: 12 },
-  gigInfo: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 },
-  gigVenue: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
-  gigSlot: { fontSize: 13, fontWeight: '500' },
-  invoicedChip: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexShrink: 0, marginLeft: 6 },
-  invoicedChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
 
-  // Bookings venue filter popup
-  filterOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  filterSheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, padding: 18, gap: 4 },
-  filterTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 4 },
-  filterRowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
+  // Bookings — date-grouped rows (venue avatar + name + time + maps)
+  dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
+  dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
+  gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  gigVenueAvatar: { width: 48, height: 48, borderRadius: 14 },
+  gigInfo: { flex: 1 },
+  gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigTime: { fontSize: 13, fontWeight: '500' },
+  mapsBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 
   // Legend popover
   legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
