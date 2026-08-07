@@ -85,16 +85,22 @@ export default function AddSlotScreen() {
   const [createdSlotId, setCreatedSlotId] = useState<string | null>(null);
 
   const assignedRef = useRef(false);
+  const slotIdRef = useRef<string | null>(null);
+  const slotPromiseRef = useRef<Promise<string | null> | null>(null);
   const startTimeScrollRef = useRef<ScrollView>(null);
   const endTimeScrollRef = useRef<ScrollView>(null);
 
   const isPast = isPastStart(targetDate, slotForm.startTime);
 
-  // Create the slot in the background as soon as the sheet opens.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!currentUser || !createSlotVenueId) return;
+  // Create the slot LAZILY — only when the manager actually drafts/sends an artist. Opening the
+  // sheet and tapping outside without drafting creates nothing (no transient slot on the
+  // calendar). Creates EXACTLY once: the in-flight promise is cached synchronously (slotPromiseRef)
+  // so two quick taps await the SAME insert instead of racing two rows into the DB.
+  const ensureSlot = (): Promise<string | null> => {
+    if (slotIdRef.current) return Promise.resolve(slotIdRef.current);
+    if (slotPromiseRef.current) return slotPromiseRef.current;
+    if (!currentUser || !createSlotVenueId) return Promise.resolve(null);
+    const p = (async (): Promise<string | null> => {
       const { data, error } = await supabase.from('slots').insert({
         venue_id: createSlotVenueId,
         manager_id: currentUser.id,
@@ -104,16 +110,18 @@ export default function AddSlotScreen() {
         end_time: slotForm.endTime,
         status: 'open',
       }).select().single();
-      if (cancelled || error || !data) { if (error) console.warn('bg slot create:', error.message); return; }
+      if (error || !data) { if (error) console.warn('slot create:', error.message); slotPromiseRef.current = null; return null; }
+      slotIdRef.current = data.id;
       addSlot({
         id: data.id, venueId: createSlotVenueId, name: slotForm.name, date: targetDate,
         startTime: slotForm.startTime, endTime: slotForm.endTime, createdAt: new Date().toISOString(),
       } as Slot);
       setCreatedSlotId(data.id);
+      return data.id;
     })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    slotPromiseRef.current = p;
+    return p;
+  };
 
   // Keep the background slot in sync when venue/date/time/name change.
   useEffect(() => {
@@ -280,22 +288,22 @@ export default function AddSlotScreen() {
     .filter((x) => !!x.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
 
-  const sendPastGigRequest = async (artistId: string) => {
-    if (!currentUser || !createdSlotId) return;
+  const sendPastGigRequest = async (artistId: string, slotId: string) => {
+    if (!currentUser || !slotId) return;
     const venueName = venues.find((v) => v.id === createSlotVenueId)?.name;
     const now = new Date().toISOString();
     const bookingId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
     });
     const booking: Booking = {
-      id: bookingId, slotId: createdSlotId, venueId: createSlotVenueId, artistId, managerId: currentUser.id,
+      id: bookingId, slotId, venueId: createSlotVenueId, artistId, managerId: currentUser.id,
       status: 'requested', isCompleted: false, createdAt: now, updatedAt: now,
       slotDate: targetDate, slotName: slotForm.name, slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime, venueName,
     };
     addBooking(booking);
     // AWAITED on purpose — see the delete-on-close effect and the calendar's past-slot sweep.
     const { error } = await supabase.from('bookings').insert({
-      id: bookingId, slot_id: createdSlotId, venue_id: createSlotVenueId, artist_id: artistId, manager_id: currentUser.id,
+      id: bookingId, slot_id: slotId, venue_id: createSlotVenueId, artist_id: artistId, manager_id: currentUser.id,
       status: 'requested', is_completed: false, slot_date: targetDate, slot_name: slotForm.name,
       slot_start_time: slotForm.startTime, slot_end_time: slotForm.endTime, venue_name: venueName ?? null,
       venue_type: getVenueById(createSlotVenueId)?.venueType ?? null,
@@ -312,14 +320,16 @@ export default function AddSlotScreen() {
   // Draft -> booking + Supabase row + notification, the same sequence the calendar's
   // send-drafts action runs (shares persistGigRequestBooking so the row can't drift).
   const sendNow = async (artistId: string) => {
-    if (!currentUser || !createdSlotId) return;
-    if (!draftedIds.has(artistId)) setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
+    if (!currentUser) return;
+    const slotId = await ensureSlot();
+    if (!slotId) return;
+    if (!draftedIds.has(artistId)) setDraft(slotId, createSlotVenueId, artistId, currentUser.id);
     assignedRef.current = true;
     const venue = venues.find((v) => v.id === createSlotVenueId);
-    const newBookingId = sendDraftByDJ(createdSlotId, artistId, currentUser.id, addBooking);
+    const newBookingId = sendDraftByDJ(slotId, artistId, currentUser.id, addBooking);
     if (!newBookingId) return;
     await persistGigRequestBooking({
-      bookingId: newBookingId, slotId: createdSlotId, venueId: createSlotVenueId, artistId,
+      bookingId: newBookingId, slotId, venueId: createSlotVenueId, artistId,
       managerId: currentUser.id, slotDate: targetDate, slotName: slotForm.name,
       slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime,
       venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
@@ -352,8 +362,16 @@ export default function AddSlotScreen() {
     );
   };
 
-  const handleTapArtist = (artistId: string) => {
-    if (!currentUser || !createdSlotId) return;
+  const handleTapArtist = async (artistId: string) => {
+    if (!currentUser) return;
+    // Tapping an already-drafted artist toggles them off — the slot already exists, so no
+    // creation needed. Every other path drafts/sends, which creates the slot on demand.
+    if (createdSlotId && draftedIds.has(artistId)) {
+      removeDraftByDJ(createdSlotId, artistId);
+      Keyboard.dismiss();
+      return;
+    }
+    if (bookedIds.has(artistId)) return;   // already requested — non-interactive
     if (isPast) {
       const name = getArtistUser(artistId)?.fullName ?? 'this artist';
       Alert.alert(
@@ -362,27 +380,23 @@ export default function AddSlotScreen() {
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Send Request', onPress: async () => {
+            const slotId = await ensureSlot();       // create the slot ONLY on confirm
+            if (!slotId) return;
             assignedRef.current = true;              // set FIRST: the unmount cleanup must never race this
             Keyboard.dismiss();
-            await sendPastGigRequest(artistId);      // row is in Supabase before we leave
+            await sendPastGigRequest(artistId, slotId);   // row is in Supabase before we leave
             router.back();
           } },
         ]
       );
       return;
     }
-    // Tapping an already-drafted artist toggles them off; tapping a new one drafts them.
-    // Either way we STAY on the screen so the manager can pick more than one artist, then
-    // send in place (the row's send icon) or close the sheet to keep them as drafts to send
-    // from the calendar later. (Already-requested artists are non-interactive — see render.)
-    if (bookedIds.has(artistId)) return;
-    if (draftedIds.has(artistId)) {
-      removeDraftByDJ(createdSlotId, artistId);
-      Keyboard.dismiss();
-      return;
-    }
+    // New artist → create the slot (once) and draft them. We STAY on the screen so the manager
+    // can pick more than one, then send in place (the row's send icon) or close to keep drafts.
+    const slotId = await ensureSlot();
+    if (!slotId) return;
     assignedRef.current = true;   // the unmount cleanup must not delete the just-created slot
-    setDraft(createdSlotId, createSlotVenueId, artistId, currentUser.id);
+    setDraft(slotId, createSlotVenueId, artistId, currentUser.id);
     Keyboard.dismiss();
   };
 
