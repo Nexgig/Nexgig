@@ -168,6 +168,9 @@ export default function ManagerDashboard() {
     () => selected ? (venues.find((v) => v.id === selected.venueId)?.name ?? '') : '',
     [selected, venues]
   );
+  // With a single venue the grid is one row, so the date number goes INSIDE each square (the
+  // header then shows only the weekday letter). With 2+ venues the number sits under the letter.
+  const singleVenue = coverage.rows.length === 1;
   // Slot-based, mirroring the calendar day list: for the selected venue+night, each slot shows its
   // bookings, its drafts, or a "Needs artist" row when empty — so an empty (coral-dashed) square
   // still lists its slot rather than reading as "nothing".
@@ -450,9 +453,11 @@ export default function ManagerDashboard() {
                         <Text style={[styles.stripDow, { color: isToday ? colors.primary : colors.muted }]}>
                           {d.toLocaleDateString('en-US', { weekday: 'narrow' })}
                         </Text>
-                        <Text style={[styles.stripDayNum, { color: isToday ? colors.primary : colors.foreground }]}>
-                          {d.getDate()}
-                        </Text>
+                        {!singleVenue && (
+                          <Text style={[styles.stripDayNum, { color: isToday ? colors.primary : colors.foreground }]}>
+                            {d.getDate()}
+                          </Text>
+                        )}
                       </View>
                     );
                   })}
@@ -463,6 +468,14 @@ export default function ManagerDashboard() {
                   <View key={r.venue.id} style={styles.cellsRow}>
                     {r.cells.map((state, i) => {
                       const isSel = selected?.venueId === r.venue.id && selected?.date === coverage.nights[i];
+                      const isToday = coverage.nights[i] === coverage.nights[0];
+                      const filled = state === 'cancelled' || state === 'sent' || state === 'booked';
+                      // In single-venue mode the square carries the date number; colour it for
+                      // contrast on the fill, coral for today/unfilled, muted on an empty day.
+                      const numColor = filled ? '#fff'
+                        : (isToday || state === 'empty') ? colors.primary
+                        : state === 'drafted' ? colors.foreground
+                        : colors.muted;
                       return (
                         <View key={i} style={styles.dayCol}>
                           <Pressable
@@ -482,7 +495,13 @@ export default function ManagerDashboard() {
                                     : state === 'booked' ? { backgroundColor: STATUS_COLORS.confirmed }
                                     : { backgroundColor: colors.background },   // no slot at all — blends into the page
                                 ]}
-                              />
+                              >
+                                {singleVenue && (
+                                  <Text style={[styles.cellNum, { color: numColor }]}>
+                                    {new Date(coverage.nights[i] + 'T00:00:00').getDate()}
+                                  </Text>
+                                )}
+                              </View>
                             </View>
                           </Pressable>
                         </View>
@@ -634,7 +653,8 @@ const styles = StyleSheet.create({
   stripDayNum: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 1 },
   cellPress: { alignItems: 'center', justifyContent: 'center' },
   cellRingWrap: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10 },
+  cellBox: { width: '100%', aspectRatio: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cellNum: { fontSize: 13, fontWeight: '600' },
   gigNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   gigName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   gigVenue: { fontSize: 13 },
