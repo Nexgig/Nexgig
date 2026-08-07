@@ -2,8 +2,9 @@ import { Tabs, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore } from '@/lib/store';
+import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useDraftStore, useSlotStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
+import { isPastStart } from '@/lib/utils';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
 
 export default function ManagerTabsLayout() {
@@ -94,6 +95,22 @@ export default function ManagerTabsLayout() {
     return invoiceSentDates.filter((d) => new Date(d).getTime() > seen).length;
   }, [invoiceSentDates, profileSeenAt]);
 
+  // ── Calendar tab badge: unsent gigs ───────────────────────────────────────
+  // Count the manager's drafts (staged, not sent) on FUTURE slots — the same set
+  // the calendar's "Send N" button sends. Filter-independent, so it's the total
+  // "you have unsent gigs" number (equals Send N when the filter is All Venues).
+  const drafts = useDraftStore((s) => s.drafts);
+  const slots = useSlotStore((s) => s.slots);
+  const draftBadge = useMemo(() => {
+    if (!currentUser?.id) return 0;
+    return drafts.filter((d) => {
+      if (d.managerId !== currentUser.id) return false;
+      const slot = slots.find((s) => s.id === d.slotId);
+      if (!slot) return false;
+      return !isPastStart(slot.date, slot.startTime);
+    }).length;
+  }, [drafts, slots, currentUser?.id]);
+
   return (
     <Tabs
       screenOptions={{
@@ -118,6 +135,7 @@ export default function ManagerTabsLayout() {
         options={{
           title: 'Calendar',
           tabBarIcon: ({ color }) => <MaterialIcons name="calendar-today" size={24} color={color} />,
+          tabBarBadge: draftBadge > 0 ? draftBadge : undefined,
         }}
       />
       <Tabs.Screen name="create-action" options={{ href: null }} />
