@@ -547,21 +547,9 @@ export default function DJAvailabilityScreen() {
     // Determine the right action icon for non-artist-created bookings
     const renderActionBtn = () => {
       if (b.isArtistCreated) {
-        // Artist-created events: show export icon if not yet exported, X cancel button
-        const isExported = exportedGigIds.has(b.id);
+        // Artist-created events: just the X to remove. (Add-to-phone-calendar export removed.)
         return (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {!isExported && Platform.OS !== 'web' && (
-              <Pressable
-                style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  exportPrivateBookingToCalendar(b);
-                }}
-              >
-                <MaterialIcons name="event" size={20} color={colors.primary} />
-              </Pressable>
-            )}
             <Pressable
               style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
               onPress={(e) => {
@@ -927,10 +915,7 @@ export default function DJAvailabilityScreen() {
               {selectedDateBlocks.map((b) => renderBlockCard(b))}
 
               {(bookingsByDate.get(selectedDate) ?? []).length === 0 && selectedDateBlocks.length === 0 && (
-                <View style={[styles.emptyDay, { borderColor: colors.border }]}>
-                  <MaterialIcons name="check-circle" size={28} color={colors.success} />
-                  <Text style={[styles.emptyDayText, { color: colors.muted }]}>Available — no gigs or blocks</Text>
-                </View>
+                <Text style={[styles.noGigsLine, { color: colors.muted }]}>No gigs on this night.</Text>
               )}
             </View>
             )}
@@ -1145,6 +1130,7 @@ const styles = StyleSheet.create({
   // Empty day
   emptyDay: { borderRadius: 14, borderWidth: 1, padding: 24, alignItems: 'center', gap: 8 },
   emptyDayText: { fontSize: 14 },
+  noGigsLine: { fontSize: 16, paddingTop: 4, paddingBottom: 4 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

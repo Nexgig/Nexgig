@@ -954,6 +954,16 @@ export default function CalendarScreen() {
     const syncFields: any = { hiddenFromManagerCalendar: true };
     if (b.cancelledByArtist) syncFields.hiddenFromCalendar = true;
     syncBookingStatus(b.id, b.status as any, syncFields);
+    // Clearing a dead booking clears the WHOLE slot — don't fall back to a "Needs artist" empty
+    // slot. Keep the slot only if something else still lives on it (another non-hidden booking or a draft).
+    if (b.slotId) {
+      const others = useBookingStore.getState().bookings.some((x) => x.slotId === b.slotId && x.id !== b.id && !x.hiddenFromManagerCalendar);
+      const hasDraft = useDraftStore.getState().drafts.some((d) => d.slotId === b.slotId);
+      if (!others && !hasDraft) {
+        deleteSlot(b.slotId);
+        supabase.from('slots').delete().eq('id', b.slotId).then(({ error }) => { if (error) console.warn('dismiss slot delete:', error.message); });
+      }
+    }
   };
 
   // Send all drafts on a slot (one confirmation, then send each). Used by the Send button on the card.

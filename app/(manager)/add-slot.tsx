@@ -83,6 +83,10 @@ export default function AddSlotScreen() {
   const [startTimeOpen, setStartTimeOpen] = useState(false);
   const [endTimeOpen, setEndTimeOpen] = useState(false);
   const [createdSlotId, setCreatedSlotId] = useState<string | null>(null);
+  // Artists the manager has TAPPED but not yet committed. Tapping only stages (local, in-memory);
+  // nothing is written until "Draft" (persist as drafts) or "Send" (send requests). Closing
+  // without either creates nothing.
+  const [stagedIds, setStagedIds] = useState<Set<string>>(new Set());
 
   const assignedRef = useRef(false);
   const slotIdRef = useRef<string | null>(null);
@@ -234,7 +238,7 @@ export default function AddSlotScreen() {
   // Once ANY artist is drafted or requested, the venue is locked. A draft/booking snapshots the
   // venue at that moment, so switching it afterwards left the slot on one venue and the booking
   // on another (calendar showed venue A, booking-detail + dashboard showed venue B).
-  const venueLocked = draftedIds.size > 0 || bookedIds.size > 0;
+  const venueLocked = stagedIds.size > 0 || draftedIds.size > 0 || bookedIds.size > 0;
 
   // Venue lineup artists with conflict info
   const lineupWithConflicts = venueAssignments
@@ -266,7 +270,7 @@ export default function AddSlotScreen() {
   const assignRows = (() => {
     const lineup = lineupWithConflicts.map((d) => {
       const state: RowState = bookedIds.has(d.artistId) ? 'requested'
-        : draftedIds.has(d.artistId) ? 'drafted'
+        : (stagedIds.has(d.artistId) || draftedIds.has(d.artistId)) ? 'drafted'
         : d.hasConflict ? 'conflict' : 'available';
       return { artistId: d.artistId, user: d.user, conflicts: d.conflicts, state };
     });
@@ -342,10 +346,10 @@ export default function AddSlotScreen() {
     });
   };
 
-  // Send every drafted artist their gig request at once (footer "Send request"). Confirmed
-  // first — sending is not undoable — then closes the sheet.
+  // Send every STAGED artist their gig request at once (header "Send N"). Confirmed first —
+  // sending is not undoable. sendNow creates the slot + draft on demand, then sends.
   const confirmSendAll = () => {
-    const ids = [...draftedIds];
+    const ids = [...stagedIds];
     if (ids.length === 0) return;
     const venueName = venues.find((v) => v.id === createSlotVenueId)?.name ?? 'this venue';
     Alert.alert(
@@ -364,15 +368,9 @@ export default function AddSlotScreen() {
 
   const handleTapArtist = async (artistId: string) => {
     if (!currentUser) return;
-    // Tapping an already-drafted artist toggles them off — the slot already exists, so no
-    // creation needed. Every other path drafts/sends, which creates the slot on demand.
-    if (createdSlotId && draftedIds.has(artistId)) {
-      removeDraftByDJ(createdSlotId, artistId);
-      Keyboard.dismiss();
-      return;
-    }
     if (bookedIds.has(artistId)) return;   // already requested — non-interactive
     if (isPast) {
+      // Past dates aren't drafted — they send a completed-gig request immediately (on confirm).
       const name = getArtistUser(artistId)?.fullName ?? 'this artist';
       Alert.alert(
         'Past Date',
@@ -391,12 +389,12 @@ export default function AddSlotScreen() {
       );
       return;
     }
-    // New artist → create the slot (once) and draft them. We STAY on the screen so the manager
-    // can pick more than one, then send in place (the row's send icon) or close to keep drafts.
-    const slotId = await ensureSlot();
-    if (!slotId) return;
-    assignedRef.current = true;   // the unmount cleanup must not delete the just-created slot
-    setDraft(slotId, createSlotVenueId, artistId, currentUser.id);
+    // Future date → just STAGE (toggle). Nothing is written until "Draft" or "Send" (below).
+    setStagedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(artistId)) next.delete(artistId); else next.add(artistId);
+      return next;
+    });
     Keyboard.dismiss();
   };
 
@@ -489,9 +487,9 @@ export default function AddSlotScreen() {
           <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
           <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>Add Slot</Text>
         </View>
-        {!isPast && draftedIds.size > 0 && (
+        {!isPast && stagedIds.size > 0 && (
           <Pressable onPress={confirmSendAll} hitSlop={8}>
-            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {draftedIds.size}</Text>
+            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {stagedIds.size}</Text>
           </Pressable>
         )}
       </View>
@@ -653,9 +651,21 @@ export default function AddSlotScreen() {
       <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
         <Pressable
           style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => { Keyboard.dismiss(); router.back(); }}
+          onPress={async () => {
+            Keyboard.dismiss();
+            // "Draft" commits the staged artists as drafts (creating the slot on demand). "Done"
+            // (nothing staged) just closes — no slot, no drafts.
+            if (currentUser && stagedIds.size > 0) {
+              const slotId = await ensureSlot();
+              if (slotId) {
+                assignedRef.current = true;
+                stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id));
+              }
+            }
+            router.back();
+          }}
         >
-          <Text style={styles.sendBtnText}>{draftedIds.size > 0 ? 'Draft' : 'Done'}</Text>
+          <Text style={styles.sendBtnText}>{stagedIds.size > 0 ? 'Draft' : 'Done'}</Text>
         </Pressable>
       </View>
     </View>

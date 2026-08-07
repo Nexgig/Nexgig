@@ -376,7 +376,15 @@ export default function DJHomeScreen() {
             style={({ pressed }) => [styles.gigRow, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
           >
-            <Image source={venueImageFor(b.venue, b.venueType)} style={styles.gigVenueAvatar} resizeMode="cover" />
+            {b.isArtistCreated ? (
+              // Private events get the same neutral date tile as the calendar (not a venue image).
+              <View style={[styles.gigPrivateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.gigPrivateShort, { color: colors.muted }]}>{new Date((date || b.slotDate || '') + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</Text>
+                <Text style={[styles.gigPrivateNum, { color: colors.foreground }]}>{new Date((date || b.slotDate || '') + 'T00:00:00').getDate()}</Text>
+              </View>
+            ) : (
+              <Image source={venueImageFor(b.venue, b.venueType)} style={styles.gigVenueAvatar} resizeMode="cover" />
+            )}
             <View style={styles.gigInfo}>
               <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
               <Text style={[styles.gigTime, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
@@ -616,6 +624,9 @@ const styles = StyleSheet.create({
   dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
   gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   gigVenueAvatar: { width: 48, height: 48, borderRadius: 14 },
+  gigPrivateTile: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  gigPrivateShort: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  gigPrivateNum: { fontSize: 18, fontFamily: fonts.bodySemibold },
   gigInfo: { flex: 1 },
   gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   gigTime: { fontSize: 13, fontWeight: '500' },
