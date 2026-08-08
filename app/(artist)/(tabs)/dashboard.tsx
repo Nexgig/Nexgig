@@ -170,9 +170,6 @@ export default function DJHomeScreen() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [dashboardBookings]);
 
-  // Booked-gigs count — shown next to the Bookings title.
-  const confirmedCount = useMemo(() => bookings.filter((b) => b.status === 'confirmed' && !b.isCompleted).length, [bookings]);
-
   // ── Overview strip: the artist's own schedule across the next 31 nights ───────────────
   // One row of days, each colored by that day's winning status (pending > booked > cancelled).
   // Completed gigs are NOT colored on the strip (only the color goes away — the booking still
@@ -391,7 +388,7 @@ export default function DJHomeScreen() {
             </View>
             {!b.isArtistCreated && (
               <Pressable hitSlop={8} style={({ pressed }) => [styles.mapsBtn, { opacity: pressed ? 0.6 : 1 }]} onPress={() => openVenueMaps(b)}>
-                <MaterialIcons name="place" size={22} color={colors.primary} />
+                <MaterialIcons name="place" size={22} color={colors.muted} />
               </Pressable>
             )}
           </Pressable>
@@ -521,11 +518,6 @@ export default function DJHomeScreen() {
         <View style={styles.section}>
           <View style={styles.bookingsHead}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
-            {confirmedCount > 0 && (
-              <View style={[styles.bookingsCount, { backgroundColor: colors.foreground }]}>
-                <Text style={[styles.bookingsCountText, { color: colors.background }]}>{confirmedCount}</Text>
-              </View>
-            )}
           </View>
           {bookingsByDate.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -617,8 +609,6 @@ const styles = StyleSheet.create({
 
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bookingsCount: { minWidth: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7 },
-  bookingsCountText: { fontSize: 13, fontWeight: '700' },
   dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
