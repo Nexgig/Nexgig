@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   // vertical position as the Dashboard/Calendar tabs, whose 40px header buttons make those rows
   // taller — without it, this header (no tall button) pins the title higher than the rest.
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, minHeight: 68 },
-  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
+  title: { fontSize: 24, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   count: { fontSize: 13, fontWeight: '600' },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },

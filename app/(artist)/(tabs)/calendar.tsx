@@ -1047,7 +1047,7 @@ export default function DJAvailabilityScreen() {
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
+  title: { fontSize: 24, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', gap: 8 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: 6, right: 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444', borderWidth: 2, borderColor: '#F6F2EC' },

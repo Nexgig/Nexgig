@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   gigPrivateShort: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   gigPrivateNum: { fontSize: 18, fontFamily: fonts.bodySemibold },
   gigInfo: { flex: 1 },
-  gigName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  gigName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },   // matches the manager dashboard's booking-row name
   gigTime: { fontSize: 13, fontWeight: '500' },
   mapsBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 
