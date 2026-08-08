@@ -141,9 +141,12 @@ export default function ArtistVenuesScreen() {
 
 const styles = StyleSheet.create({
   // Sizing mirrors the manager Roster tab (app/(manager)/(tabs)/network.tsx).
-  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  // minHeight 68 (16 + 40 icon-row + 12) + alignItems center makes the title sit at the same
+  // vertical position as the Dashboard/Calendar tabs, whose 40px header buttons make those rows
+  // taller — without it, this header (no tall button) pins the title higher than the rest.
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, minHeight: 68 },
   title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
-  count: { fontSize: 13, fontWeight: '600', marginBottom: 3 },
+  count: { fontSize: 13, fontWeight: '600' },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   thumb: { width: 48, height: 48, borderRadius: 14, borderWidth: 1 },
