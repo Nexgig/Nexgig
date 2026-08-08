@@ -707,9 +707,14 @@ export default function DJAvailabilityScreen() {
             <Text style={[styles.bookingTitle, { color: colors.foreground }]} numberOfLines={1}>
               {b.isArtistCreated ? (b.slotName ?? b.resolvedVenueName) : (b.resolvedVenueName)}
             </Text>
-            <View style={[styles.statusPill, { backgroundColor: statusColor + '22' }]}>
-              <Text style={[styles.statusPillText, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
-            </View>
+            {/* A booked (confirmed) gig gets NO badge — matches the manager calendar, where the
+                default/expected state is unlabelled and only exceptions (pending, completed,
+                cancelled) carry a pill. */}
+            {!(!b.isArtistCreated && b.status === 'confirmed') && (
+              <View style={[styles.statusPill, { backgroundColor: statusColor + '22' }]}>
+                <Text style={[styles.statusPillText, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
+              </View>
+            )}
           </View>
           {(b.resolvedStart || b.resolvedSlotName) && !b.isArtistCreated && (
             <Text style={[styles.bookingSub, { color: colors.muted }]}>
@@ -763,7 +768,7 @@ export default function DJAvailabilityScreen() {
   // ─── Dot legend items ───
   const LEGEND = [
     { color: STATUS_COLORS.pending, label: 'Requested' },
-    { color: STATUS_COLORS.confirmed, label: 'Confirmed' },
+    { color: STATUS_COLORS.confirmed, label: 'Booked' },
     { color: STATUS_COLORS.completed, label: 'Completed' },
     { color: STATUS_COLORS.cancelled, label: 'Declined / Cancelled' },
   ];

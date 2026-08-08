@@ -37,13 +37,13 @@ export function ArtistVenueInvoicesList({ venueId }: { venueId: string }) {
             onPress={() => router.push(`/(artist)/invoice-preview?invoiceId=${inv.id}&readOnly=1` as Href)}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[styles.num, { color: cancelled ? colors.muted : colors.success }]}>{inv.invoiceNumber}</Text>
+              <Text style={[styles.num, { color: cancelled ? colors.muted : colors.foreground }]}>{inv.invoiceNumber}</Text>
               <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
                 {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end', gap: 3 }}>
-              <Text style={[styles.amount, { color: cancelled ? colors.muted : colors.success, textDecorationLine: cancelled ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
+              <Text style={[styles.amount, { color: cancelled ? colors.muted : colors.primary, textDecorationLine: cancelled ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
               {cancelled && <Text style={[styles.cancelled, { color: colors.error }]}>CANCELLED</Text>}
             </View>
           </Pressable>

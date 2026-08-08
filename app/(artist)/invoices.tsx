@@ -168,14 +168,14 @@ export default function InvoicesScreen() {
       >
         <View style={styles.sentCardTop}>
           <View style={styles.sentCardLeft}>
-            <Text style={[styles.sentInvoiceNumber, { color: isCancelled ? colors.muted : colors.success }]}>{item.invoiceNumber}</Text>
+            <Text style={[styles.sentInvoiceNumber, { color: isCancelled ? colors.muted : colors.foreground }]}>{item.invoiceNumber}</Text>
             <Text style={[styles.sentVenue, { color: colors.foreground, textDecorationLine: isCancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{item.venueName}</Text>
             <Text style={[styles.sentDate, { color: colors.muted }]}>
               {item.gigs.length} gig{item.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
             </Text>
           </View>
           <View style={styles.sentCardRight}>
-            <Text style={[styles.sentAmount, { color: isCancelled ? colors.muted : colors.success, textDecorationLine: isCancelled ? 'line-through' : 'none' }]}>AED {item.totalAmount.toLocaleString()}</Text>
+            <Text style={[styles.sentAmount, { color: isCancelled ? colors.muted : colors.primary, textDecorationLine: isCancelled ? 'line-through' : 'none' }]}>AED {item.totalAmount.toLocaleString()}</Text>
           </View>
           {isCancelled ? (
             <View style={[styles.cancelledBadge, { backgroundColor: colors.error + '18' }]}>
