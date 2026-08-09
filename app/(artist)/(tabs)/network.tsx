@@ -5,7 +5,6 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useInvoiceStore } from '@/lib/store';
-import { Divider } from '@/components/ui/card-free';
 import { venueImage } from '@/lib/venue-images';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
@@ -97,7 +96,7 @@ export default function ArtistVenuesScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
-        ItemSeparatorComponent={() => <Divider full />}
+        ItemSeparatorComponent={() => <View style={[styles.rowSep, { backgroundColor: colors.border }]} />}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <MaterialIcons name="storefront" size={44} color={colors.muted} />
@@ -147,12 +146,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, minHeight: 68 },
   title: { fontSize: 24, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   count: { fontSize: 13, fontWeight: '600' },
-  list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
+  // Row metrics mirror the manager Artists tab (app/(manager)/(tabs)/network.tsx): 48px thumb,
+  // 12 gap, 14/600 title, plain 13 subtitle, and an inset hairline separator (marginLeft 76 =
+  // 16 list pad + 48 thumb + 12 gap) so the line starts under the text, not the thumbnail.
+  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
   thumb: { width: 48, height: 48, borderRadius: 14, borderWidth: 1 },
   info: { flex: 1 },
-  venueName: { fontSize: 15, fontWeight: '700', marginBottom: 1 },
-  sub: { fontSize: 13, fontWeight: '600' },
+  venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
+  sub: { fontSize: 13 },
   invoiceBtn: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 40, gap: 12 },
   emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
