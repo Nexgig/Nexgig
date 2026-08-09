@@ -9,6 +9,7 @@ import { useAuthStore, useLineupStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
 import { genreLabel } from '@/lib/utils';
+import { SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 
 export default function MyArtistsScreen() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function MyArtistsScreen() {
               <View style={styles.info}>
                 <View style={styles.titleRow}>
                   <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{u.fullName}</Text>
-                  {item.profile?.hasCompletedBooking && (
+                  {SHOW_ARTIST_VERIFIED_BADGE && item.profile?.hasCompletedBooking && (
                     <MaterialIcons name="verified" size={15} color={colors.primary} />
                   )}
                 </View>

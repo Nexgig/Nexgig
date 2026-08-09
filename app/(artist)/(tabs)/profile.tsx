@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
-import { SHOW_ARTIST_HISTORY } from '@/lib/features';
+import { SHOW_ARTIST_HISTORY, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { COUNTRIES } from '@/components/country-picker';
@@ -225,13 +225,13 @@ export default function ArtistProfileScreen() {
         <View style={styles.hero}>
           <AvatarImage uri={currentUser?.profilePhotoUrl || undefined} avatarId={currentUser?.avatarId} seed={currentUser?.id} name={currentUser?.fullName} size={80} />
           <View style={styles.nameRow}>
-            {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
+            {SHOW_ARTIST_VERIFIED_BADGE && (profile?.hasCompletedBooking || completedBookings.length > 0) ? (
               <MaterialIcons name="verified" size={18} color="transparent" style={{ marginRight: 6 }} />
             ) : null}
             <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
               {currentUser?.fullName}
             </Text>
-            {(profile?.hasCompletedBooking || completedBookings.length > 0) ? (
+            {SHOW_ARTIST_VERIFIED_BADGE && (profile?.hasCompletedBooking || completedBookings.length > 0) ? (
               <MaterialIcons name="verified" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
             ) : null}
           </View>

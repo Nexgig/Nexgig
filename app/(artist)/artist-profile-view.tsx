@@ -7,7 +7,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
 import { useLineupStore, useBookingStore, useVenueStore, useSlotStore, useArtistDirectoryStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
-import { SHOW_ARTIST_HISTORY } from '@/lib/features';
+import { SHOW_ARTIST_HISTORY, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { COUNTRIES } from '@/components/country-picker';
@@ -155,13 +155,13 @@ export default function ArtistProfileViewScreen() {
         <View style={styles.hero}>
           <AvatarImage uri={dj.profilePhotoUrl || undefined} avatarId={(dj as any).avatarId ?? undefined} seed={dj.id} name={dj.fullName} size={80} />
           <View style={styles.nameRow}>
-            {profile?.hasCompletedBooking ? (
+            {SHOW_ARTIST_VERIFIED_BADGE && profile?.hasCompletedBooking ? (
               <MaterialIcons name="verified" size={18} color="transparent" style={{ marginRight: 6 }} />
             ) : null}
             <Text style={[styles.djName, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>
               {dj.fullName}
             </Text>
-            {profile?.hasCompletedBooking ? (
+            {SHOW_ARTIST_VERIFIED_BADGE && profile?.hasCompletedBooking ? (
               <MaterialIcons name="verified" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
             ) : null}
           </View>

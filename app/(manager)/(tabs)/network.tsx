@@ -8,7 +8,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, mapVenueRow } from '@/lib/store';
-import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
+import { ALLOW_ARTIST_VENUE_APPLICATIONS, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -537,7 +537,7 @@ export default function NetworkScreen() {
                   <View style={styles.cardInfo}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>
-                      {profile?.hasCompletedBooking && (
+                      {SHOW_ARTIST_VERIFIED_BADGE && profile?.hasCompletedBooking && (
                         <MaterialIcons name="verified" size={15} color={colors.primary} />
                       )}
                     </View>

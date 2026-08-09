@@ -13,6 +13,15 @@
 export const SHOW_ARTIST_HISTORY = false;
 
 /**
+ * The "verified" seal shown next to an artist's name — on the artist's own profile, on both
+ * artist-profile views (artist→artist and manager→artist), and in the manager's Artists
+ * roster. Hidden for now (stage 1); may return in stage 2. The `hasCompletedBooking` signal
+ * that drives it stays computed underneath, so flipping this back to `true` restores every
+ * seal exactly as it was.
+ */
+export const SHOW_ARTIST_VERIFIED_BADGE = false;
+
+/**
  * The calendar legend rows (the coloured status pills and the dot key beneath the
  * month grid). Hidden for now — they cost two full rows at the top of an already
  * dense screen. The dots stay; only the key is hidden.
