@@ -1074,7 +1074,7 @@ const styles = StyleSheet.create({
   // Week view (matching manager)
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   weekLabel: { fontSize: 15, fontWeight: '700', textAlign: 'center' },
-  monthNavBtn: { padding: 4 },
+  monthNavBtn: { padding: 2 },
   weekDaysContainer: { paddingHorizontal: 20 },
   weekDaySection: { borderBottomWidth: 0.5, paddingVertical: 12 },
   weekDayHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
@@ -1090,20 +1090,21 @@ const styles = StyleSheet.create({
 
   // Month view — filled colour squares (green booked / gold pending / slate cancelled)
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
-  monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  monthTitle: { fontSize: 22, fontWeight: '700' },
+  monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  monthTitle: { fontSize: 20, fontWeight: '700' },
   todayBtnText: { fontSize: 15, fontWeight: '700' },
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 4 },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: -6 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-  dayCellRing: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  dayCell: { width: '100%', aspectRatio: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  // 36×36 rounded-10 colour box mirrors the manager calendar's day cell (was 40×40/r11).
+  dayCellRing: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  dayCell: { width: '100%', aspectRatio: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
 
   // Selected date section
-  slotsSection: { padding: 20 },
-  slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  slotsSection: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 20 },
+  slotsSectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   slotsSectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   slotsSectionLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginHorizontal: 12 },
 
