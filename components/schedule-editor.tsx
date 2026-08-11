@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
-import { DAY_MIN, DAY_FULL, setsForDay, daysWithSets, makeSetForDay } from '@/lib/venue-schedule';
+import { DAY_MIN, DAY_FULL, daysWithSets, makeSetForDay } from '@/lib/venue-schedule';
 import type { VenueSchedule, VenueScheduleSet } from '@/lib/types';
 
 // Same 30-min grid the add-slot picker uses.
@@ -28,7 +28,11 @@ export function ScheduleEditor({ value, onChange }: ScheduleEditorProps) {
   const [openTime, setOpenTime] = useState<string | null>(null);
 
   const filled = daysWithSets(value);
-  const daySets = setsForDay(value, selectedDay);
+  // Insertion order (newest at the bottom) — NOT sorted by time. Sorting the editor live meant a
+  // card jumped position the instant you changed its start time (edit 5pm → it leaps above the
+  // 9pm card), which is disorienting and caused mis-edits. The schedule is still shown and
+  // materialized chronologically elsewhere (both use setsForDay); only the editor stays put.
+  const daySets = value.filter((s) => s.day === selectedDay);
 
   const patchSet = (id: string, patch: Partial<VenueScheduleSet>) =>
     onChange(value.map((s) => (s.id === id ? { ...s, ...patch } : s)));
