@@ -4,7 +4,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Platform, View, Text, StyleSheet } from '@/lib/rn';
 import { useColors } from '@/hooks/use-colors';
-import { useAuthStore, useBookingStore, useNotificationStore, useNetworkSeenStore } from '@/lib/store';
+import { useAuthStore, useBookingStore } from '@/lib/store';
 import { SHOW_ARTIST_DIRECTORY } from '@/lib/features';
 import { useMemo } from 'react';
 
@@ -35,33 +35,6 @@ function CalendarTabIcon({ color, focused }: { color: string; focused: boolean }
           <Text style={styles.badgeText}>{calendarActionableCount > 99 ? '99+' : calendarActionableCount}</Text>
         </View>
       )}
-    </View>
-  );
-}
-
-function NetworkTabIcon({ color }: { color: string; focused: boolean }) {
-  const colors = useColors();
-  const currentUser = useAuthStore((s) => s.currentUser);
-  const notifications = useNotificationStore((s) => s.notifications);
-  const lastSeenMap = useNetworkSeenStore((s) => s.lastSeen);
-
-  const hasNew = useMemo(() => {
-    if (!currentUser?.id) return false;
-    const lastSeen = lastSeenMap[currentUser.id];
-    const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : 0;
-    const NETWORK_TYPES = ['lineup_added', 'venue_assigned', 'lineup_accepted'];
-    return notifications.some(
-      (n) =>
-        n.userId === currentUser.id &&
-        NETWORK_TYPES.includes(n.type) &&
-        new Date(n.createdAt).getTime() > lastSeenTime
-    );
-  }, [notifications, lastSeenMap, currentUser?.id]);
-
-  return (
-    <View style={styles.iconWrap}>
-      <IconSymbol size={26} name="storefront" color={color} />
-      {hasNew && <View style={[styles.dot, { backgroundColor: colors.primary }]} />}
     </View>
   );
 }
@@ -108,7 +81,7 @@ export default function DJTabLayout() {
           // The route file stays `network.tsx` (renaming it would break every push
           // deep-link and router.push in the app); it now renders the Venues list.
           title: 'Venues',
-          tabBarIcon: ({ color, focused }) => <NetworkTabIcon color={color} focused={focused} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="storefront" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -136,12 +109,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  dot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
 });
