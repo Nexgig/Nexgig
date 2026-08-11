@@ -26,8 +26,21 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
   );
   if (venues.length === 0) return;
 
-  const existing = useSlotStore.getState().slots;
-  const have = new Set(existing.map((s) => slotKey(s.venueId, s.date, s.startTime, s.endTime)));
+  // The existence check must be AUTHORITATIVE. This fires on dashboard + calendar mount, racing
+  // the _layout slot loader — so the local store can be empty/stale when we get here, and trusting
+  // it alone re-inserts nights that already exist (the duplicate-slots bug). Read the DB for this
+  // window and dedupe against that (the local store is folded in too, as a fast path).
+  const venueIds = venues.map((v) => v.id);
+  const { data: dbRows } = await supabase
+    .from('slots')
+    .select('venue_id, date, start_time, end_time')
+    .in('venue_id', venueIds)
+    .gte('date', fromStr)
+    .lte('date', toStr);
+  const have = new Set<string>([
+    ...useSlotStore.getState().slots.map((s) => slotKey(s.venueId, s.date, s.startTime, s.endTime)),
+    ...(dbRows ?? []).map((r: any) => slotKey(r.venue_id, r.date, r.start_time, r.end_time)),
+  ]);
 
   type Pending = { venueId: string; date: string; startTime: string; endTime: string };
   const pending: Pending[] = [];

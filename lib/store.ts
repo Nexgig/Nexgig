@@ -300,9 +300,19 @@ export const useSlotStore = create<SlotState>()(
   persist(
     (set, get) => ({
   slots: [],
-  addSlot: (slot) => set((state) => ({ slots: [...state.slots, slot] })),
+  // Dedupe by id (upsert), so two loaders (e.g. the _layout DB load + a screen's own fetch)
+  // can never stack duplicate copies of the same slot in the list.
+  addSlot: (slot) => set((state) => (
+    state.slots.some((s) => s.id === slot.id)
+      ? { slots: state.slots.map((s) => (s.id === slot.id ? slot : s)) }
+      : { slots: [...state.slots, slot] }
+  )),
   clearSlots: () => set({ slots: [] }),
-  bulkAddSlots: (slots) => set((state) => ({ slots: [...state.slots, ...slots] })),
+  bulkAddSlots: (slots) => set((state) => {
+    const byId = new Map(state.slots.map((s) => [s.id, s]));
+    slots.forEach((s) => byId.set(s.id, s));
+    return { slots: Array.from(byId.values()) };
+  }),
   updateSlot: (id, updates) => set((state) => ({
     slots: state.slots.map((s) => s.id === id ? { ...s, ...updates } : s),
   })),
