@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   monthOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12 },
   monthOptionText: { fontSize: 15 },
   headerAddBtn: { alignItems: 'flex-end' },
-  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
+  title: { fontSize: 26, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },
   subtitle: { fontSize: 12, marginTop: 2 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },

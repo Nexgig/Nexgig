@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   // vertical position as the Dashboard/Calendar tabs, whose 40px header buttons make those rows
   // taller — without it, this header (no tall button) pins the title higher than the rest.
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, minHeight: 68 },
-  title: { fontSize: 24, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
+  title: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },
   count: { fontSize: 13, fontWeight: '600' },
   // Row metrics mirror the manager Artists tab (app/(manager)/(tabs)/network.tsx): 48px thumb,
   // 12 gap, 14/600 title, plain 13 subtitle, and an inset hairline separator (marginLeft 76 =

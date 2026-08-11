@@ -52,9 +52,13 @@ eas submit --platform ios --profile production
 
 ## Hard-won traps — read before touching these areas
 
-**Fonts.** `lib/fonts.ts` `familyForWeight()` maps 800/900 → **ClashDisplay-Semibold**, 700 →
-GeneralSans-Bold, 600 → GeneralSans-Semibold. So `fontWeight: '800'` **silently renders Clash
-Display** (display font) instead of a bold body font. This has bitten us more than once.
+**Fonts.** `lib/fonts.ts` `familyForWeight()` now maps **every** weight to General Sans
+(800/900 → GeneralSans-Bold, 700 → GeneralSans-Bold, 600 → GeneralSans-Semibold). It used to
+route 800/900 to ClashDisplay-Semibold — that silently-renders-Clash trap is **gone** (all
+headings/titles are General Sans now). **Clash Display is applied ONLY by naming it explicitly**
+(`fonts.display*`), and only three things do: the "Nexgig." wordmark (`components/wordmark.tsx`),
+the coloured status dots (its round period glyph, e.g. `statusDot`/`slotStatusDot`), and the
+generated invoice-document branding. Don't reintroduce Clash on a heading via `fontWeight: '800'`.
 
 **`lib/rn`** re-exports React Native but swaps `Text` for `app-text`. Import RN primitives from
 `@/lib/rn`, not `react-native`. (`TextInput` and `Animated` are raw RN.)

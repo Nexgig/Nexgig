@@ -1,6 +1,7 @@
 /**
  * Font assets loaded by expo-font's `useFonts` in app/_layout.tsx.
- * General Sans = body / everything. Clash Display = logo + big headers.
+ * General Sans = body + all headings/titles. Clash Display = the "Nexgig." logo, the
+ * status dots (its round period glyph), and the generated invoice-document branding only.
  */
 export const FONT_ASSETS = {
   'GeneralSans-Light': require('../assets/fonts/GeneralSans-Light.otf'),
@@ -25,12 +26,13 @@ export const fonts = {
 };
 
 /**
- * Map a fontWeight to the correct font file.
- * 800/900 -> Clash Display (big headers); everything else -> General Sans.
+ * Map a fontWeight to the correct font file. ALL weights resolve to General Sans now —
+ * 800/900 used to route to Clash Display, but headings/titles are General Sans app-wide.
+ * Clash Display is only ever applied by naming it explicitly (logo, status dots, invoices).
  */
 export function familyForWeight(weight?: string | number): string {
   const w = String(weight ?? '400');
-  if (w === '800' || w === '900') return 'ClashDisplay-Semibold';
+  if (w === '800' || w === '900') return 'GeneralSans-Bold';
   switch (w) {
     case '100':
     case '200':
