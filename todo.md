@@ -8,7 +8,7 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 21 July 2026. Only open items live here. Done work is deleted, not archived.
+Updated 11 Aug 2026. Only open items live here. Done work is deleted, not archived.
 
 > **State of play (17 Jul).** Build 17 passed **Beta App Review** — TestFlight external
 > testers have it. That is *not* App Store approval; the public submission has **not been
@@ -42,44 +42,6 @@ template but single sets are name-less). Bundled the staged polish batch with it
 JS-only). The invoice-email function deploy is STILL held — the sendEmail call ships but
 no-ops safely until `send-email` is redeployed post-approval. **Re-freeze now: no more OTAs
 until approved unless another true blocker.**
-
-**2 · Known limitation — push notifications are not separated by role.** The in-app lists
-are (`lib/notification-roles.ts`), and the on/off categories are honoured at send time
-(`supabase/notification-preferences.sql` + the create-notification function). But a push
-arrives when the app isn't running, so nothing knows which role the user last chose, and one
-device is registered per account. A dual-role user gets both sides' pushes. Fixing it means
-either two device registrations or a role check at send time — only worth it if it proves
-annoying in practice.
-
-
-### FROM TODAY'S SESSION (manager UI overhaul — follow-ups, 31 Jul 2026)
-- **Check the create-venue steps.** Walk `app/(manager)/create-venue.tsx` end to end — required
-  fields, validation, billing/TRN, the multi-step flow — make sure nothing's broken or awkward
-  now that it's only reachable from the center "+" and My Venues.
-- **Check the artist sign-up + edit-profile steps.** After the Apple/Google auth changes
-  (`app/(auth)/artist-setup.tsx`, `app/(artist)/edit-profile.tsx`): re-verify every step, the
-  Display-Name/legal-name behaviour, the optional-for-OAuth fields, and the rate field.
-- **Merge Add Slot + Add Multiple Slots into ONE sheet.** Right now single = the `add-slot`
-  route (native form sheet) and bulk = the inline modal on the calendar (`slotSheetMode`
-  'single'|'multiple'). The center "+" offers them as two separate actions. Reunify into one
-  sheet with a single/multiple toggle so it's one flow. (There used to be an in-sheet toggle —
-  `openMultipleSlots`/`setSlotMode` still exist in `calendar.tsx`.)
-- **Dashboard stats don't respect the venue filter.** The Confirmed/Pending/Completed StatRow
-  is computed across ALL venues regardless of the selected venue (only the Bookings list is
-  venue-scoped via `bookingVenueId`). Decide: scope the stats to the selected venue too, or
-  leave them global and label them clearly. File: `app/(manager)/(tabs)/dashboard.tsx`.
-- **Mirror today's manager changes onto the artist side.** Documented in
-  `docs/manager-ui-2026-07-31.md` (every change + files + a per-item "Mirror?" call). The
-  remaining WORK is to act on it — strongest candidates: the center "+" native action sheet with
-  artist create actions, the dashboard "show all bookings + stat/venue behaviour", and a "Set"→
-  "Slot" wording sweep on the artist side. Work through the doc's Mirror? calls.
-- **Minimise the Add Slot / Assign Artist artist rows — too much per row.** The assignable-artist
-  rows (`renderAssignRow` in `app/(manager)/add-slot.tsx`, `renderDJ` in `assign-artist.tsx`)
-  cram in avatar + name + genre + an inline RED conflict banner (full description) + a status
-  pill (Available / Conflict / Requested / Drafted) + a trailing action icon. Trim to something
-  clean: shorten/drop the conflict error text (a small icon or dot instead of the full banner),
-  simplify the drafted + conflict badges (one compact indicator, not a pill AND a banner). Keep
-  it minimal and scannable.
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
 - **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
@@ -140,20 +102,6 @@ annoying in practice.
      the old time.
   3. ~~Re-check conflicts~~ — decided NOT needed here (Tuts, 21 Jul). A moved set won't
      re-run the overlap check; accepted as-is.
-- **Lineup add should require the artist's acceptance.** Today a manager adding an artist to
-  their lineup is instant + one-way — the artist just gets an "Added to a Lineup" FYI
-  (`handleConnect` / `addToGlobalLineup` on `app/(manager)/artist-profile-view.tsx`, mirrored
-  on the manager network row). Change it to a REQUEST the artist accepts or declines before
-  they're actually on the lineup:
-  - Manager "adds" → creates a PENDING lineup entry (needs a 'pending' state on the global
-    lineup, alongside 'active'/'removed') and sends the artist a request notification.
-  - Artist gets it in their notifications/pending list with Accept / Decline. The
-    `lineup_invite` / `lineup_accepted` / `lineup_declined` notification types already exist —
-    reuse them. On Accept → entry goes 'active' and the manager is notified (artist_joined);
-    on Decline → entry removed + manager notified.
-  - Until accepted, the artist is NOT on the lineup and can't be assigned to the manager's
-    venues. Check every place that reads the lineup as 'active' so a pending entry doesn't leak
-    through (assign-artist, venue assignment, etc.).
 - **Bring back the artist rate field on signup + edit profile.** The data plumbing still
   exists — `minRate` in the artist profile store and `min_rate` in Supabase (hydrateRole
   already reads it) — but there's no visible input in `app/(auth)/artist-setup.tsx` or
@@ -165,25 +113,6 @@ annoying in practice.
     `app/(manager)/artist-profile-view.tsx` READS `min_rate` (line 156) but doesn't display it.
     Show it only when `isConnected` (mirror the email/phone gate in the Account section), so a
     non-connected manager never sees the rate.
-- **Rework both Network tabs into single-purpose directories.**
-  - **Artist app:** rename the "Network" tab to **"Venues"** and show ONLY venues the artist is
-    connected to (their My Venues). Remove the Discover venues and the Artists sub-tab entirely
-    — an artist should NOT see other artists or venues they're not on. Effectively: set
-    `SHOW_ARTIST_DIRECTORY = false` again AND drop the Discover group from
-    `app/(artist)/(tabs)/network.tsx` so only connected venues remain (no My Venues/Discover
-    split — just the connected list).
-  - **Manager app:** rename the "Network" tab to **"Artists"** and show ALL artists on the app
-    (My Lineup + Discover artists is fine, or just one flat list). Remove the Venues sub-tab
-    entirely — a manager manages venues from their profile/venue screens, not here. File:
-    `app/(manager)/(tabs)/network.tsx` (drop the venues tab + the tab bar, keep the artists list).
-  - Note the knock-on: with `SHOW_ARTIST_DIRECTORY` off, `app/(artist)/artist-profile-view`
-    becomes unreachable again (that list was its only entry point) — fine, that's intended.
-- **Venue location (Maps) on the artist dashboard booking rows.** Add a Maps/location
-  action on the RIGHT of each booking row in the artist dashboard's bookings list, so an
-  artist can open the venue's location in Maps straight from the row. The venue's
-  `googleMapsLocation` (lat/lng or address) already drives the Maps button in booking-detail
-  (`MapsBadge` → `https://www.google.com/maps/dir/?api=1&destination=...`); reuse that. Only
-  show it for real (non-private-event) bookings that have a resolvable location.
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
