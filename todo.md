@@ -24,8 +24,10 @@ Updated 11 Aug 2026. Only open items live here. Done work is deleted, not archiv
 > switcher verified on device (20 Jul), so nothing blocks submission but the decision.
 > **Submission is on hold on purpose — see item 1. Don't push for it.**
 
-**1 · App Store submission — RESUBMITTED (build 21, 11 Aug 2026), now IN REVIEW.**
-Build 17 was **REJECTED** (two reasons: a custom Sign-in-with-Apple button using the Apple logo,
+**1 · App Store submission — ✅ APPROVED (build 21, 14 Aug 2026) — PENDING MANUAL RELEASE.**
+Approved by App Store review. Release is manual, so it sits at "Pending Developer Release" until
+Tuts presses **Release This Version** in App Store Connect — not live on the store until then.
+(History: build 17 was **REJECTED** — two reasons: a custom Sign-in-with-Apple button using the Apple logo,
 and asking for the user's full name at sign-up when Sign in with Apple already provides it).
 Both fixed: `AppleAuthentication.AppleAuthenticationButton` (official button, HIG-correct logo)
 and the name is now taken from Apple + not re-asked (legal-name hidden for OAuth). Build 21
@@ -35,18 +37,12 @@ General Sans headings/titles pass. New 6.9" screenshots (1290×2796) uploaded; R
 reply posted. Release is MANUAL — on approval it sits at "Pending Developer Release" until Tuts
 presses Release.
 
-⚠️ **OTA FREEZE IS ACTIVE AGAIN. Do NOT run `eas update` until the app is APPROVED.** The reviewer
-pulls JS from the same `production` channel; an OTA mid-review changes the app under them and
-can cause a rejection. Bugs found during review are written down and shipped the moment
-approval lands, not before. The freeze ends at approval (manual-vs-auto release doesn't
-change that — review is done once approved).
+✅ **OTA FREEZE IS LIFTED** (approved 14 Aug 2026). `eas update` is safe again — resume shipping
+fixes/polish over the air. Re-freeze only if a NEW build is ever submitted for review.
 
-If REJECTED: read Apple's resolution notes, fix, and only then OTA + reply in Resolution Center.
-
-**Freeze note:** during the rejected window (before this resubmission) OTAs were shipped freely
-to fix the above + polish — safe because nothing was in front of reviewers then. That window is
-now CLOSED. The invoice-email function deploy is STILL held — the sendEmail call ships but
-no-ops safely until `send-email` is redeployed post-approval.
+**Still held post-approval:** the invoice-email function. `send-email` must be **redeployed** — the
+`sendEmail` call ships but no-ops safely until then, so invoices don't actually email out yet.
+Redeploy it now that we're approved.
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
 - **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
