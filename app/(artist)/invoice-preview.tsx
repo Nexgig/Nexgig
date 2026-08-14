@@ -33,6 +33,7 @@ export default function InvoicePreviewScreen() {
   const venue = useVenueStore((s) => s.getVenueById(venueId ?? ''));
   const addInvoice = useInvoiceStore((s) => s.addInvoice);
   const invoices = useInvoiceStore((s) => s.invoices);
+  const cancelInvoice = useInvoiceStore((s) => s.cancelInvoice);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const globalLineup = useLineupStore((s) => s.globalLineup);
 
@@ -288,6 +289,40 @@ export default function InvoicePreviewScreen() {
     }
   };
 
+  // Cancel a sent invoice — SAME logic as the invoices list (invoices.tsx handleCancelInvoice):
+  // cancelInvoice() flips it to 'cancelled' on both sides and frees its gigs to be re-invoiced
+  // (the invoiceable filter excludes cancelled invoices), then the manager is notified.
+  const handleCancelInvoice = () => {
+    if (!existingInvoice) return;
+    const inv = existingInvoice;
+    Alert.alert(
+      'Cancel Invoice',
+      `Cancel invoice ${inv.invoiceNumber} for ${inv.venueName}? The manager will be notified and the gigs on it will become available to invoice again.`,
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Cancel Invoice',
+          style: 'destructive',
+          onPress: () => {
+            cancelInvoice(inv.id);
+            addNotification({
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: inv.managerId,
+              type: 'invoice_cancelled',
+              title: 'Invoice Cancelled',
+              body: `${firstName(currentUser?.fullName ?? 'The artist', 'An artist')} cancelled invoice ${inv.invoiceNumber} for ${inv.venueName}`,
+              isRead: false,
+              relatedId: inv.id,
+              relatedType: 'invoice',
+              createdAt: new Date().toISOString(),
+            });
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScreenContainer>
       {/* Header */}
@@ -372,6 +407,19 @@ export default function InvoicePreviewScreen() {
           >
             <MaterialIcons name="send" size={18} color="#fff" />
             <Text style={styles.sendBtnText}>{isSending ? 'Sending...' : 'Send Invoice'}</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Cancel — shown when viewing a sent (non-cancelled) invoice. Frees its gigs to re-invoice. */}
+      {isReadOnly && existingInvoice && existingInvoice.status !== 'cancelled' && (
+        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
+          <Pressable
+            style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.error, backgroundColor: colors.error + '10', opacity: pressed ? 0.7 : 1 }]}
+            onPress={handleCancelInvoice}
+          >
+            <MaterialIcons name="cancel" size={18} color={colors.error} />
+            <Text style={[styles.cancelBtnText, { color: colors.error }]}>Cancel Invoice</Text>
           </Pressable>
         </View>
       )}
@@ -518,4 +566,6 @@ const styles = StyleSheet.create({
   bottomBar: { paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5 },
   sendBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#E2674A', borderRadius: 14, paddingVertical: 16 },
   sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  cancelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingVertical: 15 },
+  cancelBtnText: { fontSize: 16, fontWeight: '700' },
 });
