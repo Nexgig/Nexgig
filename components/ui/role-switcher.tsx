@@ -102,7 +102,7 @@ export function RoleSwitcher({ role }: { role: Role }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 26, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },
+  title: { fontSize: 26, fontFamily: fonts.header, letterSpacing: -0.5 },
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     alignSelf: 'flex-start', paddingLeft: 12, paddingRight: 10,

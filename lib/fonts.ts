@@ -12,6 +12,9 @@ export const FONT_ASSETS = {
   'ClashDisplay-Medium': require('../assets/fonts/ClashDisplay-Medium.otf'),
   'ClashDisplay-Semibold': require('../assets/fonts/ClashDisplay-Semibold.otf'),
   'ClashDisplay-Bold': require('../assets/fonts/ClashDisplay-Bold.otf'),
+  // Bricolage Grotesque (SIL OFL) — the app's HEADER font (tab/screen titles + section headers).
+  'BricolageGrotesque-SemiBold': require('../assets/fonts/BricolageGrotesque-SemiBold.otf'),
+  'BricolageGrotesque-Bold': require('../assets/fonts/BricolageGrotesque-Bold.otf'),
 } as const;
 
 /** Explicit families for setting a font directly in a style. */
@@ -19,6 +22,9 @@ export const fonts = {
   display: 'ClashDisplay-Semibold',
   displayBold: 'ClashDisplay-Bold',
   displayMedium: 'ClashDisplay-Medium',
+  // Header font — Bricolage Grotesque. Used by the tab/screen titles + section headers.
+  header: 'BricolageGrotesque-Bold',
+  headerSemibold: 'BricolageGrotesque-SemiBold',
   bodyRegular: 'GeneralSans-Regular',
   bodyMedium: 'GeneralSans-Medium',
   bodySemibold: 'GeneralSans-Semibold',

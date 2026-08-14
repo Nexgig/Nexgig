@@ -62,7 +62,7 @@ export function VenueFilterHeader() {
 
 const styles = StyleSheet.create({
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 1 },
-  title: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5, flexShrink: 1 },
+  title: { fontSize: 24, fontFamily: fonts.header, letterSpacing: -0.5, flexShrink: 1 },
   // Popup — kept identical to the old dashboard "Filter by venue" sheet.
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 32 },
   sheet: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, padding: 18, gap: 4 },
