@@ -435,7 +435,7 @@ export default function ArtistProfileScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
-  title: { fontSize: 26, fontFamily: fonts.header, letterSpacing: -0.5 },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', gap: 8 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },

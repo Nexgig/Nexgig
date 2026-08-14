@@ -325,7 +325,7 @@ const invStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
-  title: { fontSize: 26, fontFamily: fonts.header, letterSpacing: -0.5 },
+  title: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5 },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 22, paddingHorizontal: 20, gap: 6, position: 'relative' },
   editBtn: { position: 'absolute', top: 12, right: 16, zIndex: 1, padding: 4 },

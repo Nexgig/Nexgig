@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   sectionTitle: { fontSize: 22, fontWeight: '700' },
-  overviewTitle: { fontSize: 24, fontFamily: fonts.header, letterSpacing: -0.5 },   // matches the manager's "All Venues"
+  overviewTitle: { fontSize: 24, fontFamily: fonts.displayBold, letterSpacing: -0.5 },   // matches the manager's "All Venues"
   overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   overviewInfo: { padding: 2 },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 4 },      // thick full-bleed divider under Overview

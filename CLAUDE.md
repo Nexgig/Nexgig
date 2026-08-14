@@ -52,13 +52,16 @@ eas submit --platform ios --profile production
 
 ## Hard-won traps — read before touching these areas
 
-**Fonts.** `lib/fonts.ts` `familyForWeight()` now maps **every** weight to General Sans
-(800/900 → GeneralSans-Bold, 700 → GeneralSans-Bold, 600 → GeneralSans-Semibold). It used to
-route 800/900 to ClashDisplay-Semibold — that silently-renders-Clash trap is **gone** (all
-headings/titles are General Sans now). **Clash Display is applied ONLY by naming it explicitly**
-(`fonts.display*`), and only three things do: the "Nexgig." wordmark (`components/wordmark.tsx`),
-the coloured status dots (its round period glyph, e.g. `statusDot`/`slotStatusDot`), and the
-generated invoice-document branding. Don't reintroduce Clash on a heading via `fontWeight: '800'`.
+**Fonts.** `lib/fonts.ts` `familyForWeight()` maps **every** weight to General Sans (800/900 →
+GeneralSans-Bold, 700 → GeneralSans-Bold, 600 → GeneralSans-Semibold) — so a bare `fontWeight:
+'800'` renders **General Sans**, not Clash (the old silently-renders-Clash trap is gone). Clash
+Display is applied ONLY by naming it explicitly (`fonts.display*`), currently by: the "Nexgig."
+wordmark (`components/wordmark.tsx`); the coloured status dots (round period glyph, e.g.
+`statusDot`/`slotStatusDot`); the invoice-document branding; **and the deliberate tab/screen
+titles + section headers** (`fonts.displayBold` / `fonts.display` — reverted here after a
+Bricolage-Grotesque experiment the owner rejected). The smaller per-screen/modal titles (the
+bare-`'800'` ones) are still General Sans. **Bricolage Grotesque is bundled but unused** —
+`fonts.header`/`fonts.headerSemibold` + its OTFs stay in `assets/fonts` in case it's revisited.
 
 **`lib/rn`** re-exports React Native but swaps `Text` for `app-text`. Import RN primitives from
 `@/lib/rn`, not `react-native`. (`TextInput` and `Animated` are raw RN.)
