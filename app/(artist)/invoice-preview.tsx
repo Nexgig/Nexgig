@@ -181,14 +181,34 @@ export default function InvoicePreviewScreen() {
               createdAt: new Date().toISOString(),
             });
 
-            // Also email the manager the invoice. Fire-and-forget — email is a best-effort
-            // side-effect and must never block the send (sendEmail swallows its own errors).
-            void sendEmail(managerId, 'invoice_received', {
-              artistName,
-              venueName,
-              amount: Math.round(totalAmount).toLocaleString(),
-              invoiceNumber,
-            });
+            // Also email the manager the invoice WITH the PDF attached. Generate the PDF as
+            // base64 from the same HTML the download button uses, then fire-and-forget the email.
+            // Best-effort: if PDF generation fails the email still sends (without the attachment),
+            // and none of this blocks the "Invoice Sent" confirmation below.
+            void (async () => {
+              let pdfBase64: string | undefined;
+              try {
+                if (Platform.OS !== 'web') {
+                  const Print = await import('expo-print');
+                  const html = cachedHtmlRef.current ?? generateInvoiceHTML({
+                    invoiceNumber, sentDate, artistName, artistEmail, artistLocation,
+                    venueLegalName, venueTrnNumber, venueAddress, venueName, gigs, totalAmount,
+                  });
+                  const res = await Print.printToFileAsync({ html, base64: true });
+                  pdfBase64 = res.base64 ?? undefined;
+                }
+              } catch (e) {
+                console.log('[invoice email] PDF generation failed; sending without attachment:', e);
+              }
+              await sendEmail(managerId, 'invoice_received', {
+                artistName,
+                venueName,
+                amount: Math.round(totalAmount).toLocaleString(),
+                invoiceNumber,
+                pdfBase64,
+                pdfFileName: `${invoiceNumber.replace(/[^a-zA-Z0-9]/g, '') || 'invoice'}.pdf`,
+              });
+            })();
 
             setIsSending(false);
             Alert.alert('Invoice Sent', 'Your invoice has been sent to the manager.', [

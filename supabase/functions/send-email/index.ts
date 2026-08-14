@@ -257,7 +257,7 @@ function renderTemplate(
           p(`Hi ${name},`) +
           p(`<strong>${artistName}</strong> sent you an invoice for gigs at <strong>${venueName}</strong>.`) +
           p(`Amount: <strong>AED ${amount}</strong>${invoiceNumber ? `<br/>Invoice: ${invoiceNumber}` : ''}`) +
-          p('Open Nexgig to view the full invoice and its details.'),
+          p('The invoice PDF is attached to this email. You can also open Nexgig to view the full details.'),
         ),
       };
     }
@@ -364,7 +364,14 @@ serve(async (req) => {
     const rendered = renderTemplate(template, toName, data as Record<string, unknown>, venuesHtml);
     if (!rendered) return json({ error: `Unknown template: ${template}` }, 400);
 
-    // 6. Send via Resend.
+    // 6. Optional PDF attachment — the app passes the invoice PDF as base64 in data.pdfBase64
+    //    (Resend wants { filename, content: <base64> }). Absent for templates without a PDF.
+    const dd = data as Record<string, unknown>;
+    const pdfBase64 = typeof dd.pdfBase64 === 'string' && dd.pdfBase64 ? dd.pdfBase64 : null;
+    const pdfFileName = typeof dd.pdfFileName === 'string' && dd.pdfFileName ? dd.pdfFileName : 'invoice.pdf';
+    const attachments = pdfBase64 ? [{ filename: pdfFileName, content: pdfBase64 }] : undefined;
+
+    // 7. Send via Resend.
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -376,6 +383,7 @@ serve(async (req) => {
         to: [toEmail],
         subject: rendered.subject,
         html: rendered.html,
+        ...(attachments ? { attachments } : {}),
       }),
     });
 
