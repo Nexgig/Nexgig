@@ -432,7 +432,8 @@ export default function DJHomeScreen() {
               <View style={styles.cellsRow}>
                 {stripDays.map(({ date, state }) => {
                   const isSel = selected === date;
-                  const numColor = state === 'none' ? colors.muted : '#fff';
+                  // Today's number is coral to mark it (same as the calendar), on any fill.
+                  const numColor = date === todayLocalStr() ? colors.primary : state === 'none' ? colors.muted : '#fff';
                   return (
                     <View key={date} style={styles.dayCol}>
                       <Pressable style={({ pressed }) => [styles.cellPress, { opacity: pressed ? 0.5 : 1 }]} onPress={() => toggleDay(date)}>

@@ -480,7 +480,10 @@ export default function ManagerDashboard() {
                       const filled = state === 'cancelled' || state === 'sent' || state === 'booked';
                       // In single-venue mode the square carries the date number; colour it for
                       // contrast on the fill, coral on an unfilled day, muted when there's no slot.
-                      const numColor = filled ? '#fff'
+                      // Today's number is coral to mark it (like the calendar), on any fill. Note:
+                      // an unfilled/empty slot is ALSO coral (needs-artist) — so coral = today or empty.
+                      const numColor = coverage.nights[i] === todayLocalStr() ? colors.primary
+                        : filled ? '#fff'
                         : state === 'empty' ? colors.primary
                         : state === 'drafted' ? colors.foreground
                         : colors.muted;

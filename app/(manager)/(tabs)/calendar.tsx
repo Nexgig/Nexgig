@@ -1583,7 +1583,8 @@ export default function CalendarScreen() {
                   // Today's number is coral + bold to mark it (the "Today" button is gone). White on
                   // a strong status fill for contrast; dark on no/beige fill otherwise.
                   const strongFill = !!fill && fill !== colors.surface;
-                  const numColor = strongFill ? '#fff' : isToday ? colors.primary : colors.foreground;
+                  // Today is ALWAYS coral, on any background (fill or not), so it's easy to spot.
+                  const numColor = isToday ? colors.primary : strongFill ? '#fff' : colors.foreground;
                   return (
                     <Pressable
                       key={day}
@@ -1592,7 +1593,7 @@ export default function CalendarScreen() {
                     >
                       <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
                         dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
-                        <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: (isSelected || (isToday && !strongFill)) ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                        <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: (isSelected || isToday) ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                     </Pressable>
                   );

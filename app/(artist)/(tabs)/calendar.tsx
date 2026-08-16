@@ -866,9 +866,9 @@ export default function DJAvailabilityScreen() {
                         <Text style={[
                           styles.dayNumber,
                           {
-                            color: dayColor ? '#fff' : isToday ? colors.primary : colors.foreground,
+                            color: isToday ? colors.primary : dayColor ? '#fff' : colors.foreground,
                             fontSize: isSelected ? 20 : 16,
-                            fontFamily: (isSelected || (isToday && !dayColor)) ? fonts.bodyBold : fonts.bodySemibold,
+                            fontFamily: (isSelected || isToday) ? fonts.bodyBold : fonts.bodySemibold,
                           },
                         ]}>{dayNum}</Text>
                       </View>
