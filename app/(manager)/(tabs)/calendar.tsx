@@ -5,7 +5,6 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { GestureDetector, Gesture, Directions } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 // react-native-reanimated Animated not used in this file (using RNAnimated from react-native instead)
 // TimeSelector removed — using dropdown time picker instead
@@ -1244,11 +1243,76 @@ export default function CalendarScreen() {
     setSelectedDate(todayStr);
   };
 
-  // Swipe left/right anywhere on the month grid to change month (replaces the ‹ › buttons).
-  const monthSwipe = Gesture.Race(
-    Gesture.Fling().direction(Directions.LEFT).runOnJS(true).onEnd(() => nextMonthNav()),
-    Gesture.Fling().direction(Directions.RIGHT).runOnJS(true).onEnd(() => prevMonthNav()),
-  );
+  // ── Month swipe pager (Apple-Calendar style, mirrors the artist calendar) ──
+  // prev / current / next month grids sit side-by-side in a paged horizontal ScrollView; the drag
+  // follows the finger and snaps. On settle we swap the month and instantly re-centre on the middle
+  // page, so it feels infinite. A "jump to date" just re-renders the middle page — no scroll sync.
+  const SCREEN_W = Dimensions.get('window').width;
+  const monthPagerRef = useRef<ScrollView>(null);
+  // Stable initial offset (page 1 = current month) so re-renders don't fight the scroll position.
+  const initialPagerOffset = useRef({ x: SCREEN_W, y: 0 }).current;
+  const prevMY = currentMonth === 0 ? { year: currentYear - 1, month: 11 } : { year: currentYear, month: currentMonth - 1 };
+  const nextMY = currentMonth === 11 ? { year: currentYear + 1, month: 0 } : { year: currentYear, month: currentMonth + 1 };
+  const onMonthPagerEnd = (e: any) => {
+    const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+    if (page === 1) return;                                          // didn't cross to another month
+    monthPagerRef.current?.scrollTo({ x: SCREEN_W, animated: false }); // re-centre; content swaps below
+    if (page === 0) prevMonthNav();
+    else if (page === 2) nextMonthNav();
+  };
+  // One month's grid, parameterised by (year, month) and padded to a fixed 6 rows (42 cells) so
+  // every month is the SAME height — the grid never resizes when you swipe, and the pager reserves
+  // no extra space (so there's no gap between the calendar and the day list below).
+  const renderMonthGrid = (year: number, month: number) => {
+    const dim = getDaysInMonth(month, year);
+    const offset = getFirstDayOffset(month, year);
+    const cells: (string | null)[] = [];
+    for (let i = 0; i < offset; i++) cells.push(null);
+    for (let d = 1; d <= dim; d++) cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    while (cells.length < 42) cells.push(null);
+    return (
+      <View style={styles.calendarGrid}>
+        {cells.map((dateStr, idx) => {
+          if (!dateStr) return <View key={`e-${year}-${month}-${idx}`} style={styles.calendarCell} />;
+          const day = parseInt(dateStr.split('-')[2], 10);
+          const daySlots = getSlotsForDate(dateStr);
+          const isToday = dateStr === todayStr;
+          const isSelected = dateStr === selectedDate;
+          // Strongest state among the day's slots (see the inline version this was extracted from).
+          const pastPendingOnDay = allBookings.filter(
+            (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
+              (venueFilter === 'all' || b.venueId === venueFilter) &&
+              (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
+          );
+          const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
+          const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
+          const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
+          const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
+          const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
+          const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
+          // cancelled > empty(beige+dashed) > drafted(beige) > sent(amber) > booked(green).
+          let fill: string | null = null;
+          let dashedRing = false;
+          if (dCancelled) fill = colors.cancelled;
+          else if (dEmpty) { fill = colors.surface; dashedRing = true; }
+          else if (dDrafted) fill = colors.surface;
+          else if (dPending) fill = STATUS_COLORS.pending;
+          else if (dConfirmed) fill = STATUS_COLORS.confirmed;
+          const strongFill = !!fill && fill !== colors.surface;
+          // Today is ALWAYS coral, on any background; white on a strong fill, dark otherwise.
+          const numColor = isToday ? colors.primary : strongFill ? '#fff' : colors.foreground;
+          return (
+            <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
+              <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
+                dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
+                <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: (isSelected || isToday) ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  };
 
   // ─── Render Helpers ───────────────────────────────────────────────────────
   // Returns true when slot can be deleted (no active/completed bookings)
@@ -1516,10 +1580,10 @@ export default function CalendarScreen() {
           ) : (
             /* ═══════════════════ MONTH VIEW ═══════════════════ */
             <>
-              {/* Month label; swipe the grid to change month. "Send all (N)" sits where Today was —
-                  coral text, no background — and only when there are pending draft requests. */}
+              {/* Month label (CAPS) + "SEND ALL (N)" where Today used to be — coral text, no
+                  background, only when there are pending draft requests. Swipe the grid to change month. */}
               <View style={styles.monthNav}>
-                <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Text style={[styles.monthTitle, { color: colors.foreground, textTransform: 'uppercase' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
                 <View style={{ flex: 1 }} />
                 {periodScopedDrafts.length > 0 && (
                   <Pressable
@@ -1530,77 +1594,33 @@ export default function CalendarScreen() {
                     }}
                     hitSlop={8}
                   >
-                    <Text style={[styles.todayBtn, { color: colors.primary }]}>Send all ({periodScopedDrafts.length})</Text>
+                    <Text style={[styles.todayBtn, { color: colors.primary, textTransform: 'uppercase' }]}>Send all ({periodScopedDrafts.length})</Text>
                   </Pressable>
                 )}
               </View>
 
-              <GestureDetector gesture={monthSwipe}>
-                <View>
-              {/* Day Labels - Monday first */}
+              {/* Day Labels - Monday first (fixed above the swipe pager) */}
               <View style={styles.dayLabels}>
                 {DAYS_SHORT.map((d) => (
                   <Text key={d} style={[styles.dayLabel, { color: colors.muted }]}>{d}</Text>
                 ))}
               </View>
 
-              {/* Calendar Grid - Monday first */}
-              <View style={styles.calendarGrid}>
-                {Array.from({ length: firstDayOffset }).map((_, i) => (
-                  <View key={'empty-' + i} style={styles.calendarCell} />
-                ))}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                  const day = i + 1;
-                  const dateStr = getMonthDateString(day);
-                  const daySlots = getSlotsForDate(dateStr);
-                  const isToday = dateStr === todayStr;
-                  const isSelected = dateStr === selectedDate;
-                  // Strongest state among the day's slots. FILLS are real bookings, RINGS are
-                  // "not a real booking yet": cancelled(brick fill) > pending(amber fill) >
-                  // booked(green fill) > drafted(amber ring) > empty(grey ring) > none.
-                  // Past unanswered requests (slotDate snapshot) count as pending too.
-                  const pastPendingOnDay = allBookings.filter(
-                    (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
-                      (venueFilter === 'all' || b.venueId === venueFilter) &&
-                      (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
-                  );
-                  const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
-                  const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
-                  const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
-                  const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
-                  const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
-                  const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
-                  // Colour fills: real bookings get their status colour; empty/draft slots get a
-                  // beige fill; a day with no slot at all stays plain (blends into the background).
-                  // Priority (strongest wins): cancelled > empty > drafted > sent > booked.
-                  let fill: string | null = null;
-                  let dashedRing = false;   // empty-only day: beige fill + coral dashed outline
-                  if (dCancelled) fill = colors.cancelled;
-                  else if (dEmpty) { fill = colors.surface; dashedRing = true; }   // empty slot, no artist — needs attention
-                  else if (dDrafted) fill = colors.surface;   // beige fill — artist drafted, not sent yet
-                  else if (dPending) fill = STATUS_COLORS.pending;
-                  else if (dConfirmed) fill = STATUS_COLORS.confirmed;
-                  // Today's number is coral + bold to mark it (the "Today" button is gone). White on
-                  // a strong status fill for contrast; dark on no/beige fill otherwise.
-                  const strongFill = !!fill && fill !== colors.surface;
-                  // Today is ALWAYS coral, on any background (fill or not), so it's easy to spot.
-                  const numColor = isToday ? colors.primary : strongFill ? '#fff' : colors.foreground;
-                  return (
-                    <Pressable
-                      key={day}
-                      style={styles.calendarCell}
-                      onPress={() => setSelectedDate(dateStr)}
-                    >
-                      <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
-                        dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
-                        <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: (isSelected || isToday) ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-                </View>
-              </GestureDetector>
+              {/* Swipe pager: prev / current / next month grids side by side (Apple-style paging). */}
+              <ScrollView
+                ref={monthPagerRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={onMonthPagerEnd}
+                contentOffset={initialPagerOffset}
+                scrollEventThrottle={16}
+                nestedScrollEnabled
+              >
+                <View style={{ width: SCREEN_W }}>{renderMonthGrid(prevMY.year, prevMY.month)}</View>
+                <View style={{ width: SCREEN_W }}>{renderMonthGrid(currentYear, currentMonth)}</View>
+                <View style={{ width: SCREEN_W }}>{renderMonthGrid(nextMY.year, nextMY.month)}</View>
+              </ScrollView>
 
               {/* Selected Date Slots */}
               {!selectedDate ? (

@@ -844,30 +844,24 @@ export default function DJAvailabilityScreen() {
   return (
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Calendar</Text>
-          <View style={styles.headerRight}>
-            {/* Sync-to-calendar moved here from the month-nav row. Invoices moved to the
-                Completed Gigs page. */}
-            <Pressable
-              style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => {
-                setSelectedGigIds(new Set(unexportedGigs.map((g) => g.id)));
-                setShowSyncModal(true);
-              }}
-            >
-              <MaterialIcons name="event-available" size={22} color={colors.foreground} />
-            </Pressable>
-          </View>
-        </View>
-
         {/* ─── MONTH VIEW ─── */}
         {viewMode === 'month' && (
           <View>
-            {/* Month title — swipe left/right on the grid below to change month */}
+            {/* Month title (left, CAPS) + sync-to-calendar (right, where Today used to be).
+                Swipe left/right on the grid below to change month. No screen header — the month
+                row is the top of the screen now. */}
             <View style={styles.monthNav}>
-              <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+              <Text style={[styles.monthTitle, { color: colors.foreground, textTransform: 'uppercase' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+              <Pressable
+                style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => {
+                  setSelectedGigIds(new Set(unexportedGigs.map((g) => g.id)));
+                  setShowSyncModal(true);
+                }}
+                hitSlop={8}
+              >
+                <MaterialIcons name="event-available" size={22} color={colors.foreground} />
+              </Pressable>
             </View>
 
             {/* Day Labels (fixed above the swipe pager) */}

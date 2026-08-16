@@ -463,7 +463,7 @@ export default function ManagerDashboard() {
                           {d.toLocaleDateString('en-US', { weekday: 'narrow' })}
                         </Text>
                         {!singleVenue && (
-                          <Text style={[styles.stripDayNum, { color: colors.foreground }]}>
+                          <Text style={[styles.stripDayNum, { color: date === todayLocalStr() ? colors.primary : colors.foreground }]}>
                             {d.getDate()}
                           </Text>
                         )}

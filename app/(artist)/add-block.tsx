@@ -45,6 +45,18 @@ function formatDateShort(dateStr: string) {
   return d.toLocaleDateString('en-AE', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+// Inclusive list of YYYY-MM-DD dates from start to end (end clamped up to start if it's earlier).
+function datesInRange(start: string, end: string): string[] {
+  const out: string[] = [];
+  const d = new Date(start + 'T00:00:00');
+  const last = new Date((end >= start ? end : start) + 'T00:00:00');
+  while (d <= last) {
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
 // Simple UUID generator for Supabase rows
 const genUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
   const r = Math.random() * 16 | 0;
@@ -89,11 +101,14 @@ export default function AddBlockScreen() {
 
   // Editable day for this event/block. Seeded from the tapped/quick-add day.
   const [singleDate, setSingleDate] = useState(baseDate);
+  // A full-day BLOCK can span a range: singleDate is the FROM, rangeEndDate the TO.
+  const [rangeEndDate, setRangeEndDate] = useState(baseDate);
 
   // Dropdown open states
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
   const [singleDateOpen, setSingleDateOpen] = useState(false);
+  const [rangeEndOpen, setRangeEndOpen] = useState(false);
   const startScrollRef = useRef<ScrollView>(null);
   const endScrollRef = useRef<ScrollView>(null);
 
@@ -169,16 +184,35 @@ export default function AddBlockScreen() {
         supabase.from('availability_blocks').delete().eq('id', editBlockId)
           .then(({ error }) => { if (error) console.warn('block delete error:', error.message); });
       }
-      const newId = genUUID();
-      const block: AvailabilityBlock = {
-        id: newId, artistId: currentUser.id, date: targetDate,
-        startTime: fullDay ? '00:00' : startTime,
-        endTime: fullDay ? '23:59' : endTime,
-        fullDay, label: 'Unavailable', blockType: 'block',
-        createdAt: new Date().toISOString(),
-      };
-      addBlock(block);
-      insertBlockRow(newId, targetDate, block.startTime, block.endTime, fullDay);
+
+      if (fullDay) {
+        // A full-day block can span a FROM→TO range. availability_blocks is one row per date, so
+        // create one full-day row per day and batch them into a single insert.
+        const days = datesInRange(singleDate, rangeEndDate);
+        const rows = days.map((d) => {
+          const id = genUUID();
+          const block: AvailabilityBlock = {
+            id, artistId: currentUser.id, date: d,
+            startTime: '00:00', endTime: '23:59',
+            fullDay: true, label: 'Unavailable', blockType: 'block',
+            createdAt: new Date().toISOString(),
+          };
+          addBlock(block);
+          return { id, artist_id: currentUser.id, date: d, start_time: '00:00', end_time: '23:59', is_full_day: true, block_type: 'block' };
+        });
+        supabase.from('availability_blocks').insert(rows)
+          .then(({ error }) => { if (error) console.warn('block range insert error:', error.message); });
+      } else {
+        const newId = genUUID();
+        const block: AvailabilityBlock = {
+          id: newId, artistId: currentUser.id, date: targetDate,
+          startTime, endTime,
+          fullDay: false, label: 'Unavailable', blockType: 'block',
+          createdAt: new Date().toISOString(),
+        };
+        addBlock(block);
+        insertBlockRow(newId, targetDate, startTime, endTime, false);
+      }
     }
 
     closeSheet();
@@ -231,7 +265,72 @@ export default function AddBlockScreen() {
               </Text>
             </View>
 
-            {/* DATE — editable; defaults to the day Create was opened on. */}
+            {/* DATE — a single day normally; a FROM→TO range when blocking full days, so an artist
+                can block a holiday/trip in one go. The two pickers sit where the single date was. */}
+            {kind === 'block' && fullDay ? (
+            <View style={[styles.fieldBlock, { zIndex: (singleDateOpen || rangeEndOpen) ? 30 : 1 }]}>
+              <View style={styles.timeRow}>
+                {/* FROM */}
+                <View style={{ flex: 1, zIndex: singleDateOpen ? 30 : 1 }}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>FROM</Text>
+                  <Pressable
+                    style={[styles.timeDropdownBtn, { borderColor: singleDateOpen ? colors.primary : colors.border }]}
+                    onPress={() => { Keyboard.dismiss(); setSingleDateOpen((v) => !v); setRangeEndOpen(false); setStartOpen(false); setEndOpen(false); }}
+                  >
+                    <MaterialIcons name="calendar-today" size={14} color={singleDateOpen ? colors.primary : colors.muted} />
+                    <Text style={[styles.timeDropdownText, { color: colors.foreground }]} numberOfLines={1}>{formatDateShort(singleDate)}</Text>
+                    <MaterialIcons name={singleDateOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+                  </Pressable>
+                  {singleDateOpen && (
+                    <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                      <ScrollView style={styles.dateDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                        {DATE_OPTIONS.map((d) => {
+                          const sel = singleDate === d;
+                          return (
+                            <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setSingleDate(d); if (rangeEndDate < d) setRangeEndDate(d); setSingleDateOpen(false); }}>
+                              <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{formatDateShort(d)}</Text>
+                              {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+                {/* → */}
+                <View style={styles.timeSep}>
+                  <MaterialIcons name="arrow-forward" size={16} color={colors.muted} />
+                </View>
+                {/* TO */}
+                <View style={{ flex: 1, zIndex: rangeEndOpen ? 30 : 1 }}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>TO</Text>
+                  <Pressable
+                    style={[styles.timeDropdownBtn, { borderColor: rangeEndOpen ? colors.primary : colors.border }]}
+                    onPress={() => { Keyboard.dismiss(); setRangeEndOpen((v) => !v); setSingleDateOpen(false); setStartOpen(false); setEndOpen(false); }}
+                  >
+                    <MaterialIcons name="calendar-today" size={14} color={rangeEndOpen ? colors.primary : colors.muted} />
+                    <Text style={[styles.timeDropdownText, { color: colors.foreground }]} numberOfLines={1}>{formatDateShort(rangeEndDate)}</Text>
+                    <MaterialIcons name={rangeEndOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+                  </Pressable>
+                  {rangeEndOpen && (
+                    <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                      <ScrollView style={styles.dateDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                        {DATE_OPTIONS.filter((d) => d >= singleDate).map((d) => {
+                          const sel = rangeEndDate === d;
+                          return (
+                            <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setRangeEndDate(d); setRangeEndOpen(false); }}>
+                              <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{formatDateShort(d)}</Text>
+                              {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+            ) : (
             <View style={[styles.fieldBlock, { zIndex: singleDateOpen ? 30 : 1 }]}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>DATE</Text>
               <View style={{ position: 'relative', zIndex: singleDateOpen ? 30 : 1 }}>
@@ -249,7 +348,7 @@ export default function AddBlockScreen() {
                       {DATE_OPTIONS.map((d) => {
                         const sel = singleDate === d;
                         return (
-                          <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setSingleDate(d); setSingleDateOpen(false); }}>
+                          <Pressable key={d} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setSingleDate(d); setRangeEndDate(d); setSingleDateOpen(false); }}>
                             <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{formatDateShort(d)}</Text>
                             {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
                           </Pressable>
@@ -260,6 +359,7 @@ export default function AddBlockScreen() {
                 )}
               </View>
             </View>
+            )}
 
             {/* Private event fields */}
             {kind === 'private_event' && (
