@@ -50,6 +50,12 @@ export default function AssignDJScreen() {
   const setDraft = useDraftStore((s) => s.setDraft);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
   const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
+  // STAGING (mirrors add-slot): tapping an artist only stages them locally — NOTHING is written
+  // until "Draft" (commit) or "Send". Seeded from any drafts already on the slot, so the ✕ (which
+  // writes nothing) discards this session's changes and leaves the slot exactly as it was.
+  const [stagedIds, setStagedIds] = useState<Set<string>>(() =>
+    new Set(allDrafts.filter((d) => d.slotId === slotId).map((d) => d.artistId))
+  );
   const getBookingsBySlot = useBookingStore((s) => s.getBookingsBySlot);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -348,7 +354,7 @@ export default function AssignDJScreen() {
       } else {
         state = booking?.status === 'confirmed' ? 'booked'
           : booking ? 'pending'
-          : assignedDJIds.has(artistId) ? 'drafted'
+          : stagedIds.has(artistId) ? 'drafted'
           : d.hasConflict ? 'conflict'
           : 'available';
       }
@@ -362,7 +368,6 @@ export default function AssignDJScreen() {
       return (a.user.fullName ?? '').toLowerCase().localeCompare((b.user.fullName ?? '').toLowerCase());
     });
   })();
-  const draftCount = currentDrafts.length;
 
   // For past slots: tapping a DJ sends a past-gig confirmation request to the artist
   const handleTapDJPast = (artistId: string) => {
@@ -461,10 +466,20 @@ export default function AssignDJScreen() {
     });
   };
 
-  // Send every drafted artist their gig request at once (footer "Send request"). Confirmed
-  // first — sending is not undoable — then closes the sheet.
+  // "Draft" — commit the staged set: add newly-staged artists as drafts and drop any existing
+  // draft the manager un-staged, then close. (Nothing was written while staging.)
+  const commitDrafts = () => {
+    if (!currentUser) return;
+    const original = new Set(currentDrafts.map((d) => d.artistId));
+    stagedIds.forEach((id) => { if (!original.has(id)) setDraft(slot!.id, slot!.venueId, id, currentUser.id); });
+    original.forEach((id) => { if (!stagedIds.has(id)) removeDraftByDJ(slot!.id, id); });
+    router.back();
+  };
+
+  // "Send N" — send every STAGED artist their gig request at once. Confirmed first (sending isn't
+  // undoable); any existing draft the manager un-staged is dropped too, then the sheet closes.
   const confirmSendAll = () => {
-    const ids = currentDrafts.map((d) => d.artistId);
+    const ids = [...stagedIds];
     if (ids.length === 0) return;
     Alert.alert(
       'Send Gig Request',
@@ -472,6 +487,7 @@ export default function AssignDJScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Send', onPress: async () => {
+          currentDrafts.forEach((d) => { if (!stagedIds.has(d.artistId)) removeDraftByDJ(slot!.id, d.artistId); });
           for (const id of ids) { await sendNow(id); }
           router.back();
         } },
@@ -485,15 +501,14 @@ export default function AssignDJScreen() {
       return;
     }
     if (!currentUser) return;
-    // Tapping an already-drafted artist toggles them off; tapping a new one drafts them.
-    // Either way we STAY on the screen so the manager can pick more than one artist, then
-    // send in place (the row's send icon) or close to keep the drafts to send from the
-    // calendar. Rows with a real booking already fall through untouched (see render states).
-    if (assignedDJIds.has(artistId)) {
-      removeDraftByDJ(slot!.id, artistId);
-      return;
-    }
-    setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
+    // Future slot → just STAGE (toggle). Nothing is written until "Draft" or "Send" (footer), so
+    // the manager can pick several artists and the ✕ discards them all. Booked rows aren't tappable.
+    setStagedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(artistId)) next.delete(artistId);
+      else next.add(artistId);
+      return next;
+    });
   };
 
   // Add a roster artist to THIS venue's lineup from the slot screen. No draft is
@@ -627,16 +642,24 @@ export default function AssignDJScreen() {
         )}
       </ScrollView>
 
-      {/* Footer shows Send once artists are drafted (tapping already saved them as drafts).
-          Closing — or keeping them as drafts without sending — is the ✕ in the header. */}
-      {!isPastSlot && draftCount > 0 && (
+      {/* Footer once artists are staged: Draft (commit) + Send, side by side. The ✕ in the header
+          discards the staged selections — nothing is written until one of these is tapped. */}
+      {!isPastSlot && stagedIds.size > 0 && (
         <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
-          <Pressable
-            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-            onPress={confirmSendAll}
-          >
-            <Text style={styles.sendBtnText}>Send {draftCount}</Text>
-          </Pressable>
+          <View style={styles.footerRow}>
+            <Pressable
+              style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+              onPress={commitDrafts}
+            >
+              <Text style={[styles.sendBtnText, { color: colors.foreground }]}>Draft</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+              onPress={confirmSendAll}
+            >
+              <Text style={styles.sendBtnText}>Send {stagedIds.size}</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -665,6 +688,7 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyText: { fontSize: 14 },
   footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footerRow: { flexDirection: 'row', gap: 10 },
   sendBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
   sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
