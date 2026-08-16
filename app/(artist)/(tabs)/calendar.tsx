@@ -488,6 +488,9 @@ export default function DJAvailabilityScreen() {
     const cells: (string | null)[] = [];
     for (let i = 0; i < firstDayMon; i++) cells.push(null);
     for (let d = 1; d <= daysInMonth; d++) cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    // Pad to a full 6 rows (42 cells) so every month is the SAME height — the grid never resizes
+    // when you swipe (a 4/5-row month just leaves the bottom row(s) blank). No layout jump.
+    while (cells.length < 42) cells.push(null);
     return (
       <View style={styles.calendarGrid}>
         {cells.map((date, i) => {
