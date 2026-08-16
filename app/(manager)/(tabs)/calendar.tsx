@@ -1398,10 +1398,17 @@ export default function CalendarScreen() {
           () => dismissBooking(b));
         return withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row);
       }),
-      ...drafts.map((d) =>
-        withSwipeDelete('draft-' + d.artistId, () => removeDraftByDJ(slot.id, d.artistId),
-          dayRow(getArtistUser(d.artistId), <StatusBadge status="draft" />,
-            () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)))),
+      // Drafts on the slot collapse into ONE stacked-avatar row (mirrors the live-bookings group,
+      // line above) — 2+ drafts no longer show as separate rows. Tap opens assign-artist to manage
+      // them; swipe removes every draft on the slot at once.
+      ...(drafts.length > 0 ? [
+        withSwipeDelete('drafts-' + slot.id, () => drafts.forEach((d) => removeDraftByDJ(slot.id, d.artistId)),
+          dayRowMulti(
+            drafts.map((d) => getArtistUser(d.artistId)),
+            <StatusBadge status="draft" />,
+            () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href),
+          )),
+      ] : []),
     ];
   };
 
