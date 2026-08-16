@@ -5,6 +5,7 @@ import type { Href } from 'expo-router';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform, RefreshControl, Image } from '@/lib/rn';
 import { venueImageFor } from '@/lib/venue-images';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureDetector, Gesture, Directions } from 'react-native-gesture-handler';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useCalendarJumpStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
@@ -462,6 +463,12 @@ export default function DJAvailabilityScreen() {
     setCurrentYear(now.getFullYear());
     setSelectedDate(todayStr);
   };
+
+  // Swipe left/right anywhere on the month grid to change month (replaces the ‹ › buttons).
+  const monthSwipe = Gesture.Race(
+    Gesture.Fling().direction(Directions.LEFT).runOnJS(true).onEnd(() => nextMonth()),
+    Gesture.Fling().direction(Directions.RIGHT).runOnJS(true).onEnd(() => prevMonth()),
+  );
   const prevWeek = () => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() - 7);
@@ -797,22 +804,13 @@ export default function DJAvailabilityScreen() {
         {/* ─── MONTH VIEW ─── */}
         {viewMode === 'month' && (
           <View>
-            {/* Month Navigation */}
+            {/* Month title — swipe left/right on the grid below to change month */}
             <View style={styles.monthNav}>
-              <View style={styles.monthNavLeft}>
-                <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
-                <Pressable onPress={prevMonth} style={styles.monthNavBtn} hitSlop={6}>
-                  <MaterialIcons name="chevron-left" size={26} color={colors.foreground} />
-                </Pressable>
-                <Pressable onPress={nextMonth} style={styles.monthNavBtn} hitSlop={6}>
-                  <MaterialIcons name="chevron-right" size={26} color={colors.foreground} />
-                </Pressable>
-              </View>
-              <Pressable onPress={goToday} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <Text style={[styles.todayBtnText, { color: colors.primary }]}>Today</Text>
-              </Pressable>
+              <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
             </View>
 
+            <GestureDetector gesture={monthSwipe}>
+              <View>
             {/* Day Labels */}
             <View style={styles.dayLabels}>
               {DAYS_SHORT.map((d) => (
@@ -860,16 +858,17 @@ export default function DJAvailabilityScreen() {
                     style={styles.calendarCell}
                     onPress={() => handleDayPress(date)}
                   >
-                    {/* Selection = a bigger, bolder number (like the manager). Today gets no
-                        special treatment — it reads like any other day. */}
+                    {/* Selection = a bigger, bolder number. Today's number is coral + bold to mark
+                        it (the "Today" button is gone) — unless the day has a status fill, where
+                        the number stays white for contrast. */}
                     <View style={styles.dayCellRing}>
                       <View style={[styles.dayCell, dayColor ? { backgroundColor: dayColor } : null]}>
                         <Text style={[
                           styles.dayNumber,
                           {
-                            color: dayColor ? '#fff' : colors.foreground,
+                            color: dayColor ? '#fff' : isToday ? colors.primary : colors.foreground,
                             fontSize: isSelected ? 20 : 16,
-                            fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,
+                            fontFamily: (isSelected || (isToday && !dayColor)) ? fonts.bodyBold : fonts.bodySemibold,
                           },
                         ]}>{dayNum}</Text>
                       </View>
@@ -878,6 +877,8 @@ export default function DJAvailabilityScreen() {
                 );
               })}
             </View>
+              </View>
+            </GestureDetector>
 
             {/* Status Dot Legend — hidden behind SHOW_CALENDAR_LEGEND */}
             {SHOW_CALENDAR_LEGEND && (

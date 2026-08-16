@@ -5,6 +5,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { GestureDetector, Gesture, Directions } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 // react-native-reanimated Animated not used in this file (using RNAnimated from react-native instead)
 // TimeSelector removed — using dropdown time picker instead
@@ -1243,6 +1244,12 @@ export default function CalendarScreen() {
     setSelectedDate(todayStr);
   };
 
+  // Swipe left/right anywhere on the month grid to change month (replaces the ‹ › buttons).
+  const monthSwipe = Gesture.Race(
+    Gesture.Fling().direction(Directions.LEFT).runOnJS(true).onEnd(() => nextMonthNav()),
+    Gesture.Fling().direction(Directions.RIGHT).runOnJS(true).onEnd(() => prevMonthNav()),
+  );
+
   // ─── Render Helpers ───────────────────────────────────────────────────────
   // Returns true when slot can be deleted (no active/completed bookings)
   const slotIsDeletable = (slot: Slot) => {
@@ -1489,21 +1496,6 @@ export default function CalendarScreen() {
       {/* Frozen header — stays fixed while the calendar + day list scroll. */}
       <View style={styles.header}>
         <VenueFilterHeader />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-        {periodScopedDrafts.length > 0 && (
-          <Pressable
-            style={({ pressed }) => [styles.headerSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => {
-              setSendVenueFilter(null);
-              setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
-              setShowSendSheet(true);
-            }}
-            hitSlop={8}
-          >
-            <Text style={styles.headerSendText}>Send {periodScopedDrafts.length}</Text>
-          </Pressable>
-        )}
-        </View>
       </View>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} nestedScrollEnabled refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calendarRefreshing} onRefresh={handleCalendarRefresh} tintColor={colors.primary} />}>
         <View onStartShouldSetResponder={() => { setActiveSlotMenu(null); return false; }}>
@@ -1524,21 +1516,27 @@ export default function CalendarScreen() {
           ) : (
             /* ═══════════════════ MONTH VIEW ═══════════════════ */
             <>
-              {/* Month Navigation — label + arrows on the left, Today jump on the right. */}
+              {/* Month label; swipe the grid to change month. "Send all (N)" sits where Today was —
+                  coral text, no background — and only when there are pending draft requests. */}
               <View style={styles.monthNav}>
                 <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
-                <Pressable onPress={prevMonthNav} style={styles.monthNavBtn} hitSlop={6}>
-                  <MaterialIcons name="chevron-left" size={26} color={colors.foreground} />
-                </Pressable>
-                <Pressable onPress={nextMonthNav} style={styles.monthNavBtn} hitSlop={6}>
-                  <MaterialIcons name="chevron-right" size={26} color={colors.foreground} />
-                </Pressable>
                 <View style={{ flex: 1 }} />
-                <Pressable onPress={goToToday} hitSlop={8}>
-                  <Text style={[styles.todayBtn, { color: colors.primary }]}>Today</Text>
-                </Pressable>
+                {periodScopedDrafts.length > 0 && (
+                  <Pressable
+                    onPress={() => {
+                      setSendVenueFilter(null);
+                      setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
+                      setShowSendSheet(true);
+                    }}
+                    hitSlop={8}
+                  >
+                    <Text style={[styles.todayBtn, { color: colors.primary }]}>Send all ({periodScopedDrafts.length})</Text>
+                  </Pressable>
+                )}
               </View>
 
+              <GestureDetector gesture={monthSwipe}>
+                <View>
               {/* Day Labels - Monday first */}
               <View style={styles.dayLabels}>
                 {DAYS_SHORT.map((d) => (
@@ -1582,11 +1580,10 @@ export default function CalendarScreen() {
                   else if (dDrafted) fill = colors.surface;   // beige fill — artist drafted, not sent yet
                   else if (dPending) fill = STATUS_COLORS.pending;
                   else if (dConfirmed) fill = STATUS_COLORS.confirmed;
-                  // Today gets no special treatment (the "Today" button jumps there). Dark on
-                  // no/beige fill, white on the strong status colours.
-                  const numColor = !fill ? colors.foreground
-                    : fill === colors.surface ? colors.foreground
-                    : '#fff';
+                  // Today's number is coral + bold to mark it (the "Today" button is gone). White on
+                  // a strong status fill for contrast; dark on no/beige fill otherwise.
+                  const strongFill = !!fill && fill !== colors.surface;
+                  const numColor = strongFill ? '#fff' : isToday ? colors.primary : colors.foreground;
                   return (
                     <Pressable
                       key={day}
@@ -1595,12 +1592,14 @@ export default function CalendarScreen() {
                     >
                       <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
                         dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
-                        <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                        <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: (isSelected || (isToday && !strongFill)) ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                       </View>
                     </Pressable>
                   );
                 })}
               </View>
+                </View>
+              </GestureDetector>
 
               {/* Selected Date Slots */}
               {!selectedDate ? (
