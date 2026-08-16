@@ -487,7 +487,13 @@ export default function AddSlotScreen() {
           <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
           <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>Add Slot</Text>
         </View>
-        {!isPast && stagedIds.size > 0 && (
+        {stagedIds.size === 0 ? (
+          // Nothing staged → a plain close. Creates nothing; the sheet just dismisses.
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <MaterialIcons name="close" size={24} color={colors.muted} />
+          </Pressable>
+        ) : (
+          // Artists staged → the ✕ gives way to the send action.
           <Pressable onPress={confirmSendAll} hitSlop={8}>
             <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {stagedIds.size}</Text>
           </Pressable>
@@ -648,26 +654,29 @@ export default function AddSlotScreen() {
 
       {/* Pinned footer — the root now has a real height, so this sibling stays at the bottom
           while the list scrolls between it and the header. */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
-        <Pressable
-          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          onPress={async () => {
-            Keyboard.dismiss();
-            // "Draft" commits the staged artists as drafts (creating the slot on demand). "Done"
-            // (nothing staged) just closes — no slot, no drafts.
-            if (currentUser && stagedIds.size > 0) {
-              const slotId = await ensureSlot();
-              if (slotId) {
-                assignedRef.current = true;
-                stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id));
+      {/* Footer appears only once artists are staged — it's a real action ("Draft"). With nothing
+          staged there's no footer; the ✕ in the header is how you close (see header above). */}
+      {stagedIds.size > 0 && (
+        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
+          <Pressable
+            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={async () => {
+              Keyboard.dismiss();
+              // "Draft" commits the staged artists as drafts (creating the slot on demand).
+              if (currentUser) {
+                const slotId = await ensureSlot();
+                if (slotId) {
+                  assignedRef.current = true;
+                  stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id));
+                }
               }
-            }
-            router.back();
-          }}
-        >
-          <Text style={styles.sendBtnText}>{stagedIds.size > 0 ? 'Draft' : 'Done'}</Text>
-        </Pressable>
-      </View>
+              router.back();
+            }}
+          >
+            <Text style={styles.sendBtnText}>Draft</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
