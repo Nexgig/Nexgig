@@ -591,11 +591,10 @@ export default function AssignDJScreen() {
             {formatTime(slot!.startTime)}–{formatTime(slot!.endTime)}
           </Text>
         </View>
-        {!isPastSlot && draftCount > 0 && (
-          <Pressable onPress={confirmSendAll} hitSlop={8}>
-            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {draftCount}</Text>
-          </Pressable>
-        )}
+        {/* A plain close in the top-right — always available, even after drafting artists. */}
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <MaterialIcons name="close" size={24} color={colors.muted} />
+        </Pressable>
       </View>
 
       {isPastSlot && (
@@ -628,17 +627,18 @@ export default function AssignDJScreen() {
         )}
       </ScrollView>
 
-      {/* Pinned footer — the root now has a real height, so this sibling stays at the bottom
-          while the list scrolls between it and the header. Says "Draft" when artists are
-          drafted (saved, not sent), else "Done". */}
-      <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
-        <Pressable
-          style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.sendBtnText}>{draftCount > 0 ? 'Draft' : 'Done'}</Text>
-        </Pressable>
-      </View>
+      {/* Footer shows Send once artists are drafted (tapping already saved them as drafts).
+          Closing — or keeping them as drafts without sending — is the ✕ in the header. */}
+      {!isPastSlot && draftCount > 0 && (
+        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
+          <Pressable
+            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={confirmSendAll}
+          >
+            <Text style={styles.sendBtnText}>Send {draftCount}</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }

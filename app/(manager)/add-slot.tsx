@@ -487,17 +487,10 @@ export default function AddSlotScreen() {
           <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
           <Text style={[styles.sheetSubtitle, { color: colors.muted }]}>Add Slot</Text>
         </View>
-        {stagedIds.size === 0 ? (
-          // Nothing staged → a plain close. Creates nothing; the sheet just dismisses.
-          <Pressable onPress={() => router.back()} hitSlop={10}>
-            <MaterialIcons name="close" size={24} color={colors.muted} />
-          </Pressable>
-        ) : (
-          // Artists staged → the ✕ gives way to the send action.
-          <Pressable onPress={confirmSendAll} hitSlop={8}>
-            <Text style={[styles.doneBtn, { color: colors.primary }]}>Send {stagedIds.size}</Text>
-          </Pressable>
-        )}
+        {/* A plain close in the top-right. Both real actions (Draft / Send) live in the footer. */}
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <MaterialIcons name="close" size={24} color={colors.muted} />
+        </Pressable>
       </View>
 
       {/* Fixed top — venue + time pickers stay on screen; only the artist list scrolls. */}
@@ -654,27 +647,35 @@ export default function AddSlotScreen() {
 
       {/* Pinned footer — the root now has a real height, so this sibling stays at the bottom
           while the list scrolls between it and the header. */}
-      {/* Footer appears only once artists are staged — it's a real action ("Draft"). With nothing
-          staged there's no footer; the ✕ in the header is how you close (see header above). */}
+      {/* Footer appears once artists are staged: Draft + Send side by side, splitting the width.
+          Closing is always the ✕ in the header (kept visible even after staging). */}
       {stagedIds.size > 0 && (
         <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
-          <Pressable
-            style={({ pressed }) => [styles.sendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-            onPress={async () => {
-              Keyboard.dismiss();
-              // "Draft" commits the staged artists as drafts (creating the slot on demand).
-              if (currentUser) {
-                const slotId = await ensureSlot();
-                if (slotId) {
-                  assignedRef.current = true;
-                  stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id));
+          <View style={styles.footerRow}>
+            <Pressable
+              style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
+              onPress={async () => {
+                Keyboard.dismiss();
+                // "Draft" commits the staged artists as drafts (creating the slot on demand).
+                if (currentUser) {
+                  const slotId = await ensureSlot();
+                  if (slotId) {
+                    assignedRef.current = true;
+                    stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id));
+                  }
                 }
-              }
-              router.back();
-            }}
-          >
-            <Text style={styles.sendBtnText}>Draft</Text>
-          </Pressable>
+                router.back();
+              }}
+            >
+              <Text style={[styles.sendBtnText, { color: colors.foreground }]}>Draft</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+              onPress={confirmSendAll}
+            >
+              <Text style={styles.sendBtnText}>Send {stagedIds.size}</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -710,6 +711,7 @@ const styles = StyleSheet.create({
   addPillText: { fontSize: 13, fontWeight: '700' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
   footer: { marginHorizontal: -13, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footerRow: { flexDirection: 'row', gap: 10 },
   sendBtn: { borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
   sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
