@@ -152,7 +152,7 @@ export default function InviteArtists() {
         <Text style={[styles.label, { color: colors.muted }]}>NAME (OPTIONAL)</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-          placeholder="e.g. Layla Rae"
+          placeholder="David"
           placeholderTextColor={colors.muted}
           value={name}
           onChangeText={setName}
