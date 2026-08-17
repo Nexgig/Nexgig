@@ -386,9 +386,12 @@ export default function ManagerDashboard() {
               <Text style={[styles.gigVenue, { color: colors.muted }]} numberOfLines={1}>{bookingVenueName(g.first, g.first.venue?.name)}</Text>
             </View>
             <View style={styles.gigRight}>
-              <Text style={[styles.gigTime, { color: colors.muted }]}>
-                {g.first.slot ? `${fmtTime(g.first.slot.startTime)}–${fmtTime(g.first.slot.endTime)}` : ''}
-              </Text>
+              {g.first.slot && (
+                <View style={styles.gigTimeRow}>
+                  <MaterialIcons name="schedule" size={13} color={colors.muted} />
+                  <Text style={[styles.gigTime, { color: colors.muted }]}>{fmtTime(g.first.slot.startTime)}</Text>
+                </View>
+              )}
             </View>
           </Pressable>
         );
@@ -669,6 +672,7 @@ const styles = StyleSheet.create({
   gigVenue: { fontSize: 13 },
   gigRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
   gigTime: { fontSize: 13, fontWeight: '500' },
+  gigTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   gigInfo: { flex: 1 },
   // Inline panel (expands beneath the selected Overview row)
   inlinePanel: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6, marginBottom: 12 },
