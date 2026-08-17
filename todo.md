@@ -8,41 +8,38 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 11 Aug 2026. Only open items live here. Done work is deleted, not archived.
+Updated 17 Aug 2026. Only open items live here. Done work is deleted, not archived.
 
-> **State of play (17 Jul).** Build 17 passed **Beta App Review** — TestFlight external
-> testers have it. That is *not* App Store approval; the public submission has **not been
-> made yet**. Sentry is done and live in build 17 (App Privacy Diagnostics = YES), so the old
-> Sentry item is deleted.
+> **State of play (17 Aug 2026).** 🎉 **LIVE ON THE APP STORE.** Build 21 was approved
+> (14 Aug) and **released to the public store on 17 Aug 2026** — confirmed live (found on the
+> App Store). The app is out.
 >
-> **Beta review ≠ App Store review — don't conflate them.** Beta clears TestFlight only.
-> Nothing is in front of App Store reviewers until Submit is pressed.
+> **Phase is now POST-LAUNCH: polish + the feature backlog below.** Ship JS fixes/polish via
+> `eas update` (OTA) — they reach live users over the air, no review, within a launch or two.
+> A brand-new download runs build 21's baked-in JS on its FIRST open, then pulls the latest OTA
+> bundle on the next open (`fallbackToCacheTimeout` is 0, so no wait-on-launch).
 >
-> **The current phase is TESTFLIGHT POLISH, not launch.** Testing with friends, fixing what
-> they hit, shipping via `eas update` in seconds. The polish batch, avatars and dual-role
-> accounts are all done (19–20 Jul). Demo-account avatars re-picked and the role
-> switcher verified on device (20 Jul), so nothing blocks submission but the decision.
-> **Submission is on hold on purpose — see item 1. Don't push for it.**
+> **OTA vs native — the one rule:** OTA carries JS / design / content only. A native change (new
+> package with native code, a permission, icon/splash) needs a NEW build + App Store submission,
+> and **that re-freezes OTA** until the new build is approved. Nothing to re-freeze now — keep
+> shipping OTA.
 
-**1 · App Store submission — ✅ APPROVED (build 21, 14 Aug 2026) — PENDING MANUAL RELEASE.**
-Approved by App Store review. Release is manual, so it sits at "Pending Developer Release" until
-Tuts presses **Release This Version** in App Store Connect — not live on the store until then.
-(History: build 17 was **REJECTED** — two reasons: a custom Sign-in-with-Apple button using the Apple logo,
-and asking for the user's full name at sign-up when Sign in with Apple already provides it).
-Both fixed: `AppleAuthentication.AppleAuthenticationButton` (official button, HIG-correct logo)
-and the name is now taken from Apple + not re-asked (legal-name hidden for OAuth). Build 21
-(commit 0692f29) also carries the session's other work — the duplicate schedule-slots fix, the
-schedule-editor set-order fix, the artist Venues-tab badge removal, and the Clash Display →
-General Sans headings/titles pass. New 6.9" screenshots (1290×2796) uploaded; Resolution Center
-reply posted. Release is MANUAL — on approval it sits at "Pending Developer Release" until Tuts
-presses Release.
+**1 · App Store — ✅ RELEASED & LIVE (build 21, released 17 Aug 2026). LAUNCHED.**
+Approved 14 Aug, released to the public App Store on 17 Aug 2026 and confirmed live. The app is
+out. (History: build 17 was **REJECTED** — a custom Sign-in-with-Apple button using the Apple
+logo, and asking for the user's full name at sign-up when Sign in with Apple already provides it.
+Both fixed in build 21: `AppleAuthentication.AppleAuthenticationButton` (official button) + name
+taken from Apple, not re-asked; legal-name hidden for OAuth. Build 21 = commit 0692f29.)
+Re-submit a NEW build only for native changes; until then everything ships OTA.
 
-✅ **OTA FREEZE IS LIFTED** (approved 14 Aug 2026). `eas update` is safe again — resume shipping
-fixes/polish over the air. Re-freeze only if a NEW build is ever submitted for review.
+✅ **OTA FREEZE IS LIFTED — app is live.** `eas update` reaches real users over the air. Keep
+shipping fixes/polish. Re-freeze ONLY if a NEW build is ever submitted for review.
 
-**Still held post-approval:** the invoice-email function. `send-email` must be **redeployed** — the
-`sendEmail` call ships but no-ops safely until then, so invoices don't actually email out yet.
-Redeploy it now that we're approved.
+**Invoice email — mostly done; VERIFY the PDF.** `send-email` was redeployed this session and
+invoice emails now send. The PDF-attachment fix is in `supabase/functions/send-email/index.ts`
+(Resend `attachments`) and the base64 PDF is generated in `invoice-preview.tsx` (ships OTA).
+**To close:** confirm a real invoice email actually arrives WITH the PDF attached — if it doesn't,
+redeploy `send-email` once more (its last manual deploy may predate the attachment change).
 
 ### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
 - **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
@@ -163,6 +160,7 @@ Redeploy it now that we're approved.
 ---
 
 ## ⟢ DONE  (never shown when asked what's left; newest first)
+- (Aug 17 2026) **🎉 APP STORE LAUNCH + calendar/type polish batch (all OTA).** Build 21 approved 14 Aug, **RELEASED to the public App Store 17 Aug** (confirmed live). Shipped over OTA the same day: calendar redesign — Apple-style horizontal swipe pager for months (replaced the flaky gesture-handler Fling), fixed 6-row month grid (no height jump, no gap under it), faded-but-tappable adjacent-month days (prev/next month fill the blank cells and carry their real booking status; empty ones stay greyed); removed the today-coral highlight everywhere (both calendars + both dashboard Overview strips); Clash Display → General Sans title pass (screen titles GS Bold, section headers semibold, month title matches the dashboard "Overview"; Clash kept on the "Nexgig." logo + round status dots); add-block full-day **FROM→TO date range** (one full-day `availability_blocks` row per day, single batched insert); **past-schedule-slot flicker fix** — manager calendar now floors `ensureScheduleSlots` at today (was materialising past empty slots that `sweepPastEmptySlots` then deleted). All JS-only.
 - (Jul 10 2026) **Android push (FCM) + gig reminders — DONE** (verified this session). CODE complete: `registerForPushNotifications` saves the Expo push token to `users.push_token` on app load (`app/_layout.tsx`), Android notification channel set (importance MAX), `create-notification` Edge Function sends via Expo→FCM, and `lib/reminders.ts` + `lib/invoice-reminders.ts` schedule local gig/invoice reminders (Android-safe — only web is guarded out). INFRA verified: `google-services.json` (Firebase project `nexgigapp-b34e6`) wired via `app.config` `googleServicesFile` + `POST_NOTIFICATIONS`; **Android production build exists** (EAS build code 3, Jun 28, channel `production`, SDK 54); **FCM V1 Google Service Account key uploaded to Expo** (`firebase-adminsdk-fbsvc@nexgigapp-b34e6`, matches the repo's Firebase project, updated ~Jun 25). ONLY remaining = a one-off on-device smoke-test: send to a real Android phone's `ExponentPushToken` via https://expo.dev/notifications to confirm end-to-end delivery. (A Google Play Store launch/submission path is separate and stays post-launch.)
 - (Jul 8 2026) **LEAVE/REJOIN vs OTHER VENUES — VERIFIED SAFE, no fix needed** (was logged as a "confirm this can't happen" item June 27). Investigated `handleDecline` in `app/(manager)/(tabs)/network.tsx`: declining a re-join application ONLY updates that one `applications` row by id (`status:'declined'`, `.eq('id', app.id)`) + drops it from the local list + notifies the artist. It NEVER touches `venue_assignments`. `applications` and `venue_assignments` are independent tables (no FK cascade), so a declined re-join physically can't remove/alter the artist's other venue assignments with that manager. The only bulk `venue_assignments.delete` is the separate, deliberate "disconnect artist from roster" action (unrelated to decline). No coupling → closed.
 - (Jul 8 2026, session 3) **Manager redesign + dashboard fixes** (OTA + 1 SQL col). My Artists → flat Network rows (tap→profile, Bookings button on right; Profile/Assign-Venue/disconnect removed — old Assign-Venue Modal + openAssignSheet/handleDisconnect now dead code in artists.tsx, strip later). venue-detail Slots tab → dashboard-style rows (artist-name title when assigned + `slot · date · time` sub, Clash "." status dot green/amber/blue, else amber "Unassigned"); Lineup tab → Network rows (avatar+verified+DJ/Musician label) + remove-from-lineup on the right. **Venue-photo snapshot:** new `venuePhotoUrl` on Booking — DB `alter table public.bookings add column if not exists venue_photo_url text;` — written at all 3 booking inserts (assign-artist, manager calendar, add-slot) via `venuePhotoUri(venue)`, mapped `venue_photo_url→venuePhotoUrl` in every loader, and the name-only venue fallback carries `photoUrls:[venuePhotoUrl]` so hidden/disconnected venues keep their photo on the artist dashboard + gig lists (new bookings only). **Multi-artist slots:** manager dashboard groups bookings by slotId → one row (stacked avatars + "A, B +N", priority status dot pending→confirmed→completed; single→booking-detail, multi→assign-artist?slotId).
