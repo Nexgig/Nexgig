@@ -1102,9 +1102,9 @@ const styles = StyleSheet.create({
   weekEmptyText: { fontSize: 12, fontStyle: 'italic' },
 
   // Month view — filled colour squares (green booked / gold pending / slate cancelled)
-  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  monthTitle: { fontSize: 20, fontWeight: '700' },
+  monthTitle: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },   // matches the dashboard "Overview"
   todayBtnText: { fontSize: 15, fontWeight: '700' },
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
