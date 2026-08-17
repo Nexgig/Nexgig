@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   section: { marginTop: 0 },
-  sectionTitle: { fontSize: 22, fontWeight: '700' },
+  sectionTitle: { fontSize: 22, fontWeight: '600' },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 20 },
   overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   overviewInfo: { padding: 2 },
