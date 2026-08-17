@@ -1264,19 +1264,32 @@ export default function CalendarScreen() {
   // every month is the SAME height — the grid never resizes when you swipe, and the pager reserves
   // no extra space (so there's no gap between the calendar and the day list below).
   const renderMonthGrid = (year: number, month: number) => {
-    const dim = getDaysInMonth(month, year);
     const offset = getFirstDayOffset(month, year);
-    const cells: (string | null)[] = [];
-    for (let i = 0; i < offset; i++) cells.push(null);
-    for (let d = 1; d <= dim; d++) cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-    while (cells.length < 42) cells.push(null);
+    // Full 6-row (42-cell) grid: the previous month's trailing days, this month, then the next
+    // month's leading days — no row is ever blank. Adjacent-month days render faded + inert.
+    const firstCell = new Date(year, month, 1);
+    firstCell.setDate(firstCell.getDate() - offset);
+    const cells: { date: string; outside: boolean }[] = [];
+    for (let i = 0; i < 42; i++) {
+      const dObj = new Date(firstCell);
+      dObj.setDate(firstCell.getDate() + i);
+      const ds = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+      cells.push({ date: ds, outside: dObj.getMonth() !== month });
+    }
     return (
       <View style={styles.calendarGrid}>
-        {cells.map((dateStr, idx) => {
-          if (!dateStr) return <View key={`e-${year}-${month}-${idx}`} style={styles.calendarCell} />;
+        {cells.map(({ date: dateStr, outside }) => {
           const day = parseInt(dateStr.split('-')[2], 10);
+          if (outside) {
+            return (
+              <View key={dateStr} style={styles.calendarCell}>
+                <View style={styles.dayCircle}>
+                  <Text style={[styles.dayNumber, { color: colors.muted, opacity: 0.5, fontFamily: fonts.bodySemibold }]}>{day}</Text>
+                </View>
+              </View>
+            );
+          }
           const daySlots = getSlotsForDate(dateStr);
-          const isToday = dateStr === todayStr;
           const isSelected = dateStr === selectedDate;
           // Strongest state among the day's slots (see the inline version this was extracted from).
           const pastPendingOnDay = allBookings.filter(

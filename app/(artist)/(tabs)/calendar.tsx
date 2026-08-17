@@ -483,20 +483,33 @@ export default function DJAvailabilityScreen() {
     else if (page === 2) nextMonth();
   };
   const renderMonthGrid = (year: number, month: number) => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDayMon = toMondayIndex(new Date(year, month, 1).getDay());
-    const cells: (string | null)[] = [];
-    for (let i = 0; i < firstDayMon; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
-    // Pad to a full 6 rows (42 cells) so every month is the SAME height — the grid never resizes
-    // when you swipe (a 4/5-row month just leaves the bottom row(s) blank). No layout jump.
-    while (cells.length < 42) cells.push(null);
+    // A full 6-row (42-cell) grid spanning the previous month's trailing days, this month, then the
+    // next month's leading days — so no row is ever blank. Adjacent-month days render faded + inert.
+    const firstCell = new Date(year, month, 1);
+    firstCell.setDate(firstCell.getDate() - firstDayMon);
+    const cells: { date: string; outside: boolean }[] = [];
+    for (let i = 0; i < 42; i++) {
+      const dObj = new Date(firstCell);
+      dObj.setDate(firstCell.getDate() + i);
+      const ds = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+      cells.push({ date: ds, outside: dObj.getMonth() !== month });
+    }
     return (
       <View style={styles.calendarGrid}>
-        {cells.map((date, i) => {
-          if (!date) return <View key={`e-${year}-${month}-${i}`} style={styles.calendarCell} />;
+        {cells.map(({ date, outside }) => {
           const dayNum = parseInt(date.split('-')[2]);
-          const isToday = date === todayStr;
+          if (outside) {
+            return (
+              <View key={date} style={styles.calendarCell}>
+                <View style={styles.dayCellRing}>
+                  <View style={styles.dayCell}>
+                    <Text style={[styles.dayNumber, { color: colors.muted, opacity: 0.5, fontSize: 16, fontFamily: fonts.bodySemibold }]}>{dayNum}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }
           const isSelected = date === selectedDate;
           const dayBookings = bookingsByDate.get(date) ?? [];
           const isBlocked = blockedDates.has(date);
