@@ -67,27 +67,16 @@ as $$
 declare
   v_uid   uuid := auth.uid();
   v_email text := lower(auth.jwt() ->> 'email');
-  v_ok    boolean;
   inv     record;
 begin
   if v_uid is null or v_email is null then
     return;
   end if;
 
-  -- SECURITY: only auto-claim when the email is VERIFIED — provider-verified via Apple/
-  -- Google, OR confirmed via email (email_confirmed_at). This is only safe with email
-  -- confirmation ENABLED: with it off, email_confirmed_at is auto-set at signup and proves
-  -- nothing, so an attacker could register an invited email they don't own and hijack the
-  -- invite. Keep email confirmation ON for the email_confirmed_at clause to be trustworthy.
-  select (
-    coalesce(raw_app_meta_data ->> 'provider', '') in ('apple', 'google')
-    or coalesce(raw_app_meta_data -> 'providers', '[]'::jsonb) ?| array['apple', 'google']
-    or email_confirmed_at is not null
-  ) into v_ok
-  from auth.users where id = v_uid;
-  if not coalesce(v_ok, false) then
-    return;
-  end if;
+  -- Auto-claim for ANY signup whose email matches a pending invite — Apple, Google, or
+  -- email/password — with no email-ownership check (product decision: frictionless, no code
+  -- confirmation). Known trade-off: without verification, someone could register with an
+  -- invited email they don't own and claim that roster spot.
 
   for inv in
     select * from public.roster_invites

@@ -341,8 +341,9 @@ export default function DJSetupScreen() {
         if (!Array.isArray(claimed) || claimed.length === 0) return;
         const addNotification = useNotificationStore.getState().addNotification;
         const nowIso = new Date().toISOString();
-        for (const c of claimed as { out_manager_id?: string }[]) {
+        for (const c of claimed as { out_manager_id?: string; out_manager_name?: string }[]) {
           if (!c?.out_manager_id) continue;
+          // Notify the MANAGER — their invited artist joined.
           addNotification({
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: c.out_manager_id,
@@ -352,6 +353,19 @@ export default function DJSetupScreen() {
             isRead: false,
             relatedId: user.id,
             relatedType: 'artist',
+            createdAt: nowIso,
+          });
+          // Notify the NEW ARTIST too — so they see they're on this manager's roster (same
+          // as when a manager adds an already-registered artist).
+          addNotification({
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}-a`,
+            userId: user.id,
+            type: 'lineup_added' as any,
+            title: 'Added to a roster',
+            body: `${c.out_manager_name || 'A manager'} added you to their roster — you can now be booked at their venues`,
+            isRead: false,
+            relatedId: c.out_manager_id,
+            relatedType: 'manager',
             createdAt: nowIso,
           });
         }
