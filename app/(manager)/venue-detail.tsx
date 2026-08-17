@@ -61,8 +61,11 @@ export default function VenueDetailScreen() {
   const allVenueAssignments = useLineupStore((s) => s.venueAssignments);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
+  const globalLineup = useLineupStore((s) => s.globalLineup);
+  const assignToVenue = useLineupStore((s) => s.assignToVenue);
+  const removeFromVenue = useLineupStore((s) => s.removeFromVenue);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invoices'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'roster' | 'invoices'>('overview');
   const [showReport, setShowReport] = useState(false);
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
@@ -70,6 +73,50 @@ export default function VenueDetailScreen() {
     () => venue ? allVenueAssignments.filter((a) => a.venueId === venue.id && a.status === 'active') : [],
     [venue, allVenueAssignments]
   );
+
+  // Roster tab: artists playing THIS venue, and the manager's roster artists not yet on it.
+  const venueArtistIds = useMemo(() => new Set(venueAssignments.map((a) => a.artistId)), [venueAssignments]);
+  const venueArtists = useMemo(() =>
+    venueAssignments
+      .map((a) => ({ artistId: a.artistId, user: getArtistUser(a.artistId), profile: getArtistProfile(a.artistId) }))
+      .filter((x) => !!x.user)
+      .sort((a, b) => (a.user!.fullName ?? '').toLowerCase().localeCompare((b.user!.fullName ?? '').toLowerCase())),
+    [venueAssignments, getArtistUser, getArtistProfile]);
+  const addableArtists = useMemo(() =>
+    globalLineup
+      .filter((r) => r.managerId === currentUser?.id && r.status === 'active' && !venueArtistIds.has(r.artistId))
+      .map((r) => ({ artistId: r.artistId, user: getArtistUser(r.artistId), profile: getArtistProfile(r.artistId) }))
+      .filter((x) => !!x.user)
+      .sort((a, b) => (a.user!.fullName ?? '').toLowerCase().localeCompare((b.user!.fullName ?? '').toLowerCase())),
+    [globalLineup, currentUser?.id, venueArtistIds, getArtistUser, getArtistProfile]);
+
+  const addToThisVenue = async (artistId: string) => {
+    if (!venue || !currentUser) return;
+    const now = new Date().toISOString();
+    assignToVenue({ id: `va-${venue.id}-${artistId}`, globalLineupId: `${currentUser.id}-${artistId}`, venueId: venue.id, artistId, assignedAt: now, status: 'active' });
+    await supabase.from('venue_assignments').upsert(
+      { manager_id: currentUser.id, artist_id: artistId, venue_id: venue.id, status: 'active' },
+      { onConflict: 'venue_id,artist_id' });
+  };
+
+  const removeFromThisVenue = (artistId: string, name: string) => {
+    if (!venue || !currentUser) return;
+    const v = venue, uid = currentUser.id;
+    Alert.alert('Remove from venue', `Remove ${name} from ${v.name}? They stay on your roster and any other venues.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => {
+        removeFromVenue(v.id, artistId); // optimistic
+        supabase.from('venue_assignments').update({ status: 'removed' }).eq('venue_id', v.id).eq('artist_id', artistId)
+          .then(({ error }) => {
+            if (error) {
+              console.warn('remove from venue:', error.message);
+              assignToVenue({ id: `va-${v.id}-${artistId}`, globalLineupId: `${uid}-${artistId}`, venueId: v.id, artistId, assignedAt: new Date().toISOString(), status: 'active' });
+              Alert.alert('Could not remove', 'Something went wrong — please try again.');
+            }
+          });
+      } },
+    ]);
+  };
 
   // Fallback: if the venue isn't in the local store (e.g. another manager's venue
   // opened from Network/Discovery), fetch it read-only from Supabase by id.
@@ -287,10 +334,10 @@ export default function VenueDetailScreen() {
             an artist's venues. */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'schedule', 'invoices'] as const).map((tab) => (
+            {(['overview', 'schedule', 'roster', 'invoices'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : tab === 'schedule' ? 'Schedule' : 'Invoices'}
+                  {tab === 'overview' ? 'Overview' : tab === 'schedule' ? 'Schedule' : tab === 'roster' ? 'Roster' : 'Invoices'}
                 </Text>
               </Pressable>
             ))}
@@ -450,6 +497,48 @@ export default function VenueDetailScreen() {
           </View>
         )}
 
+        {/* Roster Tab — owner only. Artists playing THIS venue; add/remove per-venue without
+            touching the manager's global roster. */}
+        {isOwner && activeTab === 'roster' && (
+          <View style={styles.rosterTab}>
+            <Text style={[styles.rosterLabel, { color: colors.muted }]}>PLAYING THIS VENUE</Text>
+            {venueArtists.length === 0 ? (
+              <Text style={[styles.rosterEmpty, { color: colors.muted }]}>No artists on this venue yet.</Text>
+            ) : (
+              venueArtists.map(({ artistId, user, profile }) => (
+                <View key={artistId} style={[styles.rosterRow, { borderBottomColor: colors.border }]}>
+                  <AvatarImage uri={user!.profilePhotoUrl || undefined} avatarId={(user as any)?.avatarId ?? undefined} seed={artistId} name={user!.fullName} size={44} variant="artist" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.rosterName, { color: colors.foreground }]} numberOfLines={1}>{user!.fullName}</Text>
+                    <Text style={[styles.rosterSub, { color: colors.muted }]} numberOfLines={1}>{genreLabel(profile?.primaryGenre, profile?.instruments)}</Text>
+                  </View>
+                  <Pressable onPress={() => removeFromThisVenue(artistId, user!.fullName ?? 'this artist')} hitSlop={8} style={({ pressed }) => [styles.rosterRemoveBtn, { borderColor: colors.error, opacity: pressed ? 0.6 : 1 }]}>
+                    <Text style={[styles.rosterRemoveText, { color: colors.error }]}>Remove</Text>
+                  </Pressable>
+                </View>
+              ))
+            )}
+
+            {addableArtists.length > 0 && (
+              <>
+                <Text style={[styles.rosterLabel, { color: colors.muted, marginTop: 24 }]}>ADD FROM YOUR ROSTER</Text>
+                {addableArtists.map(({ artistId, user, profile }) => (
+                  <View key={artistId} style={[styles.rosterRow, { borderBottomColor: colors.border }]}>
+                    <AvatarImage uri={user!.profilePhotoUrl || undefined} avatarId={(user as any)?.avatarId ?? undefined} seed={artistId} name={user!.fullName} size={44} variant="artist" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rosterName, { color: colors.foreground }]} numberOfLines={1}>{user!.fullName}</Text>
+                      <Text style={[styles.rosterSub, { color: colors.muted }]} numberOfLines={1}>{genreLabel(profile?.primaryGenre, profile?.instruments)}</Text>
+                    </View>
+                    <Pressable onPress={() => addToThisVenue(artistId)} style={({ pressed }) => [styles.rosterAddBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}>
+                      <Text style={styles.rosterAddText}>Add</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+
         {/* Invoices Tab — owner only. Every invoice sent for this venue, grouped by the
             month it was sent, with the invoice count per month and the artist named per row. */}
         {isOwner && activeTab === 'invoices' && (
@@ -469,6 +558,16 @@ export default function VenueDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  rosterTab: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
+  rosterLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
+  rosterEmpty: { fontSize: 14, paddingVertical: 8 },
+  rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  rosterName: { fontSize: 15, fontWeight: '600' },
+  rosterSub: { fontSize: 13, marginTop: 1 },
+  rosterRemoveBtn: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 },
+  rosterRemoveText: { fontSize: 13, fontWeight: '700' },
+  rosterAddBtn: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
+  rosterAddText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   scheduleTab: { paddingHorizontal: 20, paddingTop: 16, gap: 14 },
   scheduleEmptyText: { fontSize: 15, paddingVertical: 8 },
   scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12 },
