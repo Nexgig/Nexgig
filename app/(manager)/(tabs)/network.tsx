@@ -8,6 +8,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, mapVenueRow } from '@/lib/store';
+import { PendingInvites } from '@/components/pending-invites';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
@@ -502,6 +503,7 @@ export default function NetworkScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
           ItemSeparatorComponent={() => <View style={[styles.rowSep, { backgroundColor: colors.border }]} />}
+          ListHeaderComponent={<PendingInvites />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <MaterialIcons name="people" size={44} color={colors.muted} />
