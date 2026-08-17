@@ -106,7 +106,7 @@ export default function VenueDetailScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => {
         removeFromVenue(v.id, artistId); // optimistic
-        supabase.from('venue_assignments').update({ status: 'removed' }).eq('venue_id', v.id).eq('artist_id', artistId)
+        supabase.from('venue_assignments').delete().eq('manager_id', uid).eq('artist_id', artistId).eq('venue_id', v.id)
           .then(({ error }) => {
             if (error) {
               console.warn('remove from venue:', error.message);
