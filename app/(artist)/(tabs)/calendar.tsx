@@ -518,9 +518,9 @@ export default function DJAvailabilityScreen() {
               <View style={styles.dayCellRing}>
                 <View style={[styles.dayCell, dayColor ? { backgroundColor: dayColor } : null]}>
                   <Text style={[styles.dayNumber, {
-                    color: isToday ? colors.primary : dayColor ? '#fff' : colors.foreground,
+                    color: dayColor ? '#fff' : colors.foreground,
                     fontSize: isSelected ? 20 : 16,
-                    fontFamily: (isSelected || isToday) ? fonts.bodyBold : fonts.bodySemibold,
+                    fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,
                   }]}>{dayNum}</Text>
                 </View>
               </View>
