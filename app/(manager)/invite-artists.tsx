@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, Alert, FlatList } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, TextInput, Alert, ScrollView } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -142,14 +142,19 @@ export default function InviteArtists() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Add Artist</Text>
         <Pressable onPress={() => router.back()} hitSlop={8}><Text style={[styles.cancel, { color: colors.muted }]}>Cancel</Text></Pressable>
       </View>
 
-      {/* Venue picker — applies to whoever you add or invite. */}
-      <View style={styles.venuesWrap}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Venue picker — applies to whoever you add or invite. */}
         <Text style={[styles.label, { color: colors.muted }]}>ADD TO VENUES</Text>
         {managerVenues.length === 0 ? (
           <Text style={[styles.hint, { color: colors.muted }]}>You have no venues yet.</Text>
@@ -166,30 +171,24 @@ export default function InviteArtists() {
             })}
           </View>
         )}
-      </View>
 
-      {/* Search / email box */}
-      <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <MaterialIcons name="search" size={18} color={colors.muted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder="Search by name, or type an email to invite"
-          placeholderTextColor={colors.muted}
-          value={query}
-          onChangeText={setQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {query.length > 0 && <Pressable onPress={() => setQuery('')} hitSlop={8}><MaterialIcons name="close" size={18} color={colors.muted} /></Pressable>}
-      </View>
+        {/* Search / email box */}
+        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <MaterialIcons name="search" size={18} color={colors.muted} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name, or type an email to invite"
+            placeholderTextColor={colors.muted}
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {query.length > 0 && <Pressable onPress={() => setQuery('')} hitSlop={8}><MaterialIcons name="close" size={18} color={colors.muted} /></Pressable>}
+        </View>
 
-      <FlatList
-        data={results}
-        keyExtractor={(a) => a.id}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Math.max(insets.bottom, 16) + 16, flexGrow: 1 }}
-        ListHeaderComponent={emailToInvite ? (
+        {/* Invite-by-email option */}
+        {emailToInvite && (
           <Pressable onPress={inviteByEmail} disabled={inviting} style={({ pressed }) => [styles.inviteRow, { borderColor: colors.border, opacity: pressed || inviting ? 0.7 : 1 }]}>
             <View style={[styles.inviteIcon, { backgroundColor: colors.primary + '15' }]}>
               <MaterialIcons name="mail-outline" size={20} color={colors.primary} />
@@ -199,15 +198,11 @@ export default function InviteArtists() {
               <Text style={[styles.inviteSub, { color: colors.muted }]}>Not on Nexgig — we'll email them to join</Text>
             </View>
           </Pressable>
-        ) : null}
-        ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.muted }]}>
-            {!q ? 'Start typing a name to find an artist, or type a full email to invite someone new.'
-              : emailToInvite ? '' : 'No artists match. Type a full email to invite someone new.'}
-          </Text>
-        }
-        renderItem={({ item: a }) => (
-          <View style={[styles.artistRow, { borderBottomColor: colors.border }]}>
+        )}
+
+        {/* Results */}
+        {results.map((a) => (
+          <View key={a.id} style={[styles.artistRow, { borderBottomColor: colors.border }]}>
             <AvatarImage uri={a.profile_photo_url || undefined} avatarId={a.avatar_id ?? undefined} seed={a.id} name={a.full_name} size={44} variant="artist" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.artistName, { color: colors.foreground }]} numberOfLines={1}>{a.full_name}</Text>
@@ -217,8 +212,15 @@ export default function InviteArtists() {
               <Text style={styles.addBtnText}>{busyId === a.id ? 'Adding…' : 'Add'}</Text>
             </Pressable>
           </View>
+        ))}
+
+        {results.length === 0 && !emailToInvite && (
+          <Text style={[styles.empty, { color: colors.muted }]}>
+            {!q ? 'Start typing a name to find an artist, or type a full email to invite someone new.'
+              : 'No artists match. Type a full email to invite someone new.'}
+          </Text>
         )}
-      />
+      </ScrollView>
     </View>
   );
 }
@@ -227,13 +229,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 12 },
   title: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4 },
   cancel: { fontSize: 16, fontWeight: '600' },
+  content: { paddingHorizontal: 20, paddingTop: 4 },
   label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
   hint: { fontSize: 13, marginTop: 4 },
-  venuesWrap: { paddingHorizontal: 20, paddingBottom: 12 },
   venueChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   venueChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   venueChipText: { fontSize: 13, fontWeight: '600', maxWidth: 160 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 14, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11 },
   searchInput: { flex: 1, fontSize: 16, paddingVertical: 0 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 12, marginBottom: 12 },
   inviteIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -244,5 +246,5 @@ const styles = StyleSheet.create({
   artistSub: { fontSize: 13, marginTop: 1 },
   addBtn: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
   addBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  empty: { fontSize: 14, textAlign: 'center', marginTop: 40, paddingHorizontal: 20, lineHeight: 20 },
+  empty: { fontSize: 14, textAlign: 'center', marginTop: 40, paddingHorizontal: 12, lineHeight: 20 },
 });
