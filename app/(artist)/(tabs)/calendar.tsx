@@ -856,7 +856,7 @@ export default function DJAvailabilityScreen() {
                 Swipe left/right on the grid below to change month. No screen header — the month
                 row is the top of the screen now. */}
             <View style={styles.monthNav}>
-              <Text style={[styles.monthTitle, { color: colors.foreground, textTransform: 'uppercase' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+              <Text style={[styles.monthTitle, { color: colors.foreground, textTransform: 'lowercase' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
               <Pressable
                 style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
                 onPress={() => {
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
   // Month view — filled colour squares (green booked / gold pending / slate cancelled)
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  monthTitle: { fontSize: 20, fontWeight: '700' },
+  monthTitle: { fontSize: 20, fontWeight: '600' },
   todayBtnText: { fontSize: 15, fontWeight: '700' },
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
