@@ -17,7 +17,6 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { SectionSeparator } from '@/components/ui/month-separator';
 import { ALLOW_DUAL_ROLE } from '@/lib/features';
 import { supabase } from '@/lib/supabase';
-import { sendEmail } from '@/lib/send-email';
 import type { User, ArtistProfile, Venue } from '@/lib/types';
 
 type NetworkTab = 'artists' | 'venues';
@@ -347,11 +346,8 @@ export default function NetworkScreen() {
             relatedType: 'manager',
             createdAt: new Date().toISOString(),
           });
-          // Lineup-add email listing all the manager's venues + rules (server-side).
-          sendEmail(app.artist_id, 'lineup_added', {
-            managerName: currentUser.fullName ?? 'A manager',
-            managerId: currentUser.id,
-          });
+          // No email — the artist is already on Nexgig, so the in-app notification above
+          // (+ push) is enough.
         },
       },
     ]);
@@ -440,11 +436,8 @@ export default function NetworkScreen() {
       createdAt: new Date().toISOString(),
     });
 
-    // Lineup-add email listing all the manager's venues + rules (server-side).
-    sendEmail(artist.id, 'lineup_added', {
-      managerName: currentUser.fullName ?? 'A manager',
-      managerId: currentUser.id,
-    });
+    // No email — the artist is already on Nexgig, so the in-app notification above
+    // (+ push) is enough.
 
     setProcessingId(null);
   };

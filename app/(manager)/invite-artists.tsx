@@ -7,7 +7,7 @@ import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } fro
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { supabase } from '@/lib/supabase';
-import { sendEmail, sendRosterInviteEmail } from '@/lib/send-email';
+import { sendRosterInviteEmail } from '@/lib/send-email';
 import { firstName } from '@/lib/utils';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -125,7 +125,8 @@ export default function InviteArtists() {
       venueId: id, artistId, assignedAt: now, status: 'active' as const,
     }));
 
-    // 4. Notify + email the artist (same as adding from a profile).
+    // 4. Notify the artist — they're already on Nexgig, so this is an in-app notification
+    //    (+ push), NOT an email.
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId, type: 'lineup_added' as any,
@@ -133,7 +134,6 @@ export default function InviteArtists() {
       body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false, relatedId: currentUser.id, relatedType: 'manager', createdAt: now,
     });
-    sendEmail(artistId, 'lineup_added', { managerName: currentUser.fullName ?? 'A manager', managerId: currentUser.id });
 
     setSubmitting(false);
     router.back();
