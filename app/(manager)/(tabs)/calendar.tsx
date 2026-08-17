@@ -1284,18 +1284,6 @@ export default function CalendarScreen() {
       <View style={styles.calendarGrid}>
         {cells.map(({ date: dateStr, outside }) => {
           const day = parseInt(dateStr.split('-')[2], 10);
-          if (outside) {
-            // Faded, but still tappable like a normal day (selects that date + shows its slots).
-            // It does NOT jump months — the grid stays on the current month.
-            const isSelected = dateStr === selectedDate;
-            return (
-              <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
-                <View style={styles.dayCircle}>
-                  <Text style={[styles.dayNumber, { color: colors.muted, opacity: isSelected ? 1 : 0.5, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
-                </View>
-              </Pressable>
-            );
-          }
           const daySlots = getSlotsForDate(dateStr);
           const isSelected = dateStr === selectedDate;
           // Strongest state among the day's slots (see the inline version this was extracted from).
@@ -1319,13 +1307,14 @@ export default function CalendarScreen() {
           else if (dPending) fill = STATUS_COLORS.pending;
           else if (dConfirmed) fill = STATUS_COLORS.confirmed;
           const strongFill = !!fill && fill !== colors.surface;
-          // Today is rendered as a normal day for now; white on a strong fill, dark otherwise.
-          const numColor = strongFill ? '#fff' : colors.foreground;
+          // Adjacent-month days show their status fill like a normal day; only an EMPTY adjacent
+          // day (no slot at all) is greyed, to mark the month boundary.
+          const numColor = strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
           return (
             <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
               <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
                 dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
-                <Text style={[styles.dayNumber, { color: numColor, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+                <Text style={[styles.dayNumber, { color: numColor, opacity: (outside && !fill && !isSelected) ? 0.5 : 1, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
               </View>
             </Pressable>
           );

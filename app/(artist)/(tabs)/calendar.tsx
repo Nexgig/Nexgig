@@ -499,20 +499,6 @@ export default function DJAvailabilityScreen() {
       <View style={styles.calendarGrid}>
         {cells.map(({ date, outside }) => {
           const dayNum = parseInt(date.split('-')[2]);
-          if (outside) {
-            // Faded, but still tappable like a normal day (selects that date + shows its detail).
-            // It does NOT jump months — the grid stays on the current month.
-            const isSelected = date === selectedDate;
-            return (
-              <Pressable key={date} style={styles.calendarCell} onPress={() => handleDayPress(date)}>
-                <View style={styles.dayCellRing}>
-                  <View style={styles.dayCell}>
-                    <Text style={[styles.dayNumber, { color: colors.muted, opacity: isSelected ? 1 : 0.5, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
-                  </View>
-                </View>
-              </Pressable>
-            );
-          }
           const isSelected = date === selectedDate;
           const dayBookings = bookingsByDate.get(date) ?? [];
           const isBlocked = blockedDates.has(date);
@@ -534,7 +520,10 @@ export default function DJAvailabilityScreen() {
               <View style={styles.dayCellRing}>
                 <View style={[styles.dayCell, dayColor ? { backgroundColor: dayColor } : null]}>
                   <Text style={[styles.dayNumber, {
-                    color: dayColor ? '#fff' : colors.foreground,
+                    // Adjacent-month days show their status fill like a normal day; only an EMPTY
+                    // adjacent day is greyed, to mark the month boundary.
+                    color: dayColor ? '#fff' : outside ? colors.muted : colors.foreground,
+                    opacity: (outside && !dayColor && !isSelected) ? 0.5 : 1,
                     fontSize: isSelected ? 20 : 16,
                     fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,
                   }]}>{dayNum}</Text>
