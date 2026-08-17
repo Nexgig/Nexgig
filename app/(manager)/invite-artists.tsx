@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, TextInput, Alert, ScrollView } from 
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowDimensions } from 'react-native';
 import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
@@ -28,6 +29,7 @@ export default function InviteArtists() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const currentUser = useAuthStore((s) => s.currentUser);
   const allVenues = useVenueStore((s) => s.venues);
   const globalLineup = useLineupStore((s) => s.globalLineup);
@@ -155,7 +157,7 @@ export default function InviteArtists() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8 }}>
+    <View style={{ height: winH * 0.7, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Add Artist</Text>
         <Pressable onPress={() => router.back()} hitSlop={8}><Text style={[styles.cancel, { color: colors.muted }]}>Cancel</Text></Pressable>
