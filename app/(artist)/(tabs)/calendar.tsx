@@ -856,7 +856,7 @@ export default function DJAvailabilityScreen() {
                 Swipe left/right on the grid below to change month. No screen header — the month
                 row is the top of the screen now. */}
             <View style={styles.monthNav}>
-              <Text style={[styles.monthTitle, { color: colors.foreground, textTransform: 'lowercase' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+              <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
               <Pressable
                 style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
                 onPress={() => {

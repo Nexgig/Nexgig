@@ -1592,7 +1592,7 @@ export default function CalendarScreen() {
               {/* Month label (CAPS) + "SEND ALL (N)" where Today used to be — coral text, no
                   background, only when there are pending draft requests. Swipe the grid to change month. */}
               <View style={styles.monthNav}>
-                <Text style={[styles.monthTitle, { color: colors.foreground, textTransform: 'lowercase' }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
                 <View style={{ flex: 1 }} />
                 {periodScopedDrafts.length > 0 && (
                   <Pressable

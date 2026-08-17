@@ -142,7 +142,7 @@ export default function ManagerProfileScreen() {
           items={[
             {
               value: venues.length === 0 ? '+' : venues.length,
-              label: 'Venues',
+              label: 'VENUES',
               color: venues.length === 0 ? colors.primary : colors.foreground,
               // Dedicated My Venues page (Network is for browsing/connecting). Empty
               // still shortcuts straight to create-venue.
@@ -152,7 +152,7 @@ export default function ManagerProfileScreen() {
             },
             {
               value: djCount === 0 ? '+' : djCount,
-              label: 'Artists',
+              label: 'ARTISTS',
               color: djCount === 0 ? colors.primary : colors.foreground,
               // Dedicated My Artists page. With none connected, drop into Network to
               // go find some.
