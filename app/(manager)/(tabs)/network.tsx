@@ -340,7 +340,7 @@ export default function NetworkScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: app.artist_id,
             type: 'lineup_added' as any,
-            title: 'Added to Lineup',
+            title: 'Added to Roster',
             body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
             isRead: false,
             relatedId: currentUser.id,
@@ -429,7 +429,7 @@ export default function NetworkScreen() {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artist.id,
       type: 'lineup_added' as any,
-      title: 'Added to Lineup',
+      title: 'Added to Roster',
       body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false,
       relatedId: currentUser.id,
@@ -448,7 +448,7 @@ export default function NetworkScreen() {
     if (!currentUser) return;
     Alert.alert(
       'Disconnect Artist',
-      `Disconnect ${artist.fullName}? They'll be removed from your lineup and all your venues.`,
+      `Disconnect ${artist.fullName}? They'll be removed from your roster and all your venues.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Disconnect', style: 'destructive', onPress: async () => {
@@ -466,7 +466,7 @@ export default function NetworkScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artist.id,
             type: 'lineup_removed' as any,
-            title: 'Removed from a Lineup',
+            title: 'Removed from a Roster',
             body: `${firstName(currentUser.fullName, 'A manager')} removed you — you can no longer be booked at their venues`,
             isRead: false,
             createdAt: new Date().toISOString(),

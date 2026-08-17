@@ -92,11 +92,19 @@ export default function VenueDetailScreen() {
 
   const addToThisVenue = async (artistId: string) => {
     if (!venue || !currentUser) return;
-    const now = new Date().toISOString();
-    assignToVenue({ id: `va-${venue.id}-${artistId}`, globalLineupId: `${currentUser.id}-${artistId}`, venueId: venue.id, artistId, assignedAt: now, status: 'active' });
+    const v = venue, now = new Date().toISOString();
+    assignToVenue({ id: `va-${v.id}-${artistId}`, globalLineupId: `${currentUser.id}-${artistId}`, venueId: v.id, artistId, assignedAt: now, status: 'active' });
     await supabase.from('venue_assignments').upsert(
-      { manager_id: currentUser.id, artist_id: artistId, venue_id: venue.id, status: 'active' },
+      { manager_id: currentUser.id, artist_id: artistId, venue_id: v.id, status: 'active' },
       { onConflict: 'venue_id,artist_id' });
+    // Tell the artist they can now be booked here (mirrors artist-profile-view's venue toggle).
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: artistId, type: 'venue_assigned', title: 'New Venue',
+      body: `You can now be booked at ${v.name}`,
+      isRead: false, relatedId: v.id, relatedType: 'venue',
+      createdAt: new Date().toISOString(),
+    });
   };
 
   const removeFromThisVenue = (artistId: string, name: string) => {
@@ -112,6 +120,14 @@ export default function VenueDetailScreen() {
               console.warn('remove from venue:', error.message);
               assignToVenue({ id: `va-${v.id}-${artistId}`, globalLineupId: `${uid}-${artistId}`, venueId: v.id, artistId, assignedAt: new Date().toISOString(), status: 'active' });
               Alert.alert('Could not remove', 'Something went wrong — please try again.');
+            } else {
+              // Tell the artist they've been taken off this venue (mirrors artist-profile-view).
+              addNotification({
+                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                userId: artistId, type: 'venue_removed', title: 'Venue Removed',
+                body: `You can no longer be booked at ${v.name}`,
+                isRead: false, createdAt: new Date().toISOString(),
+              });
             }
           });
       } },

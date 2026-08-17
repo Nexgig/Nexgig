@@ -279,7 +279,7 @@ export default function SettingsScreen() {
             <View style={styles.settingInfo}>
               <MaterialIcons name="equalizer" size={20} color={colors.primary} />
               <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Show Lineup Balance Panel</Text>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Show Roster Balance Panel</Text>
                 <Text style={[styles.settingDesc, { color: colors.muted }]}>Display the artist booking count panel on the Calendar screen</Text>
               </View>
             </View>
@@ -391,7 +391,7 @@ export default function SettingsScreen() {
               <MaterialIcons name="group" size={20} color={colors.primary} />
               <View style={styles.settingText}>
                 <Text style={[styles.settingTitle, { color: colors.foreground }]}>Roster Changes</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>Artists joining or leaving your lineup and venues</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Artists joining or leaving your roster and venues</Text>
               </View>
             </View>
             <Switch value={prefs.roster} onValueChange={(v) => setPref('roster', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />

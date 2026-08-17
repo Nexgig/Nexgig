@@ -110,7 +110,7 @@ export default function InviteArtists() {
     }));
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      userId: a.id, type: 'lineup_added' as any, title: 'Added to Lineup',
+      userId: a.id, type: 'lineup_added' as any, title: 'Added to Roster',
       body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false, relatedId: currentUser.id, relatedType: 'manager', createdAt: now,
     });

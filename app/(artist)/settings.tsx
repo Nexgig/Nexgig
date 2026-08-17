@@ -350,8 +350,8 @@ export default function DJSettingsScreen() {
             <View style={styles.settingInfo}>
               <MaterialIcons name="group" size={20} color={colors.primary} />
               <View style={styles.settingText}>
-                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Lineup &amp; Venues</Text>
-                <Text style={[styles.settingDesc, { color: colors.muted }]}>Added / removed from lineup or venue</Text>
+                <Text style={[styles.settingTitle, { color: colors.foreground }]}>Roster &amp; Venues</Text>
+                <Text style={[styles.settingDesc, { color: colors.muted }]}>Added / removed from roster or venue</Text>
               </View>
             </View>
             <Switch value={prefs.lineup_venues} onValueChange={(v) => setPref('lineup_venues', v)} trackColor={{ false: colors.border, true: colors.primary }} thumbColor="#fff" />

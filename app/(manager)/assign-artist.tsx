@@ -253,8 +253,8 @@ export default function AssignDJScreen() {
               <MaterialIcons name="group" size={40} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>
                 {myGlobalLineup.length === 0
-                  ? 'No artists in your lineup yet'
-                  : 'All lineup artists are already assigned to this venue'}
+                  ? 'No artists in your roster yet'
+                  : 'All roster artists are already assigned to this venue'}
               </Text>
             </View>
           }

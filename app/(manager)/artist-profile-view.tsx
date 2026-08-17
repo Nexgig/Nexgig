@@ -219,7 +219,7 @@ export default function ArtistProfileViewScreen() {
     if (!currentUser || !artistId || !dj) return;
     Alert.alert(
       'Add Artist',
-      `Add ${dj.fullName || 'this artist'} to your lineup and all your venues?`,
+      `Add ${dj.fullName || 'this artist'} to your roster and all your venues?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Add', onPress: () => { void doConnect(); } },
@@ -258,7 +258,7 @@ export default function ArtistProfileViewScreen() {
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId, type: 'lineup_added',
-      title: 'Added to Lineup',
+      title: 'Added to Roster',
       body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
       isRead: false, createdAt: new Date().toISOString(),
     });
@@ -268,9 +268,9 @@ export default function ArtistProfileViewScreen() {
     if (!dj) return;
     const completedCount = completedBookings.length;
     const message = completedCount > 0
-      ? `${dj.fullName} has ${completedCount} completed gig${completedCount > 1 ? 's' : ''} on record. Their history will be preserved. This will remove them from your lineup and all venues.`
-      : `Remove ${dj.fullName} from your lineup? This will also remove them from all venues.`;
-    Alert.alert('Remove from Lineup', message, [
+      ? `${dj.fullName} has ${completedCount} completed gig${completedCount > 1 ? 's' : ''} on record. Their history will be preserved. This will remove them from your roster and all venues.`
+      : `Remove ${dj.fullName} from your roster? This will also remove them from all venues.`;
+    Alert.alert('Remove from Roster', message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove', style: 'destructive', onPress: async () => {
@@ -288,7 +288,7 @@ export default function ArtistProfileViewScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
             type: 'lineup_removed',
-            title: 'Removed from a Lineup',
+            title: 'Removed from a Roster',
             body: `${firstName(currentUser?.fullName, 'A manager')} removed you — you can no longer be booked at their venues`,
             isRead: false,
             createdAt: new Date().toISOString(),
@@ -335,7 +335,7 @@ export default function ArtistProfileViewScreen() {
   const handleRemoveFromVenue = (venueId: string) => {
     const venueName = myVenues.find((v) => v.id === venueId)?.name ?? 'venue';
     const djName = dj?.fullName ?? 'Artist';
-    Alert.alert('Remove from Venue', `Remove ${djName} from ${venueName}? They will stay on your global lineup.`, [
+    Alert.alert('Remove from Venue', `Remove ${djName} from ${venueName}? They will stay on your roster.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove', style: 'destructive', onPress: async () => {

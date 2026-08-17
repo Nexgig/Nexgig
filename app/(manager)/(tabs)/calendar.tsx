@@ -1510,7 +1510,7 @@ export default function CalendarScreen() {
           <View style={styles.lineupHeaderLeft}>
             <MaterialIcons name="equalizer" size={16} color={colors.primary} />
             <Text style={[styles.lineupTitle, { color: colors.foreground }]}>
-              Lineup Balance{' '}
+              Roster Balance{' '}
               <Text style={[styles.lineupTitle, { color: colors.muted, fontWeight: '500' }]}>({lineupPeriodLabel})</Text>
             </Text>
           </View>
