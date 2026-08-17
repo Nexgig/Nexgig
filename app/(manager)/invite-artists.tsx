@@ -70,18 +70,14 @@ export default function InviteArtists() {
   });
 
   const q = query.trim().toLowerCase();
-  // Privacy: the artist directory is NEVER listed by default. Matches appear only once the
-  // manager has typed at least 2 characters of a name/email — so a single letter can't reveal
-  // the whole directory via includes(). Inviting by email still works at any length (emailToInvite).
-  const canSearch = q.length >= 2;
   const results = useMemo(() => {
-    if (!canSearch) return [];
-    return artists
-      .filter((a) => !rosterIds.has(a.id))
-      .filter((a) => (a.full_name ?? '').toLowerCase().includes(q) || (a.email ?? '').toLowerCase().includes(q))
+    const pool = artists.filter((a) => !rosterIds.has(a.id));
+    const list = !q ? pool : pool.filter((a) =>
+      (a.full_name ?? '').toLowerCase().includes(q) || (a.email ?? '').toLowerCase().includes(q));
+    return list
       .sort((a, b) => (a.full_name ?? '').toLowerCase().localeCompare((b.full_name ?? '').toLowerCase()))
       .slice(0, 40);
-  }, [artists, rosterIds, q, canSearch]);
+  }, [artists, rosterIds, q]);
 
   // Offer "invite by email" when the query is a full email that no on-app artist matches.
   const emailToInvite = q && EMAIL_RE.test(q) && !artists.some((a) => (a.email ?? '').toLowerCase() === q) ? q : null;
@@ -237,11 +233,8 @@ export default function InviteArtists() {
 
         {results.length === 0 && !emailToInvite && (
           <Text style={[styles.empty, { color: colors.muted }]}>
-            {!q
-              ? 'Search by name to add an artist — or type a full email to invite someone new.'
-              : !canSearch
-                ? 'Keep typing to search by name…'
-                : 'No artists match. Type a full email to invite someone new.'}
+            {!q ? 'Start typing a name to find an artist, or type a full email to invite someone new.'
+              : 'No artists match. Type a full email to invite someone new.'}
           </Text>
         )}
       </ScrollView>
