@@ -515,7 +515,11 @@ export default function CalendarScreen() {
     [venues]
   );
   useEffect(() => {
-    ensureScheduleSlots(standardMonthBounds.start, standardMonthBounds.end);
+    // Only materialise schedule nights from TODAY forward (like the dashboard). Filling the whole
+    // month from the 1st re-created PAST empty schedule slots, which sweepPastEmptySlots then
+    // deleted — so past schedule slots flickered in and out on every month change.
+    const from = standardMonthBounds.start > todayStr ? standardMonthBounds.start : todayStr;
+    if (from <= standardMonthBounds.end) ensureScheduleSlots(from, standardMonthBounds.end);
   }, [standardMonthBounds.start, standardMonthBounds.end, scheduleSig]);
 
   // Custom period bounds — respects monthStartDay. Used ONLY for Lineup Balance.
