@@ -231,6 +231,19 @@ export interface VenueAssignment {
   status: 'active' | 'removed';
 }
 
+// A pending invite to an artist by EMAIL who isn't on Nexgig yet. Once they sign up
+// with this email, claim_roster_invites() converts it into a real global_lineup +
+// venue_assignments. Backed by the `roster_invites` table.
+export interface RosterInvite {
+  id: string;
+  managerId: string;
+  email: string;          // lower-cased
+  artistName?: string;    // the name the manager typed (shown as the "Invited" chip)
+  venueIds: string[];     // venues to assign on signup
+  status: 'pending' | 'accepted' | 'cancelled';
+  createdAt: string;
+}
+
 // ─── Venue Schedule (weekly programme) ────────────────────────────────────────
 
 /** One recurring set in a venue's weekly programme. Each set belongs to ONE weekday

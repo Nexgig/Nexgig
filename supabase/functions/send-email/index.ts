@@ -323,6 +323,61 @@ serve(async (req) => {
       return json({ success: true, id: adminResult?.id ?? null }, 200);
     }
 
+    // 2a-bis. ROSTER INVITE — the invitee may not have a Nexgig account yet, so the
+    //     address comes explicitly from data.to_email (not a user-id lookup). Access is
+    //     gated below: the caller must own a matching PENDING invite (manager-only via RLS).
+    if (template === 'roster_invite') {
+      const d = data as Record<string, unknown>;
+      const inviteEmail = (typeof d.to_email === 'string' ? d.to_email : '').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
+        return json({ error: 'Invalid to_email' }, 400);
+      }
+      // SECURITY: only send if the CALLER actually has a PENDING invite for this email.
+      // That row can only be created by a manager (RLS), so this both restricts sending
+      // to managers and ties every email to a real invite — no arbitrary/spam sends.
+      const svc = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: inviteRow } = await svc
+        .from('roster_invites')
+        .select('id')
+        .eq('manager_id', user.id)
+        .ilike('email', inviteEmail)
+        .eq('status', 'pending')
+        .maybeSingle();
+      if (!inviteRow) return json({ error: 'No matching pending invite for this manager' }, 403);
+
+      const APP_STORE_URL = 'https://apps.apple.com/ae/app/nexgig/id6784020757';
+      const inviteeName = escapeHtml((String(d.name ?? '')).trim() || 'there');
+      const inviterRaw = (String(d.managerName ?? '')).trim() || 'A venue manager';
+      const inviter = escapeHtml(inviterRaw);
+      const button =
+        `<a href="${APP_STORE_URL}" style="display:inline-block;background:#E2674A;color:#ffffff;` +
+        `text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px;margin:8px 0;">` +
+        `Download Nexgig</a>`;
+      const inviteHtml = shell(
+        h1("You've been invited to Nexgig") +
+        p(`Hi ${inviteeName},`) +
+        p(`<strong>${inviter}</strong> invited you to join their roster on <strong>Nexgig</strong> — the app venues use to book artists across the UAE.`) +
+        p('Download the app and sign up with this email address, and you’ll be added to their roster automatically.') +
+        button +
+        p('<span style="color:#8E8E93;font-size:13px;">If you weren’t expecting this, you can ignore this email.</span>'),
+      );
+      const inviteResp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendApiKey}` },
+        body: JSON.stringify({
+          from: FROM,
+          to: [inviteEmail],
+          subject: `${inviterRaw} invited you to Nexgig`,
+          html: inviteHtml,
+        }),
+      });
+      const inviteResult = await inviteResp.json();
+      if (!inviteResp.ok) return json({ error: 'Resend rejected the email', details: inviteResult }, 502);
+      return json({ success: true, id: inviteResult?.id ?? null }, 200);
+    }
+
     // 2b. User-targeted templates require a valid recipient.
     if (!isUuid(to_user_id)) return json({ error: 'Invalid recipient to_user_id' }, 400);
 

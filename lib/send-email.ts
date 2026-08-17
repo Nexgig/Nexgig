@@ -144,3 +144,52 @@ export async function sendAdminEmail(
     return false;
   }
 }
+
+/**
+ * Sends a ROSTER-INVITE email to someone who may NOT have a Nexgig account yet.
+ * Unlike sendEmail, the recipient is addressed by raw email (there's no user id to
+ * look up) — the `send-email` function's `roster_invite` branch validates the
+ * address and renders the "you've been invited + download the app" email.
+ *
+ * Fire-and-forget: a failure must never block the invite being saved.
+ *
+ * @param toEmail      the invitee's email (lower-cased by the caller)
+ * @param managerName  the inviting manager's display name (for the subject/body)
+ * @param name         the invitee's name the manager typed (optional greeting)
+ */
+export async function sendRosterInviteEmail(
+  toEmail: string,
+  managerName: string,
+  name?: string,
+): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { console.warn('[sendRosterInviteEmail] no active session — skipping'); return false; }
+
+    const { data: result, error } = await supabase.functions.invoke('send-email', {
+      method: 'POST',
+      body: { template: 'roster_invite', data: { to_email: toEmail, managerName, name: name ?? '' } },
+    });
+
+    if (error) {
+      let detail = error.message;
+      const ctx = (error as { context?: { json?: () => Promise<unknown> } }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = (await ctx.json()) as { error?: string; details?: unknown };
+          if (body?.error) detail = body.error + (body.details ? `: ${JSON.stringify(body.details)}` : '');
+        } catch { /* body wasn't JSON */ }
+      }
+      console.warn('[sendRosterInviteEmail] failed:', detail);
+      return false;
+    }
+    if (result && (result as { error?: string }).error) {
+      console.warn('[sendRosterInviteEmail] failed:', (result as { error: string }).error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[sendRosterInviteEmail] threw:', err);
+    return false;
+  }
+}

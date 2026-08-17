@@ -7,7 +7,7 @@ import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } fro
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { supabase } from '@/lib/supabase';
-import { sendEmail } from '@/lib/send-email';
+import { sendEmail, sendRosterInviteEmail } from '@/lib/send-email';
 import { firstName } from '@/lib/utils';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,6 +26,7 @@ export default function InviteArtists() {
   );
 
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   // Default: every venue ticked (matches the "add from profile" all-venues behavior).
   const [selected, setSelected] = useState<Set<string>>(() => new Set(managerVenues.map((v) => v.id)));
   const [submitting, setSubmitting] = useState(false);
@@ -49,9 +50,47 @@ export default function InviteArtists() {
       .ilike('email', e)
       .maybeSingle();
     if (error) { setSubmitting(false); Alert.alert('Error', error.message); return; }
+
+    // ── Not on Nexgig yet → create a PENDING INVITE + email them the App Store link.
+    //    They join this roster + the ticked venues automatically when they sign up
+    //    with this email (see claim_roster_invites() / artist-setup.tsx).
     if (!artist) {
+      const inviteVenueIds = [...selected];
+      const { data: inviteRow, error: invErr } = await supabase
+        .from('roster_invites')
+        .insert({
+          manager_id: currentUser.id,
+          manager_name: currentUser.fullName ?? null,
+          email: e,
+          artist_name: name.trim() || null,
+          venue_ids: inviteVenueIds,
+          status: 'pending',
+        })
+        .select('id, created_at')
+        .single();
       setSubmitting(false);
-      Alert.alert('No artist account', `No artist uses ${e} yet. They need to sign up for Nexgig first, then you can add them.`);
+      if (invErr) {
+        // 23505 = the (manager, email) pending unique index — already invited.
+        if ((invErr as { code?: string }).code === '23505') {
+          Alert.alert('Already invited', `You've already invited ${e}. They'll join your roster when they sign up.`);
+        } else {
+          Alert.alert('Error', invErr.message);
+        }
+        return;
+      }
+      useLineupStore.getState().addRosterInvite({
+        id: inviteRow.id,
+        managerId: currentUser.id,
+        email: e,
+        artistName: name.trim() || undefined,
+        venueIds: inviteVenueIds,
+        status: 'pending',
+        createdAt: inviteRow.created_at ?? new Date().toISOString(),
+      });
+      // Best-effort email — never blocks the invite being saved.
+      sendRosterInviteEmail(e, currentUser.fullName ?? 'A venue manager', name.trim() || undefined);
+      Alert.alert('Invite sent', `We've emailed ${e} an invite to join Nexgig. They'll be added to your roster automatically when they sign up.`);
+      router.back();
       return;
     }
 
@@ -110,7 +149,18 @@ export default function InviteArtists() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Text style={[styles.label, { color: colors.muted }]}>ARTIST EMAIL</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>NAME (OPTIONAL)</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+          placeholder="e.g. Layla Rae"
+          placeholderTextColor={colors.muted}
+          value={name}
+          onChangeText={setName}
+          autoCapitalize="words"
+          returnKeyType="next"
+        />
+
+        <Text style={[styles.label, { color: colors.muted, marginTop: 22 }]}>ARTIST EMAIL</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
           placeholder="artist@email.com"
@@ -122,7 +172,7 @@ export default function InviteArtists() {
           autoCorrect={false}
           returnKeyType="done"
         />
-        <Text style={[styles.hint, { color: colors.muted }]}>They must already have a Nexgig artist account.</Text>
+        <Text style={[styles.hint, { color: colors.muted }]}>Already on Nexgig? They're added right away. New to Nexgig? We'll email them an invite to download the app.</Text>
 
         <Text style={[styles.label, { color: colors.muted, marginTop: 22 }]}>ADD TO VENUES</Text>
         {managerVenues.length === 0 ? (

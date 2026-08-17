@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
@@ -321,6 +321,36 @@ export default function DJSetupScreen() {
 
     // Welcome email (transactional, fire-and-forget — never blocks signup).
     sendEmail(user.id, 'welcome_artist');
+
+    // Claim any pending roster invites for this email — a manager who invited this
+    // person BEFORE they signed up. The server-side RPC adds them to that manager's
+    // roster + the picked venues; we then notify the manager(s). Fire-and-forget and
+    // fully guarded: a failure here (incl. the RPC not being deployed yet) can NEVER
+    // block signup.
+    void (async () => {
+      try {
+        const { data: claimed } = await supabase.rpc('claim_roster_invites');
+        if (!Array.isArray(claimed) || claimed.length === 0) return;
+        const addNotification = useNotificationStore.getState().addNotification;
+        const nowIso = new Date().toISOString();
+        for (const c of claimed as { out_manager_id?: string }[]) {
+          if (!c?.out_manager_id) continue;
+          addNotification({
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            userId: c.out_manager_id,
+            type: 'artist_joined' as any,
+            title: 'Artist joined your roster',
+            body: `${resolvedName || 'An artist'} accepted your invite and joined your roster`,
+            isRead: false,
+            relatedId: user.id,
+            relatedType: 'artist',
+            createdAt: nowIso,
+          });
+        }
+      } catch (err) {
+        console.warn('[claim_roster_invites] failed:', err);
+      }
+    })();
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
     router.replace('/(artist)/(tabs)/dashboard' as Href);

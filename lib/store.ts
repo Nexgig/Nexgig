@@ -7,7 +7,7 @@ import { syncBookingStatus } from './booking-sync';
 import { isForRole } from './notification-roles';
 import type {
   User, ArtistProfile, Venue, Lineup, Slot, Booking, BookingStatus,
-  AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, DraftAssignment,
+  AvailabilityBlock, AppNotification, GlobalLineupEntry, VenueAssignment, RosterInvite, DraftAssignment,
   Invoice, InvoiceStatus
 } from './types';
 function generateUUID(): string {
@@ -145,6 +145,14 @@ interface LineupState {
   isEmailTaken: (email: string, excludeUserId?: string) => boolean;
   isUsernameTaken: (username: string, excludeUserId?: string) => boolean;
   getAllUsers: () => User[];
+
+  // Roster invites — pending (invited by email, not yet signed up)
+  rosterInvites: RosterInvite[];
+  setRosterInvites: (invites: RosterInvite[]) => void;
+  addRosterInvite: (invite: RosterInvite) => void;
+  removeRosterInvite: (id: string) => void;
+  getRosterInvitesByManager: (managerId: string) => RosterInvite[];
+
   clearGlobalLineup: () => void;
 clearArtistUsers: () => void;
 }
@@ -157,6 +165,7 @@ globalLineup: [],
 venueAssignments: [],
 artistProfiles: {},
 artistUsers: [],
+rosterInvites: [],
 
   // Legacy methods
   addLineup: (lineup) => set((state) => ({ lineups: [...state.lineups, lineup] })),
@@ -263,6 +272,18 @@ artistUsers: [],
     return get().artistUsers.some((u) => u.id !== excludeUserId && u.username?.toLowerCase().trim() === lower);
   },
   getAllUsers: () => get().artistUsers,
+
+  // Roster invites — pending email invites awaiting the invitee's signup.
+  setRosterInvites: (invites) => set({ rosterInvites: invites }),
+  addRosterInvite: (invite) => set((state) => ({
+    rosterInvites: [invite, ...state.rosterInvites.filter((i) => i.id !== invite.id)],
+  })),
+  removeRosterInvite: (id) => set((state) => ({
+    rosterInvites: state.rosterInvites.filter((i) => i.id !== id),
+  })),
+  getRosterInvitesByManager: (managerId) =>
+    get().rosterInvites.filter((i) => i.managerId === managerId && i.status === 'pending'),
+
   clearGlobalLineup: () => set({ globalLineup: [] }),
 clearArtistUsers: () => set({ artistUsers: [] }),
 }),
@@ -275,6 +296,7 @@ clearArtistUsers: () => set({ artistUsers: [] }),
         globalLineup: state.globalLineup,
         venueAssignments: state.venueAssignments,
         lineups: state.lineups,
+        rosterInvites: state.rosterInvites,
       }),
     }
   )

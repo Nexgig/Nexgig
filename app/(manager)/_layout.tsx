@@ -195,6 +195,26 @@ if (!lineupError && lineupData) {
             });
           });
         }
+
+        // ✅ Fetch pending roster invites (invited by email, not yet signed up) —
+        //    powers the "Invited" chips in My Artists. Fails gracefully (data null)
+        //    if the roster_invites table isn't deployed yet.
+        const { data: inviteData } = await supabase
+          .from('roster_invites')
+          .select('id, manager_id, email, artist_name, venue_ids, status, created_at')
+          .eq('manager_id', user.id)
+          .eq('status', 'pending');
+        if (inviteData) {
+          useLineupStore.getState().setRosterInvites(inviteData.map((r: any) => ({
+            id: r.id,
+            managerId: r.manager_id,
+            email: r.email,
+            artistName: r.artist_name ?? undefined,
+            venueIds: Array.isArray(r.venue_ids) ? r.venue_ids : [],
+            status: r.status,
+            createdAt: r.created_at,
+          })));
+        }
       }
     };
 
