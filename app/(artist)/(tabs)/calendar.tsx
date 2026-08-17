@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
   // Month view — filled colour squares (green booked / gold pending / slate cancelled)
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 },
   monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  monthTitle: { fontSize: 20, fontWeight: '600' },
+  monthTitle: { fontSize: 20, fontWeight: '700' },
   todayBtnText: { fontSize: 15, fontWeight: '700' },
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
