@@ -500,14 +500,17 @@ export default function DJAvailabilityScreen() {
         {cells.map(({ date, outside }) => {
           const dayNum = parseInt(date.split('-')[2]);
           if (outside) {
+            // Faded, but still tappable like a normal day (selects that date + shows its detail).
+            // It does NOT jump months — the grid stays on the current month.
+            const isSelected = date === selectedDate;
             return (
-              <View key={date} style={styles.calendarCell}>
+              <Pressable key={date} style={styles.calendarCell} onPress={() => handleDayPress(date)}>
                 <View style={styles.dayCellRing}>
                   <View style={styles.dayCell}>
-                    <Text style={[styles.dayNumber, { color: colors.muted, opacity: 0.5, fontSize: 16, fontFamily: fonts.bodySemibold }]}>{dayNum}</Text>
+                    <Text style={[styles.dayNumber, { color: colors.muted, opacity: isSelected ? 1 : 0.5, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{dayNum}</Text>
                   </View>
                 </View>
-              </View>
+              </Pressable>
             );
           }
           const isSelected = date === selectedDate;

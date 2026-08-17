@@ -1281,12 +1281,15 @@ export default function CalendarScreen() {
         {cells.map(({ date: dateStr, outside }) => {
           const day = parseInt(dateStr.split('-')[2], 10);
           if (outside) {
+            // Faded, but still tappable like a normal day (selects that date + shows its slots).
+            // It does NOT jump months — the grid stays on the current month.
+            const isSelected = dateStr === selectedDate;
             return (
-              <View key={dateStr} style={styles.calendarCell}>
+              <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
                 <View style={styles.dayCircle}>
-                  <Text style={[styles.dayNumber, { color: colors.muted, opacity: 0.5, fontFamily: fonts.bodySemibold }]}>{day}</Text>
+                  <Text style={[styles.dayNumber, { color: colors.muted, opacity: isSelected ? 1 : 0.5, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
                 </View>
-              </View>
+              </Pressable>
             );
           }
           const daySlots = getSlotsForDate(dateStr);
