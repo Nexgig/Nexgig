@@ -479,11 +479,11 @@ export default function ManagerDashboard() {
                       const isSel = selected?.venueId === r.venue.id && selected?.date === coverage.nights[i];
                       const filled = state === 'cancelled' || state === 'sent' || state === 'booked';
                       // In single-venue mode the square carries the date number; colour it for
-                      // contrast on the fill, coral on an unfilled (needs-artist) day, muted when
-                      // there's no slot. Today is rendered as a normal day for now (no coral).
+                      // contrast on the fill, dark on a beige empty/draft cell (the coral DASHED
+                      // BORDER already marks "needs an artist"), muted when there's no slot. No
+                      // coral number — matches the calendar.
                       const numColor = filled ? '#fff'
-                        : state === 'empty' ? colors.primary
-                        : state === 'drafted' ? colors.foreground
+                        : (state === 'empty' || state === 'drafted') ? colors.foreground
                         : colors.muted;
                       return (
                         <View key={i} style={styles.dayCol}>
