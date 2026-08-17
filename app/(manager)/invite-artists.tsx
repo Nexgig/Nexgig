@@ -81,7 +81,7 @@ export default function InviteArtists() {
   const emailToInvite = q && EMAIL_RE.test(q) && !artists.some((a) => (a.email ?? '').toLowerCase() === q) ? q : null;
 
   // Add an ALREADY-registered artist to the roster + ticked venues (no email — in-app notify).
-  const addExisting = async (a: DirArtist) => {
+  const doAdd = async (a: DirArtist) => {
     if (!currentUser || busyId) return;
     setBusyId(a.id);
     const venueIds = [...selected];
@@ -114,6 +114,19 @@ export default function InviteArtists() {
     });
     setBusyId(null);
     router.back();
+  };
+
+  // Confirm before adding — no direct add.
+  const addExisting = (a: DirArtist) => {
+    if (busyId) return;
+    Alert.alert(
+      'Add to roster',
+      `Add ${a.full_name || 'this artist'} to your roster?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Add', onPress: () => doAdd(a) },
+      ]
+    );
   };
 
   // Invite an email that's NOT on Nexgig yet.
