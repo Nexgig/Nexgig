@@ -17,6 +17,7 @@ import { sendEmail } from '@/lib/send-email';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { validateEmail } from '@/lib/validate-email';
+import { EmailOtpModal } from '@/components/email-otp-modal';
 
 const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
@@ -56,6 +57,7 @@ export default function ManagerRegisterScreen() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [showOtp, setShowOtp] = useState(false);
   // Avatar (optional, chosen on step 2). Managers upload a real photo later, from
   // Edit Profile — signup is avatar-only.
   const [avatarId, setAvatarId] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export default function ManagerRegisterScreen() {
 
       setIsLoading(true);
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
         // Stamped on auth.users so that if they abandon signup before the profile
@@ -138,19 +140,23 @@ export default function ManagerRegisterScreen() {
         return;
       }
 
-      // Sign in immediately after signup so session is ready for Step 2
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-      });
-
       setIsLoading(false);
-
-      if (signInError) {
-        Alert.alert('Sign in failed', signInError.message);
+      // Anti-enumeration: with Confirm-email + enumeration protection ON, signing up with
+      // an ALREADY-registered email returns NO error and an obfuscated user with
+      // identities: [] (and no session). Catch that so we don't strand them in the code
+      // modal waiting for a code that was never sent.
+      if (signUpData.user && (signUpData.user.identities?.length ?? 0) === 0) {
+        setEmailError('That email is already registered. Try signing in instead.');
         return;
       }
-
+      // Adaptive so the OTA is safe whether or not email confirmation is on:
+      //   confirmation ON  → signUp returns NO session → verify the emailed code first
+      //                      (the modal's onVerified advances to step 2).
+      //   confirmation OFF → signUp auto-confirms + returns a session → just continue.
+      if (!signUpData.session) {
+        setShowOtp(true);
+        return;
+      }
       animateToStep(2, 'forward');
       return;
     }
@@ -402,6 +408,13 @@ export default function ManagerRegisterScreen() {
         selectedId={avatarId}
         onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
+      />
+
+      <EmailOtpModal
+        visible={showOtp}
+        email={form.email.trim().toLowerCase()}
+        onVerified={() => { setShowOtp(false); animateToStep(2, 'forward'); }}
+        onCancel={() => setShowOtp(false)}
       />
     </ScreenContainer>
   );

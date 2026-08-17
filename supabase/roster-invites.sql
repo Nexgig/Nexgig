@@ -74,17 +74,15 @@ begin
     return;
   end if;
 
-  -- SECURITY: only auto-claim when the email is PROVIDER-VERIFIED (signed up via Apple or
-  -- Google, which verify the address). Email confirmation is currently OFF, so an
-  -- email/password signup does NOT prove the person owns the address — trusting it would
-  -- let someone register an invited email they don't own and hijack the invite. Those
-  -- accounts just don't auto-claim; the invite stays pending.
-  -- NOTE: with confirmation OFF, email_confirmed_at is auto-set at signup and proves
-  -- nothing — do NOT gate on it. Once you ENABLE email confirmation you can additionally
-  -- trust confirmed email/password by appending:  or email_confirmed_at is not null
+  -- SECURITY: only auto-claim when the email is VERIFIED — provider-verified via Apple/
+  -- Google, OR confirmed via email (email_confirmed_at). This is only safe with email
+  -- confirmation ENABLED: with it off, email_confirmed_at is auto-set at signup and proves
+  -- nothing, so an attacker could register an invited email they don't own and hijack the
+  -- invite. Keep email confirmation ON for the email_confirmed_at clause to be trustworthy.
   select (
     coalesce(raw_app_meta_data ->> 'provider', '') in ('apple', 'google')
     or coalesce(raw_app_meta_data -> 'providers', '[]'::jsonb) ?| array['apple', 'google']
+    or email_confirmed_at is not null
   ) into v_ok
   from auth.users where id = v_uid;
   if not coalesce(v_ok, false) then

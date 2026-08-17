@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useLineupStore, useNotificationStore } from '@/lib/store';
+import { EmailOtpModal } from '@/components/email-otp-modal';
 import { useColors } from '@/hooks/use-colors';
 import type { GenreType, InstrumentType } from '@/lib/types';
 import { CountryPicker } from '@/components/country-picker';
@@ -83,6 +84,7 @@ export default function DJSetupScreen() {
   });
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
   // Profile photo / avatar (optional, chosen on the Profile Photo step).
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -150,7 +152,7 @@ export default function DJSetupScreen() {
       // using the account_type stamped on the auth user below.
       if (!hasSession) {
         setIsLoading(true);
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: form.email.trim().toLowerCase(),
           password: form.password,
           options: { data: { account_type: 'artist' } },
@@ -165,15 +167,21 @@ export default function DJSetupScreen() {
           Alert.alert('Sign up failed', msg);
           return;
         }
-        // Sign in immediately so the session is live for the rest of the flow
-        // (the photo upload on submit needs it).
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-        });
         setIsLoading(false);
-        if (signInError) {
-          Alert.alert('Sign in failed', signInError.message);
+        // Anti-enumeration: with Confirm-email + enumeration protection ON, signing up with
+        // an ALREADY-registered email returns NO error and an obfuscated user with
+        // identities: [] (and no session). Catch that so we don't strand them in the code
+        // modal waiting for a code that was never sent.
+        if (signUpData.user && (signUpData.user.identities?.length ?? 0) === 0) {
+          setEmailError('That email is already registered. Try signing in instead.');
+          return;
+        }
+        // Adaptive so the OTA is safe whether or not email confirmation is on:
+        //   confirmation ON  → signUp returns NO session → verify the emailed code first
+        //                      (the modal's onVerified advances to step 2).
+        //   confirmation OFF → signUp auto-confirms + returns a session → just continue.
+        if (!signUpData.session) {
+          setShowOtp(true);
           return;
         }
       }
@@ -540,6 +548,13 @@ export default function DJSetupScreen() {
         selectedId={avatarId}
         onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
+      />
+
+      <EmailOtpModal
+        visible={showOtp}
+        email={form.email.trim().toLowerCase()}
+        onVerified={() => { setShowOtp(false); animateToStep(2, 'forward'); }}
+        onCancel={() => setShowOtp(false)}
       />
     </ScreenContainer>
   );
