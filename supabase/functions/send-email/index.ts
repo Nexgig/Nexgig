@@ -38,6 +38,10 @@ const BRAND = {
 // which loads the @import; other clients fall back to the system stack below.
 const LOGO_FONT = "'Clash Display','Arial Black','Helvetica Neue',Arial,sans-serif";
 const BODY_FONT = "'General Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+// Hosted PNG of the "Nexgig." wordmark in Clash Display (black letters + white dot), so the logo
+// renders identically in EVERY email client — Gmail/Outlook strip web fonts and can't use LOGO_FONT.
+// Must be a PUBLIC url (e.g. a public Supabase Storage bucket). Until it's set, the alt text shows.
+const LOGO_URL = 'REPLACE_WITH_PUBLIC_PNG_URL';
 
 // Wraps body content in a consistent Nexgig-branded layout. Returns a full HTML doc so
 // the <head> can pull the brand fonts from Fontshare (where they're hosted).
@@ -55,8 +59,8 @@ function shell(innerHtml: string): string {
   <div style="font-family:${BODY_FONT}; background:${BRAND.surface}; padding:24px;">
     <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden;">
       <div style="background:${BRAND.coral}; padding:26px 32px;">
-        <div style="font-family:${LOGO_FONT}; color:#000000; font-size:26px; font-weight:600; letter-spacing:0.5px;">NEXGIG<span style="color:${BRAND.dot};">.</span></div>
-        <div style="color:#ffffff; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px;">Book. Play. Discover.</div>
+        <img src="${LOGO_URL}" alt="Nexgig" width="109" height="30" style="display:block; border:0; outline:none; text-decoration:none;" />
+        <div style="color:#ffffff; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:8px;">Book. Play. Discover.</div>
       </div>
       <div style="padding:32px;">
         ${innerHtml}
