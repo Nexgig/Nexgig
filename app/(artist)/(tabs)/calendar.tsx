@@ -132,9 +132,9 @@ export default function DJAvailabilityScreen() {
   const notifyManager = (type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled_by_artist', b: { id: string; managerId: string; resolvedVenueName?: string; resolvedDate?: string }) => {
     if (!currentUser) return;
     const titles: Record<string, string> = {
-      booking_confirmed: 'Gig Confirmed',
-      booking_declined: 'Gig Declined',
-      booking_cancelled_by_artist: 'Artist Cancelled',
+      booking_confirmed: 'Booked',
+      booking_declined: 'Declined',
+      booking_cancelled_by_artist: 'Cancelled',
     };
     const verbs: Record<string, string> = {
       booking_confirmed: 'accepted',

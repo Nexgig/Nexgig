@@ -259,7 +259,7 @@ export default function ArtistProfileViewScreen() {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       userId: artistId, type: 'lineup_added',
       title: 'Added to Roster',
-      body: `${firstName(currentUser.fullName, 'A manager')} added you — you can now be booked at their venues`,
+      body: `${firstName(currentUser.fullName, 'A manager')} added you to their roster — you can now be booked at their venues`,
       isRead: false, createdAt: new Date().toISOString(),
     });
   };
@@ -288,8 +288,8 @@ export default function ArtistProfileViewScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             userId: artistId ?? '',
             type: 'lineup_removed',
-            title: 'Removed from a Roster',
-            body: `${firstName(currentUser?.fullName, 'A manager')} removed you — you can no longer be booked at their venues`,
+            title: 'Removed from Roster',
+            body: `${firstName(currentUser?.fullName, 'A manager')} removed you from their roster — you can no longer be booked at their venues`,
             isRead: false,
             createdAt: new Date().toISOString(),
           });

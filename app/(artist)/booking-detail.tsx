@@ -153,9 +153,9 @@ export default function DJBookingDetailScreen() {
     const venueName = venue?.name ?? booking.venueName ?? 'a venue';
     const date = slot?.date ?? booking.slotDate ?? '';
     const titles: Record<string, string> = {
-      booking_confirmed: 'Gig Confirmed',
-      booking_declined: 'Gig Declined',
-      booking_cancelled_by_artist: 'Artist Cancelled',
+      booking_confirmed: 'Booked',
+      booking_declined: 'Declined',
+      booking_cancelled_by_artist: 'Cancelled',
     };
     const verbs: Record<string, string> = {
       booking_confirmed: 'accepted',

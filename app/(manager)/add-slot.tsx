@@ -315,7 +315,7 @@ export default function AddSlotScreen() {
     if (error) console.warn('past booking insert:', error.message);
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
-      type: 'past_confirmation_request', title: 'Did You Play This Gig?', body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venueName ?? 'a venue'}, ${formatDate(targetDate)}`,
+      type: 'past_confirmation_request', title: 'Past Booking Confirmation', body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venueName ?? 'a venue'}, ${formatDate(targetDate)}`,
       isRead: false, relatedId: booking.id, relatedType: 'booking', createdAt: new Date().toISOString(),
     });
   };
@@ -340,7 +340,7 @@ export default function AddSlotScreen() {
     });
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
-      type: 'booking_request', title: 'New Gig Request',
+      type: 'booking_request', title: 'New Booking Request',
       body: `${firstName(currentUser.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(targetDate)}`,
       isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
     });

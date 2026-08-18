@@ -262,7 +262,7 @@ export default function DJHomeScreen() {
   // behave identically to that screen.
   const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined', bookingId: string, venueName: string, date: string) => {
     const artistName = currentUser?.fullName ?? 'The artist';
-    const titles = { booking_confirmed: 'Gig Confirmed', booking_declined: 'Gig Declined' } as const;
+    const titles = { booking_confirmed: 'Booked', booking_declined: 'Declined' } as const;
     const verbs = { booking_confirmed: 'accepted', booking_declined: 'declined' } as const;
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,

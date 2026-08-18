@@ -249,7 +249,7 @@ export default function DJBookingDetailScreen() {
         id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         userId: b.artistId,
         type: bReq ? 'booking_request_cancelled' : 'booking_cancelled',
-        title: bReq ? 'Request Withdrawn' : 'Gig Cancelled',
+        title: bReq ? 'Request Withdrawn' : 'Cancelled',
         body: `${firstName(currentUser?.fullName, 'The manager')} ${bReq ? 'withdrew the request for' : 'cancelled'} ${bookingVenueName(b, venue?.name)}, ${b.slotDate ? formatDate(b.slotDate) : ''}`,
         isRead: false,
         relatedId: b.id,

@@ -361,7 +361,7 @@ export default function DJSetupScreen() {
             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}-a`,
             userId: user.id,
             type: 'lineup_added' as any,
-            title: 'Added to a roster',
+            title: 'Added to Roster',
             body: `${c.out_manager_name || 'A manager'} added you to their roster — you can now be booked at their venues`,
             isRead: false,
             relatedId: c.out_manager_id,

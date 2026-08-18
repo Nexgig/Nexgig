@@ -432,7 +432,7 @@ export default function AssignDJScreen() {
               id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               userId: artistId,
               type: 'past_confirmation_request',
-              title: 'Did You Play This Gig?',
+              title: 'Past Booking Confirmation',
               body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venue?.name ?? 'a venue'}, ${formatDate(slot!.date)}`,
               isRead: false,
               relatedId: booking.id,
@@ -460,7 +460,7 @@ export default function AssignDJScreen() {
     });
     addNotification({
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
-      type: 'booking_request', title: 'New Gig Request',
+      type: 'booking_request', title: 'New Booking Request',
       body: `${firstName(currentUser.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(slot!.date)}`,
       isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
     });

@@ -393,7 +393,7 @@ export const useSlotStore = create<SlotState>()(
         id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         userId: b.artistId,
         type: 'booking_cancelled',
-        title: 'Gig Cancelled',
+        title: 'Cancelled',
         body: `${firstName(useAuthStore.getState().currentUser?.fullName, 'The manager')} cancelled ${venueName}, ${new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
         isRead: false,
         relatedId: b.id,

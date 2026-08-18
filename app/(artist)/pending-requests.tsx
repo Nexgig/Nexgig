@@ -31,9 +31,9 @@ export default function ArtistPendingRequestsScreen() {
   const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined' | 'booking_cancelled_by_artist', bookingId: string, venueName: string, date: string) => {
     const artistName = currentUser?.fullName ?? 'The artist';
     const titles: Record<string, string> = {
-      booking_confirmed: 'Gig Confirmed',
-      booking_declined: 'Gig Declined',
-      booking_cancelled_by_artist: 'Artist Cancelled',
+      booking_confirmed: 'Booked',
+      booking_declined: 'Declined',
+      booking_cancelled_by_artist: 'Cancelled',
     };
     const verbs: Record<string, string> = {
       booking_confirmed: 'accepted',

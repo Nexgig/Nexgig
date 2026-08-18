@@ -259,7 +259,7 @@ export default function VenueDetailScreen() {
                 id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                 userId: booking.artistId,
                 type: isRequested ? 'booking_request_cancelled' : 'booking_cancelled',
-                title: isRequested ? 'Request Withdrawn' : 'Gig Cancelled',
+                title: isRequested ? 'Request Withdrawn' : 'Cancelled',
                 body: `${firstName(currentUser?.fullName, 'The manager')} ${isRequested ? 'withdrew the request for' : 'cancelled'} ${booking.venueName ?? venue.name}, ${snapDate ? formatDate(snapDate) : ''}`,
                 isRead: false,
                 relatedId: booking.id,
