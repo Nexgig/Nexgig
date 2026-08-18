@@ -8,32 +8,31 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 17 Aug 2026. Only open items live here. Done work is deleted, not archived.
+Updated 18 Aug 2026. Only open items live here. Done work is deleted, not archived.
 
-> **State of play (17 Aug 2026).** 🎉 **LIVE ON THE APP STORE.** Build 21 was approved
-> (14 Aug) and **released to the public store on 17 Aug 2026** — confirmed live (found on the
-> App Store). The app is out.
+> **State of play (18 Aug 2026).** 🎉 **v1.0 (build 21) LIVE ON THE APP STORE** since 17 Aug.
+> **v1.1 (build 24) is SUBMITTED and IN REVIEW** (18 Aug) — all the post-launch polish baked in.
+> Version string is **"1.1"** to match the App Store version record (build 23 / "1.1.0" was a
+> throwaway; the version was changed to "1.1" and rebuilt as build 24).
 >
-> **Phase is now POST-LAUNCH: polish + the feature backlog below.** Ship JS fixes/polish via
-> `eas update` (OTA) — they reach live users over the air, no review, within a launch or two.
-> A brand-new download runs build 21's baked-in JS on its FIRST open, then pulls the latest OTA
-> bundle on the next open (`fallbackToCacheTimeout` is 0, so no wait-on-launch).
+> **⚠️ OTA IS HELD — do NOT `eas update`** while 1.1 is in review, so the review device can't pull
+> a bundle that diverges from the binary Apple is testing. A batch of finished fixes is committed
+> on `main` (version 1.1) waiting to ship. **Once 1.1 is approved + released, push the held batch
+> as a single OTA on the 1.1 lane.**
 >
 > **OTA vs native — the one rule:** OTA carries JS / design / content only. A native change (new
-> package with native code, a permission, icon/splash) needs a NEW build + App Store submission,
-> and **that re-freezes OTA** until the new build is approved. Nothing to re-freeze now — keep
-> shipping OTA.
+> package with native code, a permission, icon/splash) needs a NEW build + submission, and that
+> re-freezes OTA until approved. Build 24 (v1.1) is that rebuild, currently freezing OTA.
 
-**1 · App Store — ✅ RELEASED & LIVE (build 21, released 17 Aug 2026). LAUNCHED.**
-Approved 14 Aug, released to the public App Store on 17 Aug 2026 and confirmed live. The app is
-out. (History: build 17 was **REJECTED** — a custom Sign-in-with-Apple button using the Apple
-logo, and asking for the user's full name at sign-up when Sign in with Apple already provides it.
-Both fixed in build 21: `AppleAuthentication.AppleAuthenticationButton` (official button) + name
-taken from Apple, not re-asked; legal-name hidden for OAuth. Build 21 = commit 0692f29.)
-Re-submit a NEW build only for native changes; until then everything ships OTA.
+**1 · App Store — v1.0 (build 21) LIVE since 17 Aug; v1.1 (build 24) SUBMITTED & IN REVIEW (18 Aug).**
+Build 21 approved 14 Aug, released 17 Aug, confirmed live. Build 24 (version "1.1") submitted for
+review 18 Aug with refreshed screenshots + "What's New". **To close: watch for Apple's decision,
+release when approved, then ship the held OTA batch.** (History: build 17 was REJECTED — a custom
+Apple-logo sign-in button + re-asking full name at sign-up; fixed in build 21 via the official
+`AppleAuthenticationButton` + name taken from Apple. Build 21 = commit 0692f29.)
 
-✅ **OTA FREEZE IS LIFTED — app is live.** `eas update` reaches real users over the air. Keep
-shipping fixes/polish. Re-freeze ONLY if a NEW build is ever submitted for review.
+⏳ **OTA is re-frozen while 1.1 is in review.** Resume OTA (and ship the held fix batch) only once
+1.1 is approved & released.
 
 **Invoice email — mostly done; VERIFY the PDF.** `send-email` was redeployed this session and
 invoice emails now send. The PDF-attachment fix is in `supabase/functions/send-email/index.ts`
@@ -41,35 +40,7 @@ invoice emails now send. The PDF-attachment fix is in `supabase/functions/send-e
 **To close:** confirm a real invoice email actually arrives WITH the PDF attached — if it doesn't,
 redeploy `send-email` once more (its last manual deploy may predate the attachment change).
 
-### FEATURES TO BUILD (post-approval batch — currently held; ship after App Store approval)
-- **Audit EVERY notification end-to-end and amend.** Go type by type and check the whole path,
-  then fix what's off:
-  - **Copy** at each send site — title + body, tone, `firstName()` truncation, and that the
-    venue/date/name snapshots read right. Send sites are spread across `app/(manager)/*` and
-    `app/(artist)/*` (e.g. `booking_request`, `booking_confirmed/declined/cancelled`,
-    `past_confirmation_request`, `lineup_added`, `venue_assigned`, `artist_left_venue`,
-    `invoice_received`, `review_submitted`). Grep `addNotification(` + `type:` for the full set.
-  - **Tap routing** — every type should open the right screen. Check `handlePress` in BOTH
-    `app/(manager)/notifications.tsx` and `app/(artist)/notifications.tsx`, and `routeFromPush`
-    in `app/_layout.tsx` (the push-tap path). Flag any type that falls through to just the list.
-  - **Icon + colour maps** — `NOTIF_ICONS` / `NOTIF_COLORS` in both notifications screens: any
-    type missing from the map silently falls back to a generic bell/primary. Make sure every
-    live type has an entry, and the dot colours in `renderNotif` match.
-  - **Role separation** — `lib/notification-roles.ts` (`isForRole`): confirm no type leaks to the
-    wrong side's list. (Push-level role separation is its own known-limitation item above.)
-  - Deliverable: a short list of what was wrong + the amendments, then ship them.
-- **Notify artists when a manager creates a new venue.** Today creating a venue is silent to
-  artists (`app/(manager)/create-venue.tsx` — the `venues` insert / `addVenue`). Send a
-  notification so connected artists know a new venue exists (they can now be booked there).
-  - **Who to notify:** the manager's lineup — connected artists in the global lineup
-    (`globalLineup`, status `'active'` for that manager). A brand-new venue has no
-    `venue_assignments` yet, so target the manager relationship, not the venue. (Decide whether
-    to also auto-assign them to the new venue, or leave assignment manual — probably manual.)
-  - **Reuse:** the `venue_assigned` type already exists with a body like "You can now be booked
-    at {venue}" and routes to the venue; consider a distinct type (e.g. `venue_created`) or
-    reuse `venue_assigned` copy. Mirror the send pattern in `handleAddToVenue`
-    (`app/(manager)/add-slot.tsx`) / `handleAddToVenueFromSlot` (`assign-artist.tsx`).
-  - Fold the copy/routing/icon-map/role checks into the notification audit item above.
+### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
   only way to learn someone's version is to ask them to read it out. That cost real time
