@@ -57,10 +57,10 @@ function shell(innerHtml: string): string {
 </head>
 <body style="margin:0; padding:0; background:${BRAND.surface};">
   <div style="font-family:${BODY_FONT}; background:${BRAND.surface}; padding:24px;">
-    <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden;">
-      <div style="background:${BRAND.coral}; padding:26px 32px;">
+    <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid ${BRAND.hairline};">
+      <div style="background:${BRAND.surface}; padding:26px 32px; border-bottom:1px solid ${BRAND.hairline};">
         <img src="${LOGO_URL}" alt="Nexgig" width="109" height="30" style="display:block; border:0; outline:none; text-decoration:none;" />
-        <div style="color:#ffffff; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:8px;">Book. Play. Discover.</div>
+        <div style="color:${BRAND.muted}; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:8px;">Book. Play. Discover.</div>
       </div>
       <div style="padding:32px;">
         ${innerHtml}
