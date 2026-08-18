@@ -70,3 +70,6 @@ Thumbs.db
 
 # Supabase CLI temp files
 supabase/.temp/
+
+# Google Play submit credential (never commit)
+play-service-account.json
