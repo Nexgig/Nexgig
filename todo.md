@@ -34,6 +34,23 @@ Apple-logo sign-in button + re-asking full name at sign-up; fixed in build 21 vi
 ⏳ **OTA is re-frozen while 1.1 is in review.** Resume OTA (and ship the held fix batch) only once
 1.1 is approved & released.
 
+**2 · Android / Google Play — IN PROGRESS (started 18 Aug 2026).** Expo/cross-platform, so Android
+is config + store admin, not a rewrite.
+- ✅ Android config verified: adaptive icon, package `com.nexgig.app` matches `google-services.json`,
+  FCM client file present. `eas.json` now has android profiles (preview→apk, production→aab, Play
+  `internal` track); Play key gitignored as `play-service-account.json`.
+- ✅ **First Android build (preview APK) SUCCEEDED** — app compiles cleanly on Android (build
+  a02df0d4, v1.1). Install-on-a-device smoke test = still TODO.
+- ⏳ Play Console dev account created + **$25 paid**; **Google identity verification PENDING**
+  (passport submitted). Blocks Create app / uploads / listing until it clears (few days–2 wk).
+- **Remaining once verified:** create the app; store listing (copy drafted; still needs feature
+  graphic 1024×500 + android screenshots + 512 icon); app-content declarations + Data Safety;
+  upload production `.aab`; closed-testing track (new account ⇒ likely ~12 testers / 14 days) →
+  production.
+- **Android push** needs the **FCM V1 service-account key** uploaded to Expo (Firebase project
+  `nexgigapp-b34e6` → Service accounts → generate key → `eas credentials`). Not done; until then
+  Android push silently no-ops.
+
 ### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
