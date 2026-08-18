@@ -120,6 +120,14 @@ export default function ArtistNotificationsScreen() {
   );
 
   const handlePress = (notif: AppNotification) => {
+    // A booking notification whose booking no longer exists (e.g. its venue was deleted) can't be
+    // opened — clear it instead of trapping it on a dead screen. markAsRead persists to Supabase,
+    // so it stays cleared after a reload.
+    if (notif.relatedType === 'booking' && notif.relatedId &&
+        !useBookingStore.getState().bookings.some((b) => b.id === notif.relatedId)) {
+      markAsRead(notif.id);
+      return;
+    }
     // Opening a pending gig request must NOT clear it — only responding does.
     if (!needsAction(notif)) markAsRead(notif.id);
     // All booking-related notifications open the booking detail screen

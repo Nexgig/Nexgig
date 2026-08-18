@@ -25,6 +25,7 @@ const NOTIF_ICONS: Record<string, string> = {
   review_submitted: 'star',
   invoice_received: 'receipt-long',
   invoice_cancelled: 'receipt-long',
+  artist_joined: 'how-to-reg',
 };
 
 const NOTIF_COLORS: Record<string, string> = {
@@ -41,6 +42,7 @@ const NOTIF_COLORS: Record<string, string> = {
   review_submitted: '#22C55E',
   invoice_received: '#22C55E',
   invoice_cancelled: '#8E8E93',
+  artist_joined: '#22C55E',
 };
 
 function timeAgo(dateStr: string): string {
@@ -104,7 +106,7 @@ export default function ManagerNotificationsScreen() {
     markAsRead(notif.id);
     if (notif.relatedType === 'booking' && notif.relatedId) {
       router.push(('/(manager)/booking-detail?id=' + notif.relatedId) as Href);
-    } else if (notif.type === 'invoice_received') {
+    } else if (notif.type === 'invoice_received' || notif.type === 'invoice_cancelled') {
       // relatedId is the invoice id — open the invoice itself. Fall back to the profile
       // (where invoices live) for older notifications that predate the id.
       if (notif.relatedId) {
@@ -112,6 +114,10 @@ export default function ManagerNotificationsScreen() {
       } else {
         router.push('/(manager)/(tabs)/profile' as Href);
       }
+    } else if (notif.type === 'artist_joined' && notif.relatedId) {
+      router.push(('/(manager)/artist-profile-view?artistId=' + notif.relatedId) as Href);
+    } else if (notif.type === 'artist_left_venue' && notif.relatedId) {
+      router.push(('/(manager)/venue-detail?id=' + notif.relatedId) as Href);
     }
   };
 

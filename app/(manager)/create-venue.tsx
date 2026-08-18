@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useVenueStore, useLineupStore } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe, VenueSchedule } from '@/lib/types';
@@ -296,6 +296,19 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
         artistId: r.artistId,
         assignedAt: new Date().toISOString(),
         status: 'active' as const,
+      });
+      // Tell each roster artist about the new venue — they're auto-assigned above, so the
+      // existing 'venue_assigned' copy ("You can now be booked at …") is accurate.
+      useNotificationStore.getState().addNotification({
+        id: `notif-${Date.now()}-${r.artistId}`,
+        userId: r.artistId,
+        type: 'venue_assigned',
+        title: 'New Venue',
+        body: `You can now be booked at ${form.name}`,
+        isRead: false,
+        relatedId: venueData.id,
+        relatedType: 'venue',
+        createdAt: new Date().toISOString(),
       });
     });
   }
