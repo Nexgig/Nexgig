@@ -490,7 +490,7 @@ export default function DJSettingsScreen() {
             the app version alone can't, since every OTA ships under v1.0.0. Null means the
             build's original bundle (no OTA applied yet), or dev. Mirrors the manager's. */}
         <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 12, paddingVertical: 24 }}>
-          {`Nexgig v${Updates.runtimeVersion ?? '1.1.0'}${Updates.updateId ? ` · ${Updates.updateId.slice(0, 8)}` : ''}`}
+          {`Nexgig v${Updates.runtimeVersion ?? '1.1'}${Updates.updateId ? ` · ${Updates.updateId.slice(0, 8)}` : ''}`}
         </Text>
 
       </ScrollView>
