@@ -364,9 +364,7 @@ export default function DJHomeScreen() {
       </View>
       {gigs.map((b) => {
         const venueName = b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, b.venue?.name);
-        const time = (b.slotStartTime || b.slot?.startTime)
-          ? `${fmtTime(b.slot?.startTime ?? b.slotStartTime ?? '')}–${fmtTime(b.slot?.endTime ?? b.slotEndTime ?? '')}`
-          : '';
+        const startTime = b.slot?.startTime ?? b.slotStartTime ?? '';
         return (
           <Pressable
             key={b.id}
@@ -384,13 +382,19 @@ export default function DJHomeScreen() {
             )}
             <View style={styles.gigInfo}>
               <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
-              <Text style={[styles.gigTime, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
+              {!b.isArtistCreated && (
+                <Pressable hitSlop={6} onPress={() => openVenueMaps(b)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
+                  <MaterialIcons name="place" size={13} color={colors.muted} />
+                  <Text style={[styles.gigMapsText, { color: colors.muted }]}>Maps</Text>
+                </Pressable>
+              )}
             </View>
-            {!b.isArtistCreated && (
-              <Pressable hitSlop={8} style={({ pressed }) => [styles.mapsBtn, { opacity: pressed ? 0.6 : 1 }]} onPress={() => openVenueMaps(b)}>
-                <MaterialIcons name="place" size={22} color={colors.muted} />
-              </Pressable>
-            )}
+            {startTime ? (
+              <View style={styles.gigTimeRow}>
+                <MaterialIcons name="schedule" size={13} color={colors.muted} />
+                <Text style={[styles.gigTime, { color: colors.muted }]}>{fmtTime(startTime)}</Text>
+              </View>
+            ) : null}
           </Pressable>
         );
       })}
@@ -621,7 +625,9 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   gigName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },   // matches the manager dashboard's booking-row name
   gigTime: { fontSize: 13, fontWeight: '500' },
-  mapsBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  gigTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  gigMapsRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1, alignSelf: 'flex-start' },
+  gigMapsText: { fontSize: 12, fontWeight: '500' },
 
   // Legend popover
   legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
