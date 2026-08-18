@@ -41,7 +41,7 @@ const BODY_FONT = "'General Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
 // Hosted PNG of the "Nexgig." wordmark in Clash Display (black letters + white dot), so the logo
 // renders identically in EVERY email client — Gmail/Outlook strip web fonts and can't use LOGO_FONT.
 // Must be a PUBLIC url (e.g. a public Supabase Storage bucket). Until it's set, the alt text shows.
-const LOGO_URL = 'REPLACE_WITH_PUBLIC_PNG_URL';
+const LOGO_URL = 'https://jgzuzkwzoceuzytwadvc.supabase.co/storage/v1/object/public/Assets/nexgig-email-logo.png';
 
 // Wraps body content in a consistent Nexgig-branded layout. Returns a full HTML doc so
 // the <head> can pull the brand fonts from Fontshare (where they're hosted).
