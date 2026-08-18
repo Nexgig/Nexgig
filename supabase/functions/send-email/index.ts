@@ -55,8 +55,8 @@ function shell(innerHtml: string): string {
   <div style="font-family:${BODY_FONT}; background:${BRAND.surface}; padding:24px;">
     <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden;">
       <div style="background:${BRAND.coral}; padding:26px 32px;">
-        <div style="font-family:${LOGO_FONT}; color:#ffffff; font-size:26px; font-weight:600; letter-spacing:0.5px;">NEXGIG<span style="color:${BRAND.dot};">.</span></div>
-        <div style="color:${BRAND.tagline}; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px;">Book. Play. Discover.</div>
+        <div style="font-family:${LOGO_FONT}; color:#000000; font-size:26px; font-weight:600; letter-spacing:0.5px;">NEXGIG<span style="color:${BRAND.dot};">.</span></div>
+        <div style="color:#ffffff; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px;">Book. Play. Discover.</div>
       </div>
       <div style="padding:32px;">
         ${innerHtml}
@@ -255,7 +255,7 @@ function renderTemplate(
         html: shell(
           h1('You received an invoice') +
           p(`Hi ${name},`) +
-          p(`<strong>${artistName}</strong> sent you an invoice for gigs at <strong>${venueName}</strong>.`) +
+          p(`<strong>${artistName}</strong> sent you an invoice for <strong>${venueName}</strong>.`) +
           p(`Amount: <strong>AED ${amount}</strong>${invoiceNumber ? `<br/>Invoice: ${invoiceNumber}` : ''}`) +
           p('The invoice PDF is attached to this email. You can also open Nexgig to view the full details.'),
         ),
