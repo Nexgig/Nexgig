@@ -58,7 +58,7 @@ try {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.0.0",
+  version: "1.1.0",
   runtimeVersion: { policy: "appVersion" },
   updates: {
     url: "https://u.expo.dev/eae9c0e4-5f95-4c8b-ba5f-09303b81ecbe",
