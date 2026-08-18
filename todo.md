@@ -34,12 +34,6 @@ Apple-logo sign-in button + re-asking full name at sign-up; fixed in build 21 vi
 ⏳ **OTA is re-frozen while 1.1 is in review.** Resume OTA (and ship the held fix batch) only once
 1.1 is approved & released.
 
-**Invoice email — mostly done; VERIFY the PDF.** `send-email` was redeployed this session and
-invoice emails now send. The PDF-attachment fix is in `supabase/functions/send-email/index.ts`
-(Resend `attachments`) and the base64 PDF is generated in `invoice-preview.tsx` (ships OTA).
-**To close:** confirm a real invoice email actually arrives WITH the PDF attached — if it doesn't,
-redeploy `send-email` once more (its last manual deploy may predate the attachment change).
-
 ### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
