@@ -153,6 +153,18 @@ function RootLayout() {
       router.push(`${base}/my-venues` as any);
       return;
     }
+    if (accountType === 'manager' && (type === 'invoice_received' || type === 'invoice_cancelled')) {
+      router.push((relatedId ? `${base}/manager-invoice-detail?invoiceId=${relatedId}` : `${base}/(tabs)/profile`) as any);
+      return;
+    }
+    if (accountType === 'manager' && type === 'artist_joined' && relatedId) {
+      router.push(`${base}/artist-profile-view?artistId=${relatedId}` as any);
+      return;
+    }
+    if (accountType === 'manager' && type === 'artist_left_venue' && relatedId) {
+      router.push(`${base}/venue-detail?id=${relatedId}` as any);
+      return;
+    }
     router.push(`${base}/notifications` as any);
   }, [router]);
 
