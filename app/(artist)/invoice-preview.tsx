@@ -216,13 +216,10 @@ export default function InvoicePreviewScreen() {
               {
                 text: 'OK',
                 onPress: () => {
-                  // Land on the venue's page with its Invoices tab open — the invoice they just
-                  // sent lives there. Reset to dashboard first so 'back' goes to the dashboard,
-                  // not back up through the invoice-creation stack.
-                  router.replace('/(artist)/(tabs)/dashboard' as any);
-                  setTimeout(() => {
-                    router.push(`/(artist)/venue-detail?id=${venueId}&tab=invoices` as any);
-                  }, 50);
+                  // Straight to the venue's page with its Invoices tab open — the invoice they
+                  // just sent is there. A single replace() (not dashboard-then-push) transitions
+                  // cleanly with nothing flashing in between.
+                  router.replace(`/(artist)/venue-detail?id=${venueId}&tab=invoices` as any);
                 },
               },
             ]);
