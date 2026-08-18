@@ -216,11 +216,12 @@ export default function InvoicePreviewScreen() {
               {
                 text: 'OK',
                 onPress: () => {
-                  // Go to dashboard tab first (clears invoice creation stack),
-                  // then push invoices on top so back goes to dashboard
+                  // Land on the venue's page with its Invoices tab open — the invoice they just
+                  // sent lives there. Reset to dashboard first so 'back' goes to the dashboard,
+                  // not back up through the invoice-creation stack.
                   router.replace('/(artist)/(tabs)/dashboard' as any);
                   setTimeout(() => {
-                    router.push('/(artist)/invoices' as any);
+                    router.push(`/(artist)/venue-detail?id=${venueId}&tab=invoices` as any);
                   }, 50);
                 },
               },
