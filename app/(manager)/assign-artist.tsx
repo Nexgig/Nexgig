@@ -160,7 +160,7 @@ export default function AssignDJScreen() {
         if (timesOverlap(bStart, bEnd, slot.startTime, slot.endTime, bl.date, slot.date)) {
           add(bl.artist_id, {
             type: 'availability_block',
-            description: `Unavailable ${bStart}–${bEnd}`,
+            description: bl.is_full_day ? 'Unavailable all day' : `Unavailable ${bStart}–${bEnd}`,
             startTime: bStart,
             endTime: bEnd,
           });

@@ -192,7 +192,7 @@ export default function AddSlotScreen() {
         const bStart = bl.is_full_day ? '00:00' : bl.start_time;
         const bEnd = bl.is_full_day ? '23:59' : bl.end_time;
         if (timesOverlap(bStart, bEnd, slotForm.startTime, slotForm.endTime, bl.date, targetDate)) {
-          add(bl.artist_id, { type: 'availability_block', description: `Unavailable ${bStart}–${bEnd}`, startTime: bStart, endTime: bEnd });
+          add(bl.artist_id, { type: 'availability_block', description: bl.is_full_day ? 'Unavailable all day' : `Unavailable ${bStart}–${bEnd}`, startTime: bStart, endTime: bEnd });
         }
       });
       setCrossConflicts(map);
