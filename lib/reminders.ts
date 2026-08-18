@@ -56,14 +56,25 @@ export async function setReminderOffsets(offsets: number[]): Promise<void> {
   }
 }
 
-// ─── Human-friendly "in X" phrasing for the notification body ──────────────────
+// ─── Notification body helpers: "today/tomorrow at 9 PM" ───────────────────────
 
-function offsetPhrase(minutes: number): string {
-  if (minutes === 1440) return 'tomorrow';
-  if (minutes === 60) return 'in 1 hour';
-  if (minutes < 60) return `in ${minutes} minutes`;
-  if (minutes % 60 === 0) return `in ${minutes / 60} hours`;
-  return `in ${Math.round(minutes / 60)} hours`;
+// "today" if the gig lands on the same calendar day the reminder fires, else
+// "tomorrow" (our max offset is 24h, so it's only ever one of those two).
+function dayWord(fireAt: Date, gigStart: Date): string {
+  const f = new Date(fireAt.getFullYear(), fireAt.getMonth(), fireAt.getDate());
+  const g = new Date(gigStart.getFullYear(), gigStart.getMonth(), gigStart.getDate());
+  const diffDays = Math.round((g.getTime() - f.getTime()) / 86400000);
+  return diffDays >= 1 ? 'tomorrow' : 'today';
+}
+
+// "9 PM" / "8:30 PM" from a local Date (drops :00 on the hour).
+function formatGigTime(d: Date): string {
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return m === 0 ? `${h} ${ampm}` : `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
 // Build the gig start Date from a booking's snapshot fields (slotDate + slotStartTime).
@@ -111,7 +122,7 @@ export async function rescheduleArtistReminders(artistId: string): Promise<void>
     const confirmed = useBookingStore.getState().getConfirmedBookingsByDJ(artistId);
     const now = Date.now();
 
-    type Candidate = { fireAt: Date; venueName: string; phrase: string };
+    type Candidate = { fireAt: Date; venueName: string; start: Date };
     const candidates: Candidate[] = [];
 
     for (const b of confirmed) {
@@ -121,7 +132,7 @@ export async function rescheduleArtistReminders(artistId: string): Promise<void>
       for (const off of offsets) {
         const fireAt = new Date(start.getTime() - off * 60 * 1000);
         if (fireAt.getTime() <= now) continue; // already passed → skip
-        candidates.push({ fireAt, venueName, phrase: offsetPhrase(off) });
+        candidates.push({ fireAt, venueName, start });
       }
     }
 
@@ -134,7 +145,7 @@ export async function rescheduleArtistReminders(artistId: string): Promise<void>
         Notifications.scheduleNotificationAsync({
           content: {
             title: 'Upcoming Gig',
-            body: `You're on at ${c.venueName} ${c.phrase}`,
+            body: `${c.venueName} ${dayWord(c.fireAt, c.start)} at ${formatGigTime(c.start)}`,
             data: { kind: REMINDER_KIND },
             sound: true,
           },
