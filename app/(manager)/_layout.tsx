@@ -260,7 +260,7 @@ if (!lineupError && lineupData) {
 
     // Realtime: listen for booking status changes
     const subscription = supabase
-      .channel('bookings-changes')
+      .channel(`bookings-changes-${Date.now()}-${Math.floor(Math.random() * 1e6)}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'bookings' },
@@ -285,7 +285,7 @@ if (!lineupError && lineupData) {
     // Realtime: listen for venue changes (e.g. our backend verifying a venue).
     // Updates the verification badge live without needing a sign-out/in.
     const venueSubscription = supabase
-      .channel('venues-changes')
+      .channel(`venues-changes-${Date.now()}-${Math.floor(Math.random() * 1e6)}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'venues' },

@@ -349,7 +349,7 @@ export default function DJHomeScreen() {
     const url = (loc?.lat && loc?.lng)
       ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
       : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || b.venueName || '')}`;
-    Linking.openURL(url);
+    Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
   };
 
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: (typeof dashboardBookings) }) => (
