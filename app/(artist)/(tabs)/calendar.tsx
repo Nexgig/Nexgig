@@ -681,7 +681,7 @@ export default function DJAvailabilityScreen() {
                 const isPast = bookingDate !== '' && isPastEnd(bookingDate, b.resolvedStart ?? '23:59', b.resolvedEnd);
                 if (isPast) {
                   Alert.alert(
-                    'Did You Play This Gig?',
+                    'Past Booking Confirmation',
                     `Confirm that you performed at ${b.resolvedVenueName} on ${bookingDate}?`,
                     [
                       { text: 'Cancel', style: 'cancel' },

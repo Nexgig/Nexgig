@@ -224,7 +224,7 @@ export default function DJBookingDetailScreen() {
     if (isPast) {
       // Past booking — confirm goes directly to completed
       Alert.alert(
-        'Did You Play This Gig?',
+        'Past Booking Confirmation',
         `Confirm that you performed at ${venue?.name ?? 'this venue'} on ${bookingDate ? formatDate(bookingDate) : 'this date'}?`,
         [
           { text: 'Cancel', style: 'cancel' },
