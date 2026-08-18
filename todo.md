@@ -47,9 +47,12 @@ is config + store admin, not a rewrite.
   graphic 1024×500 + android screenshots + 512 icon); app-content declarations + Data Safety;
   upload production `.aab`; closed-testing track (new account ⇒ likely ~12 testers / 14 days) →
   production.
-- **Android push** needs the **FCM V1 service-account key** uploaded to Expo (Firebase project
-  `nexgigapp-b34e6` → Service accounts → generate key → `eas credentials`). Not done; until then
-  Android push silently no-ops.
+- **Android push** — a Google service-account key for `nexgigapp-b34e6` is ALREADY uploaded to Expo
+  credentials (set up in an earlier session; also means we can't easily make a new one — an org
+  policy `iam.disableServiceAccountKeyCreation` now blocks key creation). **To close: confirm the
+  key is assigned to FCM V1** (Expo → Credentials → Android → key's "used for" lists FCM V1) and
+  verify with a real test push on an Android device. If it's only used for Play submissions, assign
+  the SAME key to FCM (no new key needed).
 
 ### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
