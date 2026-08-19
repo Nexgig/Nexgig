@@ -92,13 +92,6 @@ is config + store admin, not a rewrite.
     `app/(manager)/artist-profile-view.tsx` READS `min_rate` (line 156) but doesn't display it.
     Show it only when `isConnected` (mirror the email/phone gate in the Account section), so a
     non-connected manager never sees the rate.
-- **Restructure email templates.** (Flagged 18 Aug 2026 — specifics still TBD, define before
-  starting.) Rework the transactional email templates in `supabase/functions/send-email/index.ts`
-  — the shared `shell()` layout + the per-type cases (`welcome_artist`, `roster_invite`, password
-  reset, `invoice_received`, etc.). The 18 Aug pass already did the header (cream bg + Bold
-  Clash-Display logo PNG hosted on Supabase Storage), the invoice wording, and the PDF attachment;
-  this is a broader structural cleanup of the templates themselves. **NOTE: edge-function change →
-  ships by REDEPLOYING `send-email`, not via OTA.**
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
