@@ -8,31 +8,27 @@
 
 ## ⟢ OPEN WORK  (read this first — authoritative; when asked "what's left", show ONLY this section)
 
-Updated 18 Aug 2026. Only open items live here. Done work is deleted, not archived.
+Updated 19 Aug 2026. Only open items live here. Done work is deleted, not archived.
 
-> **State of play (18 Aug 2026).** 🎉 **v1.0 (build 21) LIVE ON THE APP STORE** since 17 Aug.
-> **v1.1 (build 24) is SUBMITTED and IN REVIEW** (18 Aug) — all the post-launch polish baked in.
-> Version string is **"1.1"** to match the App Store version record (build 23 / "1.1.0" was a
-> throwaway; the version was changed to "1.1" and rebuilt as build 24).
+> **State of play (19 Aug 2026).** 🎉 **v1.1 (build 24) APPROVED + LIVE on the App Store** (19 Aug).
+> v1.0 (build 21) launched 17 Aug; 1.1 is the first post-launch update. Version string is **"1.1"**
+> (matches the App Store version record; build 23 / "1.1.0" was a throwaway, rebuilt as build 24).
 >
-> **⚠️ OTA IS HELD — do NOT `eas update`** while 1.1 is in review, so the review device can't pull
-> a bundle that diverges from the binary Apple is testing. A batch of finished fixes is committed
-> on `main` (version 1.1) waiting to ship. **Once 1.1 is approved + released, push the held batch
-> as a single OTA on the 1.1 lane.**
+> ✅ **OTA RESUMED.** The held post-launch batch shipped as one OTA on the 1.1 lane on 19 Aug
+> (update `01a01915…`, group `622a25c2`). `eas update --branch production` reaches 1.1 users
+> normally again — keep shipping JS / design / content over the air. (Users still on 1.0.0 / build
+> 21 get 1.1 — then OTAs — when they update the app from the store.)
 >
 > **OTA vs native — the one rule:** OTA carries JS / design / content only. A native change (new
 > package with native code, a permission, icon/splash) needs a NEW build + submission, and that
-> re-freezes OTA until approved. Build 24 (v1.1) is that rebuild, currently freezing OTA.
+> re-freezes OTA until approved. Nothing to re-freeze now — keep shipping OTA.
 
-**1 · App Store — v1.0 (build 21) LIVE since 17 Aug; v1.1 (build 24) SUBMITTED & IN REVIEW (18 Aug).**
-Build 21 approved 14 Aug, released 17 Aug, confirmed live. Build 24 (version "1.1") submitted for
-review 18 Aug with refreshed screenshots + "What's New". **To close: watch for Apple's decision,
-release when approved, then ship the held OTA batch.** (History: build 17 was REJECTED — a custom
-Apple-logo sign-in button + re-asking full name at sign-up; fixed in build 21 via the official
-`AppleAuthenticationButton` + name taken from Apple. Build 21 = commit 0692f29.)
-
-⏳ **OTA is re-frozen while 1.1 is in review.** Resume OTA (and ship the held fix batch) only once
-1.1 is approved & released.
+**1 · App Store — ✅ v1.1 (build 24) APPROVED + LIVE (19 Aug 2026). Post-launch OTA batch shipped.**
+Build 21 (v1.0) launched 17 Aug; build 24 (v1.1) approved + released 19 Aug with refreshed
+screenshots + "What's New", and the held post-launch OTA batch went out the same day (update
+01a01915). Re-submit a NEW build only for native changes; everything else ships OTA on the 1.1 lane.
+(History: build 17 was REJECTED — a custom Apple-logo sign-in button + re-asking full name at
+sign-up; fixed in build 21 via the official `AppleAuthenticationButton` + name from Apple.)
 
 **2 · Android / Google Play — IN PROGRESS (started 18 Aug 2026).** Expo/cross-platform, so Android
 is config + store admin, not a rewrite.
