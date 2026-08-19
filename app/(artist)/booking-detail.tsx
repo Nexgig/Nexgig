@@ -95,9 +95,9 @@ export default function DJBookingDetailScreen() {
   useEffect(() => {
     if (booking || !id) return;
     let cancelled = false;
-    // We opened a booking that wasn't in the local store — worth knowing how often
-    // this happens (stale list / a realtime fetch that missed a notification type).
-    reportWarning('booking-detail opened without a local booking', { bookingId: id });
+    // Opening a booking that isn't in the local store is a NORMAL path (e.g. tapped from a
+    // notification / deep-link) — we just fetch it below. Only the "found nothing" dead-end
+    // (a deleted / inaccessible booking) is worth logging.
     (async () => {
       const { data: b } = await supabase.from('bookings').select('*').eq('id', id).maybeSingle();
       if (cancelled) return;
