@@ -99,11 +99,11 @@ const bigStat = (label: string, value: string) =>
 const hr = () => `<div style="height:1px; background:${BRAND.hairline}; margin:24px 0;"></div>`;
 const rowsTable = (pairs: [string, string][]) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${BODY_FONT};">` +
-  pairs.map(([l, v]) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:7px 0;">${l}</td><td align="right" valign="top" style="font-size:14px; color:${BRAND.ink}; font-weight:500; padding:7px 0;">${v}</td></tr>`).join('') +
+  pairs.map(([l, v]) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:7px 16px 7px 0; white-space:nowrap;">${l}</td><td align="right" valign="top" style="font-size:14px; color:${BRAND.ink}; font-weight:500; padding:7px 0;">${v}</td></tr>`).join('') +
   `</table>`;
 const stepsTable = (items: string[]) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${BODY_FONT};">` +
-  items.map((desc, i) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:9px 0;">Step ${i + 1}</td><td align="right" valign="top" style="font-size:15px; color:${BRAND.ink}; font-weight:500; padding:9px 0;">${desc}</td></tr>`).join('') +
+  items.map((desc, i) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:9px 16px 9px 0; white-space:nowrap;">Step ${i + 1}</td><td align="right" valign="top" style="font-size:15px; color:${BRAND.ink}; font-weight:500; padding:9px 0;">${desc}</td></tr>`).join('') +
   `</table>`;
 const pdfChip = (filename: string, sizeLabel: string) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.surface}; border-radius:12px; margin:22px 0;"><tr><td style="padding:14px 16px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle"><div style="width:36px; height:36px; background:${BRAND.ink}; border-radius:8px; color:#fff; font-size:10px; font-weight:700; text-align:center; line-height:36px; font-family:${BODY_FONT};">PDF</div></td><td valign="middle" style="padding-left:12px;"><div style="font-family:${BODY_FONT}; font-size:14px; font-weight:500; color:${BRAND.ink};">${filename}</div><div style="font-family:${BODY_FONT}; font-size:12px; color:${BRAND.muted}; margin-top:2px;">Attached to this email${sizeLabel ? ` &middot; ${sizeLabel}` : ''}</div></td></tr></table></td></tr></table>`;
