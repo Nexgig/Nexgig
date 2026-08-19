@@ -20,6 +20,7 @@ import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-run
 import { supabase } from "@/lib/supabase";
 import { useSilentUpdates } from '@/lib/silent-update';
 import { UpdatingOverlay } from '@/components/updating-overlay';
+import { ForceUpdateGate } from '@/components/force-update-gate';
 import { useRoleSwitching } from '@/lib/roles';
 import { useAuthStore, resetAllStores } from "@/lib/store";
 import { registerForPushNotifications } from "@/lib/notifications-push";
@@ -260,6 +261,7 @@ function RootLayout() {
         </Stack>
         <ThemedStatusBar />
         <UpdatingOverlay visible={applyingUpdate || roleSwitching} label={applyingUpdate ? 'Updating…' : 'Switching…'} />
+        <ForceUpdateGate />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
