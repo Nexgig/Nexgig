@@ -32,7 +32,8 @@ const BRAND = {
   body: '#57534E',      // warm grey body text
   surface: '#F6F2EC',   // app surface — cards inside the email
   hairline: '#EDE7DE',  // soft divider
-  muted: '#8E8E93',     // app muted — footer
+  muted: '#8E8E93',     // app muted — labels / footer
+  faint: '#B3B0A8',     // lightest — footer address + reason line
 };
 // Font stacks. Clash Display (logo) + General Sans (everything) render in Apple Mail,
 // which loads the @import; other clients fall back to the system stack below.
@@ -43,41 +44,73 @@ const BODY_FONT = "'General Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
 // Must be a PUBLIC url (e.g. a public Supabase Storage bucket). Until it's set, the alt text shows.
 const LOGO_URL = 'https://jgzuzkwzoceuzytwadvc.supabase.co/storage/v1/object/public/Assets/nexgig-email-logo.png';
 
-// Wraps body content in a consistent Nexgig-branded layout. Returns a full HTML doc so
-// the <head> can pull the brand fonts from Fontshare (where they're hosted).
-function shell(innerHtml: string): string {
+// Wraps body content in a Nexgig-branded layout: cream page, wordmark + category label header,
+// white card, footer with links + an optional "why you got this" reason. Table-based so it holds
+// up in Outlook/Gmail (not just Apple Mail). Returns a full HTML doc.
+function shell(inner: string, opts: { category?: string; reason?: string } = {}): string {
+  const categoryCell = opts.category
+    ? `<td align="right" valign="middle" style="font-family:${BODY_FONT}; font-size:12px; letter-spacing:1.5px; color:${BRAND.muted}; text-transform:uppercase;">${opts.category}</td>`
+    : `<td></td>`;
+  const reasonCell = opts.reason
+    ? `<td align="right" valign="top" width="45%" style="font-family:${BODY_FONT}; font-size:13px; line-height:1.55; color:${BRAND.faint};">${opts.reason}</td>`
+    : `<td></td>`;
   return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    @import url('https://api.fontshare.com/v2/css?f[]=clash-display@600&f[]=general-sans@400,500,600&display=swap');
-  </style>
-</head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap');</style></head>
 <body style="margin:0; padding:0; background:${BRAND.surface};">
-  <div style="font-family:${BODY_FONT}; background:${BRAND.surface}; padding:24px;">
-    <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid ${BRAND.hairline};">
-      <div style="background:${BRAND.surface}; padding:26px 32px; border-bottom:1px solid ${BRAND.hairline};">
-        <img src="${LOGO_URL}" alt="Nexgig" width="109" height="30" style="display:block; border:0; outline:none; text-decoration:none;" />
-        <div style="color:${BRAND.muted}; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:8px;">Book. Play. Discover.</div>
-      </div>
-      <div style="padding:32px;">
-        ${innerHtml}
-      </div>
-      <div style="padding:16px 32px; border-top:1px solid ${BRAND.hairline};">
-        <div style="color:${BRAND.muted}; font-size:12px;">Sent by Nexgig &middot; nexgigapp.com</div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.surface}; font-family:${BODY_FONT};"><tr><td align="center" style="padding:28px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
+  <tr><td style="padding:4px 6px 22px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td align="left" valign="middle"><img src="${LOGO_URL}" alt="Nexgig" width="109" height="30" style="display:block; border:0; outline:none; text-decoration:none;"></td>
+      ${categoryCell}
+    </tr></table>
+  </td></tr>
+  <tr><td style="background:#ffffff; border:1px solid ${BRAND.hairline}; border-radius:16px; padding:36px;">
+    ${inner}
+  </td></tr>
+  <tr><td style="padding:24px 6px 4px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td align="left" valign="top" style="font-family:${BODY_FONT}; font-size:13px; line-height:1.6; color:${BRAND.muted};">Nexgig &middot; Book. Play. Discover.<br><a href="https://nexgigapp.com" style="color:${BRAND.muted}; text-decoration:underline;">nexgigapp.com</a> &middot; <a href="mailto:admin@nexgigapp.com" style="color:${BRAND.muted}; text-decoration:underline;">Support</a></td>
+      ${reasonCell}
+    </tr></table>
+    <div style="font-family:${BODY_FONT}; font-size:12px; color:${BRAND.faint}; margin-top:16px;">Dubai, United Arab Emirates &middot; admin@nexgigapp.com</div>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
 }
 
 const h1 = (text: string) =>
   `<h1 style="font-family:${BODY_FONT}; font-size:22px; font-weight:600; color:${BRAND.ink}; margin:0 0 16px;">${text}</h1>`;
 const p = (text: string) =>
   `<p style="color:${BRAND.body}; font-size:15px; line-height:1.6; margin:0 0 14px;">${text}</p>`;
+
+// Where every "Open Nexgig" / "Download Nexgig" button points.
+const APP_STORE_URL = 'https://apps.apple.com/ae/app/nexgig/id6784020757';
+
+// ─── Card content helpers (the redesigned emails) ────────────────────────────
+const greet = (name: string) =>
+  `<div style="font-family:${BODY_FONT}; font-size:15px; color:${BRAND.muted}; margin:0 0 6px;">Hi ${name} &mdash;</div>`;
+const cardTitle = (text: string) =>
+  `<div style="font-family:${BODY_FONT}; font-size:24px; font-weight:600; color:${BRAND.ink}; line-height:1.25; margin:0 0 24px;">${text}</div>`;
+const bigStat = (label: string, value: string) =>
+  `<div style="margin:0 0 22px;"><div style="font-family:${BODY_FONT}; font-size:12px; letter-spacing:1px; color:${BRAND.muted}; text-transform:uppercase; margin:0 0 6px;">${label}</div><div style="font-family:${BODY_FONT}; font-size:34px; font-weight:600; color:${BRAND.ink}; line-height:1.1;">${value}</div></div>`;
+const hr = () => `<div style="height:1px; background:${BRAND.hairline}; margin:24px 0;"></div>`;
+const rowsTable = (pairs: [string, string][]) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${BODY_FONT};">` +
+  pairs.map(([l, v]) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:7px 0;">${l}</td><td align="right" valign="top" style="font-size:14px; color:${BRAND.ink}; font-weight:500; padding:7px 0;">${v}</td></tr>`).join('') +
+  `</table>`;
+const stepsTable = (items: string[]) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${BODY_FONT};">` +
+  items.map((desc, i) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:9px 0;">Step ${i + 1}</td><td align="right" valign="top" style="font-size:15px; color:${BRAND.ink}; font-weight:500; padding:9px 0;">${desc}</td></tr>`).join('') +
+  `</table>`;
+const pdfChip = (filename: string, sizeLabel: string) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.surface}; border-radius:12px; margin:22px 0;"><tr><td style="padding:14px 16px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle"><div style="width:36px; height:36px; background:${BRAND.ink}; border-radius:8px; color:#fff; font-size:10px; font-weight:700; text-align:center; line-height:36px; font-family:${BODY_FONT};">PDF</div></td><td valign="middle" style="padding-left:12px;"><div style="font-family:${BODY_FONT}; font-size:14px; font-weight:500; color:${BRAND.ink};">${filename}</div><div style="font-family:${BODY_FONT}; font-size:12px; color:${BRAND.muted}; margin-top:2px;">Attached to this email${sizeLabel ? ` &middot; ${sizeLabel}` : ''}</div></td></tr></table></td></tr></table>`;
+const ctaButton = (label: string, url: string) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;"><tr><td align="center" style="background:${BRAND.ink}; border-radius:14px;"><a href="${url}" style="display:block; padding:16px 24px; font-family:${BODY_FONT}; font-size:16px; font-weight:600; color:#ffffff; text-decoration:none; text-align:center;">${label}</a></td></tr></table>`;
+const footnote = (text: string) =>
+  `<div style="font-family:${BODY_FONT}; font-size:14px; color:${BRAND.muted}; line-height:1.55; margin:20px 0 0;">${text}</div>`;
 
 function escapeHtml(s: string): string {
   return String(s ?? '')
@@ -213,10 +246,17 @@ function renderTemplate(
       return {
         subject: 'Welcome to Nexgig',
         html: shell(
-          h1('Welcome to Nexgig') +
-          p(`Hi ${name},`) +
-          p('Your artist profile is live. Managers across the UAE can now discover you, add you to their lineups, and send you booking requests.') +
-          p('Round out your profile — pick your avatar, set your genres and instruments, and add your links so venues find the right fit.'),
+          greet(escapeHtml(name || 'there')) +
+          cardTitle('Welcome to Nexgig') +
+          hr() +
+          stepsTable([
+            'Complete your artist profile',
+            'Get added to venue rosters, or add your own private gigs',
+            "Block the dates and times you're unavailable",
+          ]) +
+          ctaButton('Open Nexgig', APP_STORE_URL) +
+          footnote('A complete profile gets you found by venues looking for your sound.'),
+          { category: 'WELCOME', reason: 'You get this because you have an artist profile on Nexgig.' },
         ),
       };
     }
@@ -226,10 +266,17 @@ function renderTemplate(
       return {
         subject: 'Welcome to Nexgig',
         html: shell(
-          h1('Welcome to Nexgig') +
-          p(`Hi ${name},`) +
-          p('Your manager account is ready. Create your venues, build your artist lineup, and manage every booking in one place.') +
-          p('Start by adding a venue, then browse the Network to connect with artists.'),
+          greet(escapeHtml(name || 'there')) +
+          cardTitle('Welcome to Nexgig') +
+          hr() +
+          stepsTable([
+            'Create your venues',
+            'Invite artists to your roster',
+            'Send your first booking request',
+          ]) +
+          ctaButton('Open Nexgig', APP_STORE_URL) +
+          footnote('Book. Play. Discover. — everything for the night in one place.'),
+          { category: 'WELCOME', reason: 'You get this because you created a manager account on Nexgig.' },
         ),
       };
     }
@@ -254,14 +301,27 @@ function renderTemplate(
       const venueName = escapeHtml(String(data.venueName ?? 'your venue'));
       const amount = escapeHtml(String(data.amount ?? ''));
       const invoiceNumber = escapeHtml(String(data.invoiceNumber ?? ''));
+      const pdfName = escapeHtml(String(data.pdfFileName ?? 'invoice.pdf'));
+      const b64 = typeof data.pdfBase64 === 'string' ? data.pdfBase64 : '';
+      const kb = b64 ? Math.max(1, Math.round((b64.length * 3) / 4 / 1024)) : 0;
+      const issued = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
       return {
         subject: `New invoice from ${artistName}${invoiceNumber ? ` (${invoiceNumber})` : ''}`,
         html: shell(
-          h1('You received an invoice') +
-          p(`Hi ${name},`) +
-          p(`<strong>${artistName}</strong> sent you an invoice for <strong>${venueName}</strong>.`) +
-          p(`Amount: <strong>AED ${amount}</strong>${invoiceNumber ? `<br/>Invoice: ${invoiceNumber}` : ''}`) +
-          p('The invoice PDF is attached to this email. You can also open Nexgig to view the full details.'),
+          greet(escapeHtml(name || 'there')) +
+          cardTitle(`${artistName} sent you an invoice`) +
+          bigStat('Amount due', `AED ${amount}`) +
+          hr() +
+          rowsTable([
+            ['Invoice number', invoiceNumber || '—'],
+            ['From', artistName],
+            ['Venue', venueName],
+            ['Issued', issued],
+          ]) +
+          pdfChip(pdfName, kb ? `${kb} KB` : '') +
+          ctaButton('Open Nexgig', APP_STORE_URL) +
+          footnote(`Questions about this invoice? Message ${artistName} from the booking in Nexgig.`),
+          { category: 'INVOICE', reason: 'You get this because you manage this venue on Nexgig.' },
         ),
       };
     }
@@ -351,21 +411,16 @@ serve(async (req) => {
         .maybeSingle();
       if (!inviteRow) return json({ error: 'No matching pending invite for this manager' }, 403);
 
-      const APP_STORE_URL = 'https://apps.apple.com/ae/app/nexgig/id6784020757';
       const inviteeName = escapeHtml((String(d.name ?? '')).trim() || 'there');
       const inviterRaw = (String(d.managerName ?? '')).trim() || 'A venue manager';
       const inviter = escapeHtml(inviterRaw);
-      const button =
-        `<a href="${APP_STORE_URL}" style="display:inline-block;background:#E2674A;color:#ffffff;` +
-        `text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px;margin:8px 0;">` +
-        `Download Nexgig</a>`;
       const inviteHtml = shell(
-        h1("You've been invited to Nexgig") +
-        p(`Hi ${inviteeName},`) +
-        p(`<strong>${inviter}</strong> invited you to join their roster on <strong>Nexgig</strong> — the app venues use to book artists across the UAE.`) +
-        p('Download the app and sign up with this email address, and you’ll be added to their roster automatically.') +
-        button +
-        p('<span style="color:#8E8E93;font-size:13px;">If you weren’t expecting this, you can ignore this email.</span>'),
+        greet(inviteeName) +
+        cardTitle(`${inviter} invited you to Nexgig`) +
+        p(`<strong style="color:${BRAND.ink};">${inviter}</strong> wants to add you to their roster on <strong>Nexgig</strong> — the app venues across the UAE use to book artists.`) +
+        ctaButton('Download Nexgig', APP_STORE_URL) +
+        footnote("Sign up with this email address and you'll be added to their roster automatically. If you weren't expecting this, you can ignore this email."),
+        { category: 'ROSTER INVITE' },
       );
       const inviteResp = await fetch('https://api.resend.com/emails', {
         method: 'POST',
