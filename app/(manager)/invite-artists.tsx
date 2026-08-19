@@ -71,8 +71,12 @@ export default function InviteArtists() {
 
   const q = query.trim().toLowerCase();
   const results = useMemo(() => {
+    // Gated directory: show NO artists until the manager searches. You can't browse who's
+    // on the app — you have to know a name or email. So an empty query yields an empty list
+    // (the body then shows the "Start typing…" prompt).
+    if (!q) return [];
     const pool = artists.filter((a) => !rosterIds.has(a.id));
-    const list = !q ? pool : pool.filter((a) =>
+    const list = pool.filter((a) =>
       (a.full_name ?? '').toLowerCase().includes(q) || (a.email ?? '').toLowerCase().includes(q));
     return list
       .sort((a, b) => (a.full_name ?? '').toLowerCase().localeCompare((b.full_name ?? '').toLowerCase()))
@@ -188,7 +192,7 @@ export default function InviteArtists() {
         <MaterialIcons name="search" size={18} color={colors.muted} />
         <TextInput
           style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder="Search by name, or type an email to invite"
+          placeholder="Search by name or email"
           placeholderTextColor={colors.muted}
           value={query}
           onChangeText={setQuery}
@@ -232,10 +236,19 @@ export default function InviteArtists() {
         ))}
 
         {results.length === 0 && !emailToInvite && (
-          <Text style={[styles.empty, { color: colors.muted }]}>
-            {!q ? 'Start typing a name to find an artist, or type a full email to invite someone new.'
-              : 'No artists match. Type a full email to invite someone new.'}
-          </Text>
+          <View style={styles.emptyWrap}>
+            <View style={[styles.emptyIcon, { backgroundColor: colors.primary + '12' }]}>
+              <MaterialIcons name={q ? 'search-off' : 'person-search'} size={26} color={colors.primary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              {q ? 'No artists match' : 'Start typing to find available artists'}
+            </Text>
+            <Text style={[styles.emptySub, { color: colors.muted }]}>
+              {q
+                ? 'Check the spelling, or type their full email to invite them to Nexgig.'
+                : 'Search by name to add someone already on Nexgig — or type their full email to invite someone new.'}
+            </Text>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -263,5 +276,8 @@ const styles = StyleSheet.create({
   artistSub: { fontSize: 13, marginTop: 1 },
   addBtn: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
   addBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  empty: { fontSize: 14, textAlign: 'center', marginTop: 40, paddingHorizontal: 12, lineHeight: 20 },
+  emptyWrap: { alignItems: 'center', marginTop: 48, paddingHorizontal: 24 },
+  emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center', letterSpacing: -0.2 },
+  emptySub: { fontSize: 13.5, textAlign: 'center', lineHeight: 20, marginTop: 6, maxWidth: 300 },
 });
