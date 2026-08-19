@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { defaultAvatarId } from '@/lib/avatars';
 import { validateEmail } from '@/lib/validate-email';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
@@ -88,6 +89,19 @@ export default function DJSetupScreen() {
   // Profile photo / avatar (optional, chosen on the Profile Photo step).
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  // The signed-in user's id, captured as soon as a session exists (signUp at step 1, OTP
+  // verify, or an OAuth/resume session already present on mount). The avatar step's default
+  // preview is seeded by THIS id so it matches the id-seeded default the profile renders
+  // later — otherwise the auto-avatar shown at signup differs from the one on the profile,
+  // which reads as "my avatar changed after signup".
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => { if (data.user?.id) setAuthUserId(data.user.id); });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.id) setAuthUserId(session.user.id);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const translateX = useSharedValue(0);
 
@@ -251,6 +265,11 @@ export default function DJSetupScreen() {
 
     // Avatar only — no photo upload anywhere in the app.
     const photoUrl: string | null = null;
+    // Always persist a CONCRETE avatar: an explicit pick, or the deterministic default
+    // seeded by the user id (the same seed every display screen uses). Never leave it null —
+    // a null makes each screen recompute its own default, and those can differ (the bug that
+    // made a freshly-picked avatar look like it "changed" on the profile).
+    const resolvedAvatarId = avatarId ?? defaultAvatarId(user.id);
 
     // ✅ Step 3 — insert into artists table (retry username on a unique clash / race)
     const artistRow = {
@@ -266,7 +285,7 @@ export default function DJSetupScreen() {
       secondary_genres: form.secondaryGenres,
       instruments: form.instruments,
       profile_photo_url: photoUrl,
-      avatar_id: avatarId ?? null,
+      avatar_id: resolvedAvatarId,
       instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
       soundcloud_url: form.soundcloud || null,
       mixcloud_url: form.mixcloud || null,
@@ -303,7 +322,7 @@ export default function DJSetupScreen() {
       bio: form.bio,
       location: undefined,
       profilePhotoUrl: photoUrl ?? undefined,
-      avatarId: avatarId ?? undefined,
+      avatarId: resolvedAvatarId,
       isPhoneVerified: false,
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
@@ -503,7 +522,7 @@ export default function DJSetupScreen() {
           {displayStep === 3 && (
             <View style={styles.form}>
               <View style={styles.photoStep}>
-                <AvatarImage avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} />
+                <AvatarImage avatarId={avatarId ?? undefined} seed={authUserId ?? form.fullName} name={form.fullName} size={120} />
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                   <MaterialIcons name="face" size={18} color={colors.foreground} />
                   <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>

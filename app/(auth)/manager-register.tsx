@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, useWindowDimensions } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { defaultAvatarId } from '@/lib/avatars';
 import { validateEmail } from '@/lib/validate-email';
 import { EmailOtpModal } from '@/components/email-otp-modal';
 
@@ -62,6 +63,19 @@ export default function ManagerRegisterScreen() {
   // Edit Profile — signup is avatar-only.
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  // The signed-in user's id, captured as soon as a session exists (signUp at step 1, OTP
+  // verify, or an OAuth/resume session already present on mount). The avatar step's default
+  // preview is seeded by THIS id so it matches the id-seeded default the profile renders
+  // later — otherwise the auto-avatar shown at signup differs from the one on the profile,
+  // which reads as "my avatar changed after signup".
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => { if (data.user?.id) setAuthUserId(data.user.id); });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.id) setAuthUserId(session.user.id);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const translateX = useSharedValue(0);
 
@@ -206,6 +220,10 @@ export default function ManagerRegisterScreen() {
     // Managers pick a bundled avatar at signup; no photo upload here. They can
     // still upload one later from Edit Profile.
     const photoUrl: string | null = null;
+    // Always persist a CONCRETE avatar: an explicit pick, or the deterministic default
+    // seeded by the user id (the same seed every display screen uses). Never leave it null —
+    // a null makes each screen recompute its own default, and those can differ.
+    const resolvedAvatarId = avatarId ?? defaultAvatarId(user.id);
 
     // Insert into managers table
     const { error: insertError } = await supabase.from('managers').upsert({
@@ -216,7 +234,7 @@ export default function ManagerRegisterScreen() {
       based_in: form.basedIn || null,
       company_name: form.companyName.trim() || null,
       profile_photo_url: photoUrl,
-      avatar_id: avatarId ?? null,
+      avatar_id: resolvedAvatarId,
     }, { onConflict: 'id' });
 
     setIsLoading(false);
@@ -235,7 +253,7 @@ export default function ManagerRegisterScreen() {
       location: undefined,
       companyName: form.companyName.trim() || undefined,
       profilePhotoUrl: photoUrl ?? undefined,
-      avatarId: avatarId ?? undefined,
+      avatarId: resolvedAvatarId,
       isPhoneVerified: false,
       isEmailVerified: false,
       createdAt: new Date().toISOString(),
@@ -362,7 +380,7 @@ export default function ManagerRegisterScreen() {
           {displayStep === 2 && (
             <View style={styles.form}>
               <View style={styles.photoStep}>
-                <AvatarImage avatarId={avatarId ?? undefined} seed={form.fullName} name={form.fullName} size={120} variant="manager" />
+                <AvatarImage avatarId={avatarId ?? undefined} seed={authUserId ?? form.fullName} name={form.fullName} size={120} variant="manager" />
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                   <MaterialIcons name="face" size={18} color={colors.foreground} />
                   <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
