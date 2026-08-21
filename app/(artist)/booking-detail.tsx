@@ -142,6 +142,7 @@ export default function DJBookingDetailScreen() {
   }, [slotIdForCoArtists, isPrivate]);
 
   const hideFromCalendar = useBookingStore((s) => s.hideFromCalendar);
+  const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const allNotifications = useNotificationStore((s) => s.notifications);
@@ -306,6 +307,23 @@ export default function DJBookingDetailScreen() {
     ]);
   };
 
+  // Delete a private event (artist-created). Mirrors the calendar's X: drop it from the
+  // booking store, delete the availability_blocks row it lives in, clear its notifications.
+  const handleDeletePrivateEvent = () => {
+    Alert.alert('Delete Event', `Delete "${booking.slotName ?? 'this event'}"? This cannot be undone.`, [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: () => {
+          deleteBooking(booking.id);
+          supabase.from('availability_blocks').delete().eq('id', booking.id)
+            .then(({ error }) => { if (error) console.warn('availability_blocks delete error:', error.message); });
+          markRelatedNotificationsRead(booking.id);
+          router.back();
+        }
+      },
+    ]);
+  };
+
 
   // The request-action footer condition — also drives the ScrollView bottom padding so the
   // pinned Confirm/Decline bar never covers the content.
@@ -461,6 +479,13 @@ export default function DJBookingDetailScreen() {
           {!booking.isArtistCreated && booking.status === 'confirmed' && (
             <View style={styles.actions}>
               <SoftButton tone="danger" icon="cancel" label="Cancel Booking" onPress={handleCancel} />
+            </View>
+          )}
+
+          {/* Delete — for the artist's own private events (mirrors the calendar's X) */}
+          {booking.isArtistCreated && (
+            <View style={styles.actions}>
+              <SoftButton tone="danger" icon="delete-outline" label="Delete Event" onPress={handleDeletePrivateEvent} />
             </View>
           )}
 
