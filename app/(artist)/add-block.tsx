@@ -376,7 +376,7 @@ export default function AddBlockScreen() {
                   <View style={[styles.textInputBox, { borderColor: colors.border }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Wedding, Corporate Party"
+                      placeholder="e.g. Space Club, Tony & Jane's Wedding"
                       placeholderTextColor={colors.muted}
                       value={eventName}
                       onChangeText={setEventName}
