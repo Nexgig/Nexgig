@@ -21,7 +21,6 @@ export const OCCASIONS: Occasion[] = [
   { key: 'brunch',    label: 'Brunch',    icon: 'brunch-dining' },
   { key: 'sunset',    label: 'Sunset',    icon: 'wb-twilight' },
   { key: 'dinner',    label: 'Dinner',    icon: 'restaurant' },
-  { key: 'other',     label: 'Other',     icon: 'event' },
 ];
 
 // The chip pre-selected on a NEW private event.

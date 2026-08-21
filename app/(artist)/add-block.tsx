@@ -497,19 +497,20 @@ export default function AddBlockScreen() {
               </View>
             </View>
 
-        {/* Actions */}
-        <View style={styles.modalActions}>
-          <Pressable style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={closeSheet}>
-            <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
-          </Pressable>
-          <Pressable style={({ pressed }) => [styles.confirmBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 }]} onPress={handleSave}>
-            <MaterialIcons name="check" size={16} color="#fff" />
-            <Text style={styles.confirmBtnText}>{isEditing ? 'Update' : 'Save'}</Text>
-          </Pressable>
-        </View>
-
-        <View style={{ flexGrow: 1, minHeight: 600, backgroundColor: colors.background }} />
+        <View style={{ flexGrow: 1, minHeight: 260, backgroundColor: colors.background }} />
       </ScrollView>
+
+      {/* Pinned footer — outside the scroll, so a tall form (occasion chips, etc.) never
+          buries the Save button below the sheet's fixed height. */}
+      <View style={[styles.footerBar, { borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <Pressable style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={closeSheet}>
+          <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
+        </Pressable>
+        <Pressable style={({ pressed }) => [styles.confirmBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 }]} onPress={handleSave}>
+          <MaterialIcons name="check" size={16} color="#fff" />
+          <Text style={styles.confirmBtnText}>{isEditing ? 'Update' : 'Save'}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
   toggleThumbOn: { alignSelf: 'flex-end' },
 
   // Actions
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  footerBar: { flexDirection: 'row', gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
   cancelBtn: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   cancelBtnText: { fontSize: 13, fontWeight: '600' },
   confirmBtn: { flex: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 5 },
