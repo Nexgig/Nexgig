@@ -353,6 +353,13 @@ export default function DJHomeScreen() {
     Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
   };
 
+  // Private events have a free-text location the artist typed (e.g. "Dubai Marina"), not a
+  // geocoded venue — open Maps as a search on that text.
+  const openPrivateEventMaps = (loc: string) => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
+    Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+  };
+
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: (typeof dashboardBookings) }) => (
     <View key={date}>
       <View style={styles.dateHeader}>
@@ -382,12 +389,17 @@ export default function DJHomeScreen() {
             )}
             <View style={styles.gigInfo}>
               <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
-              {!b.isArtistCreated && (
+              {!b.isArtistCreated ? (
                 <Pressable hitSlop={6} onPress={() => openVenueMaps(b)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
                   <MaterialIcons name="place" size={13} color={colors.muted} />
                   <Text style={[styles.gigMapsText, { color: colors.muted }]}>Maps</Text>
                 </Pressable>
-              )}
+              ) : b.privateEventLocation ? (
+                <Pressable hitSlop={6} onPress={() => openPrivateEventMaps(b.privateEventLocation!)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
+                  <MaterialIcons name="place" size={13} color={colors.muted} />
+                  <Text style={[styles.gigMapsText, { color: colors.muted }]} numberOfLines={1}>{b.privateEventLocation}</Text>
+                </Pressable>
+              ) : null}
             </View>
             {startTime ? (
               <View style={styles.gigTimeRow}>
