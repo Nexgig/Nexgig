@@ -11,6 +11,7 @@ import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useV
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
+import { occasionIcon } from '@/lib/occasions';
 import { fonts } from '@/lib/fonts';
 import { SHOW_CALENDAR_LEGEND } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
@@ -763,14 +764,10 @@ export default function DJAvailabilityScreen() {
         onPress={() => !isCancelled && !isDeclined && router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
       >
         {b.isArtistCreated ? (
-          // Private events (the artist's own) get a neutral date tile, not a venue image.
+          // Private events (the artist's own) get an occasion icon tile, not a venue image.
+          // The date still shows on the time line below; the occasion drives the glyph.
           <View style={[styles.privateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.privateTileShort, { color: colors.muted }]}>
-              {new Date((b.resolvedDate ?? b.slotDate ?? todayStr) + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-            </Text>
-            <Text style={[styles.privateTileNum, { color: colors.foreground }]}>
-              {new Date((b.resolvedDate ?? b.slotDate ?? todayStr) + 'T00:00:00').getDate()}
-            </Text>
+            <MaterialIcons name={occasionIcon(b.privateEventOccasion)} size={24} color={colors.foreground} />
           </View>
         ) : (
           <Image source={venueImageFor(undefined, b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
@@ -1125,8 +1122,6 @@ const styles = StyleSheet.create({
   bookingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   bookingThumb: { width: 48, height: 48, borderRadius: 12 },
   privateTile: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  privateTileShort: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  privateTileNum: { fontSize: 18, fontFamily: fonts.bodySemibold },
   bookingInfo: { flex: 1, gap: 3 },
   bookingTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bookingTitle: { fontSize: 15, fontWeight: '700', flexShrink: 1 },   // badge sits right after the name (manager placement)

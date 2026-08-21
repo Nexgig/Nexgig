@@ -317,6 +317,7 @@ export interface Booking {
   artistRespondedFromRequests?: boolean; // artist tapped Confirm/Decline on a past_confirmation card in Requests tab
   isArtistCreated?: boolean;    // true when artist created this booking (private event)
   privateEventLocation?: string; // only for artist-created private events, never shown to managers
+  privateEventOccasion?: string; // occasion key (see lib/occasions.ts) — drives the private-event icon
 }
 
 // ─── Notification ────────────────────────────────────────────────────────────

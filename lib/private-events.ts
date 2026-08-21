@@ -15,7 +15,7 @@ import type { Booking } from './types';
 export async function fetchPrivateEventBookings(artistId: string): Promise<Booking[]> {
   const { data } = await supabase
     .from('availability_blocks')
-    .select('id, date, start_time, end_time, is_full_day, block_type, event_name, location')
+    .select('id, date, start_time, end_time, is_full_day, block_type, event_name, location, occasion')
     .eq('artist_id', artistId)
     .eq('block_type', 'private_event');
 
@@ -41,6 +41,7 @@ export async function fetchPrivateEventBookings(artistId: string): Promise<Booki
       slotName: b.event_name ?? 'Private Event',
       venueName: b.event_name ?? 'Private Event',
       privateEventLocation: b.location ?? undefined,
+      privateEventOccasion: b.occasion ?? undefined,
     } as Booking;
   });
 }

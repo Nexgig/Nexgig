@@ -8,6 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { isPastEnd } from '@/lib/utils';
+import { OCCASIONS, DEFAULT_OCCASION } from '@/lib/occasions';
 import type { AvailabilityBlock, Booking } from '@/lib/types';
 
 const TIME_OPTIONS: string[] = [];
@@ -79,6 +80,7 @@ export default function AddBlockScreen() {
     et?: string;      // prefill end
     fd?: string;      // prefill fullDay '1'|'0'
     kind?: string;    // prefill kind 'block'|'private_event'
+    occ?: string;     // prefill occasion key (edit private event)
   }>();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -94,6 +96,7 @@ export default function AddBlockScreen() {
 
   const [kind, setKind] = useState<BlockKind>((params.kind as BlockKind) || 'private_event');
   const [eventName, setEventName] = useState(params.ev ?? '');
+  const [occasion, setOccasion] = useState<string>(params.occ ?? DEFAULT_OCCASION);
   const [location, setLocation] = useState(params.loc ?? '');
   const [startTime, setStartTime] = useState(params.st ?? '21:00');
   const [endTime, setEndTime] = useState(params.et ?? '01:00');
@@ -141,6 +144,7 @@ export default function AddBlockScreen() {
           slotEndTime: fullDay ? '23:59' : endTime,
           slotName: eventName.trim(),
           venueName: eventName.trim(),
+          privateEventOccasion: occasion,
         });
         // keep availability_blocks row in sync
         supabase.from('availability_blocks').update({
@@ -150,6 +154,7 @@ export default function AddBlockScreen() {
           is_full_day: fullDay,
           event_name: eventName.trim(),
           location: location.trim() || null,
+          occasion,
         }).eq('id', editBookingId).then(({ error }) => { if (error) console.warn('pe update error:', error.message); });
       } else {
         const isPast = isPastEnd(targetDate, fullDay ? '00:00' : startTime, fullDay ? '23:59' : endTime);
@@ -165,6 +170,7 @@ export default function AddBlockScreen() {
           slotEndTime: fullDay ? '23:59' : endTime,
           slotName: eventName.trim(), venueName: eventName.trim(),
           privateEventLocation: location.trim() || undefined,
+          privateEventOccasion: occasion,
         };
         addBooking(newBooking);
         supabase.from('availability_blocks').insert({
@@ -173,6 +179,7 @@ export default function AddBlockScreen() {
           end_time: fullDay ? '23:59' : endTime,
           is_full_day: fullDay, block_type: 'private_event',
           event_name: eventName.trim(), location: location.trim() || null,
+          occasion,
         }).then(({ error }) => { if (error) console.warn('availability_blocks insert error:', error.message); });
       }
     } else {
@@ -378,6 +385,23 @@ export default function AddBlockScreen() {
                   </View>
                 </View>
                 <View style={styles.fieldBlock}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>OCCASION</Text>
+                  <View style={styles.occasionWrap}>
+                    {OCCASIONS.map((o) => {
+                      const on = occasion === o.key;
+                      return (
+                        <Pressable
+                          key={o.key}
+                          onPress={() => setOccasion(o.key)}
+                          style={[styles.occasionChip, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '15' : 'transparent' }]}
+                        >
+                          <Text style={[styles.occasionChipText, { color: on ? colors.primary : colors.foreground }]}>{o.label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                <View style={styles.fieldBlock}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION (OPTIONAL)</Text>
                   <View style={[styles.textInputBox, { borderColor: colors.border }]}>
                     <TextInput
@@ -498,6 +522,9 @@ const styles = StyleSheet.create({
 
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
+  occasionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  occasionChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  occasionChipText: { fontSize: 13, fontWeight: '600' },
   helperText: { fontSize: 12, marginBottom: 12, lineHeight: 17 },
 
   // Segmented control (type toggle) — pill style consistent with app

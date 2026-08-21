@@ -17,6 +17,7 @@ import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { submitReview, fetchReviews } from '@/lib/reviews';
 import { isPastEnd, displayStatus, isExpiredRequest, firstName, bookingVenueName } from '@/lib/utils';
+import { occasionIcon } from '@/lib/occasions';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -369,6 +370,11 @@ export default function DJBookingDetailScreen() {
             <>
               <Section label="Private Event">
                 <ListRow
+                  leading={
+                    <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialIcons name={occasionIcon(booking.privateEventOccasion)} size={22} color={colors.foreground} />
+                    </View>
+                  }
                   title={booking.slotName ?? 'Private Event'}
                   subtitle={booking.privateEventLocation ?? undefined}
                   divider={false}

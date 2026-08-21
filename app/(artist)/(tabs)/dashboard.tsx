@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/lib/supabase';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
+import { occasionIcon } from '@/lib/occasions';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -372,10 +373,9 @@ export default function DJHomeScreen() {
             onPress={() => router.push(('/(artist)/booking-detail?id=' + b.id) as Href)}
           >
             {b.isArtistCreated ? (
-              // Private events get the same neutral date tile as the calendar (not a venue image).
+              // Private events get an occasion icon tile (matches the calendar), not a venue image.
               <View style={[styles.gigPrivateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.gigPrivateShort, { color: colors.muted }]}>{new Date((date || b.slotDate || '') + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</Text>
-                <Text style={[styles.gigPrivateNum, { color: colors.foreground }]}>{new Date((date || b.slotDate || '') + 'T00:00:00').getDate()}</Text>
+                <MaterialIcons name={occasionIcon(b.privateEventOccasion)} size={22} color={colors.foreground} />
               </View>
             ) : (
               <Image source={venueImageFor(b.venue, b.venueType)} style={styles.gigVenueAvatar} resizeMode="cover" />
@@ -620,8 +620,6 @@ const styles = StyleSheet.create({
   gigRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   gigVenueAvatar: { width: 48, height: 48, borderRadius: 14 },
   gigPrivateTile: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  gigPrivateShort: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  gigPrivateNum: { fontSize: 18, fontFamily: fonts.bodySemibold },
   gigInfo: { flex: 1 },
   gigName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },   // matches the manager dashboard's booking-row name
   gigTime: { fontSize: 13, fontWeight: '500' },
