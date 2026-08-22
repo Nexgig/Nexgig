@@ -502,8 +502,9 @@ export default function AddBlockScreen() {
       </ScrollView>
 
       {/* Pinned footer — outside the scroll, so a tall form (occasion chips, etc.) never
-          buries the Save button below the sheet's fixed height. */}
-      <View style={[styles.footerBar, { borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
+          buries the Save button. The +56 matches add-slot: the winH*0.8 root overshoots the
+          78% sheet, so the buttons need that lift to clear the clipped bottom. */}
+      <View style={[styles.footerBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
         <Pressable style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={closeSheet}>
           <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
         </Pressable>
@@ -558,7 +559,7 @@ const styles = StyleSheet.create({
   toggleThumbOn: { alignSelf: 'flex-end' },
 
   // Actions
-  footerBar: { flexDirection: 'row', gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  footerBar: { flexDirection: 'row', gap: 10, marginHorizontal: -13, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   cancelBtn: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   cancelBtnText: { fontSize: 13, fontWeight: '600' },
   confirmBtn: { flex: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 5 },
