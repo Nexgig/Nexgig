@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Image, Linking, ActivityIndicator, Alert } from '@/lib/rn';
+import { openLink } from '@/lib/open-link';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import type { Venue } from '@/lib/types';
@@ -298,7 +299,7 @@ export default function ArtistVenueDetailScreen() {
                             opacity: pressed ? 0.7 : 1,
                           },
                         ]}
-                        onPress={() => Linking.openURL(l.url)}
+                        onPress={() => openLink(l.url)}
                       >
                         <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
                         <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
@@ -322,7 +323,7 @@ export default function ArtistVenueDetailScreen() {
                         const url = (loc?.lat && loc?.lng)
                           ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
                           : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
-                        Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+                        openLink(url);
                       }}
                     />
                   </View>

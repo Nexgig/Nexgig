@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Linking, ActivityIndicator } from '@/lib/rn';
+import { openLink } from '@/lib/open-link';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -234,7 +235,7 @@ export default function ArtistProfileViewScreen() {
                             opacity: pressed ? 0.7 : 1,
                           },
                         ]}
-                        onPress={() => Linking.openURL(l.url)}
+                        onPress={() => openLink(l.url)}
                       >
                         <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
                         <MaterialIcons name="open-in-new" size={16} color={colors.muted} />

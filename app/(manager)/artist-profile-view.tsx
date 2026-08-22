@@ -1,6 +1,7 @@
 import { firstName } from '@/lib/utils';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Linking, Alert, Modal, Image, ActivityIndicator, Animated } from '@/lib/rn';
+import { openLink } from '@/lib/open-link';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -541,7 +542,7 @@ export default function ArtistProfileViewScreen() {
                             opacity: pressed ? 0.7 : 1,
                           },
                         ]}
-                        onPress={() => Linking.openURL(l.url)}
+                        onPress={() => openLink(l.url)}
                       >
                         <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
                         <MaterialIcons name="open-in-new" size={16} color={colors.muted} />
@@ -633,14 +634,14 @@ export default function ArtistProfileViewScreen() {
             {isConnected ? (
               <>
               {dj.email ? (
-                <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`mailto:${dj.email}`)}>
+                <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => openLink(`mailto:${dj.email}`)}>
                   <MaterialIcons name="email" size={18} color={colors.muted} style={styles.acctIcon} />
                   <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.email}</Text>
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
                 </Pressable>
               ) : null}
               {dj.phone ? (
-                <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => Linking.openURL(`tel:${dj.phone}`)}>
+                <Pressable style={({ pressed }) => [styles.contactRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => openLink(`tel:${dj.phone}`)}>
                   <MaterialIcons name="phone" size={18} color={colors.muted} style={styles.acctIcon} />
                   <Text style={[styles.contactValue, { color: colors.foreground }]} numberOfLines={1}>{dj.phone}</Text>
                   <MaterialIcons name="chevron-right" size={18} color={colors.muted} />

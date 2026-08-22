@@ -2,6 +2,7 @@ import { RoleSwitcher } from '@/components/ui/role-switcher';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl } from '@/lib/rn';
+import { openLink } from '@/lib/open-link';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -309,7 +310,7 @@ export default function ArtistProfileScreen() {
                           opacity: pressed ? 0.7 : 1,
                         },
                       ]}
-                      onPress={() => Linking.openURL(l.url)}
+                      onPress={() => openLink(l.url)}
                     >
                       <Text style={[styles.linkRowText, { color: colors.foreground }]}>{l.label}</Text>
                       <MaterialIcons name="open-in-new" size={16} color={colors.muted} />

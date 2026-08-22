@@ -2,6 +2,7 @@ import { fetchPrefs, savePref, DEFAULT_PREFS, type NotificationPrefs, type PrefK
 import * as Updates from 'expo-updates';
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Switch, Alert, Linking } from '@/lib/rn';
+import { openLink } from '@/lib/open-link';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -432,7 +433,7 @@ export default function DJSettingsScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Pressable
             style={({ pressed }) => [styles.navRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => Linking.openURL('https://nexgig.github.io/legal/privacy-policy.html')}
+            onPress={() => openLink('https://nexgig.github.io/legal/privacy-policy.html')}
           >
             <View style={styles.settingInfo}>
               <MaterialIcons name="privacy-tip" size={20} color={colors.primary} />
@@ -447,7 +448,7 @@ export default function DJSettingsScreen() {
 
           <Pressable
             style={({ pressed }) => [styles.navRow, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => Linking.openURL('https://nexgig.github.io/legal/terms-of-service.html')}
+            onPress={() => openLink('https://nexgig.github.io/legal/terms-of-service.html')}
           >
             <View style={styles.settingInfo}>
               <MaterialIcons name="description" size={20} color={colors.primary} />
