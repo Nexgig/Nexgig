@@ -245,7 +245,7 @@ export default function AddBlockScreen() {
 
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+        contentContainerStyle={{ paddingBottom: 8 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -498,7 +498,9 @@ export default function AddBlockScreen() {
               </View>
             </View>
 
-        <View style={{ flexGrow: 1, minHeight: 260, backgroundColor: colors.background }} />
+        {/* Bottom room only when a time dropdown is open (so it can scroll into view above the
+            footer). Otherwise the scroll ends right after the last field — no dead space. */}
+        <View style={{ height: (startOpen || endOpen) ? 200 : 16 }} />
       </ScrollView>
 
       {/* Pinned footer — outside the scroll, so a tall form (occasion chips, etc.) never
