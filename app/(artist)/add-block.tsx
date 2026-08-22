@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, Keyboard } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, Keyboard, useWindowDimensions } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore } from '@/lib/store';
@@ -70,6 +70,7 @@ export default function AddBlockScreen() {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const params = useLocalSearchParams<{
     date?: string;
     editBlockId?: string;
@@ -233,7 +234,7 @@ export default function AddBlockScreen() {
   };
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.8 }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
