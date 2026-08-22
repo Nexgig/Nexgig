@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useAvailabilityStore, useBookingStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
+import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { isPastEnd } from '@/lib/utils';
@@ -71,6 +72,7 @@ export default function AddBlockScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
+  const keyboardHeight = useKeyboardHeight();
   const params = useLocalSearchParams<{
     date?: string;
     editBlockId?: string;
@@ -512,7 +514,7 @@ export default function AddBlockScreen() {
       {/* Pinned footer — outside the scroll, so a tall form (occasion chips, etc.) never
           buries the Save button. The +56 matches add-slot: the winH*0.8 root overshoots the
           78% sheet, so the buttons need that lift to clear the clipped bottom. */}
-      <View style={[styles.footerBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 12) + 56 }]}>
+      <View style={[styles.footerBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 10 : Math.max(insets.bottom, 12) + 56 }]}>
         <Pressable style={({ pressed }) => [styles.cancelBtn, { borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]} onPress={closeSheet}>
           <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
         </Pressable>
