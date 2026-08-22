@@ -369,57 +369,26 @@ export default function AddBlockScreen() {
             </View>
             )}
 
-            {/* Private event fields */}
+            {/* Event name (private event) — the Time pickers follow directly below. */}
             {kind === 'private_event' && (
-              <>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>EVENT NAME *</Text>
-                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
-                    <TextInput
-                      style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Space Club, Tony & Jane's Wedding"
-                      placeholderTextColor={colors.muted}
-                      value={eventName}
-                      onChangeText={setEventName}
-                      returnKeyType="next"
-                    />
-                  </View>
+              <View style={styles.fieldBlock}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>EVENT NAME *</Text>
+                <View style={[styles.textInputBox, { borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.textInputField, { color: colors.foreground }]}
+                    placeholder="e.g. Space Club, Tony & Jane's Wedding"
+                    placeholderTextColor={colors.muted}
+                    value={eventName}
+                    onChangeText={setEventName}
+                    returnKeyType="next"
+                  />
                 </View>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>OCCASION</Text>
-                  <View style={styles.occasionWrap}>
-                    {OCCASIONS.map((o) => {
-                      const on = occasion === o.key;
-                      return (
-                        <Pressable
-                          key={o.key}
-                          onPress={() => setOccasion(o.key)}
-                          style={[styles.occasionChip, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '15' : 'transparent' }]}
-                        >
-                          <Text style={[styles.occasionChipText, { color: on ? colors.primary : colors.foreground }]}>{o.label}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION (OPTIONAL)</Text>
-                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
-                    <TextInput
-                      style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Dubai Marina"
-                      placeholderTextColor={colors.muted}
-                      value={location}
-                      onChangeText={setLocation}
-                      returnKeyType="done"
-                    />
-                  </View>
-                </View>
-              </>
+              </View>
             )}
 
-            {/* Time pickers + Full Day */}
-            <View style={styles.timeRow}>
+            {/* Time pickers + Full Day — sits under Event name so the pickers aren't the last
+                field. Raised z-index when open so a dropdown paints over Occasion/Location below. */}
+            <View style={[styles.timeRow, { zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
               {!fullDay && (
                 <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
@@ -498,9 +467,46 @@ export default function AddBlockScreen() {
               </View>
             </View>
 
-        {/* Bottom room only when a time dropdown is open (so it can scroll into view above the
-            footer). Otherwise the scroll ends right after the last field — no dead space. */}
-        <View style={{ height: (startOpen || endOpen) ? 200 : 16 }} />
+            {/* Occasion + Location (private event) — placed AFTER Time so the time pickers are
+                never the last field and the sheet needs no big bottom filler. */}
+            {kind === 'private_event' && (
+              <>
+                <View style={styles.fieldBlock}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>OCCASION</Text>
+                  <View style={styles.occasionWrap}>
+                    {OCCASIONS.map((o) => {
+                      const on = occasion === o.key;
+                      return (
+                        <Pressable
+                          key={o.key}
+                          onPress={() => setOccasion(o.key)}
+                          style={[styles.occasionChip, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '15' : 'transparent' }]}
+                        >
+                          <Text style={[styles.occasionChipText, { color: on ? colors.primary : colors.foreground }]}>{o.label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+                <View style={styles.fieldBlock}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION (OPTIONAL)</Text>
+                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground }]}
+                      placeholder="e.g. Dubai Marina"
+                      placeholderTextColor={colors.muted}
+                      value={location}
+                      onChangeText={setLocation}
+                      returnKeyType="done"
+                    />
+                  </View>
+                </View>
+              </>
+            )}
+
+        {/* Small bottom padding; the extra only appears while a time dropdown is open, so it can
+            clear the Occasion/Location fields it paints over. */}
+        <View style={{ height: (startOpen || endOpen) ? 60 : 16 }} />
       </ScrollView>
 
       {/* Pinned footer — outside the scroll, so a tall form (occasion chips, etc.) never
