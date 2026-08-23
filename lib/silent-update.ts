@@ -111,7 +111,12 @@ export function useSilentUpdates(): boolean {
         // they keep running the bundle they have, which is exactly the old behaviour.
         // Drop the overlay: reloadAsync never happened, so nothing is going to replace it.
         setUpdating(false);
-        reportError(e, { where: 'useSilentUpdates' });
+        // A dropped connection / timeout on the update check is EXPECTED (the comment above),
+        // so don't report it — it's just Sentry noise. Only surface genuinely unexpected failures.
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!/tim(?:e|ed)\s?out|timeout|network|offline|unreachable|connection|internet|Unable to (?:connect|resolve)/i.test(msg)) {
+          reportError(e, { where: 'useSilentUpdates' });
+        }
       } finally {
         checking.current = false;
       }
