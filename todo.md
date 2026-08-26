@@ -51,6 +51,15 @@ is config + store admin, not a rewrite.
   the SAME key to FCM (no new key needed).
 
 ### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
+- **Fix the artist invoice button location.** (Added 24 Aug 2026.) Details TBD with Tuts —
+  which invoice button / screen, and where it should sit. Likely a small UI/OTA fix.
+- **Show today's date on the dashboard, in coral (`#E2674A`), on BOTH artist + manager.**
+  (Added 24 Aug 2026.) Small UI/OTA change to both `app/(artist)/(tabs)/dashboard.tsx` and
+  `app/(manager)/(tabs)/dashboard.tsx`.
+- **Show an artist's gig history somewhere.** (Added 24 Aug 2026.) A place to display an
+  artist's past/completed gigs — decide the surface with Tuts (their own profile, the
+  manager's artist-profile-view, or both). Note: the app already has a show/hide-gig-history
+  privacy notion (see privacy policy) — respect that when displaying.
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
   only way to learn someone's version is to ask them to read it out. That cost real time
