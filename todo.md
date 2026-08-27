@@ -60,6 +60,22 @@ is config + store admin, not a rewrite.
   artist's past/completed gigs — decide the surface with Tuts (their own profile, the
   manager's artist-profile-view, or both). Note: the app already has a show/hide-gig-history
   privacy notion (see privacy policy) — respect that when displaying.
+- **Artist can upload their own profile picture.** (Added 27 Aug 2026.) Today it's avatar-only —
+  "no photo upload anywhere" (`edit-profile.tsx`). Add a real photo upload for the artist profile
+  (image picker → Supabase `avatars` storage → `profile_photo_url`; `AvatarImage` already prefers a
+  `uri` when present). ⚠️ **NOT an OTA** — an image picker (`expo-image-picker`) is a native module,
+  so this needs a NATIVE rebuild + new store submission. Also flips the App Store / Play **Data
+  Safety** declaration to "Photos collected," and the privacy policy currently states no photo
+  upload — update both.
+- **Manager can add a one-time (off-app) DJ to a slot.** (Added 27 Aug 2026.) Let a manager create
+  a slot and assign a GUEST artist who isn't a Nexgig user — just enter a name (no linked account /
+  `artist_id`). Decide how it renders (a "guest" booking: name only, no profile, no notifications /
+  invoices to a non-user).
+- **Manager's monthly COST in the lineup/roster balance.** (Added 27 Aug 2026.) The lineup balance
+  shows slots-per-artist; add a field where the manager sets the **price they'll pay each artist**,
+  so it also shows **total monthly cost** (slots × price, or summed), not just slot counts. Related
+  to the artist "min rate" backlog item, but this is the MANAGER-set pay side (what he pays), not
+  the artist's asking rate.
 - **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
   nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
   only way to learn someone's version is to ask them to read it out. That cost real time
