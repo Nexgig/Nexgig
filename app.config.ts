@@ -58,8 +58,13 @@ try {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.1",
-  runtimeVersion: { policy: "appVersion" },
+  version: "1.1.1",
+  // OTA "lane" is PINNED to "1.1" on purpose — decoupled from the marketing version above.
+  // 1.1 is released on the App Store, so new store/TestFlight builds must bump the version
+  // (Apple closes a released version), but OTAs stay keyed to "1.1" so a version bump doesn't
+  // strand the live 1.1 users on an OTA lane they can't reach. Bump this string BY HAND only
+  // for a NATIVE change (new native module / permission / icon) — JS/OTA changes keep it "1.1".
+  runtimeVersion: "1.1",
   updates: {
     url: "https://u.expo.dev/eae9c0e4-5f95-4c8b-ba5f-09303b81ecbe",
   },
