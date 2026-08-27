@@ -15,10 +15,13 @@ import { useColors } from '@/hooks/use-colors';
 export function UpdatingOverlay({ visible, label = 'Updating…' }: { visible: boolean; label?: string }) {
   const colors = useColors();
   if (!visible) return null;
+  // Coral (brand) background — matches the native coral splash, so a role-switch reload reads as
+  // one intentional branded transition instead of a near-white "flash". White spinner + label
+  // for contrast on the coral.
   return (
-    <View style={[StyleSheet.absoluteFillObject, styles.wrap, { backgroundColor: colors.background }]}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={[styles.label, { color: colors.muted }]}>{label}</Text>
+    <View style={[StyleSheet.absoluteFillObject, styles.wrap, { backgroundColor: colors.primary }]}>
+      <ActivityIndicator size="large" color="#fff" />
+      <Text style={[styles.label, { color: '#fff' }]}>{label}</Text>
     </View>
   );
 }
