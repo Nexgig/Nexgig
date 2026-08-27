@@ -51,16 +51,14 @@ is config + store admin, not a rewrite.
   the SAME key to FCM (no new key needed).
 
 ### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
-- **Role-switch "white gap" — needs a NATIVE fix (fold into the next native build).** (Investigated
-  27 Aug 2026.) The coral "Switching…" overlay recolor (OTA, `components/updating-overlay.tsx`)
-  killed the big white part; a tiny **~0.2s white remains at the very end** — the instant
-  `Updates.reloadAsync()` restarts the app, when **NO JS runs**, so no OTA can paint it. Three OTA
-  attempts already FAILED — **don't repeat them**: (1) painting the font-loading gate, (2)
-  `SystemUI.setBackgroundColorAsync`, (3) root Stack `contentStyle`. Real fix = set the app's
-  **native window background to coral `#E2674A`** → needs `eas build` + resubmission, so bundle it
-  with the next native build (e.g. profile-picture upload) and verify on TestFlight. LOW priority
-  (<0.3s, only on dual-role accounts). Do NOT revert to cross-group navigation — that's the native
-  crash `e51e94e`.
+- **Role-switch white "flash" — ACCEPTED AS-IS (Tuts is fine with the original).** (27 Aug 2026.)
+  Tried recoloring the "Switching…" overlay coral (OTA, `components/updating-overlay.tsx`); Tuts
+  preferred the original near-white and had it reverted. If ever revisited: the only real fix is
+  **NATIVE** — set the app's native window background to coral `#E2674A` (needs `eas build` +
+  resubmission), because during the `reloadAsync` restart **NO JS runs**, so no OTA can paint that
+  instant. **DON'T repeat the 3 OTA attempts that already failed**: (1) painting the font-loading
+  gate, (2) `SystemUI.setBackgroundColorAsync`, (3) root Stack `contentStyle`. Do NOT revert to
+  cross-group navigation — that's the native crash `e51e94e`. LOW priority (<0.3s, dual-role only).
 - **Fix the artist invoice button location.** (Added 24 Aug 2026.) Details TBD with Tuts —
   which invoice button / screen, and where it should sit. Likely a small UI/OTA fix.
 - **Show today's date on the dashboard, in coral (`#E2674A`), on BOTH artist + manager.**
