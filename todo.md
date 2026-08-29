@@ -51,6 +51,15 @@ is config + store admin, not a rewrite.
   the SAME key to FCM (no new key needed).
 
 ### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
+- **Venues can have their own uploaded profile picture.** (Added 28 Aug 2026.) Today venue images
+  are the bundled type-based art (`lib/venue-images.ts` / `venueImageFor`); let a manager upload a
+  real photo per venue. Same constraint as the artist photo upload — an image picker is a NATIVE
+  module, so this needs a native rebuild + resubmission (NOT an OTA), and flips Data Safety to
+  "Photos collected." Bundle it with the artist profile-picture build.
+- **Rename the "Send N" button → "Send Request(s)" in assign-artist + add-slot.** (Added 28 Aug
+  2026.) The staged-send button reads "Send 1" / "Send 2"; change to "Send Request(s)" (pluralize
+  by count if easy). Small copy fix, ships OTA. Files: `app/(manager)/assign-artist.tsx`,
+  `app/(manager)/add-slot.tsx`.
 - **Role-switch white "flash" — ACCEPTED AS-IS (Tuts is fine with the original).** (27 Aug 2026.)
   Tried recoloring the "Switching…" overlay coral (OTA, `components/updating-overlay.tsx`); Tuts
   preferred the original near-white and had it reverted. If ever revisited: the only real fix is
