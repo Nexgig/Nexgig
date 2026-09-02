@@ -8,7 +8,15 @@ import { RELEASE_NOTES } from '@/lib/whats-new';
  * "What's New" card — shown once after an update that bumped RELEASE_NOTES.version. A branded
  * card (not a full-screen takeover) with the changelog + a single "Got it" dismiss.
  */
-export function WhatsNewModal({ visible, onDismiss }: { visible: boolean; onDismiss: () => void }) {
+export function WhatsNewModal({
+  visible,
+  onDismiss,
+  onSendFeedback,
+}: {
+  visible: boolean;
+  onDismiss: () => void;
+  onSendFeedback: () => void;
+}) {
   const colors = useColors();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} statusBarTranslucent>
@@ -26,12 +34,20 @@ export function WhatsNewModal({ visible, onDismiss }: { visible: boolean; onDism
               </View>
             ))}
           </View>
-          <Pressable
-            onPress={onDismiss}
-            style={({ pressed }) => [styles.btn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={styles.btnText}>Got it</Text>
-          </Pressable>
+          <View style={styles.actions}>
+            <Pressable
+              onPress={onSendFeedback}
+              style={({ pressed }) => [styles.btnSecondary, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Text style={[styles.btnSecondaryText, { color: colors.foreground }]}>Send feedback</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDismiss}
+              style={({ pressed }) => [styles.btnPrimary, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            >
+              <Text style={styles.btnPrimaryText}>Got it</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -47,6 +63,9 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
   itemText: { flex: 1, fontSize: 14.5, lineHeight: 21 },
-  btn: { alignSelf: 'stretch', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  btnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  actions: { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
+  btnSecondary: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  btnSecondaryText: { fontSize: 15, fontWeight: '600' },
+  btnPrimary: { flex: 1, borderRadius: 14, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  btnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

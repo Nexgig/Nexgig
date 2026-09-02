@@ -15,7 +15,7 @@ export const RELEASE_NOTES = {
   version: 1,
   items: [
     "Say hello to What's New — we'll pop a note here whenever we ship something.",
-    'Got a feature idea? Send it from Settings → Send Feedback (pick "Feature Request"). We read every one.',
+    'Got a feature idea? Tap "Send feedback" below — it goes straight to us, and we read every one.',
   ],
 };
 

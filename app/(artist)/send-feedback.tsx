@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from '@/lib/rn';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
@@ -24,10 +24,13 @@ export default function SendFeedbackScreen() {
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
   const currentUser = useAuthStore((s) => s.currentUser);
+  const params = useLocalSearchParams<{ category?: string }>();
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [category, setCategory] = useState<FeedbackCategory>('general');
+  const [category, setCategory] = useState<FeedbackCategory>(
+    params.category === 'feature' || params.category === 'bug' ? params.category : 'general',
+  );
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [success, setSuccess] = useState(false);

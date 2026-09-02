@@ -14,6 +14,11 @@ Two route groups mirror the two sides: `app/(manager)/…` and `app/(artist)/…
   a yes to `eas update`. **`eas update` reaches real users' phones within minutes and there is
   no review gate**, so it always gets its own explicit confirmation, never bundled into "and
   then I'll ship it".
+  - **EXCEPTION — the `preview` channel is pre-authorized (added 2 Sep 2026).** Preview is the
+    private TestFlight test track (build 26), NOT live users. For preview work: **just auto-commit
+    and `eas update --branch preview` — don't ask.** This carve-out is ONLY `--branch preview`.
+    `--branch production` (real phones) and `eas build`/`eas submit` (native) still each get their
+    own explicit yes, always.
   - Read-only checks (`git log`, `git status`, `eas update:list`) need no permission — just run
     them. **Prefer them to asking**: never claim something is committed/shipped when you could
     have checked in one command. That mistake was made repeatedly on 17 Jul.
