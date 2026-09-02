@@ -15,8 +15,9 @@ const ROSTER_HINT = 'Venues appear here once a manager invites you to their rost
 
 /**
  * The artist's Venues tab — the venues they're on the roster of, each with its invoicing
- * state. The document icon on the right opens the send-invoice flow when there are gigs to
- * invoice (coral), or the venue's sent-invoices tab when there's nothing outstanding (grey).
+ * state. Tapping a venue row (or its "N gigs to invoice" subtitle) opens invoicing: the
+ * send-invoice flow when there are gigs to invoice, else the venue's sent-invoices tab. The
+ * "View Profile" card on the right opens the venue profile.
  */
 export default function ArtistVenuesScreen() {
   const router = useRouter();
@@ -111,7 +112,9 @@ export default function ArtistVenuesScreen() {
           return (
             <Pressable
               style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => router.push(('/(artist)/venue-detail?id=' + item.venue.id) as Href)}
+              onPress={() => router.push((hasUninvoiced
+                ? `/(artist)/invoice-gigs?venueId=${item.venue.id}`
+                : `/(artist)/venue-detail?id=${item.venue.id}&tab=invoices`) as Href)}
             >
               <Image source={venueImage(item.venue.venueType)} style={[styles.thumb, { borderColor: colors.border }]} resizeMode="cover" />
               <View style={styles.info}>
@@ -120,16 +123,14 @@ export default function ArtistVenuesScreen() {
                   {hasUninvoiced ? `${item.uninvoiced} gig${item.uninvoiced === 1 ? '' : 's'} to invoice` : 'Up to date'}
                 </Text>
               </View>
-              {/* Uninvoiced → coral, opens the send-invoice flow. None → grey, opens sent invoices.
-                  Minimal: a bare icon (no chip), generous hit-slop keeps it easy to tap. */}
+              {/* The row (and its invoice subtitle) opens invoicing; this small card opens the
+                  venue profile. */}
               <Pressable
-                hitSlop={12}
-                style={({ pressed }) => [styles.invoiceBtn, { opacity: pressed ? 0.5 : 1 }]}
-                onPress={() => router.push((hasUninvoiced
-                  ? `/(artist)/invoice-gigs?venueId=${item.venue.id}`
-                  : `/(artist)/venue-detail?id=${item.venue.id}&tab=invoices`) as Href)}
+                hitSlop={8}
+                style={({ pressed }) => [styles.viewProfileBtn, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                onPress={() => router.push(('/(artist)/venue-detail?id=' + item.venue.id) as Href)}
               >
-                <MaterialIcons name="description" size={19} color={hasUninvoiced ? colors.primary : colors.muted} />
+                <Text style={[styles.viewProfileText, { color: colors.foreground }]}>View Profile</Text>
               </Pressable>
             </Pressable>
           );
@@ -157,7 +158,8 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   sub: { fontSize: 13 },
-  invoiceBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  viewProfileBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 11, paddingVertical: 7 },
+  viewProfileText: { fontSize: 12, fontWeight: '600' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 100, paddingHorizontal: 40, gap: 12 },
   emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 21 },
   footerText: { fontSize: 13, lineHeight: 20, marginTop: 18 },
