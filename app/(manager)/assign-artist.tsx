@@ -623,7 +623,7 @@ export default function AssignDJScreen() {
         <View style={[styles.infoNote, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '55' }]}>
           <MaterialIcons name="groups" size={15} color={colors.primary} />
           <Text style={[styles.infoNoteText, { color: colors.primary }]}>
-            Booking more than one artist? Tap each one — a slot can hold several.
+            One slot can hold several artists.
           </Text>
         </View>
       )}
@@ -658,7 +658,7 @@ export default function AssignDJScreen() {
               style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}
               onPress={commitDrafts}
             >
-              <Text style={[styles.sendBtnText, { color: colors.foreground }]}>Draft</Text>
+              <Text style={[styles.sendBtnText, { color: colors.foreground }]}>Save as Draft</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
