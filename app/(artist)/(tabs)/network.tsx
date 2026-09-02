@@ -5,7 +5,6 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useInvoiceStore } from '@/lib/store';
-import { realInvoicedBookingIds, isGigInvoicedForArtist } from '@/lib/invoices';
 import { venueImage } from '@/lib/venue-images';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
@@ -72,12 +71,15 @@ export default function ArtistVenuesScreen() {
     const venues = venueIds
       .map((id) => allVenues.find((v) => v.id === id))
       .filter((v): v is NonNullable<typeof v> => !!v && !v.isHidden);
-    // A gig is invoiceable when completed and neither in a non-cancelled invoice nor manually
-    // marked invoiced (billed outside the app) — both clear it from the "N gigs to invoice" count.
+    // A gig is invoiceable when completed and not already in a non-cancelled invoice for the venue.
     const invoiceable = allBookings.filter((b) => b.artistId === currentUser?.id && b.isCompleted && b.status === 'completed');
-    const realIds = realInvoicedBookingIds(invoices, currentUser?.id);
     return venues.map((venue) => {
-      const uninvoiced = invoiceable.filter((b) => b.venueId === venue.id && !isGigInvoicedForArtist(b, realIds)).length;
+      const invoicedIds = new Set(
+        invoices
+          .filter((inv) => inv.venueId === venue.id && inv.artistId === currentUser?.id && inv.status !== 'cancelled')
+          .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
+      );
+      const uninvoiced = invoiceable.filter((b) => b.venueId === venue.id && !invoicedIds.has(b.id)).length;
       return { venue, uninvoiced };
     }).sort((a, b) => (a.venue.name ?? '').toLowerCase().localeCompare((b.venue.name ?? '').toLowerCase()));
   }, [venueAssignments, allVenues, allBookings, invoices, currentUser?.id]);

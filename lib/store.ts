@@ -431,7 +431,6 @@ interface BookingState {
   addBooking: (booking: Booking) => void;
   updateBookingStatus: (id: string, status: BookingStatus, extra?: Partial<Booking>) => void;
   updateBookingStatusLocal: (id: string, status: BookingStatus, extra?: Partial<Booking>) => void;
-  setBookingsInvoicedLocal: (ids: string[], value: boolean) => void;
   getBookingsByDJ: (artistId: string) => Booking[];
   getBookingsByVenue: (venueId: string) => Booking[];
   getBookingBySlot: (slotId: string) => Booking | undefined;
@@ -490,15 +489,6 @@ export const useBookingStore = create<BookingState>()(
     // the same values harmlessly.
     get().updateBookingStatusLocal(id, status, extra);
     void syncBookingStatus(id, status, extra as Record<string, any>);
-  },
-  // LOCAL-ONLY patch of the manual "invoiced outside the app" flag. The screen persists the
-  // `manually_invoiced` column to Supabase itself; this just reflects it instantly in the UI.
-  setBookingsInvoicedLocal: (ids, value) => {
-    set((state) => ({
-      bookings: state.bookings.map((b) =>
-        ids.includes(b.id) ? { ...b, manuallyInvoiced: value, updatedAt: new Date().toISOString() } : b
-      ),
-    }));
   },
   getBookingsByDJ: (artistId) => get().bookings.filter((b) => b.artistId === artistId),
   getBookingsByVenue: (venueId) => get().bookings.filter((b) => b.venueId === venueId),

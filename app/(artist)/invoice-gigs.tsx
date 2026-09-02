@@ -5,8 +5,6 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useInvoiceStore, useInvoiceReminderStore } from '@/lib/store';
-import { isGigInvoicedForArtist } from '@/lib/invoices';
-import { supabase } from '@/lib/supabase';
 import { Divider } from '@/components/ui/card-free';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/use-colors';
@@ -84,7 +82,7 @@ export default function InvoiceGigsScreen() {
           b.venueId === venueId &&
           b.isCompleted &&
           b.status === 'completed' &&
-          !isGigInvoicedForArtist(b, invoicedBookingIds)
+          !invoicedBookingIds.has(b.id)
       )
       .sort((a, b) => (a.slotDate ?? '').localeCompare(b.slotDate ?? ''));
   }, [allBookings, currentUser, venueId, invoicedBookingIds]);
@@ -133,48 +131,6 @@ export default function InvoiceGigsScreen() {
   const selectedGigs = allGigRows.filter((g) => g.selected);
   const total = selectedGigs.reduce((sum, g) => sum + (parseFloat(g.price) || 0), 0);
   const allPriced = selectedGigs.every((g) => parseFloat(g.price) > 0);
-  const allSelected = allGigRows.length > 0 && allGigRows.every((g) => g.selected);
-
-  const toggleSelectAll = useCallback(() => {
-    setCompletedGigRows((prev) => {
-      const next = !prev.every((g) => g.selected);
-      return prev.map((g) => ({ ...g, selected: next }));
-    });
-  }, []);
-
-  // "Mark as invoiced" — for gigs the artist billed OUTSIDE the app (their own TRN, etc.). It sets
-  // a private flag on the selected bookings (no in-app invoice, no manager notification, no price),
-  // which clears them from the "N gigs to invoice" count everywhere on the artist side.
-  const handleMarkInvoiced = () => {
-    const ids = selectedGigs.map((g) => g.booking.id);
-    if (ids.length === 0) {
-      Alert.alert('No Gigs Selected', 'Select the gigs you invoiced outside the app.');
-      return;
-    }
-    Alert.alert(
-      'Mark as invoiced',
-      `Mark ${ids.length} gig${ids.length === 1 ? '' : 's'} at ${venueName} as invoiced? They'll be cleared from your to-invoice list. Use this when you've already billed them outside the app.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Mark as invoiced',
-          onPress: async () => {
-            // Local first (instant), then persist the private flag to Supabase.
-            useBookingStore.getState().setBookingsInvoicedLocal(ids, true);
-            const { error } = await supabase
-              .from('bookings')
-              .update({ manually_invoiced: true })
-              .in('id', ids)
-              .eq('artist_id', currentUser!.id);
-            if (error) {
-              useBookingStore.getState().setBookingsInvoicedLocal(ids, false); // revert on failure
-              Alert.alert('Could not save', 'Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  };
 
   // Only completed gigs are invoiceable, so there is a single unlabelled section.
   const listData = useMemo(
@@ -306,14 +262,6 @@ export default function InvoiceGigsScreen() {
         }
         renderItem={renderItem}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={allGigRows.length > 1 ? (
-          <View style={styles.selectAllRow}>
-            <Text style={[styles.selectAllInfo, { color: colors.muted }]}>{selectedGigs.length} of {allGigRows.length} selected</Text>
-            <Pressable onPress={toggleSelectAll} hitSlop={8}>
-              <Text style={[styles.selectAllBtn, { color: colors.primary }]}>{allSelected ? 'Deselect all' : 'Select all'}</Text>
-            </Pressable>
-          </View>
-        ) : null}
         ListEmptyComponent={
           <View style={styles.empty}>
             <MaterialIcons name="check-circle" size={48} color={colors.success} />
@@ -325,28 +273,18 @@ export default function InvoiceGigsScreen() {
       {/* Bottom bar */}
       {allGigRows.length > 0 && (
         <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
-          <View style={styles.totalRow}>
+          <View>
             <Text style={[styles.totalLabel, { color: colors.muted }]}>Total ({selectedGigs.length} gig{selectedGigs.length !== 1 ? 's' : ''})</Text>
             <Text style={[styles.totalValue, { color: colors.foreground }]}>AED {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
-          <View style={styles.btnRow}>
-            <Pressable
-              style={({ pressed }) => [styles.markBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : selectedGigs.length > 0 ? 1 : 0.4 }]}
-              onPress={handleMarkInvoiced}
-              disabled={selectedGigs.length === 0}
-            >
-              <Text style={[styles.markBtnText, { color: colors.primary }]}>Mark as invoiced</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.continueBtn, { flex: 1, justifyContent: 'center', opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced ? '#E2674A' : colors.border }]}
-              onPress={handleContinue}
-              disabled={selectedGigs.length === 0 || !allPriced}
-            >
-              <Text style={styles.continueBtnText}>Preview Invoice</Text>
-              <MaterialIcons name="arrow-forward" size={18} color="#fff" />
-            </Pressable>
-          </View>
-          <Text style={[styles.markHint, { color: colors.muted }]}>Billed outside the app? Use &ldquo;Mark as invoiced&rdquo;.</Text>
+          <Pressable
+            style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced ? '#E2674A' : colors.border }]}
+            onPress={handleContinue}
+            disabled={selectedGigs.length === 0 || !allPriced}
+          >
+            <Text style={styles.continueBtnText}>Preview Invoice</Text>
+            <MaterialIcons name="arrow-forward" size={18} color="#fff" />
+          </Pressable>
         </View>
       )}
 
@@ -405,19 +343,11 @@ const styles = StyleSheet.create({
   priceInput: { width: 80, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 14, textAlign: 'center' },
-  bottomBar: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 0.5, gap: 10 },
-  totalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5 },
   totalLabel: { fontSize: 12 },
   totalValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
-  btnRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
   continueBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 14 },
   continueBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  markBtn: { borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  markBtnText: { fontSize: 14, fontWeight: '700' },
-  markHint: { fontSize: 11.5, textAlign: 'center' },
-  selectAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 2, paddingBottom: 8 },
-  selectAllInfo: { fontSize: 12 },
-  selectAllBtn: { fontSize: 13, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   reminderSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
   reminderHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },

@@ -294,8 +294,6 @@ export interface Booking {
   status: BookingStatus;
   cancellationReason?: string;
   isCompleted: boolean;
-  /** Artist marked this gig invoiced-outside-the-app (private to the artist; no real invoice). */
-  manuallyInvoiced?: boolean;
   createdAt: string;
   updatedAt: string;
   confirmedAt?: string;

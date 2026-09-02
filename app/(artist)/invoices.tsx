@@ -6,7 +6,6 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useLineupStore, useInvoiceStore, useInvoiceReminderStore, useNotificationStore } from '@/lib/store';
-import { isGigInvoicedForArtist } from '@/lib/invoices';
 import { rescheduleInvoiceReminders } from '@/lib/invoice-reminders';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
@@ -75,7 +74,7 @@ export default function InvoicesScreen() {
           .flatMap((inv) => inv.gigs.map((g) => g.bookingId))
       );
       const uninvoicedCount = invoiceableBookings.filter(
-        (b) => b.venueId === vid && !isGigInvoicedForArtist(b, invoicedBookingIds)
+        (b) => b.venueId === vid && !invoicedBookingIds.has(b.id)
       ).length;
       return { venue, venueId: vid, uninvoicedCount };
     }).filter((v) => v.venue);
