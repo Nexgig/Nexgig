@@ -29,6 +29,9 @@ screenshots + "What's New", and the held post-launch OTA batch went out the same
 01a01915). Re-submit a NEW build only for native changes; everything else ships OTA on the 1.1 lane.
 (History: build 17 was REJECTED — a custom Apple-logo sign-in button + re-asking full name at
 sign-up; fixed in build 21 via the official `AppleAuthenticationButton` + name from Apple.)
+- **Refresh the App Store listing — screenshots + the "Book, Play, Manage" copy.** (Added 29 Aug
+  2026.) Redo / clean up the App Store screenshots and the "Book, Play, Manage" caption/tagline.
+  Store-listing work in App Store Connect, not app code.
 
 **2 · Android / Google Play — IN PROGRESS (started 18 Aug 2026).** Expo/cross-platform, so Android
 is config + store admin, not a rewrite.
@@ -121,6 +124,8 @@ those into ONE build.
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
 ### Parked — post-launch (not now)
+- **Direct messaging / chat between artist and manager** — future / maybe. (Added 29 Aug 2026.)
+  In-app conversation so they can coordinate a gig without leaving the app.
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
 - **Tap Payments** integration.
 - **Google Calendar** sync.
