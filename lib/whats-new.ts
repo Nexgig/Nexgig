@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * it when there's genuinely something to tell users.
  */
 export const RELEASE_NOTES = {
-  version: 1,
+  version: 2,
   items: [
     "Say hello to What's New — we'll pop a note here whenever we ship something.",
     'Got a feature idea? Tap "Send feedback" below — it goes straight to us, and we read every one.',
