@@ -72,8 +72,8 @@ function RootLayout() {
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
   const currentUser = useAuthStore((s) => s.currentUser);
-  // "What's New" card — shown once per RELEASE_NOTES.version, only to signed-in users.
-  const whatsNew = useWhatsNew(!!currentUser?.id);
+  // "What's New" card — shown once per RELEASE_NOTES.version, per role, only to signed-in users.
+  const whatsNew = useWhatsNew(!!currentUser?.id, currentUser?.accountType as 'artist' | 'manager' | undefined);
   // "Send feedback" on the card → dismiss + open the role's feedback form, pre-set to Feature Request.
   const openFeedbackFromWhatsNew = () => {
     whatsNew.dismiss();
@@ -274,7 +274,7 @@ function RootLayout() {
         <ThemedStatusBar />
         <UpdatingOverlay visible={applyingUpdate || roleSwitching} label={applyingUpdate ? 'Updating…' : 'Switching…'} />
         <ForceUpdateGate />
-        <WhatsNewModal visible={whatsNew.show} onDismiss={whatsNew.dismiss} onSendFeedback={openFeedbackFromWhatsNew} />
+        <WhatsNewModal visible={whatsNew.show} onDismiss={whatsNew.dismiss} onSendFeedback={openFeedbackFromWhatsNew} items={whatsNew.items} />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

@@ -14,6 +14,7 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
+import { markWhatsNewSeen } from '@/lib/whats-new';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { defaultAvatarId } from '@/lib/avatars';
@@ -264,6 +265,8 @@ export default function ManagerRegisterScreen() {
     sendEmail(user.id, 'welcome_manager');
 
     await AsyncStorage.setItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
+    // Brand-new account → mark the current "What's New" as seen so it doesn't pop on first sign-in.
+    await markWhatsNewSeen('manager');
     router.replace('/(manager)/(tabs)/dashboard' as Href);
   };
 

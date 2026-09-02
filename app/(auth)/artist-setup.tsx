@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
+import { markWhatsNewSeen } from '@/lib/whats-new';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { defaultAvatarId } from '@/lib/avatars';
@@ -394,6 +395,8 @@ export default function DJSetupScreen() {
     })();
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
+    // Brand-new account → mark the current "What's New" as seen so it doesn't pop on first sign-in.
+    await markWhatsNewSeen('artist');
     router.replace('/(artist)/(tabs)/dashboard' as Href);
   };
 

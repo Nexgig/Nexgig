@@ -2,20 +2,21 @@ import { View, Text, Pressable, StyleSheet, Modal } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
-import { RELEASE_NOTES } from '@/lib/whats-new';
 
 /**
  * "What's New" card — shown once after an update that bumped RELEASE_NOTES.version. A branded
- * card (not a full-screen takeover) with the changelog + a single "Got it" dismiss.
+ * card (not a full-screen takeover) with the role's changelog + a "Got it" / "Send feedback" row.
  */
 export function WhatsNewModal({
   visible,
   onDismiss,
   onSendFeedback,
+  items,
 }: {
   visible: boolean;
   onDismiss: () => void;
   onSendFeedback: () => void;
+  items: string[];
 }) {
   const colors = useColors();
   return (
@@ -27,7 +28,7 @@ export function WhatsNewModal({
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>What&apos;s New</Text>
           <View style={styles.items}>
-            {RELEASE_NOTES.items.map((it, i) => (
+            {items.map((it, i) => (
               <View key={i} style={styles.itemRow}>
                 <View style={[styles.dot, { backgroundColor: colors.primary }]} />
                 <Text style={[styles.itemText, { color: colors.foreground }]}>{it}</Text>
