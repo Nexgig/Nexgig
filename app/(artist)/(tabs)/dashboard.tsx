@@ -9,6 +9,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { fonts } from '@/lib/fonts';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
+import { isGigInvoicedForArtist } from '@/lib/invoices';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/lib/supabase';
@@ -146,7 +147,7 @@ export default function DJHomeScreen() {
         const isPending = b.status === 'requested' || b.status === 'past_confirmation';
         const statusKey = isDone ? 'completed' : isPending ? 'pending' : 'confirmed';
         const dotColor = isDone ? STATUS_COLORS.completed : isPending ? STATUS_COLORS.pending : STATUS_COLORS.confirmed;
-        return { ...b, slot: resolvedSlot, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced: invoicedIds.has(b.id) };
+        return { ...b, slot: resolvedSlot, venue: resolvedVenue, statusKey, dotColor, isDone, isInvoiced: isGigInvoicedForArtist(b, invoicedIds) };
       });
     return mapped.sort((a, b) => {
       if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;

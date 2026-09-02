@@ -74,7 +74,7 @@ export default function ArtistCompletedGigsScreen() {
       } : undefined);
       // Completed gigs are history — freeze to the booking's snapshot name (bookingVenueName).
       const resolvedVenueName = bookingVenueName(b, venue?.name);
-      return { ...b, slot: resolvedSlot, resolvedVenueName, venue, isInvoiced: invoiceByBooking.has(b.id), invoiceId: invoiceByBooking.get(b.id) };
+      return { ...b, slot: resolvedSlot, resolvedVenueName, venue, isInvoiced: invoiceByBooking.has(b.id) || !!b.manuallyInvoiced, invoiceId: invoiceByBooking.get(b.id) };
     })
     .sort((a, b) => ((a.slot?.date ?? '') > (b.slot?.date ?? '') ? -1 : 1)),
     [bookings, currentUser?.id, slots, allVenues, invoiceByBooking]
@@ -151,13 +151,20 @@ export default function ArtistCompletedGigsScreen() {
               </Text>
             </View>
             {booking.isInvoiced && (
-              <Pressable
-                onPress={() => booking.invoiceId && router.push((`/(artist)/invoice-preview?invoiceId=${booking.invoiceId}&readOnly=1`) as Href)}
-                hitSlop={8}
-                style={({ pressed }) => [styles.invoicedChip, { backgroundColor: colors.primary + '1A', opacity: pressed ? 0.6 : 1 }]}
-              >
-                <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
-              </Pressable>
+              booking.invoiceId ? (
+                <Pressable
+                  onPress={() => router.push((`/(artist)/invoice-preview?invoiceId=${booking.invoiceId}&readOnly=1`) as Href)}
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.invoicedChip, { backgroundColor: colors.primary + '1A', opacity: pressed ? 0.6 : 1 }]}
+                >
+                  <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                </Pressable>
+              ) : (
+                // Manually marked invoiced (billed outside the app) — no invoice to open.
+                <View style={[styles.invoicedChip, { backgroundColor: colors.primary + '1A' }]}>
+                  <Text style={[styles.invoicedChipText, { color: colors.primary }]}>Invoiced</Text>
+                </View>
+              )
             )}
           </Pressable>
           );

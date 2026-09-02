@@ -180,6 +180,7 @@ function mapBooking(b: any): Booking {
     slotEndTime: b.slot_end_time ?? undefined,
     venueName: b.venue_name ?? undefined,
     isCompleted: b.is_completed ?? false,
+    manuallyInvoiced: b.manually_invoiced ?? false,
     isArtistCreated: b.is_artist_created ?? false,
     confirmedAt: b.confirmed_at ?? undefined,
     cancelledAt: b.cancelled_at ?? undefined,
