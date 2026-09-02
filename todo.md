@@ -72,9 +72,6 @@ those into ONE build.
   ("no photo upload" in `edit-profile.tsx`); add real upload (image picker → Supabase `avatars`
   storage → `profile_photo_url`; `AvatarImage` already prefers a `uri`). Flips Data Safety to
   "Photos collected"; privacy policy currently says no photo upload — update both.
-- **Show an artist's gig history somewhere.** (24 Aug 2026.) A place to display past/completed
-  gigs — surface TBD (own profile, the manager's artist-profile-view, or both). Respect the
-  existing show/hide-gig-history privacy notion.
 - **Bring back the artist "min rate" field** on signup + edit profile. (24 Aug 2026.) Plumbing
   exists (`minRate` store, `min_rate` in Supabase, hydrateRole reads it) but no input in
   `artist-setup.tsx` / `edit-profile.tsx`. OPTIONAL, AED, label "Min. Rate (AED)". Gate on the
@@ -118,6 +115,26 @@ those into ONE build.
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
 ### Parked — post-launch (not now)
+- **Artist gig ledger → monthly income + insights** — PARKED 2 Sep 2026 (Tuts wants something else
+  first). NOT a public profile section (the old SHOW_ARTIST_HISTORY flag is the WRONG tool — that's
+  profile-facing; don't flip it). Aim: the artist's OWN private place to track ALL his gigs (venue
+  bookings + private events) in one list, then later see monthly income + insights.
+  - **Phase 1 (OTA, no DB change):** the data is ALREADY merged — `useBookingStore.bookings` filtered
+    by `artistId` already contains venue gigs AND private events (private events reconstructed by
+    `fetchPrivateEventBookings`, loaded at artist cold-start + all 3 pull-to-refresh paths).
+    `completed-gigs.tsx` already lists both but renders private events poorly (event name in the venue
+    slot, slate badge, NO occasion icon/location) and its venue-filter drops them; it's past-only.
+    Fix = fork/extend `completed-gigs.tsx`: reuse the calendar's `myBookings` resolve (calendar.tsx
+    :173-187) + branch on `b.isArtistCreated` (occasion icon/location vs venue art) like the calendar
+    render (:766-799); decide past-only vs past+upcoming (section by `isPastEnd`); fix the filter so
+    private events aren't dropped. Rename the Profile "Completed Gigs" stat → "My Gigs".
+  - **Phase 2 (needs DB):** monthly income. Today the ONLY per-gig money is `InvoiceGig.price` inside
+    the `invoices` table — un-invoiced gigs and ALL private events have NO amount, so income from
+    today's data undercounts. To make it complete, add a numeric AED `fee` column to BOTH `bookings`
+    (venue gigs) and `availability_blocks` (private events), map both onto the reconstructed Booking
+    as one `fee` field, auto-fill venue-gig fee from the invoice on send, attribute income by GIG date
+    (not invoice sent_at). Phase 3 = charts/insights on that.
+  - Full recon: workflow run `wf_57b40c07-cf2` (task `wqqgor8hs`).
 - **Let the artist manually mark a gig as invoiced** — BUILT then REVERTED + PARKED (2 Sep 2026;
   Tuts didn't want it). Was a private per-booking flag (a `manually_invoiced` toggle in the venue
   gig list) that cleared the "N gigs to invoice" count for gigs billed outside the app — private to
