@@ -118,6 +118,13 @@ those into ONE build.
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
 ### Parked — post-launch (not now)
+- **Let the artist manually mark a gig as invoiced** — BUILT then REVERTED + PARKED (2 Sep 2026;
+  Tuts didn't want it). Was a private per-booking flag (a `manually_invoiced` toggle in the venue
+  gig list) that cleared the "N gigs to invoice" count for gigs billed outside the app — private to
+  the artist, invisible to the manager. Reverted in git (commit revert of 794490e). **The Supabase
+  column `bookings.manually_invoiced` (boolean, default false) is still there — harmless, unused;
+  don't bother dropping it unless we're sure we'll never revisit.** If revived: `git show 794490e`
+  is the full implementation (shared helper `lib/invoices.ts`, the gig-list button + Select-all).
 - **Direct messaging / chat between artist and manager** — future / maybe. (Added 29 Aug 2026.)
   In-app conversation so they can coordinate a gig without leaving the app.
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
