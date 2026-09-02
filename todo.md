@@ -72,12 +72,6 @@ those into ONE build.
   ("no photo upload" in `edit-profile.tsx`); add real upload (image picker → Supabase `avatars`
   storage → `profile_photo_url`; `AvatarImage` already prefers a `uri`). Flips Data Safety to
   "Photos collected"; privacy policy currently says no photo upload — update both.
-- **Let the artist manually mark a gig as invoiced.** (Added 29 Aug 2026.) Artists sometimes
-  invoice a gig OUTSIDE the app; give them a manual "mark as invoiced" toggle so the gig shows as
-  invoiced without sending an in-app invoice. OTA. (Reuse the same invoiced state the dashboard /
-  invoices tab already reads, so the manual flag looks identical.)
-- **Fix the artist invoice button location.** (24 Aug 2026.) Details TBD — which button/screen and
-  where it should sit. Small UI/OTA fix.
 - **Show an artist's gig history somewhere.** (24 Aug 2026.) A place to display past/completed
   gigs — surface TBD (own profile, the manager's artist-profile-view, or both). Respect the
   existing show/hide-gig-history privacy notion.
