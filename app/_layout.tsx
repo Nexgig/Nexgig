@@ -21,6 +21,8 @@ import { supabase } from "@/lib/supabase";
 import { useSilentUpdates } from '@/lib/silent-update';
 import { UpdatingOverlay } from '@/components/updating-overlay';
 import { ForceUpdateGate } from '@/components/force-update-gate';
+import { WhatsNewModal } from '@/components/whats-new-modal';
+import { useWhatsNew } from '@/lib/whats-new';
 import { useRoleSwitching } from '@/lib/roles';
 import { useAuthStore, resetAllStores } from "@/lib/store";
 import { registerForPushNotifications } from "@/lib/notifications-push";
@@ -70,6 +72,8 @@ function RootLayout() {
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
   const currentUser = useAuthStore((s) => s.currentUser);
+  // "What's New" card — shown once per RELEASE_NOTES.version, only to signed-in users.
+  const whatsNew = useWhatsNew(!!currentUser?.id);
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
@@ -262,6 +266,7 @@ function RootLayout() {
         <ThemedStatusBar />
         <UpdatingOverlay visible={applyingUpdate || roleSwitching} label={applyingUpdate ? 'Updating…' : 'Switching…'} />
         <ForceUpdateGate />
+        <WhatsNewModal visible={whatsNew.show} onDismiss={whatsNew.dismiss} />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
