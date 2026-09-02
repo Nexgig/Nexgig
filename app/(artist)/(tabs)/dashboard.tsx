@@ -69,7 +69,7 @@ export default function DJHomeScreen() {
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         isArtistCreated: b.is_artist_created ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
-        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined, price: b.price ?? undefined,
         venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
@@ -515,6 +515,9 @@ export default function DJHomeScreen() {
                     <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
                       {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
                     </Text>
+                    {item.price != null && (
+                      <Text style={[styles.replyFee, { color: colors.primary }]} numberOfLines={1}>AED {item.price.toLocaleString()}</Text>
+                    )}
                   </View>
                 </Pressable>
                 <View style={styles.replyActions}>
@@ -617,6 +620,7 @@ const styles = StyleSheet.create({
   replyInfo: { flex: 1 },
   replyName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   replySub: { fontSize: 13, fontWeight: '500' },
+  replyFee: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   replyBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 

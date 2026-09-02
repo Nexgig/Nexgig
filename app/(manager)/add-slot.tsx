@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Keyboard } from '@/lib/rn';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -87,6 +87,9 @@ export default function AddSlotScreen() {
   // nothing is written until "Draft" (persist as drafts) or "Send" (send requests). Closing
   // without either creates nothing.
   const [stagedIds, setStagedIds] = useState<Set<string>>(new Set());
+  // Per-artist gig price (AED) while staging. Manual slots have no default, so these start blank
+  // and the manager types each artist's price.
+  const [stagedPrices, setStagedPrices] = useState<Record<string, number | undefined>>({});
 
   const assignedRef = useRef(false);
   const slotIdRef = useRef<string | null>(null);
@@ -327,7 +330,8 @@ export default function AddSlotScreen() {
     if (!currentUser) return;
     const slotId = await ensureSlot();
     if (!slotId) return;
-    if (!draftedIds.has(artistId)) setDraft(slotId, createSlotVenueId, artistId, currentUser.id);
+    const price = stagedPrices[artistId];
+    setDraft(slotId, createSlotVenueId, artistId, currentUser.id, price);
     assignedRef.current = true;
     const venue = venues.find((v) => v.id === createSlotVenueId);
     const newBookingId = sendDraftByDJ(slotId, artistId, currentUser.id, addBooking);
@@ -335,7 +339,7 @@ export default function AddSlotScreen() {
     await persistGigRequestBooking({
       bookingId: newBookingId, slotId, venueId: createSlotVenueId, artistId,
       managerId: currentUser.id, slotDate: targetDate, slotName: slotForm.name,
-      slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime,
+      slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime, price: price ?? null,
       venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
     });
     addNotification({
@@ -460,6 +464,27 @@ export default function AddSlotScreen() {
             <MaterialIcons name="add-circle-outline" size={26} color={colors.muted} />
           )}
         </Pressable>
+        {/* Per-artist price — appears once staged. Type what this artist is paid for the gig. */}
+        {state === 'drafted' && (
+          <View style={styles.priceRow}>
+            <Text style={[styles.priceRowLabel, { color: colors.muted }]}>Price for this gig</Text>
+            <View style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
+              <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
+              <TextInput
+                style={[styles.priceInput, { color: colors.foreground }]}
+                value={stagedPrices[artistId] != null ? String(stagedPrices[artistId]) : ''}
+                onChangeText={(t) => {
+                  const digits = t.replace(/[^0-9]/g, '');
+                  setStagedPrices((prev) => ({ ...prev, [artistId]: digits === '' ? undefined : parseInt(digits, 10) }));
+                }}
+                placeholder="Optional"
+                placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+        )}
       </Fragment>
     );
   };
@@ -669,7 +694,7 @@ export default function AddSlotScreen() {
                   const slotId = await ensureSlot();
                   if (slotId) {
                     assignedRef.current = true;
-                    stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id));
+                    stagedIds.forEach((artistId) => setDraft(slotId, createSlotVenueId, artistId, currentUser.id, stagedPrices[artistId]));
                   }
                 }
                 router.back();
@@ -719,6 +744,11 @@ const styles = StyleSheet.create({
   requestedText: { fontSize: 13, fontWeight: '600' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 54, paddingRight: 4, paddingBottom: 12, marginTop: -2 },
+  priceRowLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, minHeight: 38, minWidth: 120 },
+  priceCurrency: { fontSize: 12, fontWeight: '700' },
+  priceInput: { flex: 1, fontSize: 15, fontWeight: '700', paddingVertical: 8, textAlign: 'right' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
   footer: { marginHorizontal: -13, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   footerRow: { flexDirection: 'row', gap: 10 },

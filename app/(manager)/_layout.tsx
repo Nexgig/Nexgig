@@ -83,6 +83,7 @@ export default function ManagerLayout() {
           slotName: b.slot_name ?? undefined,
           slotStartTime: b.slot_start_time ?? undefined,
           slotEndTime: b.slot_end_time ?? undefined,
+          price: b.price ?? undefined,
           venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined,
           createdAt: b.created_at,
           updatedAt: b.updated_at,

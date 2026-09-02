@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert } from '@/lib/rn';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -56,6 +56,13 @@ export default function AssignDJScreen() {
   const [stagedIds, setStagedIds] = useState<Set<string>>(() =>
     new Set(allDrafts.filter((d) => d.slotId === slotId).map((d) => d.artistId))
   );
+  // Per-artist gig price (AED) while staging — seeded from any existing draft's price, then from
+  // the slot's default_price when an artist is first staged. Parallel to stagedIds.
+  const [stagedPrices, setStagedPrices] = useState<Record<string, number | undefined>>(() => {
+    const m: Record<string, number | undefined> = {};
+    allDrafts.filter((d) => d.slotId === slotId).forEach((d) => { m[d.artistId] = d.price; });
+    return m;
+  });
   const getBookingsBySlot = useBookingStore((s) => s.getBookingsBySlot);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -407,6 +414,7 @@ export default function AssignDJScreen() {
               slotName: slot!.name,
               slotStartTime: slot!.startTime,
               slotEndTime: slot!.endTime,
+              price: slot!.defaultPrice,
               venueName: venue?.name,
             };
             addBooking(booking);
@@ -424,6 +432,7 @@ export default function AssignDJScreen() {
               slot_name: slot!.name,
               slot_start_time: slot!.startTime,
               slot_end_time: slot!.endTime,
+              price: slot!.defaultPrice ?? null,
               venue_name: venue?.name ?? null,
               venue_type: venue?.venueType ?? null,
             });
@@ -449,13 +458,15 @@ export default function AssignDJScreen() {
   // send-drafts, via the shared persistGigRequestBooking so the booking row can't drift).
   const sendNow = async (artistId: string) => {
     if (!currentUser) return;
-    if (!assignedDJIds.has(artistId)) setDraft(slot!.id, slot!.venueId, artistId, currentUser.id);
+    const price = stagedPrices[artistId] ?? slot!.defaultPrice;
+    // Always (re)write the draft with the current price — setDraft dedupes and updates in place.
+    setDraft(slot!.id, slot!.venueId, artistId, currentUser.id, price);
     const newBookingId = sendDraftByDJ(slot!.id, artistId, currentUser.id, addBooking);
     if (!newBookingId) return;
     await persistGigRequestBooking({
       bookingId: newBookingId, slotId: slot!.id, venueId: slot!.venueId, artistId,
       managerId: currentUser.id, slotDate: slot!.date, slotName: slot!.name,
-      slotStartTime: slot!.startTime, slotEndTime: slot!.endTime,
+      slotStartTime: slot!.startTime, slotEndTime: slot!.endTime, price: price ?? null,
       venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
     });
     addNotification({
@@ -471,7 +482,8 @@ export default function AssignDJScreen() {
   const commitDrafts = () => {
     if (!currentUser) return;
     const original = new Set(currentDrafts.map((d) => d.artistId));
-    stagedIds.forEach((id) => { if (!original.has(id)) setDraft(slot!.id, slot!.venueId, id, currentUser.id); });
+    // Create new drafts and refresh prices on existing ones (setDraft updates in place).
+    stagedIds.forEach((id) => setDraft(slot!.id, slot!.venueId, id, currentUser.id, stagedPrices[id] ?? slot!.defaultPrice));
     original.forEach((id) => { if (!stagedIds.has(id)) removeDraftByDJ(slot!.id, id); });
     router.back();
   };
@@ -509,6 +521,8 @@ export default function AssignDJScreen() {
       else next.add(artistId);
       return next;
     });
+    // Seed this artist's price from the slot default the first time they're staged.
+    setStagedPrices((p) => (artistId in p ? p : { ...p, [artistId]: slot?.defaultPrice }));
   };
 
   // Add a roster artist to THIS venue's lineup from the slot screen. No draft is
@@ -590,6 +604,28 @@ export default function AssignDJScreen() {
             <MaterialIcons name="add-circle-outline" size={26} color={colors.muted} />
           )}
         </Pressable>
+        {/* Per-artist price — appears once the artist is staged. Pre-filled from the slot default,
+            editable to pay this artist more or less. */}
+        {state === 'drafted' && (
+          <View style={styles.priceRow}>
+            <Text style={[styles.priceRowLabel, { color: colors.muted }]}>Price for this gig</Text>
+            <View style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
+              <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
+              <TextInput
+                style={[styles.priceInput, { color: colors.foreground }]}
+                value={stagedPrices[artistId] != null ? String(stagedPrices[artistId]) : ''}
+                onChangeText={(t) => {
+                  const digits = t.replace(/[^0-9]/g, '');
+                  setStagedPrices((prev) => ({ ...prev, [artistId]: digits === '' ? undefined : parseInt(digits, 10) }));
+                }}
+                placeholder={slot?.defaultPrice != null ? String(slot.defaultPrice) : 'Optional'}
+                placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+        )}
       </Fragment>
     );
   };
@@ -692,6 +728,11 @@ const styles = StyleSheet.create({
   trailingText: { fontSize: 13, fontWeight: '600' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 60, paddingRight: 4, paddingBottom: 12, marginTop: -2 },
+  priceRowLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
+  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, minHeight: 38, minWidth: 120 },
+  priceCurrency: { fontSize: 12, fontWeight: '700' },
+  priceInput: { flex: 1, fontSize: 15, fontWeight: '700', paddingVertical: 8, textAlign: 'right' },
   emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
   emptyText: { fontSize: 14 },
   footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },

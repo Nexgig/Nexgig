@@ -18,6 +18,7 @@ export async function persistGigRequestBooking(args: {
   slotName: string;
   slotStartTime: string;
   slotEndTime: string;
+  price: number | null;
   venueName: string | null;
   venueType: string | null;
 }): Promise<void> {
@@ -33,6 +34,7 @@ export async function persistGigRequestBooking(args: {
     slot_name: args.slotName,
     slot_start_time: args.slotStartTime,
     slot_end_time: args.slotEndTime,
+    price: args.price,
     venue_name: args.venueName,
     venue_type: args.venueType,
   });

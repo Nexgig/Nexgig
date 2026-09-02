@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from '@/lib/rn';
+import { TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { DAY_MIN, DAY_FULL, daysWithSets, makeSetForDay } from '@/lib/venue-schedule';
@@ -105,6 +106,26 @@ export function ScheduleEditor({ value, onChange }: ScheduleEditorProps) {
                 </Pressable>
               </View>
 
+              {/* Default price for this recurring set — pre-fills each artist's price at assignment. */}
+              <View style={styles.priceRow}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>DEFAULT PRICE (AED)</Text>
+                <View style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                  <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
+                  <TextInput
+                    style={[styles.priceInput, { color: colors.foreground }]}
+                    value={set.defaultPrice != null ? String(set.defaultPrice) : ''}
+                    onChangeText={(t) => {
+                      const digits = t.replace(/[^0-9]/g, '');
+                      patchSet(set.id, { defaultPrice: digits === '' ? undefined : parseInt(digits, 10) });
+                    }}
+                    placeholder="Optional"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="number-pad"
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
+
               {openField && (
                 <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <ScrollView style={{ maxHeight: 168 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
@@ -155,6 +176,10 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, minHeight: 42 },
   pillText: { flex: 1, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  priceRow: { marginTop: 10 },
+  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 42 },
+  priceCurrency: { fontSize: 13, fontWeight: '700' },
+  priceInput: { flex: 1, fontSize: 15, fontWeight: '700', paddingVertical: 10 },
   trash: { padding: 6, marginBottom: 2 },
   dropdown: { borderWidth: 1, borderRadius: 12, marginTop: 8, overflow: 'hidden' },
   option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 9, minHeight: 38 },

@@ -205,6 +205,9 @@ export default function ArtistPendingRequestsScreen() {
               {dateLine}
             </Text>
           )}
+          {item.price != null && !isManagerCancelled && (
+            <Text style={[styles.feeLine, { color: colors.primary }]} numberOfLines={1}>AED {item.price.toLocaleString()}</Text>
+          )}
         </View>
 
         {/* Right-side actions */}
@@ -287,6 +290,7 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   venueName: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
   time: { fontSize: 13 },
+  feeLine: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   cancelledText: { fontSize: 13, fontWeight: '600' },
 
   // Accept / Decline (match manager venue-join buttons)

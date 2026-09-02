@@ -117,7 +117,7 @@ export default function DJBookingDetailScreen() {
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
-        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined, price: b.price ?? undefined,
         venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined,
         createdAt: b.created_at, updatedAt: b.updated_at,
       });
@@ -410,6 +410,7 @@ export default function DJBookingDetailScreen() {
           {/* Details — document-style label/value table. Replaces the icon-tile rows:
               the coral tiles added colour but said nothing the label didn't. */}
           <Section label="Details">
+            <DetailRow label="FEE" value={booking.price != null ? `AED ${booking.price.toLocaleString()}` : undefined} />
             <DetailRow label="DATE" value={slot ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : undefined)} />
             <DetailRow
               label="TIME"

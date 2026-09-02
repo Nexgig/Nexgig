@@ -100,6 +100,7 @@ async function fetchManagerSlots(managerId: string): Promise<Slot[] | null> {
     endTime: s.end_time,
     status: s.status,
     scheduleGenerated: s.schedule_generated ?? false,
+    defaultPrice: s.default_price ?? undefined,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
   }));
@@ -178,6 +179,7 @@ function mapBooking(b: any): Booking {
     slotName: b.slot_name ?? undefined,
     slotStartTime: b.slot_start_time ?? undefined,
     slotEndTime: b.slot_end_time ?? undefined,
+    price: b.price ?? undefined,
     venueName: b.venue_name ?? undefined,
     isCompleted: b.is_completed ?? false,
     isArtistCreated: b.is_artist_created ?? false,

@@ -134,10 +134,10 @@ export default function CalendarScreen() {
   // Thin wrapper over the shared persistGigRequestBooking (lib/gig-requests) — the pick
   // screens (add-slot / assign-artist) use the same helper, so the booking row shape stays
   // in lockstep. Signature kept so the call sites below don't change.
-  const saveBookingToSupabase = (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null) =>
+  const saveBookingToSupabase = (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null, price: number | null) =>
     persistGigRequestBooking({
       bookingId, slotId, venueId, artistId, managerId: currentUser?.id ?? '',
-      slotDate, slotName, slotStartTime, slotEndTime, venueName,
+      slotDate, slotName, slotStartTime, slotEndTime, price, venueName,
       venueType: getVenueById(venueId)?.venueType ?? null,
     });
 
@@ -154,7 +154,7 @@ export default function CalendarScreen() {
       ]);
       if (slotsRes.data) {
         clearSlots();
-        slotsRes.data.forEach((s: any) => addSlot({ id: s.id, venueId: s.venue_id, name: s.name, date: s.date, startTime: s.start_time, endTime: s.end_time, createdAt: s.created_at }));
+        slotsRes.data.forEach((s: any) => addSlot({ id: s.id, venueId: s.venue_id, name: s.name, date: s.date, startTime: s.start_time, endTime: s.end_time, defaultPrice: s.default_price ?? undefined, createdAt: s.created_at }));
       }
     }
     setCalendarRefreshing(false);
@@ -989,7 +989,7 @@ export default function CalendarScreen() {
             drafts.forEach((draft) => {
               const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
               if (newBookingId) {
-                saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null);
+                saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null, draft.price ?? null);
               }
               addNotification({
                 id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -1819,9 +1819,10 @@ export default function CalendarScreen() {
                           const [slotId, artistId] = key.split('::');
                           const draftSlot = getSlotById(slotId);
                           const draftVenue = draftSlot ? getVenueById(draftSlot.venueId) : undefined;
+                          const draftPrice = getDraftsBySlot(slotId).find((d) => d.artistId === artistId)?.price ?? null;
                           const newBookingId = sendDraftByDJ(slotId, artistId, currentUser.id, addBooking);
                           if (newBookingId && draftSlot) {
-  saveBookingToSupabase(newBookingId, slotId, draftSlot.venueId, artistId, draftSlot.date, draftSlot.name, draftSlot.startTime, draftSlot.endTime, draftVenue?.name ?? null);
+  saveBookingToSupabase(newBookingId, slotId, draftSlot.venueId, artistId, draftSlot.date, draftSlot.name, draftSlot.startTime, draftSlot.endTime, draftVenue?.name ?? null, draftPrice);
 }
                           addNotification({
                             id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,

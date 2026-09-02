@@ -244,7 +244,7 @@ export default function DJAvailabilityScreen() {
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
         isArtistCreated: b.is_artist_created ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
-        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined,
+        slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined, price: b.price ?? undefined,
         venueName: b.venue_name ?? undefined, venueType: b.venue_type ?? undefined, createdAt: b.created_at, updatedAt: b.updated_at,
       }));
     }
@@ -843,6 +843,23 @@ export default function DJAvailabilityScreen() {
     { color: STATUS_COLORS.cancelled, label: 'Declined / Cancelled' },
   ];
 
+  // Expected earnings for the month being viewed — sum of the fee on this month's booked/completed
+  // venue gigs. Private events carry no manager price and are excluded. `missing` counts gigs the
+  // manager hasn't priced yet, so the total is never silently wrong.
+  const monthEarnings = useMemo(() => {
+    const prefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    let total = 0, counted = 0, missing = 0;
+    myBookings.forEach((b) => {
+      if (!(b.resolvedDate ?? '').startsWith(prefix)) return;
+      if (b.isArtistCreated) return;
+      const isBooked = b.status === 'confirmed' || b.status === 'completed' || b.isCompleted;
+      if (!isBooked) return;
+      counted++;
+      if (b.price != null) total += b.price; else missing++;
+    });
+    return { total, counted, missing };
+  }, [myBookings, currentMonth, currentYear]);
+
   return (
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
@@ -865,6 +882,17 @@ export default function DJAvailabilityScreen() {
                 <MaterialIcons name="event-available" size={22} color={colors.foreground} />
               </Pressable>
             </View>
+
+            {/* Expected earnings for the month being viewed. */}
+            {monthEarnings.counted > 0 && (
+              <View style={[styles.earningsStrip, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.earningsLabel, { color: colors.primary }]}>This month{monthEarnings.missing > 0 ? ` · ${monthEarnings.missing} without a price` : ''}</Text>
+                  <Text style={[styles.earningsValue, { color: colors.foreground }]}>AED {monthEarnings.total.toLocaleString()}</Text>
+                </View>
+                <MaterialIcons name="payments" size={22} color={colors.primary} />
+              </View>
+            )}
 
             {/* Day Labels (fixed above the swipe pager) */}
             <View style={styles.dayLabels}>
@@ -1103,6 +1131,9 @@ const styles = StyleSheet.create({
   monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthTitle: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },   // matches the dashboard "Overview"
   todayBtnText: { fontSize: 15, fontWeight: '700' },
+  earningsStrip: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12 },
+  earningsLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.2, marginBottom: 2 },
+  earningsValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: -6 },

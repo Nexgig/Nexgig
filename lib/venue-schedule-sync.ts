@@ -42,7 +42,7 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
     ...(dbRows ?? []).map((r: any) => slotKey(r.venue_id, r.date, r.start_time, r.end_time)),
   ]);
 
-  type Pending = { venueId: string; date: string; startTime: string; endTime: string };
+  type Pending = { venueId: string; date: string; startTime: string; endTime: string; defaultPrice?: number };
   const pending: Pending[] = [];
 
   for (let date = fromStr; date <= toStr; date = addDaysStr(date, 1)) {
@@ -53,7 +53,7 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
         if (have.has(key) || inflight.has(key)) continue;
         have.add(key);
         inflight.add(key);
-        pending.push({ venueId: v.id, date, startTime: set.startTime, endTime: set.endTime });
+        pending.push({ venueId: v.id, date, startTime: set.startTime, endTime: set.endTime, defaultPrice: set.defaultPrice });
       }
     }
   }
@@ -67,6 +67,7 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
     start_time: p.startTime,
     end_time: p.endTime,
     schedule_generated: true,
+    default_price: p.defaultPrice ?? null,
   }));
 
   try {
@@ -80,6 +81,7 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
       startTime: s.start_time,
       endTime: s.end_time,
       scheduleGenerated: true,
+      defaultPrice: s.default_price ?? undefined,
       createdAt: s.created_at,
     }));
     useSlotStore.getState().bulkAddSlots(newSlots);

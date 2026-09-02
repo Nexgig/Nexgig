@@ -568,7 +568,7 @@ export const useAvailabilityStore = create<AvailabilityState>()(
 interface DraftAssignmentState {
   drafts: DraftAssignment[];
   // Add a DJ to a slot as a draft (multiple DJs allowed per slot)
-  setDraft: (slotId: string, venueId: string, artistId: string, managerId: string) => void;
+  setDraft: (slotId: string, venueId: string, artistId: string, managerId: string, price?: number) => void;
   // Remove a specific DJ's draft from a slot
   removeDraftByDJ: (slotId: string, artistId: string) => void;
   // Remove ALL drafts for a slot (legacy, used when deleting a slot)
@@ -597,15 +597,23 @@ export const useDraftStore = create<DraftAssignmentState>()(
   persist(
     (set, get) => ({
   drafts: [],
-  setDraft: (slotId, venueId, artistId, managerId) => set((state) => {
-    // If this DJ is already drafted for this slot, do nothing (no duplicates)
-    const alreadyExists = state.drafts.find((d) => d.slotId === slotId && d.artistId === artistId);
-    if (alreadyExists) return state;
+  setDraft: (slotId, venueId, artistId, managerId, price) => set((state) => {
     const now = new Date().toISOString();
+    // Already drafted for this slot → keep the draft but update its price (the manager may have
+    // adjusted what this artist is paid). Never create a duplicate.
+    const existing = state.drafts.find((d) => d.slotId === slotId && d.artistId === artistId);
+    if (existing) {
+      if (existing.price === price) return state;
+      return {
+        drafts: state.drafts.map((d) =>
+          d.slotId === slotId && d.artistId === artistId ? { ...d, price, updatedAt: now } : d
+        ),
+      };
+    }
     return {
       drafts: [
         ...state.drafts,
-        { id: 'draft-' + Date.now() + '-' + artistId, slotId, venueId, artistId, managerId, createdAt: now, updatedAt: now },
+        { id: 'draft-' + Date.now() + '-' + artistId, slotId, venueId, artistId, managerId, price, createdAt: now, updatedAt: now },
       ],
     };
   }),
@@ -637,6 +645,7 @@ export const useDraftStore = create<DraftAssignmentState>()(
         venueId: draft.venueId,
         artistId: draft.artistId,
         managerId: draft.managerId,
+        price: draft.price,
         status: 'requested',
         isCompleted: false,
         createdAt: new Date().toISOString(),
@@ -662,6 +671,7 @@ export const useDraftStore = create<DraftAssignmentState>()(
         venueId: draft.venueId,
         artistId: draft.artistId,
         managerId: draft.managerId,
+        price: draft.price,
         status: 'requested',
         isCompleted: false,
         createdAt: new Date().toISOString(),
@@ -684,6 +694,7 @@ export const useDraftStore = create<DraftAssignmentState>()(
       venueId: draft.venueId,
       artistId: draft.artistId,
       managerId: draft.managerId,
+      price: draft.price,
       status: 'requested',
       isCompleted: false,
       createdAt: new Date().toISOString(),

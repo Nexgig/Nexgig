@@ -256,6 +256,10 @@ export interface VenueScheduleSet {
   day: number;         // Monday-first: 0=Mon … 6=Sun
   startTime: string;   // HH:MM
   endTime: string;     // HH:MM
+  /** Default gig price (AED) the manager set for this recurring set. Seeds each generated slot's
+   *  defaultPrice, which in turn pre-fills the per-artist price at assignment. Rides the
+   *  venues.schedule JSON — no DB column. */
+  defaultPrice?: number;
 }
 
 export type VenueSchedule = VenueScheduleSet[];
@@ -273,6 +277,9 @@ export interface Slot {
    *  Distinguishes recurring nights from manual one-offs so a programme edit only ever
    *  touches its own EMPTY future slots — never a manually-added slot or a booked night. */
   scheduleGenerated?: boolean;
+  /** Default gig price (AED) for this slot — inherited from the schedule set, or typed on a
+   *  manual slot. Pre-fills the per-artist price when a manager assigns an artist. `slots.default_price`. */
+  defaultPrice?: number;
   createdAt: string;
 }
 
@@ -303,6 +310,9 @@ export interface Booking {
   slotName?: string;
   slotStartTime?: string; // HH:MM
   slotEndTime?: string;   // HH:MM
+  /** Agreed gig price (AED) for THIS artist, snapshot onto the booking at send time (like
+   *  slotDate/venueName). Frozen once sent — a later slot edit never moves it. `bookings.price`. */
+  price?: number;
   venueName?: string;
   /** Snapshot of the venue's type. The venue row can become unreadable (artist
    *  disconnected, venue soft-deleted), and the venue IMAGE is derived from the type
@@ -383,6 +393,8 @@ export interface DraftAssignment {
   venueId: string;
   artistId: string;
   managerId: string;
+  /** Agreed price (AED) for this artist, carried from staging so it survives Save-as-Draft. */
+  price?: number;
   createdAt: string;
   updatedAt: string;
 }
