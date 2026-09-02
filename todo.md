@@ -50,90 +50,75 @@ is config + store admin, not a rewrite.
   verify with a real test push on an Android device. If it's only used for Play submissions, assign
   the SAME key to FCM (no new key needed).
 
-### FEATURES TO BUILD (remaining backlog — polish; ship as OTA once 1.1 is live)
-- **Venues can have their own uploaded profile picture.** (Added 28 Aug 2026.) Today venue images
-  are the bundled type-based art (`lib/venue-images.ts` / `venueImageFor`); let a manager upload a
-  real photo per venue. Same constraint as the artist photo upload — an image picker is a NATIVE
-  module, so this needs a native rebuild + resubmission (NOT an OTA), and flips Data Safety to
-  "Photos collected." Bundle it with the artist profile-picture build.
-- **Rename the "Send N" button → "Send Request(s)" in assign-artist + add-slot.** (Added 28 Aug
-  2026.) The staged-send button reads "Send 1" / "Send 2"; change to "Send Request(s)" (pluralize
-  by count if easy). Small copy fix, ships OTA. Files: `app/(manager)/assign-artist.tsx`,
-  `app/(manager)/add-slot.tsx`.
-- **Role-switch white "flash" — ACCEPTED AS-IS (Tuts is fine with the original).** (27 Aug 2026.)
-  Tried recoloring the "Switching…" overlay coral (OTA, `components/updating-overlay.tsx`); Tuts
-  preferred the original near-white and had it reverted. If ever revisited: the only real fix is
-  **NATIVE** — set the app's native window background to coral `#E2674A` (needs `eas build` +
-  resubmission), because during the `reloadAsync` restart **NO JS runs**, so no OTA can paint that
-  instant. **DON'T repeat the 3 OTA attempts that already failed**: (1) painting the font-loading
-  gate, (2) `SystemUI.setBackgroundColorAsync`, (3) root Stack `contentStyle`. Do NOT revert to
-  cross-group navigation — that's the native crash `e51e94e`. LOW priority (<0.3s, dual-role only).
-- **Fix the artist invoice button location.** (Added 24 Aug 2026.) Details TBD with Tuts —
-  which invoice button / screen, and where it should sit. Likely a small UI/OTA fix.
-- **Show today's date on the dashboard, in coral (`#E2674A`), on BOTH artist + manager.**
-  (Added 24 Aug 2026.) Small UI/OTA change to both `app/(artist)/(tabs)/dashboard.tsx` and
-  `app/(manager)/(tabs)/dashboard.tsx`.
-- **Show an artist's gig history somewhere.** (Added 24 Aug 2026.) A place to display an
-  artist's past/completed gigs — decide the surface with Tuts (their own profile, the
-  manager's artist-profile-view, or both). Note: the app already has a show/hide-gig-history
-  privacy notion (see privacy policy) — respect that when displaying.
-- **Artist can upload their own profile picture.** (Added 27 Aug 2026.) Today it's avatar-only —
-  "no photo upload anywhere" (`edit-profile.tsx`). Add a real photo upload for the artist profile
-  (image picker → Supabase `avatars` storage → `profile_photo_url`; `AvatarImage` already prefers a
-  `uri` when present). ⚠️ **NOT an OTA** — an image picker (`expo-image-picker`) is a native module,
-  so this needs a NATIVE rebuild + new store submission. Also flips the App Store / Play **Data
-  Safety** declaration to "Photos collected," and the privacy policy currently states no photo
-  upload — update both.
-- **Manager can add a one-time (off-app) DJ to a slot.** (Added 27 Aug 2026.) Let a manager create
-  a slot and assign a GUEST artist who isn't a Nexgig user — just enter a name (no linked account /
-  `artist_id`). Decide how it renders (a "guest" booking: name only, no profile, no notifications /
-  invoices to a non-user).
-- **Manager's monthly COST in the lineup/roster balance.** (Added 27 Aug 2026.) The lineup balance
-  shows slots-per-artist; add a field where the manager sets the **price they'll pay each artist**,
-  so it also shows **total monthly cost** (slots × price, or summed), not just slot counts. Related
-  to the artist "min rate" backlog item, but this is the MANAGER-set pay side (what he pays), not
-  the artist's asking rate.
-- **Record each user's app version in Supabase (diagnostics/ops, not user-facing).** Today
-  nothing stores it — `Updates.updateId` is only rendered in the two settings footers, so the
-  only way to learn someone's version is to ask them to read it out. That cost real time
-  chasing a tester who was silently on build 14 (21 Jul).
-  Write these to the `users` row on launch / sign-in:
-  - `app_update_id` — the OTA bundle running (`Updates.updateId`)
-  - `app_build` — native build number (this is what distinguishes **build 14 vs 17**)
-  - `is_embedded_launch` — `Updates.isEmbeddedLaunch`; true = never applied an OTA, still on
-    the bundle baked into the binary. This one flag answers "why is this user seeing old
-    behaviour?" instantly.
-  - `last_seen_at` — so you know how stale the reading is
-  Then a one-line query shows everyone not on the current bundle. Needs a small migration
-  (columns on `users`) + a few lines on launch; ships over the air.
-- **Let the manager edit a set's timing after it's created.** The edit flow already EXISTS but
-  is unreachable: `openEditSlot` (`app/(manager)/(tabs)/calendar.tsx:859`) is never called —
-  no menu/button points at it. So step one is just an entry point (set card menu, or from
-  booking-detail). Then three real gaps to close before it's safe:
-  1. **Bookings keep stale times — sync the snapshot on edit, freeze it at completion.** The
-     save handler (~line 878) updates the `slots` row and slot store only. Bookings carry
-     their OWN snapshot (`slot_start_time` / `slot_end_time`), which is what the ARTIST reads
-     (their app doesn't hold the manager's slots — that's why the snapshot exists) and what
-     drives completion (`isPastEnd`) and invoices.
-     **Rule:** on set edit, update the snapshot on all NON-completed bookings of that slot, so
-     the artist sees the new time. Leave COMPLETED bookings untouched — their times stay
-     frozen as history. Same shape as the venue-name freeze already shipped
-     (`bookingVenueName`): live while active, frozen once completed.
-  2. **Notify the booked artists** that the time changed — they've already accepted a gig at
-     the old time.
-  3. ~~Re-check conflicts~~ — decided NOT needed here (Tuts, 21 Jul). A moved set won't
-     re-run the overlap check; accepted as-is.
-- **Bring back the artist rate field on signup + edit profile.** The data plumbing still
-  exists — `minRate` in the artist profile store and `min_rate` in Supabase (hydrateRole
-  already reads it) — but there's no visible input in `app/(auth)/artist-setup.tsx` or
-  `app/(artist)/edit-profile.tsx` (only stale comments referencing "rate"). Re-add the input
-  on both screens, wired to `minRate` / `min_rate` (check git history for the old block).
-  - **OPTIONAL** (not required at signup), currency **AED**, label e.g. "Min. Rate (AED)".
-  - Add a helper note under the field: **"Only visible to managers you're connected to."**
-    For that to be TRUE, the rate must be gated on the manager side: right now
-    `app/(manager)/artist-profile-view.tsx` READS `min_rate` (line 156) but doesn't display it.
-    Show it only when `isConnected` (mirror the email/phone gate in the Account section), so a
-    non-connected manager never sees the rate.
+### FEATURES TO BUILD (remaining backlog — grouped by audience)
+Most ship as **OTA**; items marked ⚠️ **NATIVE** need an `eas build` + store submission — bundle
+those into ONE build.
+
+#### 👤 For artists
+- **Press kit — artists add photos to share with managers, IN and OUT of the app.** (Added 29 Aug
+  2026.) A set of press-kit photos on the artist profile; shareable inside the app to managers AND
+  via a link / share-sheet to people who DON'T have the app. ⚠️ NATIVE (image picker) + storage +
+  a public share link (a small web page or the OS share sheet). Bundle the upload part with the
+  other native photo work.
+- **Artist can upload their own profile picture.** (27 Aug 2026.) ⚠️ NATIVE. Today avatar-only
+  ("no photo upload" in `edit-profile.tsx`); add real upload (image picker → Supabase `avatars`
+  storage → `profile_photo_url`; `AvatarImage` already prefers a `uri`). Flips Data Safety to
+  "Photos collected"; privacy policy currently says no photo upload — update both.
+- **Let the artist manually mark a gig as invoiced.** (Added 29 Aug 2026.) Artists sometimes
+  invoice a gig OUTSIDE the app; give them a manual "mark as invoiced" toggle so the gig shows as
+  invoiced without sending an in-app invoice. OTA. (Reuse the same invoiced state the dashboard /
+  invoices tab already reads, so the manual flag looks identical.)
+- **Fix the artist invoice button location.** (24 Aug 2026.) Details TBD — which button/screen and
+  where it should sit. Small UI/OTA fix.
+- **Show an artist's gig history somewhere.** (24 Aug 2026.) A place to display past/completed
+  gigs — surface TBD (own profile, the manager's artist-profile-view, or both). Respect the
+  existing show/hide-gig-history privacy notion.
+- **Bring back the artist "min rate" field** on signup + edit profile. (24 Aug 2026.) Plumbing
+  exists (`minRate` store, `min_rate` in Supabase, hydrateRole reads it) but no input in
+  `artist-setup.tsx` / `edit-profile.tsx`. OPTIONAL, AED, label "Min. Rate (AED)". Gate on the
+  manager side: `(manager)/artist-profile-view.tsx` reads `min_rate` (line 156) — show ONLY when
+  `isConnected`, so a non-connected manager never sees it. OTA.
+
+#### 🏢 For managers
+- **Availability-first booking flow.** (Added 29 Aug 2026.) Manager creates a slot → sends an
+  AVAILABILITY request to several artists ("are you free for this?") → after they reply, the
+  manager sends the actual BOOKING to the one they pick. A new two-step flow (availability → then
+  confirmed booking), distinct from today's direct booking request. Bigger feature.
+- **Make "you can add MULTIPLE artists to a slot" obvious.** (Added 29 Aug 2026.) Managers don't
+  realize a slot can hold more than one artist — the assign/add-slot UI doesn't signal it. Add a
+  hint/affordance so multi-artist is clear. OTA. Files: `(manager)/assign-artist.tsx`, `add-slot.tsx`.
+- **Manager can add a one-time (off-app) DJ to a slot.** (27 Aug 2026.) A GUEST artist not on
+  Nexgig — enter a name (no `artist_id`). Renders as a name-only "guest" booking (no profile /
+  notifications / invoices). OTA.
+- **Manager's monthly COST in the lineup/roster balance.** (27 Aug 2026.) The balance shows
+  slots-per-artist; add a manager-set pay-price per artist → show TOTAL monthly cost, not just slot
+  counts. (Manager-pays side; distinct from the artist's asking "min rate".) OTA.
+- **Let managers edit a set's timing after it's created.** `openEditSlot`
+  (`(manager)/(tabs)/calendar.tsx:859`) exists but nothing calls it — add an entry point (set-card
+  menu, or from booking-detail). Then: (1) on edit, sync the `slot_start_time`/`slot_end_time`
+  **snapshot** on all NON-completed bookings of that slot (the artist reads that snapshot; it drives
+  completion + invoices), leave COMPLETED ones frozen (same shape as `bookingVenueName`); (2)
+  **notify** the booked artists of the change. Conflict re-check NOT needed (Tuts, 21 Jul). OTA.
+- **Rename "Send N" → "Send Request(s)"** in assign-artist + add-slot. (28 Aug 2026.) Button reads
+  "Send 1"/"Send 2"; change to "Send Request(s)" (pluralize by count). Small copy fix. OTA.
+- **Venues can have their own uploaded profile picture.** (28 Aug 2026.) ⚠️ NATIVE. Today venue
+  images are the bundled type art (`lib/venue-images.ts` / `venueImageFor`); let a manager upload a
+  real photo per venue. Bundle with the other native photo work; flips Data Safety to "Photos
+  collected."
+
+#### 🌐 General / both sides
+- **Show today's date on the dashboard, in coral (`#E2674A`), on BOTH artist + manager.** (24 Aug
+  2026.) Small OTA — `(artist)/(tabs)/dashboard.tsx`, `(manager)/(tabs)/dashboard.tsx`.
+- **Record each user's app version in Supabase** (diagnostics/ops, not user-facing). Nothing stores
+  it today (`Updates.updateId` only shows in the settings footers). Write to the `users` row on
+  launch/sign-in: `app_update_id` (`Updates.updateId`), `app_build` (native build #),
+  `is_embedded_launch` (`Updates.isEmbeddedLaunch`; true = never took an OTA), `last_seen_at`. Then
+  one query shows who's on a stale bundle. Small migration + a few lines. OTA.
+- **Role-switch white "flash" — ACCEPTED AS-IS** (Tuts fine with the original). (27 Aug 2026.)
+  Coral overlay was tried + reverted. If ever revisited: NATIVE-only (set native window bg coral
+  `#E2674A`) — during the `reloadAsync` restart NO JS runs. **DON'T repeat the 3 failed OTA
+  attempts** (font-gate paint, `SystemUI.setBackgroundColorAsync`, root Stack `contentStyle`), and
+  don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
 ### Parked — post-launch (not now)
 - **Booking lifecycle:** auto gig-feedback prompt + completion push notification.
