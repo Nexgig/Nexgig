@@ -92,9 +92,6 @@ those into ONE build.
   AVAILABILITY request to several artists ("are you free for this?") → after they reply, the
   manager sends the actual BOOKING to the one they pick. A new two-step flow (availability → then
   confirmed booking), distinct from today's direct booking request. Bigger feature.
-- **Make "you can add MULTIPLE artists to a slot" obvious.** (Added 29 Aug 2026.) Managers don't
-  realize a slot can hold more than one artist — the assign/add-slot UI doesn't signal it. Add a
-  hint/affordance so multi-artist is clear. OTA. Files: `(manager)/assign-artist.tsx`, `add-slot.tsx`.
 - **Manager can add a one-time (off-app) DJ to a slot.** (27 Aug 2026.) A GUEST artist not on
   Nexgig — enter a name (no `artist_id`). Renders as a name-only "guest" booking (no profile /
   notifications / invoices). OTA.
@@ -107,8 +104,6 @@ those into ONE build.
   **snapshot** on all NON-completed bookings of that slot (the artist reads that snapshot; it drives
   completion + invoices), leave COMPLETED ones frozen (same shape as `bookingVenueName`); (2)
   **notify** the booked artists of the change. Conflict re-check NOT needed (Tuts, 21 Jul). OTA.
-- **Rename "Send N" → "Send Request(s)"** in assign-artist + add-slot. (28 Aug 2026.) Button reads
-  "Send 1"/"Send 2"; change to "Send Request(s)" (pluralize by count). Small copy fix. OTA.
 - **Venues can have their own uploaded profile picture.** (28 Aug 2026.) ⚠️ NATIVE. Today venue
   images are the bundled type art (`lib/venue-images.ts` / `venueImageFor`); let a manager upload a
   real photo per venue. Bundle with the other native photo work; flips Data Safety to "Photos

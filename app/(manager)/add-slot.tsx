@@ -636,6 +636,14 @@ export default function AddSlotScreen() {
             <View style={styles.listHeaderRow}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>ASSIGN GIG TO</Text>
             </View>
+            {assignRows.length > 0 && (
+              <View style={[styles.multiHint, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '55' }]}>
+                <MaterialIcons name="groups" size={15} color={colors.primary} />
+                <Text style={[styles.multiHintText, { color: colors.primary }]}>
+                  Booking more than one artist? Tap each one — a slot can hold several.
+                </Text>
+              </View>
+            )}
             {assignRows.length === 0 ? (
               <Text style={[styles.emptyText, { color: colors.muted }]}>No artists in this venue's roster yet.</Text>
             ) : (
@@ -673,7 +681,7 @@ export default function AddSlotScreen() {
               style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
               onPress={confirmSendAll}
             >
-              <Text style={styles.sendBtnText}>Send {stagedIds.size}</Text>
+              <Text style={styles.sendBtnText}>Send Request{stagedIds.size > 1 ? 's' : ''}</Text>
             </Pressable>
           </View>
         </View>
@@ -687,6 +695,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 4, paddingBottom: 12 },
   sheetTitle: { fontSize: 20, fontFamily: fonts.bodyBold, letterSpacing: -0.4, marginBottom: 1 },
   sheetSubtitle: { fontSize: 13, marginTop: 2 },
+  multiHint: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 11, marginBottom: 10 },
+  multiHintText: { flex: 1, fontSize: 12, lineHeight: 17 },
   doneBtn: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },

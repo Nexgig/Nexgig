@@ -612,11 +612,18 @@ export default function AssignDJScreen() {
         </Pressable>
       </View>
 
-      {isPastSlot && (
+      {isPastSlot ? (
         <View style={[styles.infoNote, { backgroundColor: colors.warning + '15', borderColor: colors.warning }]}>
           <MaterialIcons name="history" size={14} color={colors.warning} />
           <Text style={[styles.infoNoteText, { color: colors.warning }]}>
             This slot is in the past. Tapping an artist sends them a completed gig request — they must confirm or decline it.
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.infoNote, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '55' }]}>
+          <MaterialIcons name="groups" size={15} color={colors.primary} />
+          <Text style={[styles.infoNoteText, { color: colors.primary }]}>
+            Booking more than one artist? Tap each one — a slot can hold several.
           </Text>
         </View>
       )}
@@ -657,7 +664,7 @@ export default function AssignDJScreen() {
               style={({ pressed }) => [styles.sendBtn, { flex: 1, backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
               onPress={confirmSendAll}
             >
-              <Text style={styles.sendBtnText}>Send {stagedIds.size}</Text>
+              <Text style={styles.sendBtnText}>Send Request{stagedIds.size > 1 ? 's' : ''}</Text>
             </Pressable>
           </View>
         </View>
