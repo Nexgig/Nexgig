@@ -597,8 +597,9 @@ export default function CalendarScreen() {
       periodEnd = monthPeriodBounds.end;
     }
 
-    // Count gigs per artist in the period — respects lineupStatuses filter
+    // Count gigs (and sum the fee) per artist in the period — respects lineupStatuses filter
     const gigCounts: Record<string, number> = {};
+    const gigCosts: Record<string, number> = {};
 
     // 1. Drafts (only if 'draft' is in the active filter)
     if (lineupStatuses.includes('draft')) {
@@ -608,6 +609,7 @@ export default function CalendarScreen() {
           const date = slotDateMap[d.slotId];
           if (date && date >= periodStart && date <= periodEnd) {
             gigCounts[d.artistId] = (gigCounts[d.artistId] ?? 0) + 1;
+            gigCosts[d.artistId] = (gigCosts[d.artistId] ?? 0) + (d.price ?? 0);
           }
         });
     }
@@ -626,6 +628,7 @@ export default function CalendarScreen() {
           const date = slotDateMap[b.slotId];
           if (date && date >= periodStart && date <= periodEnd) {
             gigCounts[b.artistId] = (gigCounts[b.artistId] ?? 0) + 1;
+            gigCosts[b.artistId] = (gigCosts[b.artistId] ?? 0) + (b.price ?? 0);
           }
         });
     }
@@ -634,9 +637,9 @@ export default function CalendarScreen() {
       .map((entry) => {
         const user = getArtistUser(entry.artistId);
         if (!user) return null;
-        return { artistId: entry.artistId, user, gigCount: gigCounts[entry.artistId] ?? 0 };
+        return { artistId: entry.artistId, user, gigCount: gigCounts[entry.artistId] ?? 0, cost: gigCosts[entry.artistId] ?? 0 };
       })
-      .filter((row): row is { artistId: string; user: NonNullable<ReturnType<typeof getArtistUser>>; gigCount: number } => row !== null && row.gigCount > 0)
+      .filter((row): row is { artistId: string; user: NonNullable<ReturnType<typeof getArtistUser>>; gigCount: number; cost: number } => row !== null && row.gigCount > 0)
       .sort((a, b) => b.gigCount - a.gigCount || a.user.fullName.localeCompare(b.user.fullName));
   }, [currentUser, allDrafts, allBookings, allSlots, calendarMode, weekDays, monthPeriodBounds, getGlobalLineupByManager, getArtistUser, lineupStatuses, todayDateStr, viewedDayStr]);
 
@@ -1500,6 +1503,7 @@ export default function CalendarScreen() {
     const isMonthView = calendarMode === 'month' || calendarMode === 'today';
     if (lineupRows.length === 0 && !isMonthView) return null;
     const maxCount = Math.max(...lineupRows.map((r) => r.gigCount), 1);
+    const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
     return (
       <View style={[styles.lineupPanel, { borderColor: colors.border }]}>
         {/* Panel header — tap to collapse/expand */}
@@ -1514,11 +1518,16 @@ export default function CalendarScreen() {
               <Text style={[styles.lineupTitle, { color: colors.muted, fontWeight: '500' }]}>({lineupPeriodLabel})</Text>
             </Text>
           </View>
-          <MaterialIcons
-            name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-            size={20}
-            color={colors.muted}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {totalCost > 0 && (
+              <Text style={[styles.lineupTotal, { color: colors.primary }]}>AED {totalCost.toLocaleString()}</Text>
+            )}
+            <MaterialIcons
+              name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+              size={20}
+              color={colors.muted}
+            />
+          </View>
         </Pressable>
 
         {/* Panel body */}
@@ -1538,7 +1547,7 @@ export default function CalendarScreen() {
                     <View style={styles.lineupRowTop}>
                       <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
                       <Text style={[styles.lineupCount, { color: row.gigCount > 0 ? colors.primary : colors.muted }]}>
-                        {row.gigCount} booking{row.gigCount !== 1 ? 's' : ''}
+                        {row.cost > 0 ? `AED ${row.cost.toLocaleString()} · ` : ''}{row.gigCount} booking{row.gigCount !== 1 ? 's' : ''}
                       </Text>
                     </View>
                     {/* Mini progress bar */}
@@ -2129,6 +2138,7 @@ const styles = StyleSheet.create({
   lineupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   lineupHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lineupTitle: { fontSize: 14, fontWeight: '700' },
+  lineupTotal: { fontSize: 13, fontWeight: '800' },
   lineupBody: { paddingHorizontal: 16, paddingBottom: 14, gap: 10 },
   lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineupRowInfo: { flex: 1, gap: 4 },
