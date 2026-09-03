@@ -1782,6 +1782,10 @@ export default function CalendarScreen() {
                               {item.venue?.name ?? 'Unknown Venue'} · {fmtTime(item.slot.startTime)}–{fmtTime(item.slot.endTime)}
                             </Text>
                           </View>
+                          {/* Gig fee on the right */}
+                          {item.draft.price != null && (
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.primary }}>AED {item.draft.price.toLocaleString()}</Text>
+                          )}
                         </Pressable>
                       );
                     })}
