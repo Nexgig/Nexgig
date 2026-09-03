@@ -7,13 +7,13 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, mapVenueRow } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, useInvoiceStore, mapVenueRow } from '@/lib/store';
 import { PendingInvites } from '@/components/pending-invites';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
 import { venueImage } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
-import { genreLabel, firstName } from '@/lib/utils';
+import { firstName } from '@/lib/utils';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { SectionSeparator } from '@/components/ui/month-separator';
 import { ALLOW_DUAL_ROLE } from '@/lib/features';
@@ -94,6 +94,17 @@ export default function NetworkScreen() {
   const rosterMonthCost = useMemo(() =>
     bookings.filter((b) => isCommittedThisMonth(b)).reduce((sum, b) => sum + (b.price ?? 0), 0),
     [bookings, isCommittedThisMonth]);
+
+  // How many of an artist's completed gigs (with this manager) no non-cancelled invoice covers yet.
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const invoicedBookingIds = useMemo(() =>
+    new Set(allInvoices.filter((inv) => inv.status !== 'cancelled').flatMap((inv) => inv.gigs.map((g) => g.bookingId))),
+    [allInvoices]);
+  const uninvoicedCount = useCallback((artistId: string) =>
+    bookings.filter((b) =>
+      b.artistId === artistId && b.managerId === currentUser?.id &&
+      (b.isCompleted || b.status === 'completed') && !invoicedBookingIds.has(b.id)
+    ).length, [bookings, currentUser?.id, invoicedBookingIds]);
 
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -542,6 +553,7 @@ export default function NetworkScreen() {
             const profile = getProfile(user.id);
             const count = gigCount(user.id);
             const cost = gigCost(user.id);
+            const uninv = uninvoicedCount(user.id);
             return (
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { opacity: pressed ? 0.7 : 1 }]}
@@ -556,14 +568,13 @@ export default function NetworkScreen() {
                         <MaterialIcons name="verified" size={15} color={colors.primary} />
                       )}
                     </View>
-                    <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-                      {genreLabel(profile?.primaryGenre, profile?.instruments)}
+                    <Text style={[styles.cardSub, { color: uninv > 0 ? colors.warning : colors.muted }]} numberOfLines={1}>
+                      {uninv > 0 ? `${uninv} gig${uninv === 1 ? '' : 's'} not invoiced` : 'Up to date'}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.gigWrap}>
-                  <Text style={[styles.gigNum, { color: colors.foreground }]}>{count}</Text>
-                  <Text style={[styles.gigLabel, { color: colors.muted }]}>{count === 1 ? 'gig' : 'gigs'}</Text>
+                  <Text style={[styles.gigCountLine, { color: colors.foreground }]}>{count} gig{count === 1 ? '' : 's'}</Text>
                   {cost > 0 && <Text style={[styles.gigCost, { color: colors.primary }]}>AED {cost.toLocaleString()}</Text>}
                 </View>
               </Pressable>
@@ -605,6 +616,7 @@ const styles = StyleSheet.create({
   gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
   gigNum: { fontSize: 18, fontWeight: '800' },
   gigLabel: { fontSize: 12, marginTop: -1 },
+  gigCountLine: { fontSize: 15, fontWeight: '800' },
   gigCost: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   inviteFooter: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 4 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
