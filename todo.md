@@ -79,6 +79,11 @@ those into ONE build.
   `isConnected`, so a non-connected manager never sees it. OTA.
 
 #### 🏢 For managers
+- **Roster Balance — inline status filter.** (Added 2 Sep 2026.) The under-calendar Roster Balance
+  panel filters by booking status (draft / requested / confirmed / completed); today that toggle only
+  lives in Settings (`STORAGE_KEY_LINEUP_STATUSES` → `lineupStatuses`, `(manager)/(tabs)/calendar.tsx`,
+  panel = `renderLineupBalance`). Add the filter ON the panel itself (status chips/segmented control in
+  the panel header) so the manager filters in place without opening Settings. OTA.
 - **Availability-first booking flow.** (Added 29 Aug 2026.) Manager creates a slot → sends an
   AVAILABILITY request to several artists ("are you free for this?") → after they reply, the
   manager sends the actual BOOKING to the one they pick. A new two-step flow (availability → then
