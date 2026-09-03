@@ -340,6 +340,7 @@ export type NotificationType =
   | 'booking_cancelled_by_artist' // artist cancels -> manager
   | 'booking_request_cancelled'
   | 'past_confirmation_request'
+  | 'booking_fee_updated'
   | 'lineup_invite'
   | 'lineup_request'
   | 'lineup_accepted'

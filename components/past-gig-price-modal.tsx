@@ -13,6 +13,8 @@ export function PastGigPriceModal({
   artistName,
   subtitle,
   defaultPrice,
+  title = 'Confirm past gig',
+  confirmLabel = 'Send request',
   onCancel,
   onConfirm,
 }: {
@@ -20,6 +22,8 @@ export function PastGigPriceModal({
   artistName: string;
   subtitle: string;
   defaultPrice?: number;
+  title?: string;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (price: number | undefined) => void;
 }) {
@@ -34,7 +38,7 @@ export function PastGigPriceModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Confirm past gig</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
           <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={2}>{artistName} · {subtitle}</Text>
 
           <Text style={[styles.label, { color: colors.muted }]}>WHAT YOU PAID (AED)</Text>
@@ -60,7 +64,7 @@ export function PastGigPriceModal({
               onPress={() => onConfirm(price === '' ? undefined : parseInt(price, 10))}
               style={({ pressed }) => [styles.btnPrimary, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
             >
-              <Text style={styles.btnPrimaryText}>Send request</Text>
+              <Text style={styles.btnPrimaryText}>{confirmLabel}</Text>
             </Pressable>
           </View>
         </View>

@@ -44,6 +44,7 @@ export async function syncBookingStatus(
   if (extra.slotStartTime !== undefined) updates.slot_start_time = extra.slotStartTime;
   if (extra.slotEndTime !== undefined) updates.slot_end_time = extra.slotEndTime;
   if (extra.venueName !== undefined) updates.venue_name = extra.venueName;
+  if (extra.price !== undefined) updates.price = extra.price;
 
   // `.select('id')` returns the affected rows so we can tell a genuine success from a
   // silent 0-row write (e.g. blocked by RLS, or the row doesn't exist) — the exact

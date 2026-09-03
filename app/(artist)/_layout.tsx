@@ -283,6 +283,7 @@ export default function DJLayout() {
               n.type === 'booking_request_cancelled' ||
               n.type === 'booking_confirmed' ||
               n.type === 'booking_request' ||
+              n.type === 'booking_fee_updated' ||
               n.type === 'past_confirmation_request') &&
             n.related_id && n.related_type === 'booking'
           ) {
@@ -302,6 +303,7 @@ export default function DJLayout() {
                     confirmedAt: b.confirmed_at ?? undefined,
                     cancelledAt: b.cancelled_at ?? undefined,
                     isCompleted: b.is_completed ?? false,
+                    price: b.price ?? undefined,
                   });
                 } else {
                   bookingStore.addBooking({

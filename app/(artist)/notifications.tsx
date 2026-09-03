@@ -138,7 +138,8 @@ export default function ArtistNotificationsScreen() {
         notif.type === 'booking_request' ||
         notif.type === 'booking_cancelled' ||
         notif.type === 'booking_request_cancelled' ||
-        notif.type === 'past_confirmation_request'
+        notif.type === 'past_confirmation_request' ||
+        notif.type === 'booking_fee_updated'
       )
     ) {
       router.push(('/(artist)/booking-detail?id=' + notif.relatedId + '&from=notifications') as Href);

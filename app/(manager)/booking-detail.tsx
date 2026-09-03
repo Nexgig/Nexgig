@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -6,7 +6,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
-import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore, useDraftStore, useNotificationStore } from '@/lib/store';
+import { useBookingStore, useSlotStore, useVenueStore, useAuthStore, useReviewStore, useLineupStore, useDraftStore, useNotificationStore, useInvoiceStore } from '@/lib/store';
+import { PastGigPriceModal } from '@/components/past-gig-price-modal';
 import type { Href } from 'expo-router';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
@@ -89,6 +90,13 @@ export default function DJBookingDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const allDrafts = useDraftStore((s) => s.drafts);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const [feeModalOpen, setFeeModalOpen] = useState(false);
+  // Invoiced gigs are settled — the invoice locked that number, so editing the booking price
+  // would let the two disagree. Block the edit once any non-cancelled invoice covers this gig.
+  const isInvoiced = useMemo(() =>
+    !!booking && allInvoices.some((inv) => inv.status !== 'cancelled' && inv.gigs.some((g) => g.bookingId === booking.id)),
+    [allInvoices, booking]);
 
   // Dashed "+ Add Artist" row — opens the picker (assign-artist) for this slot.
   const AddArtistRow = ({ slotId }: { slotId: string }) => (
@@ -343,7 +351,26 @@ export default function DJBookingDetailScreen() {
     );
   };
 
-
+  // Save an edited fee: write it to the booking (local + Supabase) and notify the artist, since
+  // it changes a deal they may have already accepted. Blocked while invoiced (see isInvoiced).
+  const saveFee = (price: number | undefined) => {
+    setFeeModalOpen(false);
+    if (!booking || price == null) return;
+    updateBookingStatus(booking.id, booking.status, { price });
+    const vName = bookingVenueName(booking, venue?.name);
+    const dateStr = booking.slotDate ? formatDate(booking.slotDate) : (slot ? formatDate(slot.date) : '');
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: booking.artistId,
+      type: 'booking_fee_updated',
+      title: 'Fee updated',
+      body: `${firstName(currentUser?.fullName, 'Your manager')} set your fee for ${vName}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}`,
+      isRead: false,
+      relatedId: booking.id,
+      relatedType: 'booking',
+      createdAt: new Date().toISOString(),
+    });
+  };
 
   return (
     <ScreenContainer>
@@ -429,6 +456,24 @@ export default function DJBookingDetailScreen() {
           {/* Details — document-style label/value table. Replaces the icon-tile rows:
               the coral tiles added colour but said nothing the label didn't. */}
           <Section label="Details">
+            <DetailRow
+              label="FEE"
+              value={booking.price != null ? `AED ${booking.price.toLocaleString()}` : undefined}
+              trailing={
+                isInvoiced ? (
+                  <Text style={[styles.feeInvoiced, { color: colors.muted }]}>Invoiced</Text>
+                ) : (
+                  <Pressable
+                    onPress={() => setFeeModalOpen(true)}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.feeEditBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <MaterialIcons name="edit" size={13} color={colors.primary} />
+                    <Text style={[styles.feeEditText, { color: colors.primary }]}>{booking.price != null ? 'Edit' : 'Set fee'}</Text>
+                  </Pressable>
+                )
+              }
+            />
             <DetailRow label="DATE" value={slot ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : undefined)} />
             <DetailRow
               label="TIME"
@@ -554,6 +599,17 @@ export default function DJBookingDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <PastGigPriceModal
+        visible={feeModalOpen}
+        title="Edit fee"
+        confirmLabel="Save"
+        artistName={getArtistUser(booking.artistId)?.fullName ?? 'this artist'}
+        subtitle={`${bookingVenueName(booking, venue?.name)} · ${slot ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : '')}`}
+        defaultPrice={booking.price}
+        onCancel={() => setFeeModalOpen(false)}
+        onConfirm={saveFee}
+      />
     </ScreenContainer>
   );
 }
@@ -575,6 +631,9 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   mapsBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
   mapsBadgeText: { fontSize: 13, fontWeight: '700' },
+  feeEditBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  feeEditText: { fontSize: 12, fontWeight: '700' },
+  feeInvoiced: { fontSize: 12, fontWeight: '600' },
   reviewTitle: { fontSize: 16, fontWeight: '700' },
   starsRow: { flexDirection: 'row', gap: 6 },
   actions: { gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
