@@ -356,20 +356,34 @@ export default function DJBookingDetailScreen() {
   const saveFee = (price: number | undefined) => {
     setFeeModalOpen(false);
     if (!booking || price == null) return;
-    updateBookingStatus(booking.id, booking.status, { price });
     const vName = bookingVenueName(booking, venue?.name);
     const dateStr = booking.slotDate ? formatDate(booking.slotDate) : (slot ? formatDate(slot.date) : '');
-    addNotification({
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      userId: booking.artistId,
-      type: 'booking_fee_updated',
-      title: 'Fee updated',
-      body: `${firstName(currentUser?.fullName, 'Your manager')} set your fee for ${vName}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}`,
-      isRead: false,
-      relatedId: booking.id,
-      relatedType: 'booking',
-      createdAt: new Date().toISOString(),
-    });
+    const artistName = getArtistUser(booking.artistId)?.fullName ?? 'the artist';
+    // Confirm first — saving changes an agreed fee AND notifies the artist.
+    Alert.alert(
+      'Update fee',
+      `Set ${artistName}'s fee for ${vName}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}? They'll be notified of the change.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update & notify',
+          onPress: () => {
+            updateBookingStatus(booking.id, booking.status, { price });
+            addNotification({
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: booking.artistId,
+              type: 'booking_fee_updated',
+              title: 'Fee updated',
+              body: `${firstName(currentUser?.fullName, 'Your manager')} set your fee for ${vName}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}`,
+              isRead: false,
+              relatedId: booking.id,
+              relatedType: 'booking',
+              createdAt: new Date().toISOString(),
+            });
+          },
+        },
+      ]
+    );
   };
 
   return (
