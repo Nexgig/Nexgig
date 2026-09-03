@@ -8,6 +8,7 @@ import { AvatarImage } from '@/components/ui/avatar-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useSlotStore, useLineupStore, useBookingStore, useAvailabilityStore, useVenueStore, useDraftStore, useNotificationStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { PastGigPriceModal } from '@/components/past-gig-price-modal';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
@@ -63,6 +64,8 @@ export default function AssignDJScreen() {
     allDrafts.filter((d) => d.slotId === slotId).forEach((d) => { m[d.artistId] = d.price; });
     return m;
   });
+  // Which artist the past-gig price sheet is open for (past slots send via a sheet, not staging).
+  const [pastGigArtist, setPastGigArtist] = useState<string | null>(null);
   const getBookingsBySlot = useBookingStore((s) => s.getBookingsBySlot);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -381,77 +384,45 @@ export default function AssignDJScreen() {
     if (!currentUser) return;
     // If already has a booking (any status) for this DJ on this slot, do nothing
     if (assignedDJIds.has(artistId)) return;
-    const djUser = getArtistUser(artistId);
-    Alert.alert(
-      'Send Completed Gig Request',
-      `Send a completed gig request to ${djUser?.fullName ?? 'this artist'} for "${slot!.name}" on ${formatDate(slot!.date)}?\n\nThey will be asked to confirm or decline this completed gig.`,
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => {
-          // Only bin the slot if nothing is riding on it. A slot with a booking or a
-          // draft is real work — closing the screen must never destroy it.
-          if (assignedDJIds.size === 0) deleteSlot(slot!.id);
-          router.back();
-        } },
-        {
-          text: 'Send Completed Request',
-          onPress: async () => {
-            const now = new Date().toISOString();
-            const bookingId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-              const r = Math.random() * 16 | 0;
-              return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-            });
-            const booking: Booking = {
-              id: bookingId,
-              slotId: slot!.id,
-              venueId: slot!.venueId,
-              artistId,
-              managerId: currentUser.id,
-              status: 'requested',
-              isCompleted: false,
-              createdAt: now,
-              updatedAt: now,
-              slotDate: slot!.date,
-              slotName: slot!.name,
-              slotStartTime: slot!.startTime,
-              slotEndTime: slot!.endTime,
-              price: slot!.defaultPrice,
-              venueName: venue?.name,
-            };
-            addBooking(booking);
-            // AWAITED on purpose. Fire-and-forget let the manager calendar's past-slot
-            // sweep run first, find no booking rows for this past slot, and delete it.
-            const { error: bkErr } = await supabase.from('bookings').insert({
-              id: bookingId,
-              slot_id: slot!.id,
-              venue_id: slot!.venueId,
-              artist_id: artistId,
-              manager_id: currentUser.id,
-              status: 'requested',
-              is_completed: false,
-              slot_date: slot!.date,
-              slot_name: slot!.name,
-              slot_start_time: slot!.startTime,
-              slot_end_time: slot!.endTime,
-              price: slot!.defaultPrice ?? null,
-              venue_name: venue?.name ?? null,
-              venue_type: venue?.venueType ?? null,
-            });
-            if (bkErr) console.warn('past booking insert error:', bkErr.message);
-            addNotification({
-              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              userId: artistId,
-              type: 'past_confirmation_request',
-              title: 'Past Booking Confirmation',
-              body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venue?.name ?? 'a venue'}, ${formatDate(slot!.date)}`,
-              isRead: false,
-              relatedId: booking.id,
-              relatedType: 'booking',
-              createdAt: new Date().toISOString(),
-            });
-          },
-        },
-      ]
-    );
+    setPastGigArtist(artistId);
+  };
+
+  const cancelPastGig = () => {
+    setPastGigArtist(null);
+    // Match the old confirm-alert Cancel: bin the slot only if nothing rides on it, then leave.
+    if (assignedDJIds.size === 0) deleteSlot(slot!.id);
+    router.back();
+  };
+
+  // Send the past-gig (completed) request with the price the manager entered in the sheet.
+  const sendPastGig = async (artistId: string, price: number | undefined) => {
+    if (!currentUser) return;
+    setPastGigArtist(null);
+    const now = new Date().toISOString();
+    const bookingId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    const booking: Booking = {
+      id: bookingId, slotId: slot!.id, venueId: slot!.venueId, artistId, managerId: currentUser.id,
+      status: 'requested', isCompleted: false, createdAt: now, updatedAt: now,
+      slotDate: slot!.date, slotName: slot!.name, slotStartTime: slot!.startTime, slotEndTime: slot!.endTime,
+      price, venueName: venue?.name,
+    };
+    addBooking(booking);
+    const { error: bkErr } = await supabase.from('bookings').insert({
+      id: bookingId, slot_id: slot!.id, venue_id: slot!.venueId, artist_id: artistId, manager_id: currentUser.id,
+      status: 'requested', is_completed: false, slot_date: slot!.date, slot_name: slot!.name,
+      slot_start_time: slot!.startTime, slot_end_time: slot!.endTime, price: price ?? null,
+      venue_name: venue?.name ?? null, venue_type: venue?.venueType ?? null,
+    });
+    if (bkErr) console.warn('past booking insert error:', bkErr.message);
+    addNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`, userId: artistId,
+      type: 'past_confirmation_request', title: 'Past Booking Confirmation',
+      body: `${firstName(currentUser?.fullName, 'A manager')} says you played ${venue?.name ?? 'a venue'}, ${formatDate(slot!.date)}`,
+      isRead: false, relatedId: bookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
+    });
   };
 
   // Send a drafted artist their gig request in place (same sequence as the calendar's
@@ -705,6 +676,15 @@ export default function AssignDJScreen() {
           </View>
         </View>
       )}
+
+      <PastGigPriceModal
+        visible={!!pastGigArtist}
+        artistName={getArtistUser(pastGigArtist ?? '')?.fullName ?? 'this artist'}
+        subtitle={`${venue?.name ?? slot?.name ?? 'Venue'} · ${slot ? formatDate(slot.date) : ''}`}
+        defaultPrice={slot?.defaultPrice}
+        onCancel={cancelPastGig}
+        onConfirm={(price) => { if (pastGigArtist) sendPastGig(pastGigArtist, price); }}
+      />
     </View>
   );
 }

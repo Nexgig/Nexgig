@@ -6,6 +6,7 @@ import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore, useSlotStore, useAuthStore, useLineupStore, useDraftStore, useBookingStore, useNotificationStore, useAvailabilityStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
+import { PastGigPriceModal } from '@/components/past-gig-price-modal';
 import { fonts } from '@/lib/fonts';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useColors } from '@/hooks/use-colors';
@@ -90,6 +91,8 @@ export default function AddSlotScreen() {
   // Per-artist gig price (AED) while staging. Manual slots have no default, so these start blank
   // and the manager types each artist's price.
   const [stagedPrices, setStagedPrices] = useState<Record<string, number | undefined>>({});
+  // Which artist the past-gig price sheet is open for (past dates send via a sheet, not staging).
+  const [pastGigArtist, setPastGigArtist] = useState<string | null>(null);
 
   const assignedRef = useRef(false);
   const slotIdRef = useRef<string | null>(null);
@@ -295,7 +298,7 @@ export default function AddSlotScreen() {
     .filter((x) => !!x.user)
     .sort((a, b) => (a.user!.fullName ?? '').localeCompare(b.user!.fullName ?? ''));
 
-  const sendPastGigRequest = async (artistId: string, slotId: string) => {
+  const sendPastGigRequest = async (artistId: string, slotId: string, price?: number) => {
     if (!currentUser || !slotId) return;
     const venueName = venues.find((v) => v.id === createSlotVenueId)?.name;
     const now = new Date().toISOString();
@@ -305,14 +308,14 @@ export default function AddSlotScreen() {
     const booking: Booking = {
       id: bookingId, slotId, venueId: createSlotVenueId, artistId, managerId: currentUser.id,
       status: 'requested', isCompleted: false, createdAt: now, updatedAt: now,
-      slotDate: targetDate, slotName: slotForm.name, slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime, venueName,
+      slotDate: targetDate, slotName: slotForm.name, slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime, price, venueName,
     };
     addBooking(booking);
     // AWAITED on purpose — see the delete-on-close effect and the calendar's past-slot sweep.
     const { error } = await supabase.from('bookings').insert({
       id: bookingId, slot_id: slotId, venue_id: createSlotVenueId, artist_id: artistId, manager_id: currentUser.id,
       status: 'requested', is_completed: false, slot_date: targetDate, slot_name: slotForm.name,
-      slot_start_time: slotForm.startTime, slot_end_time: slotForm.endTime, venue_name: venueName ?? null,
+      slot_start_time: slotForm.startTime, slot_end_time: slotForm.endTime, price: price ?? null, venue_name: venueName ?? null,
       venue_type: getVenueById(createSlotVenueId)?.venueType ?? null,
     });
     if (error) console.warn('past booking insert:', error.message);
@@ -374,23 +377,9 @@ export default function AddSlotScreen() {
     if (!currentUser) return;
     if (bookedIds.has(artistId)) return;   // already requested — non-interactive
     if (isPast) {
-      // Past dates aren't drafted — they send a completed-gig request immediately (on confirm).
-      const name = getArtistUser(artistId)?.fullName ?? 'this artist';
-      Alert.alert(
-        'Past Date',
-        `This date is in the past. Send ${name} a completed-gig request to confirm they played this gig?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Send Request', onPress: async () => {
-            const slotId = await ensureSlot();       // create the slot ONLY on confirm
-            if (!slotId) return;
-            assignedRef.current = true;              // set FIRST: the unmount cleanup must never race this
-            Keyboard.dismiss();
-            await sendPastGigRequest(artistId, slotId);   // row is in Supabase before we leave
-            router.back();
-          } },
-        ]
-      );
+      // Past dates aren't drafted — open the price sheet, then send a completed-gig request.
+      Keyboard.dismiss();
+      setPastGigArtist(artistId);
       return;
     }
     // Future date → just STAGE (toggle). Nothing is written until "Draft" or "Send" (below).
@@ -400,6 +389,16 @@ export default function AddSlotScreen() {
       return next;
     });
     Keyboard.dismiss();
+  };
+
+  const cancelPastGig = () => setPastGigArtist(null);
+  const sendPastGig = async (artistId: string, price: number | undefined) => {
+    setPastGigArtist(null);
+    const slotId = await ensureSlot();         // create the slot ONLY on confirm
+    if (!slotId) return;
+    assignedRef.current = true;                // set FIRST: the unmount cleanup must never race this
+    await sendPastGigRequest(artistId, slotId, price);
+    router.back();
   };
 
   // Add a roster artist to this venue's lineup (stays open; they move into the assignable list).
@@ -711,6 +710,14 @@ export default function AddSlotScreen() {
           </View>
         </View>
       )}
+
+      <PastGigPriceModal
+        visible={!!pastGigArtist}
+        artistName={getArtistUser(pastGigArtist ?? '')?.fullName ?? 'this artist'}
+        subtitle={`${venues.find((v) => v.id === createSlotVenueId)?.name ?? 'Venue'} · ${formatDate(targetDate)}`}
+        onCancel={cancelPastGig}
+        onConfirm={(price) => { if (pastGigArtist) sendPastGig(pastGigArtist, price); }}
+      />
     </View>
   );
 }
