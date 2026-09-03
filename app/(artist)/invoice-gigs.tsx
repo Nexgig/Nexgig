@@ -134,6 +134,14 @@ export default function InvoiceGigsScreen() {
   const selectedGigs = allGigRows.filter((g) => g.selected);
   const total = selectedGigs.reduce((sum, g) => sum + (parseFloat(g.price) || 0), 0);
   const allPriced = selectedGigs.every((g) => parseFloat(g.price) > 0);
+  const allSelected = allGigRows.length > 0 && allGigRows.every((g) => g.selected);
+
+  const toggleSelectAll = useCallback(() => {
+    setCompletedGigRows((prev) => {
+      const next = !prev.every((g) => g.selected);
+      return prev.map((g) => ({ ...g, selected: next }));
+    });
+  }, []);
 
   // Only completed gigs are invoiceable, so there is a single unlabelled section.
   const listData = useMemo(
@@ -269,6 +277,17 @@ export default function InvoiceGigsScreen() {
         }
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={allGigRows.length > 1 ? (
+          <View>
+            <View style={styles.selectAllRow}>
+              <Text style={[styles.selectAllInfo, { color: colors.muted }]}>{selectedGigs.length} of {allGigRows.length} selected</Text>
+              <Pressable onPress={toggleSelectAll} hitSlop={8}>
+                <Text style={[styles.selectAllBtn, { color: colors.primary }]}>{allSelected ? 'Deselect all' : 'Select all'}</Text>
+              </Pressable>
+            </View>
+            <Text style={[styles.selectHint, { color: colors.muted }]}>Tick only the gigs you want on this invoice — the rest stay for later.</Text>
+          </View>
+        ) : null}
         ListEmptyComponent={
           <View style={styles.empty}>
             <MaterialIcons name="check-circle" size={48} color={colors.success} />
@@ -339,6 +358,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12 },
   bellBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 },
+  selectAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 2 },
+  selectAllInfo: { fontSize: 12 },
+  selectAllBtn: { fontSize: 13, fontWeight: '700' },
+  selectHint: { fontSize: 11.5, paddingHorizontal: 4, paddingTop: 4, paddingBottom: 8, lineHeight: 16 },
   sectionHeader: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4, marginBottom: 2 },
   gigRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, gap: 12 },
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
