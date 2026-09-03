@@ -81,19 +81,19 @@ export default function NetworkScreen() {
     (b.slotDate ?? '').startsWith(monthPrefix)
   ).length, [bookings, currentUser?.id, monthPrefix]);
 
-  // Per-artist COST for the picked month = sum of the price on this manager's COMMITTED gigs
-  // (confirmed + completed) that month. Requested/cancelled/declined don't count as spend.
-  const isCommittedThisMonth = useCallback((b: (typeof bookings)[number], artistId?: string) =>
+  // Per-artist COST for the picked month = sum of the price on this manager's COMPLETED gigs that
+  // month — the SAME set the gig count uses, so the money and the count always agree.
+  const isCompletedThisMonth = useCallback((b: (typeof bookings)[number], artistId?: string) =>
     b.managerId === currentUser?.id &&
     (artistId ? b.artistId === artistId : true) &&
-    (b.status === 'confirmed' || b.status === 'completed' || b.isCompleted) &&
+    (b.isCompleted || b.status === 'completed') &&
     (b.slotDate ?? '').startsWith(monthPrefix), [currentUser?.id, monthPrefix]);
   const gigCost = useCallback((artistId: string) =>
-    bookings.filter((b) => isCommittedThisMonth(b, artistId)).reduce((sum, b) => sum + (b.price ?? 0), 0),
-    [bookings, isCommittedThisMonth]);
+    bookings.filter((b) => isCompletedThisMonth(b, artistId)).reduce((sum, b) => sum + (b.price ?? 0), 0),
+    [bookings, isCompletedThisMonth]);
   const rosterMonthCost = useMemo(() =>
-    bookings.filter((b) => isCommittedThisMonth(b)).reduce((sum, b) => sum + (b.price ?? 0), 0),
-    [bookings, isCommittedThisMonth]);
+    bookings.filter((b) => isCompletedThisMonth(b)).reduce((sum, b) => sum + (b.price ?? 0), 0),
+    [bookings, isCompletedThisMonth]);
 
   // How many of an artist's completed gigs (with this manager) no non-cancelled invoice covers yet.
   const allInvoices = useInvoiceStore((s) => s.invoices);
