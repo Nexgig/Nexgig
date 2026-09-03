@@ -52,6 +52,8 @@ export default function ManagerLayout() {
           date: s.date,
           startTime: s.start_time,
           endTime: s.end_time,
+          scheduleGenerated: s.schedule_generated ?? false,
+          defaultPrice: s.default_price ?? undefined,
           createdAt: s.created_at,
         }));
         useSlotStore.setState({ slots });
