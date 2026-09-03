@@ -81,6 +81,20 @@ export default function NetworkScreen() {
     (b.slotDate ?? '').startsWith(monthPrefix)
   ).length, [bookings, currentUser?.id, monthPrefix]);
 
+  // Per-artist COST for the picked month = sum of the price on this manager's COMMITTED gigs
+  // (confirmed + completed) that month. Requested/cancelled/declined don't count as spend.
+  const isCommittedThisMonth = useCallback((b: (typeof bookings)[number], artistId?: string) =>
+    b.managerId === currentUser?.id &&
+    (artistId ? b.artistId === artistId : true) &&
+    (b.status === 'confirmed' || b.status === 'completed' || b.isCompleted) &&
+    (b.slotDate ?? '').startsWith(monthPrefix), [currentUser?.id, monthPrefix]);
+  const gigCost = useCallback((artistId: string) =>
+    bookings.filter((b) => isCommittedThisMonth(b, artistId)).reduce((sum, b) => sum + (b.price ?? 0), 0),
+    [bookings, isCommittedThisMonth]);
+  const rosterMonthCost = useMemo(() =>
+    bookings.filter((b) => isCommittedThisMonth(b)).reduce((sum, b) => sum + (b.price ?? 0), 0),
+    [bookings, isCommittedThisMonth]);
+
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -487,10 +501,15 @@ export default function NetworkScreen() {
       {/* ROSTER label + month picker (the per-artist gig count is for this month) */}
       <View style={styles.rosterBar}>
         <Text style={[styles.rosterLabel, { color: colors.muted }]}>ROSTER</Text>
-        <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
-          <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
-          <MaterialIcons name="expand-more" size={18} color={colors.muted} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {rosterMonthCost > 0 && (
+            <Text style={[styles.rosterCost, { color: colors.primary }]}>AED {rosterMonthCost.toLocaleString()}</Text>
+          )}
+          <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
+            <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
+            <MaterialIcons name="expand-more" size={18} color={colors.muted} />
+          </Pressable>
+        </View>
       </View>
 
       {artistsLoading ? (
@@ -522,6 +541,7 @@ export default function NetworkScreen() {
           renderItem={({ item: user }) => {
             const profile = getProfile(user.id);
             const count = gigCount(user.id);
+            const cost = gigCost(user.id);
             return (
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { opacity: pressed ? 0.7 : 1 }]}
@@ -544,6 +564,7 @@ export default function NetworkScreen() {
                 <View style={styles.gigWrap}>
                   <Text style={[styles.gigNum, { color: colors.foreground }]}>{count}</Text>
                   <Text style={[styles.gigLabel, { color: colors.muted }]}>{count === 1 ? 'gig' : 'gigs'}</Text>
+                  {cost > 0 && <Text style={[styles.gigCost, { color: colors.primary }]}>AED {cost.toLocaleString()}</Text>}
                 </View>
               </Pressable>
             );
@@ -577,12 +598,14 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   rosterBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 },
   rosterLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  rosterCost: { fontSize: 14, fontWeight: '800' },
   monthBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   monthBtnText: { fontSize: 15, fontWeight: '600' },
   rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
   gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
   gigNum: { fontSize: 18, fontWeight: '800' },
   gigLabel: { fontSize: 12, marginTop: -1 },
+  gigCost: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   inviteFooter: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 4 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
   inviteText: { fontSize: 16, fontWeight: '700' },

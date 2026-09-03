@@ -92,7 +92,8 @@ export default function InvoiceGigsScreen() {
       booking: b,
       slot: slots.find((s) => s.id === b.slotId),
       selected: true,
-      price: '',
+      // Pre-fill (and lock) from the manager's agreed price when there is one.
+      price: b.price != null ? String(b.price) : '',
     }))
   );
 
@@ -100,15 +101,17 @@ export default function InvoiceGigsScreen() {
   // runs on mount, so if bookings/slots are still loading on the first render the
   // list would stay empty forever. Preserves selection + typed price across
   // updates, adds newly-arrived bookings, drops ones that just got invoiced.
-  const completedKey = useMemo(() => completedGigsSource.map((b) => b.id).join(','), [completedGigsSource]);
+  const completedKey = useMemo(() => completedGigsSource.map((b) => `${b.id}:${b.price ?? ''}`).join(','), [completedGigsSource]);
   useEffect(() => {
     setCompletedGigRows((prev) => {
       const byId = new Map(prev.map((r) => [r.booking.id, r]));
       return completedGigsSource.map((b) => {
         const existing = byId.get(b.id);
+        // Manager-set price always wins and is locked; otherwise keep the artist's typed value.
+        const lockedPrice = b.price != null ? String(b.price) : undefined;
         return existing
-          ? { ...existing, booking: b, slot: slots.find((s) => s.id === b.slotId) }
-          : { booking: b, slot: slots.find((s) => s.id === b.slotId), selected: true, price: '' };
+          ? { ...existing, booking: b, slot: slots.find((s) => s.id === b.slotId), price: lockedPrice ?? existing.price }
+          : { booking: b, slot: slots.find((s) => s.id === b.slotId), selected: true, price: lockedPrice ?? '' };
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,6 +181,9 @@ export default function InvoiceGigsScreen() {
       : '';
     // Same test the Preview Invoice CTA uses, so the border never disagrees with it.
     const isPriced = parseFloat(item.price) > 0;
+    // Locked when the manager set an agreed price — the artist can't change it, so all three
+    // numbers (their earnings, the manager's cost, this invoice) stay in agreement.
+    const locked = item.booking.price != null;
     return (
       <View key={item.booking.id} style={styles.gigRow}>
         <Pressable
@@ -195,15 +201,16 @@ export default function InvoiceGigsScreen() {
         <View style={styles.priceCol}>
           <Text style={[styles.priceLabel, { color: colors.muted }]}>AED</Text>
           <TextInput
-            style={[styles.priceInput, { backgroundColor: colors.background, borderColor: isPriced ? colors.success : item.selected ? colors.primary : colors.border, color: colors.foreground }]}
+            style={[styles.priceInput, { backgroundColor: locked ? colors.surface : colors.background, borderColor: isPriced ? colors.success : item.selected ? colors.primary : colors.border, color: locked ? colors.muted : colors.foreground }]}
             placeholder="0"
             placeholderTextColor={colors.muted}
             value={item.price}
             onChangeText={(v) => updatePrice(item.booking.id, v)}
             keyboardType="decimal-pad"
             returnKeyType="done"
-            editable={item.selected}
+            editable={item.selected && !locked}
           />
+          {locked && <Text style={[styles.priceSetBy, { color: colors.muted }]}>set by venue</Text>}
         </View>
       </View>
     );
@@ -341,6 +348,7 @@ const styles = StyleSheet.create({
   priceCol: { alignItems: 'center', gap: 2 },
   priceLabel: { fontSize: 10, fontWeight: '600' },
   priceInput: { width: 80, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 15, fontWeight: '700', textAlign: 'center' },
+  priceSetBy: { fontSize: 9, marginTop: 3, textAlign: 'center' },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 14, textAlign: 'center' },
   bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5 },
