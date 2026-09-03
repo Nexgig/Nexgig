@@ -147,9 +147,12 @@ glyphs have different widths. Pin them to a fixed-width box to align rows.
 
 - **Theme**: `useColors()` + tokens — primary `#E2674A` (coral), surface `#F6F2EC`, muted
   `#8E8E93`, success `#22C55E`, warning `#D4A017`, error `#EF4444`. Don't hardcode hex.
-- **Status colours** (booking lists): pending gold `#D4A017`, confirmed green `#22C55E`,
-  completed blue `#2563EB`. Shared `DateBadge` (`components/ui/date-badge.tsx`) renders the
-  status-coloured WED/15 tile used by the dashboards + artist-bookings.
+- **Status colours** (booking lists) — source of truth is `STATUS_COLORS` in
+  `components/ui/date-badge.tsx`, NOT this doc: pending **amber `#E29A4A`** (deliberately in coral's
+  family — the old gold `#D4A017` was dropped), confirmed **green `#22C55E`**, completed **slate
+  `#64748B`**, cancelled/declined **slate `#64748B`** (recedes rather than shouts; the old blue
+  `#2563EB` was dropped). Shared `DateBadge` renders the status-coloured WED/15 tile used by the
+  dashboards + bookings lists.
 - **State**: Zustand stores in `lib/store.ts`, persisted. Errors/telemetry go through
   `lib/observability.ts` (`reportError` for thrown/caught errors, `reportWarning` for
   "this shouldn't happen" silent-failure tripwires) — never import Sentry directly.
