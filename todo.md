@@ -86,9 +86,19 @@ those into ONE build.
 - **Manager can add a one-time (off-app) DJ to a slot.** (27 Aug 2026.) A GUEST artist not on
   Nexgig — enter a name (no `artist_id`). Renders as a name-only "guest" booking (no profile /
   notifications / invoices). OTA.
-- **Manager's monthly COST in the lineup/roster balance.** (27 Aug 2026.) The balance shows
-  slots-per-artist; add a manager-set pay-price per artist → show TOTAL monthly cost, not just slot
-  counts. (Manager-pays side; distinct from the artist's asking "min rate".) OTA.
+- **GIG PRICING — Phases 3 & 4 remaining** (Phases 1+2 SHIPPED TO PREVIEW 2 Sep 2026, commit
+  599106a: manager sets a per-gig `bookings.price` via a schedule-set `defaultPrice` → `slots.default_price`
+  → per-artist input in assign-artist/add-slot; artist sees it on the request card, booking-detail FEE
+  row, and the calendar "This month · AED X" strip. DB columns `bookings.price` + `slots.default_price`
+  are live). REMAINING, both OTA:
+  - **Phase 3 — invoice auto-fill:** pre-fill `invoice-gigs.tsx` per-gig price from `booking.price`
+    (GigRow init at :90-97 + re-sync :104-115). DECISION (approved): LOCK the pre-filled value to the
+    manager's price (read-only) unless the manager left it blank — so the artist's earnings, the
+    manager's cost, and the actual invoice all agree.
+  - **Phase 4 — manager's monthly COST** in the roster/lineup balance (`(manager)/(tabs)/network.tsx`
+    `gigCount` at :77-82 → add a `gigCost` summing `b.price`; roster-wide total in `rosterBar` :488-494).
+    This IS the old "monthly cost in lineup balance" item — now unblocked by the price field. Manager-pays
+    side; distinct from the artist's asking "min rate". OTA.
 - **Let managers edit a set's timing after it's created.** `openEditSlot`
   (`(manager)/(tabs)/calendar.tsx:859`) exists but nothing calls it — add an entry point (set-card
   menu, or from booking-detail). Then: (1) on edit, sync the `slot_start_time`/`slot_end_time`
