@@ -851,7 +851,8 @@ export default function DJAvailabilityScreen() {
     let total = 0, counted = 0, missing = 0;
     myBookings.forEach((b) => {
       if (!(b.resolvedDate ?? '').startsWith(prefix)) return;
-      if (b.isArtistCreated) return;
+      // Include private events now that they carry a fee — they're the artist's own gigs. Their
+      // status is always 'confirmed', so they pass the isBooked check below.
       const isBooked = b.status === 'confirmed' || b.status === 'completed' || b.isCompleted;
       if (!isBooked) return;
       counted++;

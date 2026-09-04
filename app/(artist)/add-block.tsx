@@ -82,6 +82,7 @@ export default function AddBlockScreen() {
     fd?: string;      // prefill fullDay '1'|'0'
     kind?: string;    // prefill kind 'block'|'private_event'
     occ?: string;     // prefill occasion key (edit private event)
+    price?: string;   // prefill fee (edit private event)
   }>();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -99,6 +100,7 @@ export default function AddBlockScreen() {
   const [eventName, setEventName] = useState(params.ev ?? '');
   const [occasion, setOccasion] = useState<string>(params.occ ?? DEFAULT_OCCASION);
   const [location, setLocation] = useState(params.loc ?? '');
+  const [price, setPrice] = useState(params.price ?? '');
   const [startTime, setStartTime] = useState(params.st ?? '21:00');
   const [endTime, setEndTime] = useState(params.et ?? '01:00');
   const [fullDay, setFullDay] = useState(params.fd === '1');
@@ -137,6 +139,7 @@ export default function AddBlockScreen() {
     if (kind === 'private_event') {
       if (!eventName.trim()) { Alert.alert('Required', 'Please enter an event name.'); return; }
       if (!fullDay && (!startTime || !endTime)) { Alert.alert('Required', 'Please select start and end time.'); return; }
+      const priceNum = price.trim() === '' ? undefined : parseInt(price.replace(/[^0-9]/g, ''), 10);
 
       if (editBookingId) {
         updateBookingStatus(editBookingId, 'confirmed', {
@@ -145,6 +148,7 @@ export default function AddBlockScreen() {
           slotEndTime: fullDay ? '23:59' : endTime,
           slotName: eventName.trim(),
           venueName: eventName.trim(),
+          price: priceNum,
           privateEventOccasion: occasion,
         });
         // keep availability_blocks row in sync
@@ -156,6 +160,7 @@ export default function AddBlockScreen() {
           event_name: eventName.trim(),
           location: location.trim() || null,
           occasion,
+          price: priceNum ?? null,
         }).eq('id', editBookingId).then(({ error }) => { if (error) console.warn('pe update error:', error.message); });
       } else {
         const isPast = isPastEnd(targetDate, fullDay ? '00:00' : startTime, fullDay ? '23:59' : endTime);
@@ -170,6 +175,7 @@ export default function AddBlockScreen() {
           slotStartTime: fullDay ? '00:00' : startTime,
           slotEndTime: fullDay ? '23:59' : endTime,
           slotName: eventName.trim(), venueName: eventName.trim(),
+          price: priceNum,
           privateEventLocation: location.trim() || undefined,
           privateEventOccasion: occasion,
         };
@@ -180,7 +186,7 @@ export default function AddBlockScreen() {
           end_time: fullDay ? '23:59' : endTime,
           is_full_day: fullDay, block_type: 'private_event',
           event_name: eventName.trim(), location: location.trim() || null,
-          occasion,
+          occasion, price: priceNum ?? null,
         }).then(({ error }) => { if (error) console.warn('availability_blocks insert error:', error.message); });
       }
     } else {
@@ -381,6 +387,25 @@ export default function AddBlockScreen() {
                     value={eventName}
                     onChangeText={setEventName}
                     returnKeyType="next"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Fee (private event) — the artist's own gig price; feeds their monthly earnings. */}
+            {kind === 'private_event' && (
+              <View style={styles.fieldBlock}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>FEE (AED)</Text>
+                <View style={[styles.textInputBox, { borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                  <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
+                  <TextInput
+                    style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
+                    placeholder="Optional"
+                    placeholderTextColor={colors.muted}
+                    value={price}
+                    onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
+                    keyboardType="number-pad"
+                    returnKeyType="done"
                   />
                 </View>
               </View>
