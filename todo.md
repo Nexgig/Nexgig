@@ -10,6 +10,10 @@
 
 Updated 19 Aug 2026. Only open items live here. Done work is deleted, not archived.
 
+> 📐 **Design sync:** every correction we send Claude Design (fonts, old-screen fixes) + the
+> dead-code cleanup each one implies is logged in [DESIGN-SYNC.md](DESIGN-SYNC.md). Clear those
+> when doing UI polish so future mockups match the real app.
+
 > **State of play (19 Aug 2026).** 🎉 **v1.1 (build 24) APPROVED + LIVE on the App Store** (19 Aug).
 > v1.0 (build 21) launched 17 Aug; 1.1 is the first post-launch update. Version string is **"1.1"**
 > (matches the App Store version record; build 23 / "1.1.0" was a throwaway, rebuilt as build 24).

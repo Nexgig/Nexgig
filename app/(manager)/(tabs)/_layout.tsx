@@ -151,7 +151,6 @@ export default function ManagerTabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="create-action" options={{ href: null }} />
       <Tabs.Screen
         name="network"
         options={{

@@ -1612,7 +1612,7 @@ export default function CalendarScreen() {
                     }}
                     hitSlop={8}
                   >
-                    <Text style={[styles.todayBtn, { color: colors.primary, textTransform: 'uppercase' }]}>Send all ({periodScopedDrafts.length})</Text>
+                    <Text style={[styles.sendAllBtn, { color: colors.primary, textTransform: 'uppercase' }]}>Send all ({periodScopedDrafts.length})</Text>
                   </Pressable>
                 )}
               </View>
@@ -2095,7 +2095,7 @@ const styles = StyleSheet.create({
   // Month view
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 20, paddingVertical: 12 },
   monthNavBtn: { padding: 2 },
-  todayBtn: { fontSize: 15, fontWeight: '700' },
+  sendAllBtn: { fontSize: 15, fontWeight: '700' },
 
   monthTitle: { fontSize: 20, fontWeight: '600' },
 
@@ -2136,7 +2136,6 @@ const styles = StyleSheet.create({
   // Header Send button
   headerSendBtn: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 },
   headerSendText: { color: '#fff', fontSize: 15, fontWeight: '700' as const },
-  // Send FAB (kept for style reference, no longer rendered)
   // Lineup Balance panel
   lineupPanel: { marginHorizontal: 20, marginTop: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   lineupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
