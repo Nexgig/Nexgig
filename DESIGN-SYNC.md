@@ -21,8 +21,8 @@ Legend: 🎨 = tell Claude Design · 🧹 = code cleanup (delete/rename) · ✅ 
   **invoice-document** branding. Nothing else.
 - Both are free on Fontshare. **Ignore Bricolage Grotesque** in `assets/fonts` (bundled, unused).
 
-🧹 Code is correct as-is (`lib/fonts.ts`). Optional: the unused **Bricolage Grotesque** OTFs +
-`fonts.header` / `fonts.headerSemibold` could be removed so CD never picks them up.
+🧹 Code is correct as-is (`lib/fonts.ts`). ✅ **Removed** the unused **Bricolage Grotesque** OTFs +
+`fonts.header` / `fonts.headerSemibold` (4 Sep 2026) so CD / design tools can't pick them up.
 
 ## 2026-09-04 · Manager Dashboard (Overview) — mostly faithful
 🎨 In **"All Venues" (multi-venue)** mode the coverage-grid cells are **plain coloured squares** —

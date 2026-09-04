@@ -65,8 +65,9 @@ wordmark (`components/wordmark.tsx`); the coloured status dots (round period gly
 `statusDot`/`slotStatusDot`); the invoice-document branding; **and the deliberate tab/screen
 titles + section headers** (`fonts.displayBold` / `fonts.display` — reverted here after a
 Bricolage-Grotesque experiment the owner rejected). The smaller per-screen/modal titles (the
-bare-`'800'` ones) are still General Sans. **Bricolage Grotesque is bundled but unused** —
-`fonts.header`/`fonts.headerSemibold` + its OTFs stay in `assets/fonts` in case it's revisited.
+bare-`'800'` ones) are still General Sans. **Bricolage Grotesque was removed** (4 Sep 2026) — it
+was bundled but unused; its OTFs + `fonts.header`/`fonts.headerSemibold` were deleted so mockup/
+design tools reading the repo can't pick it up. Re-add from git history if ever revisited.
 
 **`lib/rn`** re-exports React Native but swaps `Text` for `app-text`. Import RN primitives from
 `@/lib/rn`, not `react-native`. (`TextInput` and `Animated` are raw RN.)
