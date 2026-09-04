@@ -91,9 +91,6 @@ export default function NetworkScreen() {
   const gigCost = useCallback((artistId: string) =>
     bookings.filter((b) => isCompletedThisMonth(b, artistId)).reduce((sum, b) => sum + (b.price ?? 0), 0),
     [bookings, isCompletedThisMonth]);
-  const rosterMonthCost = useMemo(() =>
-    bookings.filter((b) => isCompletedThisMonth(b)).reduce((sum, b) => sum + (b.price ?? 0), 0),
-    [bookings, isCompletedThisMonth]);
 
   // How many of an artist's completed gigs (with this manager) no non-cancelled invoice covers yet.
   const allInvoices = useInvoiceStore((s) => s.invoices);
@@ -512,15 +509,10 @@ export default function NetworkScreen() {
       {/* ROSTER label + month picker (the per-artist gig count is for this month) */}
       <View style={styles.rosterBar}>
         <Text style={[styles.rosterLabel, { color: colors.muted }]}>ROSTER</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {rosterMonthCost > 0 && (
-            <Text style={[styles.rosterCost, { color: colors.primary }]}>AED {rosterMonthCost.toLocaleString()}</Text>
-          )}
-          <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
-            <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
-            <MaterialIcons name="expand-more" size={18} color={colors.muted} />
-          </Pressable>
-        </View>
+        <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
+          <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
+          <MaterialIcons name="expand-more" size={18} color={colors.muted} />
+        </Pressable>
       </View>
 
       {artistsLoading ? (
@@ -609,7 +601,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   rosterBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 },
   rosterLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
-  rosterCost: { fontSize: 14, fontWeight: '800' },
   monthBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   monthBtnText: { fontSize: 15, fontWeight: '600' },
   rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
