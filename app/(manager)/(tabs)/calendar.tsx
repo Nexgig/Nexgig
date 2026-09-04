@@ -1,7 +1,7 @@
 import { VenueFilterRow } from '@/components/venue-filter-row';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { useRoleSwitching } from '@/lib/roles';
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -32,6 +32,8 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 
 // Monday-first day labels
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+// Calendar day-view mode: the day's gigs listed BELOW the whole grid, or opened INLINE under the tapped week.
+const STORAGE_KEY_CALENDAR_DAY_LAYOUT = 'nexgig:calendarDayLayout';
 const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -324,6 +326,9 @@ export default function CalendarScreen() {
   // Custom month-cycle start day — loaded from AsyncStorage (set in Settings screen)
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showLineupSettings, setShowLineupSettings] = useState(false);   // inline Roster-Balance settings strip
+  const [dayLayout, setDayLayout] = useState<'below' | 'inline'>('below');   // day view: list-below vs open-under-the-day
+  const [dayLayoutMenuOpen, setDayLayoutMenuOpen] = useState(false);
+  const persistDayLayout = (v: 'below' | 'inline') => { setDayLayout(v); AsyncStorage.setItem(STORAGE_KEY_CALENDAR_DAY_LAYOUT, v); setDayLayoutMenuOpen(false); };
 
   // On every focus: sync monthStartDay, showLineupBalance, and the saved default view label.
   // calendarMode (the active view) is only set from the default on FIRST mount —
@@ -347,13 +352,15 @@ export default function CalendarScreen() {
     useCallback(() => {
       let active = true;
       (async () => {
-        const [msd, slb, dcv, ls] = await Promise.all([
+        const [msd, slb, dcv, ls, cdl] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_MONTH_START_DAY),
           AsyncStorage.getItem(STORAGE_KEY_SHOW_LINEUP_BALANCE),
           AsyncStorage.getItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
           AsyncStorage.getItem(STORAGE_KEY_LINEUP_STATUSES),
+          AsyncStorage.getItem(STORAGE_KEY_CALENDAR_DAY_LAYOUT),
         ]);
         if (!active) return;
+        if (cdl === 'inline' || cdl === 'below') setDayLayout(cdl);
         if (msd !== null) setMonthStartDay(Number(msd));
         if (slb !== null) setShowLineupBalance(slb !== 'false');
         if (ls !== null) {
@@ -1268,6 +1275,27 @@ export default function CalendarScreen() {
     if (page === 0) prevMonthNav();
     else if (page === 2) nextMonthNav();
   };
+  // The day's gigs — used BELOW the grid ("List below" view) or injected INLINE under the tapped
+  // week ("Open under the day" view). Same content either way: date header + add-slot + each gig row.
+  const renderDayPanel = () => (
+    <View style={styles.slotsSection}>
+      <View style={styles.dayHeaderRow}>
+        <Text style={[styles.dayHeaderLabel, { color: colors.muted }]}>
+          {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()}
+        </Text>
+        <View style={[styles.dayHeaderLine, { backgroundColor: colors.border }]} />
+        <Pressable onPress={() => openCreateSlot(selectedDate)} hitSlop={10} style={styles.dayHeaderAdd}>
+          <MaterialIcons name="add" size={22} color={colors.primary} />
+        </Pressable>
+      </View>
+      {selectedSlots.length === 0 ? (
+        <Text style={[styles.noSlotsLine, { color: colors.muted }]}>No slots on this night.</Text>
+      ) : (
+        selectedSlots.flatMap(renderDaySlot)
+      )}
+    </View>
+  );
+
   // One month's grid, parameterised by (year, month) and padded to a fixed 6 rows (42 cells) so
   // every month is the SAME height — the grid never resizes when you swipe, and the pager reserves
   // no extra space (so there's no gap between the calendar and the day list below).
@@ -1284,45 +1312,66 @@ export default function CalendarScreen() {
       const ds = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
       cells.push({ date: ds, outside: dObj.getMonth() !== month });
     }
+    // One day square. Shared by the flat grid ("List below") and the week-row grid ("Open under the day").
+    const cell = ({ date: dateStr, outside }: { date: string; outside: boolean }) => {
+      const day = parseInt(dateStr.split('-')[2], 10);
+      const daySlots = getSlotsForDate(dateStr);
+      const isSelected = dateStr === selectedDate;
+      // Strongest state among the day's slots (see the inline version this was extracted from).
+      const pastPendingOnDay = allBookings.filter(
+        (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
+          (venueFilter === 'all' || b.venueId === venueFilter) &&
+          (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
+      );
+      const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
+      const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
+      const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
+      const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
+      const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
+      const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
+      // cancelled > empty(beige+dashed) > drafted(beige) > sent(amber) > booked(green).
+      let fill: string | null = null;
+      let dashedRing = false;
+      if (dCancelled) fill = colors.cancelled;
+      else if (dEmpty) { fill = colors.surface; dashedRing = true; }
+      else if (dDrafted) fill = colors.surface;
+      else if (dPending) fill = STATUS_COLORS.pending;
+      else if (dConfirmed) fill = STATUS_COLORS.confirmed;
+      const strongFill = !!fill && fill !== colors.surface;
+      // Adjacent-month days show their status fill like a normal day; only an EMPTY adjacent
+      // day (no slot at all) is greyed, to mark the month boundary.
+      const numColor = strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
+      return (
+        <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
+          <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
+            dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
+            <Text style={[styles.dayNumber, { color: numColor, opacity: (outside && !fill && !isSelected) ? 0.5 : 1, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
+          </View>
+        </Pressable>
+      );
+    };
+
+    // "Open under the day": 6 explicit week rows, with the day panel dropped right under the week
+    // that OWNS the selected date (a non-outside cell — so only the home month shows the panel).
+    if (dayLayout === 'inline') {
+      const selIdx = cells.findIndex((c) => c.date === selectedDate && !c.outside);
+      const selWeek = selIdx >= 0 ? Math.floor(selIdx / 7) : -1;
+      const weeks = Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+      return (
+        <View style={styles.calendarGridInline}>
+          {weeks.map((wk, wi) => (
+            <View key={wi}>
+              <View style={styles.weekRow}>{wk.map(cell)}</View>
+              {wi === selWeek && renderDayPanel()}
+            </View>
+          ))}
+        </View>
+      );
+    }
+
     return (
       <View style={styles.calendarGrid}>
-        {cells.map(({ date: dateStr, outside }) => {
-          const day = parseInt(dateStr.split('-')[2], 10);
-          const daySlots = getSlotsForDate(dateStr);
-          const isSelected = dateStr === selectedDate;
-          // Strongest state among the day's slots (see the inline version this was extracted from).
-          const pastPendingOnDay = allBookings.filter(
-            (b) => (b.status === 'requested' || b.status === 'past_confirmation') &&
-              (venueFilter === 'all' || b.venueId === venueFilter) &&
-              (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
-          );
-          const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
-          const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
-          const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
-          const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
-          const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
-          const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
-          // cancelled > empty(beige+dashed) > drafted(beige) > sent(amber) > booked(green).
-          let fill: string | null = null;
-          let dashedRing = false;
-          if (dCancelled) fill = colors.cancelled;
-          else if (dEmpty) { fill = colors.surface; dashedRing = true; }
-          else if (dDrafted) fill = colors.surface;
-          else if (dPending) fill = STATUS_COLORS.pending;
-          else if (dConfirmed) fill = STATUS_COLORS.confirmed;
-          const strongFill = !!fill && fill !== colors.surface;
-          // Adjacent-month days show their status fill like a normal day; only an EMPTY adjacent
-          // day (no slot at all) is greyed, to mark the month boundary.
-          const numColor = strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
-          return (
-            <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
-              <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
-                dashedRing ? { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed' } : null]}>
-                <Text style={[styles.dayNumber, { color: numColor, opacity: (outside && !fill && !isSelected) ? 0.5 : 1, fontSize: isSelected ? 20 : 16, fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold }]}>{day}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
+        {cells.map(cell)}
       </View>
     );
   };
@@ -1365,30 +1414,12 @@ export default function CalendarScreen() {
     const bookedIds = new Set(bs.map((b) => b.artistId));
     const drafts = getDraftsBySlot(slot.id).filter((d) => !bookedIds.has(d.artistId));
 
-    // Swipe-left reveals a delete action. Used for draft rows (remove the draft) and empty
-    // slots (delete the slot) — not for real bookings (those are cancelled from the booking).
-    const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
-      const doDelete = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDelete(); };
-      return (
-        <Swipeable
-          key={key}
-          friction={1.4}
-          rightThreshold={56}                 // a decisive swipe past this deletes (full-swipe)
-          overshootRight={false}
-          onSwipeableOpen={(dir) => { if (dir === 'right') doDelete(); }}
-          renderRightActions={() => (
-            <View style={styles.swipeDeleteAction}>
-              <Pressable style={[styles.swipeDeleteBtn, { backgroundColor: colors.error }]} onPress={doDelete}>
-                <MaterialIcons name="delete" size={17} color="#fff" />
-                <Text style={styles.swipeDeleteText}>Remove</Text>
-              </Pressable>
-            </View>
-          )}
-        >
-          {child}
-        </Swipeable>
-      );
-    };
+    // Swipe-to-delete is TEMPORARILY DISABLED in both calendar day-views (the inline "Open under the
+    // day" view's month-swipe would fight it). Slot deletion will get a new affordance — see todo.md
+    // ("Calendar Open under the day view — restore swipe-to-delete"). For now just render the row.
+    const withSwipeDelete = (key: string, _onDelete: () => void, child: React.ReactNode) => (
+      <Fragment key={key}>{child}</Fragment>
+    );
 
     // Truly empty — no booking, no draft → prompt to add an artist (swipe to delete the slot).
     if (bs.length === 0 && drafts.length === 0) {
@@ -1518,7 +1549,7 @@ export default function CalendarScreen() {
   };
 
   const renderLineupBalance = () => {
-    if (!showLineupBalance) return null;
+    // Roster Balance is ALWAYS shown now — the old Settings on/off toggle was removed.
     // Always show panel in month/venue view (empty state message shown when no bookings).
     // In week view, hide only when there are no bookings.
     const isMonthView = calendarMode === 'month' || calendarMode === 'today';
@@ -1534,14 +1565,16 @@ export default function CalendarScreen() {
         <Pressable style={styles.lineupHeader} onPress={() => setLineupBalanceOpen((v) => !v)}>
           <MaterialIcons name="equalizer" size={17} color={colors.muted} style={{ marginTop: 5 }} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
+            <View style={styles.lineupTitleRow}>
+              <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
+              {lineupBalanceOpen && (
+                <Pressable hitSlop={8} onPress={() => setShowLineupSettings((v) => !v)} style={styles.lineupGear}>
+                  <MaterialIcons name="tune" size={18} color={showLineupSettings ? colors.primary : colors.muted} />
+                </Pressable>
+              )}
+            </View>
             <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
           </View>
-          {lineupBalanceOpen && (
-            <Pressable hitSlop={8} onPress={() => setShowLineupSettings((v) => !v)} style={styles.lineupGear}>
-              <MaterialIcons name="tune" size={19} color={showLineupSettings ? colors.primary : colors.muted} />
-            </Pressable>
-          )}
           <MaterialIcons
             name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
             size={20}
@@ -1661,6 +1694,9 @@ export default function CalendarScreen() {
                   background, only when there are pending draft requests. Swipe the grid to change month. */}
               <View style={styles.monthNav}>
                 <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Pressable hitSlop={8} onPress={() => setDayLayoutMenuOpen(true)} style={styles.calViewGear}>
+                  <MaterialIcons name="tune" size={18} color={colors.muted} />
+                </Pressable>
                 <View style={{ flex: 1 }} />
                 {periodScopedDrafts.length > 0 && (
                   <Pressable
@@ -1699,36 +1735,39 @@ export default function CalendarScreen() {
                 <View style={{ width: SCREEN_W }}>{renderMonthGrid(nextMY.year, nextMY.month)}</View>
               </ScrollView>
 
-              {/* Selected Date Slots */}
-              {!selectedDate ? (
+              {/* Selected-day gigs — only in the "List below" view. The "Open under the day" view
+                  injects this same panel inline under the tapped week (see renderMonthGrid). */}
+              {dayLayout === 'below' && (!selectedDate ? (
                 <View style={[styles.noSlotsCard, { borderColor: colors.border }]}>
                   <MaterialIcons name="touch-app" size={32} color={colors.muted} />
                   <Text style={[styles.noSlotsText, { color: colors.muted }]}>Tap a date to see sets</Text>
                 </View>
               ) : (
-              <View style={styles.slotsSection}>
-                <View style={styles.dayHeaderRow}>
-                  <Text style={[styles.dayHeaderLabel, { color: colors.muted }]}>
-                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()}
-                  </Text>
-                  <View style={[styles.dayHeaderLine, { backgroundColor: colors.border }]} />
-                  <Pressable onPress={() => openCreateSlot(selectedDate)} hitSlop={10} style={styles.dayHeaderAdd}>
-                    <MaterialIcons name="add" size={22} color={colors.primary} />
-                  </Pressable>
-                </View>
-
-                {selectedSlots.length === 0 ? (
-                  <Text style={[styles.noSlotsLine, { color: colors.muted }]}>No slots on this night.</Text>
-                ) : (
-                  selectedSlots.flatMap(renderDaySlot)
-                )}
-              </View>
-              )}
+                renderDayPanel()
+              ))}
               {renderLineupBalance()}
             </>
           )}
         </View>
       </ScrollView>
+
+      {/* Day-view chooser — List below vs Open under the day (tune icon by the month name) */}
+      <Modal visible={dayLayoutMenuOpen} transparent animationType="fade" onRequestClose={() => setDayLayoutMenuOpen(false)}>
+        <Pressable style={styles.dayLayoutBackdrop} onPress={() => setDayLayoutMenuOpen(false)}>
+          <View style={[styles.dayLayoutCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.dayLayoutHead, { color: colors.muted }]}>DAY VIEW</Text>
+            {([['below', 'List below the calendar'], ['inline', 'Open under the day']] as const).map(([val, label]) => {
+              const active = dayLayout === val;
+              return (
+                <Pressable key={val} style={styles.dayLayoutOption} onPress={() => persistDayLayout(val)}>
+                  <Text style={[styles.dayLayoutOptionText, { color: active ? colors.primary : colors.foreground, fontWeight: active ? '700' : '500' }]}>{label}</Text>
+                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* ═══════════════════ SEND BOOKING MODAL (full-screen, context-aware) ═══════════════════ */}
       <Modal
@@ -2162,6 +2201,15 @@ const styles = StyleSheet.create({
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: -6 },
+  calendarGridInline: { paddingHorizontal: 12, marginBottom: -6 },
+  weekRow: { flexDirection: 'row' },
+  calViewGear: { padding: 2, marginLeft: 2 },
+  lineupTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dayLayoutBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  dayLayoutCard: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, paddingVertical: 8, paddingHorizontal: 6 },
+  dayLayoutHead: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4 },
+  dayLayoutOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 13 },
+  dayLayoutOptionText: { fontSize: 15 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },
@@ -2203,7 +2251,7 @@ const styles = StyleSheet.create({
   lineupPeriod: { fontSize: 13, marginTop: 2 },
   lineupTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 10 },
   lineupTotalLabel: { fontSize: 13 },
-  lineupTotalValue: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  lineupTotalValue: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
   lineupInsetDivider: { height: StyleSheet.hairlineWidth * 2, marginHorizontal: 20 },
   lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 11 },
   lineupRowInfo: { flex: 1 },

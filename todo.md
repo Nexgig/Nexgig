@@ -67,6 +67,9 @@ Most ship as **OTA**; items marked ⚠️ **NATIVE** need an `eas build` + store
 those into ONE build.
 
 #### 👤 For artists
+- **Artist gig-history section on the dashboard.** (Added 4 Sep 2026.) A section on the ARTIST dashboard
+  that shows their past / completed gigs (venue gigs + private events) as a running history. Adjacent to the
+  parked gig-ledger idea, but scoped to a dashboard section. Needs a quick design. OTA.
 - **Press kit — artists add photos to share with managers, IN and OUT of the app.** (Added 29 Aug
   2026.) A set of press-kit photos on the artist profile; shareable inside the app to managers AND
   via a link / share-sheet to people who DON'T have the app. ⚠️ NATIVE (image picker) + storage +
@@ -83,6 +86,16 @@ those into ONE build.
   `isConnected`, so a non-connected manager never sees it. OTA.
 
 #### 🏢 For managers
+- **Roster tab counts should follow INVOICES, not "completed this month".** (Added 4 Sep 2026.) Today each
+  Roster-tab artist row shows their COMPLETED gigs in the picked month + the sum of those fees. Change the
+  count + amount to follow INVOICING instead: count the completed gigs that have been INVOICED and show
+  their invoiced amount (not completed-this-month + fee sum). NEEDS a one-line spec first: all-time vs a
+  month, and whether the amount is the invoice total or the gig fees. (`gigCount` / `gigCost` in
+  `(manager)/(tabs)/network.tsx`.) OTA.
+- **Calendar "Open under the day" view — restore swipe-to-delete.** (Added 4 Sep 2026.) The new inline
+  calendar day-view navigates months with ‹ › arrows because an inline day panel + the gig rows'
+  left-swipe-to-delete would fight the grid's month-swipe. Find a gesture setup that lets swipe-to-delete
+  work in that view too (so it can drop the arrows). Follow-up to the inline-view build. OTA.
 - **Availability-first booking flow.** (Added 29 Aug 2026.) Manager creates a slot → sends an
   AVAILABILITY request to several artists ("are you free for this?") → after they reply, the
   manager sends the actual BOOKING to the one they pick. A new two-step flow (availability → then

@@ -63,6 +63,13 @@ iOS `01a06c88`).
   money-proportional bars — a bigger earner shows a longer bar. The gig COUNT and the totals are unchanged.
   [group `f95c3116`, iOS `01a06c8f`]
 
+## 2026-09-04 · Manager Roster tab → row layout IMPLEMENTED ✅
+From a newer Claude Design Roster mockup (the original handoff said the Roster tab already matched `main`;
+this is an updated design). Each artist row's **right column** now leads with the **AED amount** (big, bold,
+foreground) over a muted **"N completed"** line — "—" / "No gigs" when the artist has no gigs that month.
+Also removed the roster-wide **month total** from the header (Tuts: "doesn't mean anything"). Counts + costs
+(completed gigs in the picked month) unchanged. Shipped to preview 4 Sep (groups `2e35aa12` + `beb9940d`).
+
 ---
 
 ## Later · one comprehensive dead-code sweep
