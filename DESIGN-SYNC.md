@@ -59,9 +59,9 @@ every other frame in that bundle already matched `main`). Roster Balance went fr
 **"Month total"** row, per-artist **"AED {cost}"** + progress bar + **"N gigs"**, inset dividers past the
 avatar. **Look only — no logic changed** (Tuts's instruction). Shipped to preview 4 Sep (group `c384c8e7`,
 iOS `01a06c88`).
-- ⚠️ **Known deviation from the mockup:** the bar width still tracks **gig count** (existing logic), so two
-  artists with the same gig count show equal bars even at different fees. The mockup's cost-proportional bars
-  would be a *logic* change — deliberately NOT made. Flag to revisit if Tuts wants money-weighted bars.
+- ✅ **Bars now scale by AED** (Tuts approved same day): bar width = `cost / maxCost`, matching the mockup's
+  money-proportional bars — a bigger earner shows a longer bar. The gig COUNT and the totals are unchanged.
+  [group `f95c3116`, iOS `01a06c8f`]
 
 ---
 

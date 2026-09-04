@@ -323,6 +323,7 @@ export default function CalendarScreen() {
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   // Custom month-cycle start day — loaded from AsyncStorage (set in Settings screen)
   const [monthStartDay, setMonthStartDay] = useState(1);
+  const [showLineupSettings, setShowLineupSettings] = useState(false);   // inline Roster-Balance settings strip
 
   // On every focus: sync monthStartDay, showLineupBalance, and the saved default view label.
   // calendarMode (the active view) is only set from the default on FIRST mount —
@@ -1496,6 +1497,26 @@ export default function CalendarScreen() {
   };
 
   // ─── Lineup Balance Panel ──────────────────────────────────────────────────────────────────────────
+  // Inline Roster-Balance settings — write the SAME AsyncStorage keys as the Settings page so
+  // the two stay in sync. Local state updates immediately; the settings screen re-reads on focus.
+  const persistMonthStartDay = (day: number) => {
+    setMonthStartDay(day);
+    AsyncStorage.setItem(STORAGE_KEY_MONTH_START_DAY, String(day));
+  };
+  const persistLineupStatus = (status: LineupStatusFilter) => {
+    setLineupStatuses((prev) => {
+      let next: LineupStatusFilter[];
+      if (prev.includes(status)) {
+        if (prev.length === 1) return prev; // keep at least one selected
+        next = prev.filter((s) => s !== status);
+      } else {
+        next = [...prev, status];
+      }
+      AsyncStorage.setItem(STORAGE_KEY_LINEUP_STATUSES, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const renderLineupBalance = () => {
     if (!showLineupBalance) return null;
     // Always show panel in month/venue view (empty state message shown when no bookings).
@@ -1516,6 +1537,11 @@ export default function CalendarScreen() {
             <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
             <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
           </View>
+          {lineupBalanceOpen && (
+            <Pressable hitSlop={8} onPress={() => setShowLineupSettings((v) => !v)} style={styles.lineupGear}>
+              <MaterialIcons name="tune" size={19} color={showLineupSettings ? colors.primary : colors.muted} />
+            </Pressable>
+          )}
           <MaterialIcons
             name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
             size={20}
@@ -1525,6 +1551,46 @@ export default function CalendarScreen() {
 
         {lineupBalanceOpen && (
           <>
+            {/* Inline settings strip — toggled by the tune icon. Same controls as the Settings page. */}
+            {showLineupSettings && (
+              <View style={styles.lineupSettings}>
+                <Text style={[styles.lineupSettingsLabel, { color: colors.muted }]}>COUNT</Text>
+                <View style={styles.lineupChipRow}>
+                  {(['draft', 'requested', 'confirmed', 'completed'] as LineupStatusFilter[]).map((status) => {
+                    const active = lineupStatuses.includes(status);
+                    // Manager-facing labels: a request is one they SENT; confirmed reads "Booked".
+                    const label = status === 'requested' ? 'Sent'
+                      : status === 'confirmed' ? 'Booked'
+                      : status.charAt(0).toUpperCase() + status.slice(1);
+                    return (
+                      <Pressable
+                        key={status}
+                        onPress={() => persistLineupStatus(status)}
+                        style={[styles.lineupChip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
+                      >
+                        <Text style={[styles.lineupChipText, { color: active ? '#fff' : colors.foreground }]}>{label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.lineupSettingsLabel, { color: colors.muted, marginTop: 12 }]}>MONTH STARTS ON</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lineupDayRow}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                    const active = monthStartDay === day;
+                    return (
+                      <Pressable
+                        key={day}
+                        onPress={() => persistMonthStartDay(day)}
+                        style={[styles.lineupDayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
+                      >
+                        <Text style={[styles.lineupDayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border, marginTop: 14 }]} />
+              </View>
+            )}
             {/* Month total */}
             <View style={styles.lineupTotalRow}>
               <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Month total</Text>
@@ -2150,6 +2216,15 @@ const styles = StyleSheet.create({
   lineupGigs: { fontSize: 12, fontWeight: '600' },
   lineupRowDivider: { height: StyleSheet.hairlineWidth * 2, marginLeft: 66 },
   lineupEmptyText: { fontSize: 13, fontStyle: 'italic', textAlign: 'center', paddingVertical: 6, paddingHorizontal: 20 },
+  lineupGear: { marginRight: 6, marginTop: 1 },
+  lineupSettings: { paddingHorizontal: 20, paddingTop: 2, paddingBottom: 2 },
+  lineupSettingsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8 },
+  lineupChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  lineupChip: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  lineupChipText: { fontSize: 13, fontWeight: '600' },
+  lineupDayRow: { gap: 8, paddingVertical: 2, paddingRight: 20 },
+  lineupDayBtn: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  lineupDayText: { fontSize: 14, fontWeight: '600' },
   // Month-start-day picker
   // Dot legend
   assignRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 5, marginTop: 2, borderTopWidth: StyleSheet.hairlineWidth },
