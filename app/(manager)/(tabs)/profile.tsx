@@ -8,7 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { Section, Divider, StatRow, SoftButton } from '@/components/ui/card-free';
-import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, useBookingStore, resetAllStores } from '@/lib/store';
+import { useAuthStore, useVenueStore, useLineupStore, useInvoiceStore, resetAllStores } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { clearPushToken } from '@/lib/notifications-push';
 import { useColors } from '@/hooks/use-colors';
@@ -39,9 +39,6 @@ export default function ManagerProfileScreen() {
 
   const addInvoice = useInvoiceStore((s) => s.addInvoice);
   const invoicesList = useInvoiceStore((s) => s.invoices);
-  const hasInvoices = invoicesList.some(
-    (inv) => inv.managerId === currentUser?.id && !inv.isDeletedByManager
-  );
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
@@ -165,14 +162,6 @@ export default function ManagerProfileScreen() {
 
         <Divider />
 
-        {hasInvoices ? (
-          <>
-            <View style={styles.content}>
-              <InvoicesSection colors={colors} currentUserId={currentUser?.id ?? ''} router={router} />
-            </View>
-            <Divider />
-          </>
-        ) : null}
 
         {/* Account */}
         <Section label="Account">
@@ -203,125 +192,6 @@ export default function ManagerProfileScreen() {
   );
 }
 
-// ─── Invoices Section ─────────────────────────────────────────────────────────
-
-
-function InvoicesSection({ colors, currentUserId, router }: {
-  colors: ReturnType<typeof import('@/hooks/use-colors').useColors>;
-  currentUserId: string;
-  router: ReturnType<typeof import('expo-router').useRouter>;
-}) {
-  const invoices = useInvoiceStore((s) => s.invoices);
-  const allBookings = useBookingStore((s) => s.bookings);
-  const getArtistUser = useLineupStore((s) => s.getArtistUser);
-  const [expanded, setExpanded] = useState(false);
-
-  const managerInvoices = useMemo(
-    () => invoices.filter((inv) => inv.managerId === currentUserId && !inv.isDeletedByManager),
-    [invoices, currentUserId]
-  );
-
-  // Booking ids already covered by a non-cancelled invoice (InvoiceGig.bookingId).
-  const invoicedBookingIds = useMemo(
-    () => new Set(managerInvoices.filter((inv) => inv.status !== 'cancelled').flatMap((inv) => inv.gigs.map((g) => g.bookingId))),
-    [managerInvoices]
-  );
-
-  // One row per artist: invoice count + unread + how many of their COMPLETED gigs are still
-  // uninvoiced. Includes artists who have completed gigs but have not sent an invoice yet, so
-  // the manager can see who still owes them one.
-  const artistRows = useMemo(() => {
-    const map = new Map<string, { artistId: string; name: string; invoiceCount: number; unread: number; uninvoiced: number }>();
-    const ensure = (artistId: string, fallbackName: string) => {
-      let e = map.get(artistId);
-      if (!e) { e = { artistId, name: getArtistUser(artistId)?.fullName ?? fallbackName, invoiceCount: 0, unread: 0, uninvoiced: 0 }; map.set(artistId, e); }
-      return e;
-    };
-    managerInvoices.forEach((inv) => {
-      if (!inv.artistId) return;
-      const e = ensure(inv.artistId, inv.artistLegalName ?? 'Artist');
-      e.invoiceCount += 1;
-      if (!inv.isReadByManager) e.unread += 1;
-    });
-    allBookings.forEach((b) => {
-      if (b.managerId !== currentUserId || !b.artistId) return;
-      if (!(b.status === 'completed' || b.isCompleted)) return;
-      if (invoicedBookingIds.has(b.id)) return;
-      ensure(b.artistId, 'Artist').uninvoiced += 1;
-    });
-    // Artists with an unopened invoice float to the TOP (until the manager opens it); then alphabetical.
-    return Array.from(map.values()).sort((a, b) => (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0) || a.name.localeCompare(b.name));
-  }, [managerInvoices, allBookings, invoicedBookingIds, currentUserId, getArtistUser]);
-
-  const totalUnread = useMemo(() => artistRows.reduce((n, a) => n + a.unread, 0), [artistRows]);
-
-  if (artistRows.length === 0) return null;
-
-  return (
-    <View style={invStyles.container}>
-      <Pressable
-        style={({ pressed }) => [invStyles.collapseHeader, { opacity: pressed ? 0.7 : 1 }]}
-        onPress={() => setExpanded((v) => !v)}
-        hitSlop={6}
-      >
-        <View style={invStyles.collapseHeaderLeft}>
-          <Text style={[invStyles.collapseTitle, { color: colors.muted }]}>INVOICES</Text>
-          {totalUnread > 0 && (
-            <View style={[invStyles.unreadBadge, { backgroundColor: colors.primary }]}>
-              <Text style={invStyles.unreadBadgeText}>{totalUnread}</Text>
-            </View>
-          )}
-        </View>
-        <MaterialIcons name={expanded ? 'expand-less' : 'expand-more'} size={20} color={colors.muted} />
-      </Pressable>
-      {expanded && (
-        <ScrollView style={{ maxHeight: 360 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-          {artistRows.map((a, idx) => {
-            const artist = getArtistUser(a.artistId);
-            const isLast = idx === artistRows.length - 1;
-            return (
-              <Pressable
-                key={a.artistId}
-                style={({ pressed }) => [invStyles.artistRow, { borderBottomColor: isLast ? 'transparent' : colors.border, borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth * 2, opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push({ pathname: '/(manager)/artist-invoices' as any, params: { artistId: a.artistId, name: a.name } })}
-              >
-                <AvatarImage uri={artist?.profilePhotoUrl} avatarId={artist?.avatarId} seed={a.artistId} name={a.name} size={40} variant="artist" />
-                <View style={{ flex: 1 }}>
-                  <Text style={[invStyles.artistName, { color: colors.foreground }]} numberOfLines={1}>{a.name}</Text>
-                  {a.uninvoiced > 0 && (
-                    <Text style={[invStyles.subLabel, { color: colors.warning }]}>
-                      {a.uninvoiced} gig{a.uninvoiced !== 1 ? 's' : ''} not invoiced
-                    </Text>
-                  )}
-                </View>
-                {/* Coral dot = a newly-received invoice the manager hasn't opened yet. No chevron. */}
-                {a.unread > 0 && <View style={[invStyles.coralDot, { backgroundColor: colors.primary }]} />}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
-    </View>
-  );
-}
-
-const invStyles = StyleSheet.create({
-  container: {},
-  collapseHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 14 },
-  collapseHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  collapseTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
-  coralDot: { width: 10, height: 10, borderRadius: 5, marginLeft: 8 },
-  unreadBadge: { borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  artistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  artistName: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
-  subLabel: { fontSize: 12, marginTop: 2 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  pendingPill: { alignItems: 'center', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, minWidth: 58 },
-  pendingCount: { fontSize: 15, fontWeight: '800' },
-  pendingLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
-});
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
