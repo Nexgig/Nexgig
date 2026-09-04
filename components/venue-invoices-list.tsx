@@ -6,8 +6,16 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useInvoiceStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 
-/** All invoices sent to this manager FOR one venue, grouped by the month they were sent.
- *  Each month header shows how many invoices landed that month. Rows name the artist. */
+/** All invoices sent to this manager FOR one venue, grouped by the month of the invoice's LAST
+ *  gig (not the month it was sent) — so an invoice is filed under when the work happened. Each
+ *  month header shows that month's total. Rows name the artist. */
+
+/** Latest gig date (YYYY-MM-DD) on an invoice; falls back to the sent date if it has no gigs. */
+function lastGigDate(inv: { gigs: { date: string }[]; sentAt: string }): string {
+  const dates = (inv.gigs ?? []).map((g) => g.date).filter(Boolean);
+  if (dates.length === 0) return (inv.sentAt ?? '').slice(0, 10);
+  return dates.reduce((a, b) => (a > b ? a : b));
+}
 export function VenueInvoicesList({ venueId }: { venueId: string }) {
   const router = useRouter();
   const colors = useColors();
@@ -18,20 +26,24 @@ export function VenueInvoicesList({ venueId }: { venueId: string }) {
   const list = useMemo(
     () => invoices
       .filter((inv) => inv.managerId === currentUser?.id && inv.venueId === venueId && !inv.isDeletedByManager)
-      .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()),
+      .sort((a, b) => lastGigDate(b).localeCompare(lastGigDate(a))),
     [invoices, currentUser?.id, venueId]
   );
 
-  // Group by month (newest month first — `list` is already sorted newest-first).
+  // Group by the LAST GIG's month (newest month first — `list` is already sorted that way).
   // `total` is the summed AED of that month's invoices; cancelled invoices don't count
   // toward it (they're struck through per-row and represent no real charge).
   const months = useMemo(() => {
     const map = new Map<string, { key: string; label: string; items: typeof list; total: number }>();
     list.forEach((inv) => {
-      const d = new Date(inv.sentAt);
-      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
+      const gigDate = lastGigDate(inv);
+      const key = gigDate.slice(0, 7); // YYYY-MM
       let e = map.get(key);
-      if (!e) { e = { key, label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), items: [], total: 0 }; map.set(key, e); }
+      if (!e) {
+        const label = new Date(gigDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        e = { key, label, items: [], total: 0 };
+        map.set(key, e);
+      }
       e.items.push(inv);
       if (inv.status !== 'cancelled') e.total += inv.totalAmount;
     });
