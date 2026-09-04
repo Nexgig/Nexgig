@@ -1505,68 +1505,61 @@ export default function CalendarScreen() {
     const maxCount = Math.max(...lineupRows.map((r) => r.gigCount), 1);
     const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
     return (
-      <View style={[styles.lineupPanel, { borderColor: colors.border }]}>
-        {/* Panel header — tap to collapse/expand */}
-        <Pressable
-          style={styles.lineupHeader}
-          onPress={() => setLineupBalanceOpen((v) => !v)}
-        >
-          <View style={styles.lineupHeaderLeft}>
-            <MaterialIcons name="equalizer" size={16} color={colors.primary} />
-            <Text style={[styles.lineupTitle, { color: colors.foreground }]}>
-              Roster Balance{' '}
-              <Text style={[styles.lineupTitle, { color: colors.muted, fontWeight: '500' }]}>({lineupPeriodLabel})</Text>
-            </Text>
+      <View style={styles.lineupSection}>
+        {/* Full-bleed hairline above the section — card-free, no bordered box. */}
+        <View style={[styles.lineupTopDivider, { backgroundColor: colors.border }]} />
+
+        {/* Header — equalizer + two-line title (name over period); tap toggles open/closed. */}
+        <Pressable style={styles.lineupHeader} onPress={() => setLineupBalanceOpen((v) => !v)}>
+          <MaterialIcons name="equalizer" size={17} color={colors.muted} style={{ marginTop: 5 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
+            <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {totalCost > 0 && (
-              <Text style={[styles.lineupTotal, { color: colors.primary }]}>AED {totalCost.toLocaleString()}</Text>
-            )}
-            <MaterialIcons
-              name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-              size={20}
-              color={colors.muted}
-            />
-          </View>
+          <MaterialIcons
+            name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+            size={20}
+            color={colors.muted}
+          />
         </Pressable>
 
-        {/* Panel body */}
         {lineupBalanceOpen && (
-          <View style={styles.lineupBody}>
-            {lineupRows.length === 0 && (
-              <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>
-                No bookings for this period yet.
-              </Text>
-            )}
-            {lineupRows.map((row) => {
-              const barWidth = maxCount > 0 ? (row.gigCount / maxCount) * 100 : 0;
-              return (
-                <View key={row.artistId} style={styles.lineupRow}>
-                  <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={32} />
-                  <View style={styles.lineupRowInfo}>
-                    <View style={styles.lineupRowTop}>
-                      <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
-                      <Text style={[styles.lineupCount, { color: row.gigCount > 0 ? colors.primary : colors.muted }]}>
-                        {row.cost > 0 ? `AED ${row.cost.toLocaleString()} · ` : ''}{row.gigCount} booking{row.gigCount !== 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                    {/* Mini progress bar */}
-                    <View style={[styles.lineupBarTrack, { backgroundColor: colors.border }]}>
-                      <View
-                        style={[
-                          styles.lineupBarFill,
-                          {
-                            width: `${barWidth}%` as `${number}%`,
-                            backgroundColor: row.gigCount > 0 ? colors.primary : colors.border,
-                          },
-                        ]}
-                      />
+          <>
+            {/* Month total */}
+            <View style={styles.lineupTotalRow}>
+              <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Month total</Text>
+              <Text style={[styles.lineupTotalValue, { color: colors.primary }]}>AED {totalCost.toLocaleString()}</Text>
+            </View>
+            <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
+
+            {lineupRows.length === 0 ? (
+              <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
+            ) : (
+              lineupRows.map((row, i) => {
+                const barWidth = maxCount > 0 ? (row.gigCount / maxCount) * 100 : 0;
+                return (
+                  <View key={row.artistId}>
+                    {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}
+                    <View style={styles.lineupRow}>
+                      <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={34} />
+                      <View style={styles.lineupRowInfo}>
+                        <View style={styles.lineupRowTop}>
+                          <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
+                          <Text style={[styles.lineupAmount, { color: colors.primary }]}>AED {row.cost.toLocaleString()}</Text>
+                        </View>
+                        <View style={styles.lineupBarLine}>
+                          <View style={styles.lineupBarTrack}>
+                            <View style={[styles.lineupBarFill, { width: `${barWidth}%` as `${number}%`, backgroundColor: colors.primary }]} />
+                          </View>
+                          <Text style={[styles.lineupGigs, { color: colors.muted }]} numberOfLines={1}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
+                        </View>
+                      </View>
                     </View>
                   </View>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })
+            )}
+          </>
         )}
       </View>
     );
@@ -2136,21 +2129,27 @@ const styles = StyleSheet.create({
   // Header Send button
   headerSendBtn: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 },
   headerSendText: { color: '#fff', fontSize: 15, fontWeight: '700' as const },
-  // Lineup Balance panel
-  lineupPanel: { marginHorizontal: 20, marginTop: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  lineupHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  lineupHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  lineupTitle: { fontSize: 14, fontWeight: '700' },
-  lineupTotal: { fontSize: 13, fontWeight: '800' },
-  lineupBody: { paddingHorizontal: 16, paddingBottom: 14, gap: 10 },
-  lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  lineupRowInfo: { flex: 1, gap: 4 },
-  lineupRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  lineupDJName: { fontSize: 13, fontWeight: '600', flex: 1 },
-  lineupCount: { fontSize: 12, fontWeight: '700' },
-  lineupBarTrack: { height: 4, borderRadius: 2, overflow: 'hidden' },
-  lineupBarFill: { height: 4, borderRadius: 2 },
-  lineupEmptyText: { fontSize: 13, fontStyle: 'italic', textAlign: 'center', paddingVertical: 6 },
+  // Roster Balance — card-free section (design handoff)
+  lineupSection: { paddingBottom: 24 },
+  lineupTopDivider: { height: StyleSheet.hairlineWidth * 2 },
+  lineupHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+  lineupTitle: { fontSize: 20, fontWeight: '600' },
+  lineupPeriod: { fontSize: 13, marginTop: 2 },
+  lineupTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 10 },
+  lineupTotalLabel: { fontSize: 13 },
+  lineupTotalValue: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  lineupInsetDivider: { height: StyleSheet.hairlineWidth * 2, marginHorizontal: 20 },
+  lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 11 },
+  lineupRowInfo: { flex: 1 },
+  lineupRowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  lineupDJName: { fontSize: 15, fontWeight: '600', flex: 1 },
+  lineupAmount: { fontSize: 15, fontWeight: '700' },
+  lineupBarLine: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 7 },
+  lineupBarTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: '#EFE8DE', overflow: 'hidden' },
+  lineupBarFill: { height: 6, borderRadius: 3 },
+  lineupGigs: { fontSize: 12, fontWeight: '600' },
+  lineupRowDivider: { height: StyleSheet.hairlineWidth * 2, marginLeft: 66 },
+  lineupEmptyText: { fontSize: 13, fontStyle: 'italic', textAlign: 'center', paddingVertical: 6, paddingHorizontal: 20 },
   // Month-start-day picker
   // Dot legend
   assignRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 5, marginTop: 2, borderTopWidth: StyleSheet.hairlineWidth },
