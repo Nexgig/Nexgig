@@ -566,8 +566,12 @@ export default function NetworkScreen() {
                   </View>
                 </View>
                 <View style={styles.gigWrap}>
-                  <Text style={[styles.gigCountLine, { color: colors.foreground }]}>{count} gig{count === 1 ? '' : 's'}</Text>
-                  {cost > 0 && <Text style={[styles.gigCost, { color: colors.primary }]}>AED {cost.toLocaleString()}</Text>}
+                  <Text style={[styles.gigAmount, { color: count > 0 ? colors.foreground : colors.muted }]}>
+                    {count > 0 ? `AED ${cost.toLocaleString()}` : '—'}
+                  </Text>
+                  <Text style={[styles.gigCompleted, { color: colors.muted }]}>
+                    {count > 0 ? `${count} completed` : 'No gigs'}
+                  </Text>
                 </View>
               </Pressable>
             );
@@ -607,8 +611,8 @@ const styles = StyleSheet.create({
   gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
   gigNum: { fontSize: 18, fontWeight: '800' },
   gigLabel: { fontSize: 12, marginTop: -1 },
-  gigCountLine: { fontSize: 15, fontWeight: '800' },
-  gigCost: { fontSize: 13, fontWeight: '700', marginTop: 2 },
+  gigAmount: { fontSize: 16, fontWeight: '800' },
+  gigCompleted: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   inviteFooter: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 4 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
   inviteText: { fontSize: 16, fontWeight: '700' },
