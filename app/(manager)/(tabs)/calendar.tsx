@@ -1502,7 +1502,7 @@ export default function CalendarScreen() {
     // In week view, hide only when there are no bookings.
     const isMonthView = calendarMode === 'month' || calendarMode === 'today';
     if (lineupRows.length === 0 && !isMonthView) return null;
-    const maxCount = Math.max(...lineupRows.map((r) => r.gigCount), 1);
+    const maxCost = Math.max(...lineupRows.map((r) => r.cost), 1);
     const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
     return (
       <View style={styles.lineupSection}>
@@ -1536,7 +1536,7 @@ export default function CalendarScreen() {
               <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
             ) : (
               lineupRows.map((row, i) => {
-                const barWidth = maxCount > 0 ? (row.gigCount / maxCount) * 100 : 0;
+                const barWidth = maxCost > 0 ? (row.cost / maxCost) * 100 : 0;
                 return (
                   <View key={row.artistId}>
                     {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}

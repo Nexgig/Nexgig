@@ -52,6 +52,17 @@ as Thursday). Placeholder data to tidy.
 - **`calendar.tsx`** — the `todayBtn` style is now used for the "Send all" text. Misleading name;
   rename to `sendAllBtn`.
 
+## 2026-09-04 · Manager Calendar → Roster Balance redesign — IMPLEMENTED ✅
+The **one** code change in Claude Design's manager-screens handoff (`~/Downloads/design_handoff_manager_screens/README.md`;
+every other frame in that bundle already matched `main`). Roster Balance went from a bordered box to a
+**card-free section**: full-bleed hairline, two-line header ("Roster Balance" over the period), a dedicated
+**"Month total"** row, per-artist **"AED {cost}"** + progress bar + **"N gigs"**, inset dividers past the
+avatar. **Look only — no logic changed** (Tuts's instruction). Shipped to preview 4 Sep (group `c384c8e7`,
+iOS `01a06c88`).
+- ⚠️ **Known deviation from the mockup:** the bar width still tracks **gig count** (existing logic), so two
+  artists with the same gig count show equal bars even at different fees. The mockup's cost-proportional bars
+  would be a *logic* change — deliberately NOT made. Flag to revisit if Tuts wants money-weighted bars.
+
 ---
 
 ## Later · one comprehensive dead-code sweep
