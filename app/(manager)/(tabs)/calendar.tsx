@@ -1552,28 +1552,61 @@ export default function CalendarScreen() {
         {/* Full-bleed hairline above the section — card-free, no bordered box. */}
         <View style={[styles.lineupTopDivider, { backgroundColor: colors.border }]} />
 
-        {/* Header — equalizer + two-line title (name over period); tap toggles open/closed. */}
+        {/* Header — title + expand chevron; month/period underneath. Tap toggles open/closed. */}
         <Pressable style={styles.lineupHeader} onPress={() => setLineupBalanceOpen((v) => !v)}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.lineupTitleRow}>
-              <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
-              {lineupBalanceOpen && (
-                <Pressable hitSlop={8} onPress={() => setShowLineupSettings((v) => !v)} style={styles.lineupGear}>
-                  <MaterialIcons name="tune" size={18} color={showLineupSettings ? colors.primary : colors.muted} />
-                </Pressable>
-              )}
-            </View>
+          <View style={styles.lineupTitleRow}>
+            <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
+            <MaterialIcons
+              name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+              size={22}
+              color={colors.muted}
+            />
           </View>
-          <MaterialIcons
-            name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-            size={20}
-            color={colors.muted}
-          />
+          <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
         </Pressable>
 
         {lineupBalanceOpen && (
           <>
-            {/* Inline settings strip — toggled by the tune icon. Same controls as the Settings page. */}
+            {lineupRows.length === 0 ? (
+              <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
+            ) : (
+              lineupRows.map((row, i) => {
+                const barWidth = maxCost > 0 ? (row.cost / maxCost) * 100 : 0;
+                return (
+                  <View key={row.artistId}>
+                    {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}
+                    <View style={styles.lineupRow}>
+                      <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={34} />
+                      <View style={styles.lineupRowInfo}>
+                        <View style={styles.lineupRowTop}>
+                          <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
+                          <Text style={[styles.lineupAmount, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
+                        </View>
+                        <View style={styles.lineupBarLine}>
+                          <View style={styles.lineupBarTrack}>
+                            <View style={[styles.lineupBarFill, { width: `${barWidth}%` as `${number}%`, backgroundColor: colors.primary }]} />
+                          </View>
+                          <Text style={[styles.lineupGigs, { color: colors.muted }]} numberOfLines={1}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+
+            {/* Total — at the bottom, under everyone. */}
+            <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.lineupTotalRow}>
+              <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Total</Text>
+              <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
+            </View>
+
+            {/* Filter/settings — moved out of the header to a small toggle at the bottom. */}
+            <Pressable onPress={() => setShowLineupSettings((v) => !v)} style={styles.lineupSettingsToggle}>
+              <MaterialIcons name="tune" size={15} color={showLineupSettings ? colors.primary : colors.muted} />
+              <Text style={[styles.lineupSettingsToggleText, { color: showLineupSettings ? colors.primary : colors.muted }]}>Count & month</Text>
+            </Pressable>
             {showLineupSettings && (
               <View style={styles.lineupSettings}>
                 <Text style={[styles.lineupSettingsLabel, { color: colors.muted }]}>COUNT</Text>
@@ -1610,42 +1643,7 @@ export default function CalendarScreen() {
                     );
                   })}
                 </ScrollView>
-                <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border, marginTop: 14 }]} />
               </View>
-            )}
-            {/* Month total */}
-            <View style={styles.lineupTotalRow}>
-              <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
-              <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
-            </View>
-            <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
-
-            {lineupRows.length === 0 ? (
-              <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
-            ) : (
-              lineupRows.map((row, i) => {
-                const barWidth = maxCost > 0 ? (row.cost / maxCost) * 100 : 0;
-                return (
-                  <View key={row.artistId}>
-                    {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}
-                    <View style={styles.lineupRow}>
-                      <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={34} />
-                      <View style={styles.lineupRowInfo}>
-                        <View style={styles.lineupRowTop}>
-                          <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
-                          <Text style={[styles.lineupAmount, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.lineupBarLine}>
-                          <View style={styles.lineupBarTrack}>
-                            <View style={[styles.lineupBarFill, { width: `${barWidth}%` as `${number}%`, backgroundColor: colors.primary }]} />
-                          </View>
-                          <Text style={[styles.lineupGigs, { color: colors.muted }]} numberOfLines={1}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })
             )}
           </>
         )}
@@ -2204,12 +2202,14 @@ const styles = StyleSheet.create({
   // Roster Balance — card-free section (design handoff)
   lineupSection: { paddingBottom: 24 },
   lineupTopDivider: { height: StyleSheet.hairlineWidth * 2 },
-  lineupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
+  lineupHeader: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
   lineupTitle: { fontSize: 20, fontWeight: '600' },
   lineupPeriod: { fontSize: 13, marginTop: 2 },
   lineupTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 10 },
   lineupTotalLabel: { fontSize: 13 },
   lineupTotalValue: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
+  lineupSettingsToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 12 },
+  lineupSettingsToggleText: { fontSize: 12, fontWeight: '600' },
   lineupInsetDivider: { height: StyleSheet.hairlineWidth * 2, marginHorizontal: 20 },
   lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 11 },
   lineupRowInfo: { flex: 1 },
