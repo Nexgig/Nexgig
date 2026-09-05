@@ -1552,101 +1552,94 @@ export default function CalendarScreen() {
         {/* Full-bleed hairline above the section — card-free, no bordered box. */}
         <View style={[styles.lineupTopDivider, { backgroundColor: colors.border }]} />
 
-        {/* Header — title + expand chevron; month/period underneath. Tap toggles open/closed. */}
-        <Pressable style={styles.lineupHeader} onPress={() => setLineupBalanceOpen((v) => !v)}>
+        {/* Header — title + settings gear; month/period underneath. Always expanded. */}
+        <View style={styles.lineupHeader}>
           <View style={styles.lineupTitleRow}>
             <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
-            <MaterialIcons
-              name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-              size={22}
-              color={colors.muted}
-            />
+            <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
+              <MaterialIcons name="tune" size={20} color={colors.muted} />
+            </Pressable>
           </View>
           <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
-        </Pressable>
+        </View>
 
-        {lineupBalanceOpen && (
-          <>
-            {lineupRows.length === 0 ? (
-              <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
-            ) : (
-              lineupRows.map((row, i) => {
-                const barWidth = maxCost > 0 ? (row.cost / maxCost) * 100 : 0;
-                return (
-                  <View key={row.artistId}>
-                    {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}
-                    <View style={styles.lineupRow}>
-                      <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={34} />
-                      <View style={styles.lineupRowInfo}>
-                        <View style={styles.lineupRowTop}>
-                          <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
-                          <Text style={[styles.lineupAmount, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.lineupBarLine}>
-                          <View style={styles.lineupBarTrack}>
-                            <View style={[styles.lineupBarFill, { width: `${barWidth}%` as `${number}%`, backgroundColor: colors.primary }]} />
-                          </View>
-                          <Text style={[styles.lineupGigs, { color: colors.muted }]} numberOfLines={1}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
-                        </View>
+        {lineupRows.length === 0 ? (
+          <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
+        ) : (
+          lineupRows.map((row, i) => {
+            const barWidth = maxCost > 0 ? (row.cost / maxCost) * 100 : 0;
+            return (
+              <View key={row.artistId}>
+                {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}
+                <View style={styles.lineupRow}>
+                  <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={34} />
+                  <View style={styles.lineupRowInfo}>
+                    <View style={styles.lineupRowTop}>
+                      <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
+                      <Text style={[styles.lineupAmount, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
+                    </View>
+                    <View style={styles.lineupBarLine}>
+                      <View style={styles.lineupBarTrack}>
+                        <View style={[styles.lineupBarFill, { width: `${barWidth}%` as `${number}%`, backgroundColor: colors.primary }]} />
                       </View>
+                      <Text style={[styles.lineupGigs, { color: colors.muted }]} numberOfLines={1}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
                     </View>
                   </View>
-                );
-              })
-            )}
-
-            {/* Total — at the bottom, under everyone. */}
-            <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.lineupTotalRow}>
-              <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Total</Text>
-              <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
-            </View>
-
-            {/* Filter/settings — moved out of the header to a small toggle at the bottom. */}
-            <Pressable onPress={() => setShowLineupSettings((v) => !v)} style={styles.lineupSettingsToggle}>
-              <MaterialIcons name="tune" size={15} color={showLineupSettings ? colors.primary : colors.muted} />
-              <Text style={[styles.lineupSettingsToggleText, { color: showLineupSettings ? colors.primary : colors.muted }]}>Count & month</Text>
-            </Pressable>
-            {showLineupSettings && (
-              <View style={styles.lineupSettings}>
-                <Text style={[styles.lineupSettingsLabel, { color: colors.muted }]}>COUNT</Text>
-                <View style={styles.lineupChipRow}>
-                  {(['draft', 'requested', 'confirmed', 'completed'] as LineupStatusFilter[]).map((status) => {
-                    const active = lineupStatuses.includes(status);
-                    // Manager-facing labels: a request is one they SENT; confirmed reads "Booked".
-                    const label = status === 'requested' ? 'Sent'
-                      : status === 'confirmed' ? 'Booked'
-                      : status.charAt(0).toUpperCase() + status.slice(1);
-                    return (
-                      <Pressable
-                        key={status}
-                        onPress={() => persistLineupStatus(status)}
-                        style={[styles.lineupChip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
-                      >
-                        <Text style={[styles.lineupChipText, { color: active ? '#fff' : colors.foreground }]}>{label}</Text>
-                      </Pressable>
-                    );
-                  })}
                 </View>
-                <Text style={[styles.lineupSettingsLabel, { color: colors.muted, marginTop: 12 }]}>MONTH STARTS ON</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lineupDayRow}>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                    const active = monthStartDay === day;
-                    return (
-                      <Pressable
-                        key={day}
-                        onPress={() => persistMonthStartDay(day)}
-                        style={[styles.lineupDayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
-                      >
-                        <Text style={[styles.lineupDayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
               </View>
-            )}
-          </>
+            );
+          })
         )}
+
+        {/* Total — at the bottom, under everyone. */}
+        <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
+        <View style={styles.lineupTotalRow}>
+          <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Total</Text>
+          <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
+        </View>
+
+        {/* Settings — popup opened by the gear (mirrors the Overview legend popover). Tap outside to close. */}
+        <Modal visible={showLineupSettings} transparent animationType="fade" onRequestClose={() => setShowLineupSettings(false)}>
+          <Pressable style={styles.lineupSettingsBackdrop} onPress={() => setShowLineupSettings(false)}>
+            <Pressable style={[styles.lineupSettingsCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => {}}>
+              <Text style={[styles.lineupSettingsCardTitle, { color: colors.foreground }]}>Roster Balance</Text>
+              <Text style={[styles.lineupSettingsLabel, { color: colors.muted }]}>COUNT</Text>
+              <View style={styles.lineupChipRow}>
+                {(['draft', 'requested', 'confirmed', 'completed'] as LineupStatusFilter[]).map((status) => {
+                  const active = lineupStatuses.includes(status);
+                  // Manager-facing labels: a request is one they SENT; confirmed reads "Booked".
+                  const label = status === 'requested' ? 'Sent'
+                    : status === 'confirmed' ? 'Booked'
+                    : status.charAt(0).toUpperCase() + status.slice(1);
+                  return (
+                    <Pressable
+                      key={status}
+                      onPress={() => persistLineupStatus(status)}
+                      style={[styles.lineupChip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
+                    >
+                      <Text style={[styles.lineupChipText, { color: active ? '#fff' : colors.foreground }]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={[styles.lineupSettingsLabel, { color: colors.muted, marginTop: 14 }]}>MONTH STARTS ON</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lineupDayRow}>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                  const active = monthStartDay === day;
+                  return (
+                    <Pressable
+                      key={day}
+                      onPress={() => persistMonthStartDay(day)}
+                      style={[styles.lineupDayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
+                    >
+                      <Text style={[styles.lineupDayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </View>
     );
   };
@@ -2208,8 +2201,9 @@ const styles = StyleSheet.create({
   lineupTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 10 },
   lineupTotalLabel: { fontSize: 13 },
   lineupTotalValue: { fontSize: 17, fontWeight: '700', letterSpacing: -0.2 },
-  lineupSettingsToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 12 },
-  lineupSettingsToggleText: { fontSize: 12, fontWeight: '600' },
+  lineupSettingsBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  lineupSettingsCard: { width: '88%', maxWidth: 360, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 18, paddingVertical: 18 },
+  lineupSettingsCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
   lineupInsetDivider: { height: StyleSheet.hairlineWidth * 2, marginHorizontal: 20 },
   lineupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 11 },
   lineupRowInfo: { flex: 1 },
