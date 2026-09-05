@@ -1275,7 +1275,6 @@ export default function CalendarScreen() {
         <Text style={[styles.dayHeaderLabel, { color: colors.muted }]}>
           {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()}
         </Text>
-        <View style={[styles.dayHeaderLine, { backgroundColor: colors.border }]} />
         <Pressable onPress={() => openCreateSlot(selectedDate)} hitSlop={10} style={styles.dayHeaderAdd}>
           <MaterialIcons name="add" size={22} color={colors.primary} />
         </Pressable>
@@ -2178,8 +2177,7 @@ const styles = StyleSheet.create({
   // Slots section
   dayHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   dayHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  dayHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12, marginRight: 12 },
-  dayHeaderAdd: { padding: 2 },
+  dayHeaderAdd: { padding: 2, marginLeft: 8 },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   dayAvatarStack: { flexDirection: 'row', alignItems: 'center' },
   dayAvatarRing: { borderRadius: 24, borderWidth: 2 },
