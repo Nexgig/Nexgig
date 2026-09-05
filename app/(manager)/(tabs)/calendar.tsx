@@ -1554,7 +1554,6 @@ export default function CalendarScreen() {
 
         {/* Header — equalizer + two-line title (name over period); tap toggles open/closed. */}
         <Pressable style={styles.lineupHeader} onPress={() => setLineupBalanceOpen((v) => !v)}>
-          <MaterialIcons name="equalizer" size={17} color={colors.muted} style={{ marginTop: 5 }} />
           <View style={{ flex: 1 }}>
             <View style={styles.lineupTitleRow}>
               <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
@@ -1564,7 +1563,6 @@ export default function CalendarScreen() {
                 </Pressable>
               )}
             </View>
-            <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
           </View>
           <MaterialIcons
             name={lineupBalanceOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
@@ -1617,7 +1615,7 @@ export default function CalendarScreen() {
             )}
             {/* Month total */}
             <View style={styles.lineupTotalRow}>
-              <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Month total</Text>
+              <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
               <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
             </View>
             <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
@@ -2206,7 +2204,7 @@ const styles = StyleSheet.create({
   // Roster Balance — card-free section (design handoff)
   lineupSection: { paddingBottom: 24 },
   lineupTopDivider: { height: StyleSheet.hairlineWidth * 2 },
-  lineupHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+  lineupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
   lineupTitle: { fontSize: 20, fontWeight: '600' },
   lineupPeriod: { fontSize: 13, marginTop: 2 },
   lineupTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 10 },
