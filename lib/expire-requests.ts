@@ -1,6 +1,7 @@
+import { supabase } from './supabase';
 import { useBookingStore } from './store';
-import { syncBookingStatus } from './booking-sync';
 import { isExpiredRequest } from './utils';
+import { reportWarning } from './observability';
 
 /**
  * Flip unanswered requests to `expired` once their gig has finished.
@@ -24,15 +25,31 @@ export async function sweepExpiredRequests(): Promise<void> {
   const store = useBookingStore.getState();
   const stale = store.bookings.filter((b) =>
     b.status === 'requested' &&
+    // A gig that was ever confirmed is NOT an unanswered request — never expire it, even if THIS
+    // device's copy still reads 'requested' (a stale local snapshot from before the confirm synced).
+    !b.confirmedAt &&
     isExpiredRequest(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime)
   );
   if (stale.length === 0) return;
 
   const now = new Date().toISOString();
   for (const b of stale) {
-    // Local first so the UI settles immediately, then persist. Either side of the booking
-    // can run this sweep; the write is idempotent, so both doing it is harmless.
+    // Write to the DB FIRST, GUARDED on the row still being 'requested' THERE. The local copy can be
+    // stale — a confirmation that reached another device but not this one — and an unconditional write
+    // keyed only on `id` would clobber a real confirmed/completed booking to 'expired' (exactly the bug
+    // that wrongly expired a completed gig, 3 Sep 2026). `.eq('status','requested')` makes the write a
+    // no-op once the source of truth has moved on; only a genuine flip is then reflected locally.
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status: 'expired', updated_at: now })
+      .eq('id', b.id)
+      .eq('status', 'requested')
+      .select('id');
+    if (error) {
+      reportWarning('expire write failed', { bookingId: b.id, error: error.message });
+      continue;
+    }
+    if (!data || data.length === 0) continue; // DB already moved past 'requested' — don't clobber it
     store.updateBookingStatus(b.id, 'expired', { updatedAt: now });
-    await syncBookingStatus(b.id, 'expired', { updatedAt: now });
   }
 }
