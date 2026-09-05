@@ -202,6 +202,10 @@ export default function DJHomeScreen() {
 
   const [selected, setSelected] = useState<string | null>(null);
   const [showLegend, setShowLegend] = useState(false);
+  // Measured width of the day strip → size each day column to an even fraction so a WHOLE number of
+  // days fills it (no partial next-day cell peeking on the right). Falls back to 44 before measuring.
+  const [stripW, setStripW] = useState(0);
+  const dayW = stripW > 0 ? stripW / Math.max(1, Math.round(stripW / 44)) : 44;
   const toggleDay = (date: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSelected((cur) => (cur === date ? null : date));
@@ -434,11 +438,11 @@ export default function DJHomeScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Overview strip — one horizontal row of the next 31 days, colored by status. */}
         <View style={styles.strip}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysScroll} onLayout={(e) => setStripW(e.nativeEvent.layout.width)}>
             <View>
               <View style={styles.stripHeaderRow}>
                 {stripDays.map(({ date }) => (
-                  <View key={date} style={styles.dayCol}>
+                  <View key={date} style={[styles.dayCol, { width: dayW }]}>
                     <Text style={[styles.stripDow, { color: colors.muted }]}>
                       {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}
                     </Text>
@@ -451,7 +455,7 @@ export default function DJHomeScreen() {
                   // Today is rendered as a normal day for now (no coral).
                   const numColor = state === 'none' ? colors.muted : '#fff';
                   return (
-                    <View key={date} style={styles.dayCol}>
+                    <View key={date} style={[styles.dayCol, { width: dayW }]}>
                       <Pressable style={({ pressed }) => [styles.cellPress, { opacity: pressed ? 0.5 : 1 }]} onPress={() => toggleDay(date)}>
                         <View style={[styles.cellRingWrap, isSel && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 12 }]}>
                           <View style={[styles.cellBox, { backgroundColor: stripFill(state) }]}>
