@@ -2198,7 +2198,7 @@ const styles = StyleSheet.create({
   lineupSection: { paddingBottom: 24 },
   lineupHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 16 },
   lineupHeadLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
-  lineupBigTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5, paddingHorizontal: 20, marginTop: 6 },
+  lineupBigTotal: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, paddingHorizontal: 20, marginTop: 6 },
   lineupSummary: { fontSize: 14, paddingHorizontal: 20, marginTop: 3 },
   lineupSegBar: { flexDirection: 'row', height: 14, gap: 3, marginHorizontal: 20, marginTop: 16, marginBottom: 6 },
   lineupRow2: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 13 },
