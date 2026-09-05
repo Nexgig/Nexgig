@@ -1328,9 +1328,10 @@ export default function CalendarScreen() {
       else if (dDrafted) fill = colors.surface;
       else if (dPending) fill = STATUS_COLORS.pending;
       else if (dConfirmed) fill = STATUS_COLORS.confirmed;
+      // Adjacent-month (previous/next) days carry NO status colour — just a faded grey number — so the
+      // colour legend reads as "this month only". Only the current month's days are coloured.
+      if (outside) { fill = null; dashedRing = false; }
       const strongFill = !!fill && fill !== colors.surface;
-      // Adjacent-month days show their status fill like a normal day; only an EMPTY adjacent
-      // day (no slot at all) is greyed, to mark the month boundary.
       const numColor = strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
       return (
         <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
