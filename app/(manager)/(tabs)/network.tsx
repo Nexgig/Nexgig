@@ -580,11 +580,8 @@ export default function NetworkScreen() {
                   </View>
                 </View>
                 <View style={styles.gigWrap}>
-                  <Text style={[styles.gigAmount, { color: count > 0 ? colors.foreground : colors.muted }]}>
+                  <Text style={[styles.gigAmount, { color: colors.muted }]}>
                     {count > 0 ? `AED ${cost.toLocaleString()}` : '—'}
-                  </Text>
-                  <Text style={[styles.gigCompleted, { color: colors.muted }]}>
-                    {count > 0 ? `${count} invoiced` : 'None invoiced'}
                   </Text>
                 </View>
               </Pressable>
