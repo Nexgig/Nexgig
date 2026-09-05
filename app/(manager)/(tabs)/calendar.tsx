@@ -1,7 +1,7 @@
 import { VenueFilterRow } from '@/components/venue-filter-row';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { useRoleSwitching } from '@/lib/roles';
-import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Alert, FlatList, Keyboard, TouchableWithoutFeedback, Platform, Dimensions, PanResponder, Animated as RNAnimated, RefreshControl } from '@/lib/rn';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -32,8 +32,6 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 
 // Monday-first day labels
 const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-// Calendar day-view mode: the day's gigs listed BELOW the whole grid, or opened INLINE under the tapped week.
-const STORAGE_KEY_CALENDAR_DAY_LAYOUT = 'nexgig:calendarDayLayout';
 const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -326,9 +324,6 @@ export default function CalendarScreen() {
   // Custom month-cycle start day — loaded from AsyncStorage (set in Settings screen)
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showLineupSettings, setShowLineupSettings] = useState(false);   // inline Roster-Balance settings strip
-  const [dayLayout, setDayLayout] = useState<'below' | 'inline'>('below');   // day view: list-below vs open-under-the-day
-  const [dayLayoutMenuOpen, setDayLayoutMenuOpen] = useState(false);
-  const persistDayLayout = (v: 'below' | 'inline') => { setDayLayout(v); AsyncStorage.setItem(STORAGE_KEY_CALENDAR_DAY_LAYOUT, v); setDayLayoutMenuOpen(false); };
 
   // On every focus: sync monthStartDay, showLineupBalance, and the saved default view label.
   // calendarMode (the active view) is only set from the default on FIRST mount —
@@ -352,15 +347,13 @@ export default function CalendarScreen() {
     useCallback(() => {
       let active = true;
       (async () => {
-        const [msd, slb, dcv, ls, cdl] = await Promise.all([
+        const [msd, slb, dcv, ls] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_MONTH_START_DAY),
           AsyncStorage.getItem(STORAGE_KEY_SHOW_LINEUP_BALANCE),
           AsyncStorage.getItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
           AsyncStorage.getItem(STORAGE_KEY_LINEUP_STATUSES),
-          AsyncStorage.getItem(STORAGE_KEY_CALENDAR_DAY_LAYOUT),
         ]);
         if (!active) return;
-        if (cdl === 'inline' || cdl === 'below') setDayLayout(cdl);
         if (msd !== null) setMonthStartDay(Number(msd));
         if (slb !== null) setShowLineupBalance(slb !== 'false');
         if (ls !== null) {
@@ -1275,8 +1268,7 @@ export default function CalendarScreen() {
     if (page === 0) prevMonthNav();
     else if (page === 2) nextMonthNav();
   };
-  // The day's gigs — used BELOW the grid ("List below" view) or injected INLINE under the tapped
-  // week ("Open under the day" view). Same content either way: date header + add-slot + each gig row.
+  // The selected day's gigs, shown below the month grid: date header + add-slot + each gig row.
   const renderDayPanel = () => (
     <View style={styles.slotsSection}>
       <View style={styles.dayHeaderRow}>
@@ -1312,7 +1304,7 @@ export default function CalendarScreen() {
       const ds = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
       cells.push({ date: ds, outside: dObj.getMonth() !== month });
     }
-    // One day square. Shared by the flat grid ("List below") and the week-row grid ("Open under the day").
+    // One day square in the month grid.
     const cell = ({ date: dateStr, outside }: { date: string; outside: boolean }) => {
       const day = parseInt(dateStr.split('-')[2], 10);
       const daySlots = getSlotsForDate(dateStr);
@@ -1350,24 +1342,6 @@ export default function CalendarScreen() {
         </Pressable>
       );
     };
-
-    // "Open under the day": 6 explicit week rows, with the day panel dropped right under the week
-    // that OWNS the selected date (a non-outside cell — so only the home month shows the panel).
-    if (dayLayout === 'inline') {
-      const selIdx = cells.findIndex((c) => c.date === selectedDate && !c.outside);
-      const selWeek = selIdx >= 0 ? Math.floor(selIdx / 7) : -1;
-      const weeks = Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
-      return (
-        <View style={styles.calendarGridInline}>
-          {weeks.map((wk, wi) => (
-            <View key={wi}>
-              <View style={styles.weekRow}>{wk.map(cell)}</View>
-              {wi === selWeek && renderDayPanel()}
-            </View>
-          ))}
-        </View>
-      );
-    }
 
     return (
       <View style={styles.calendarGrid}>
@@ -1414,12 +1388,30 @@ export default function CalendarScreen() {
     const bookedIds = new Set(bs.map((b) => b.artistId));
     const drafts = getDraftsBySlot(slot.id).filter((d) => !bookedIds.has(d.artistId));
 
-    // Swipe-to-delete is TEMPORARILY DISABLED in both calendar day-views (the inline "Open under the
-    // day" view's month-swipe would fight it). Slot deletion will get a new affordance — see todo.md
-    // ("Calendar Open under the day view — restore swipe-to-delete"). For now just render the row.
-    const withSwipeDelete = (key: string, _onDelete: () => void, child: React.ReactNode) => (
-      <Fragment key={key}>{child}</Fragment>
-    );
+    // Swipe-left reveals a delete action. Used for draft rows (remove the draft) and empty
+    // slots (delete the slot) — not for real bookings (those are cancelled from the booking).
+    const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
+      const doDelete = () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDelete(); };
+      return (
+        <Swipeable
+          key={key}
+          friction={1.4}
+          rightThreshold={56}                 // a decisive swipe past this deletes (full-swipe)
+          overshootRight={false}
+          onSwipeableOpen={(dir) => { if (dir === 'right') doDelete(); }}
+          renderRightActions={() => (
+            <View style={styles.swipeDeleteAction}>
+              <Pressable style={[styles.swipeDeleteBtn, { backgroundColor: colors.error }]} onPress={doDelete}>
+                <MaterialIcons name="delete" size={17} color="#fff" />
+                <Text style={styles.swipeDeleteText}>Remove</Text>
+              </Pressable>
+            </View>
+          )}
+        >
+          {child}
+        </Swipeable>
+      );
+    };
 
     // Truly empty — no booking, no draft → prompt to add an artist (swipe to delete the slot).
     if (bs.length === 0 && drafts.length === 0) {
@@ -1694,9 +1686,6 @@ export default function CalendarScreen() {
                   background, only when there are pending draft requests. Swipe the grid to change month. */}
               <View style={styles.monthNav}>
                 <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
-                <Pressable hitSlop={8} onPress={() => setDayLayoutMenuOpen(true)} style={styles.calViewGear}>
-                  <MaterialIcons name="tune" size={18} color={colors.muted} />
-                </Pressable>
                 <View style={{ flex: 1 }} />
                 {periodScopedDrafts.length > 0 && (
                   <Pressable
@@ -1735,39 +1724,20 @@ export default function CalendarScreen() {
                 <View style={{ width: SCREEN_W }}>{renderMonthGrid(nextMY.year, nextMY.month)}</View>
               </ScrollView>
 
-              {/* Selected-day gigs — only in the "List below" view. The "Open under the day" view
-                  injects this same panel inline under the tapped week (see renderMonthGrid). */}
-              {dayLayout === 'below' && (!selectedDate ? (
+              {/* Selected-day gigs — below the whole month grid. */}
+              {!selectedDate ? (
                 <View style={[styles.noSlotsCard, { borderColor: colors.border }]}>
                   <MaterialIcons name="touch-app" size={32} color={colors.muted} />
                   <Text style={[styles.noSlotsText, { color: colors.muted }]}>Tap a date to see sets</Text>
                 </View>
               ) : (
                 renderDayPanel()
-              ))}
+              )}
               {renderLineupBalance()}
             </>
           )}
         </View>
       </ScrollView>
-
-      {/* Day-view chooser — List below vs Open under the day (tune icon by the month name) */}
-      <Modal visible={dayLayoutMenuOpen} transparent animationType="fade" onRequestClose={() => setDayLayoutMenuOpen(false)}>
-        <Pressable style={styles.dayLayoutBackdrop} onPress={() => setDayLayoutMenuOpen(false)}>
-          <View style={[styles.dayLayoutCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.dayLayoutHead, { color: colors.muted }]}>DAY VIEW</Text>
-            {([['below', 'List below the calendar'], ['inline', 'Open under the day']] as const).map(([val, label]) => {
-              const active = dayLayout === val;
-              return (
-                <Pressable key={val} style={styles.dayLayoutOption} onPress={() => persistDayLayout(val)}>
-                  <Text style={[styles.dayLayoutOptionText, { color: active ? colors.primary : colors.foreground, fontWeight: active ? '700' : '500' }]}>{label}</Text>
-                  {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
-                </Pressable>
-              );
-            })}
-          </View>
-        </Pressable>
-      </Modal>
 
       {/* ═══════════════════ SEND BOOKING MODAL (full-screen, context-aware) ═══════════════════ */}
       <Modal
@@ -2201,15 +2171,7 @@ const styles = StyleSheet.create({
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },
   dayLabel: { flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', paddingVertical: 4 },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: -6 },
-  calendarGridInline: { paddingHorizontal: 12, marginBottom: -6 },
-  weekRow: { flexDirection: 'row' },
-  calViewGear: { padding: 2, marginLeft: 2 },
   lineupTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dayLayoutBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  dayLayoutCard: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: 1, paddingVertical: 8, paddingHorizontal: 6 },
-  dayLayoutHead: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4 },
-  dayLayoutOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 13 },
-  dayLayoutOptionText: { fontSize: 15 },
   calendarCell: { width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   dayCircle: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   dayNumber: { fontSize: 16, fontFamily: fonts.bodySemibold },

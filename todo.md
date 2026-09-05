@@ -92,10 +92,6 @@ those into ONE build.
   their invoiced amount (not completed-this-month + fee sum). NEEDS a one-line spec first: all-time vs a
   month, and whether the amount is the invoice total or the gig fees. (`gigCount` / `gigCost` in
   `(manager)/(tabs)/network.tsx`.) OTA.
-- **Calendar "Open under the day" view — restore swipe-to-delete.** (Added 4 Sep 2026.) The new inline
-  calendar day-view navigates months with ‹ › arrows because an inline day panel + the gig rows'
-  left-swipe-to-delete would fight the grid's month-swipe. Find a gesture setup that lets swipe-to-delete
-  work in that view too (so it can drop the arrows). Follow-up to the inline-view build. OTA.
 - **Availability-first booking flow.** (Added 29 Aug 2026.) Manager creates a slot → sends an
   AVAILABILITY request to several artists ("are you free for this?") → after they reply, the
   manager sends the actual BOOKING to the one they pick. A new two-step flow (availability → then
