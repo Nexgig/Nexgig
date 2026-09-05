@@ -1545,58 +1545,60 @@ export default function CalendarScreen() {
     // In week view, hide only when there are no bookings.
     const isMonthView = calendarMode === 'month' || calendarMode === 'today';
     if (lineupRows.length === 0 && !isMonthView) return null;
-    const maxCost = Math.max(...lineupRows.map((r) => r.cost), 1);
     const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
+    const totalGigs = lineupRows.reduce((s, r) => s + r.gigCount, 0);
+    // Biggest earner first; each artist gets a coral shade by rank (darkest = most earned), shared by
+    // the stacked bar segment and the row's square.
+    const sortedRows = [...lineupRows].sort((a, b) => b.cost - a.cost);
+    const shadeAt = (i: number) => {
+      const n = sortedRows.length;
+      const alpha = n <= 1 ? 1 : Math.max(0.22, 1 - (i / (n - 1)) * 0.75);
+      return colors.primary + Math.round(alpha * 255).toString(16).padStart(2, '0');
+    };
     return (
       <View style={styles.lineupSection}>
         {/* Full-bleed hairline above the section — card-free, no bordered box. */}
         <View style={[styles.lineupTopDivider, { backgroundColor: colors.border }]} />
 
-        {/* Header — title + settings gear; month/period underneath. Always expanded. */}
-        <View style={styles.lineupHeader}>
-          <View style={styles.lineupTitleRow}>
-            <Text style={[styles.lineupTitle, { color: colors.foreground }]}>Roster Balance</Text>
-            <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
-              <MaterialIcons name="tune" size={20} color={colors.muted} />
-            </Pressable>
-          </View>
-          <Text style={[styles.lineupPeriod, { color: colors.muted }]}>{lineupPeriodLabel}</Text>
+        {/* Header — "ROSTER BALANCE" label + settings gear. */}
+        <View style={styles.lineupHead}>
+          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>ROSTER BALANCE</Text>
+          <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
+            <MaterialIcons name="tune" size={18} color={colors.muted} />
+          </Pressable>
         </View>
 
-        {lineupRows.length === 0 ? (
-          <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
-        ) : (
-          lineupRows.map((row, i) => {
-            const barWidth = maxCost > 0 ? (row.cost / maxCost) * 100 : 0;
-            return (
-              <View key={row.artistId}>
-                {i > 0 && <View style={[styles.lineupRowDivider, { backgroundColor: colors.border }]} />}
-                <View style={styles.lineupRow}>
-                  <AvatarImage uri={row.user.profilePhotoUrl} name={row.user.fullName} size={34} />
-                  <View style={styles.lineupRowInfo}>
-                    <View style={styles.lineupRowTop}>
-                      <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
-                      <Text style={[styles.lineupAmount, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
-                    </View>
-                    <View style={styles.lineupBarLine}>
-                      <View style={styles.lineupBarTrack}>
-                        <View style={[styles.lineupBarFill, { width: `${barWidth}%` as `${number}%`, backgroundColor: colors.primary }]} />
-                      </View>
-                      <Text style={[styles.lineupGigs, { color: colors.muted }]} numberOfLines={1}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            );
-          })
+        {/* Big total + summary line. */}
+        <Text style={[styles.lineupBigTotal, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
+        <Text style={[styles.lineupSummary, { color: colors.muted }]}>
+          {lineupPeriodLabel} · {totalGigs} gig{totalGigs !== 1 ? 's' : ''} · {lineupRows.length} artist{lineupRows.length !== 1 ? 's' : ''}
+        </Text>
+
+        {/* Stacked coral bar — one segment per artist, width ∝ their fee, shaded by rank. */}
+        {totalCost > 0 && (
+          <View style={styles.lineupSegBar}>
+            {sortedRows.map((row, i) => (
+              <View key={row.artistId} style={{ flex: row.cost, backgroundColor: shadeAt(i), borderRadius: 4 }} />
+            ))}
+          </View>
         )}
 
-        {/* Total — at the bottom, under everyone. */}
-        <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
-        <View style={styles.lineupTotalRow}>
-          <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Total</Text>
-          <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
-        </View>
+        {/* Rows — coral square (matching the bar shade) + name + gigs + amount. */}
+        {sortedRows.length === 0 ? (
+          <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
+        ) : (
+          sortedRows.map((row, i) => (
+            <View key={row.artistId}>
+              <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.lineupRow2}>
+                <View style={[styles.lineupSquare, { backgroundColor: shadeAt(i) }]} />
+                <Text style={[styles.lineupDJName2, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
+                <Text style={[styles.lineupGigs2, { color: colors.muted }]}>{row.gigCount} gig{row.gigCount !== 1 ? 's' : ''}</Text>
+                <Text style={[styles.lineupAmount2, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
+              </View>
+            </View>
+          ))
+        )}
 
         {/* Settings — popup opened by the gear (mirrors the Overview legend popover). Tap outside to close. */}
         <Modal visible={showLineupSettings} transparent animationType="fade" onRequestClose={() => setShowLineupSettings(false)}>
@@ -2194,6 +2196,16 @@ const styles = StyleSheet.create({
   headerSendText: { color: '#fff', fontSize: 15, fontWeight: '700' as const },
   // Roster Balance — card-free section (design handoff)
   lineupSection: { paddingBottom: 24 },
+  lineupHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 16 },
+  lineupHeadLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
+  lineupBigTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5, paddingHorizontal: 20, marginTop: 6 },
+  lineupSummary: { fontSize: 14, paddingHorizontal: 20, marginTop: 3 },
+  lineupSegBar: { flexDirection: 'row', height: 14, gap: 3, marginHorizontal: 20, marginTop: 16, marginBottom: 6 },
+  lineupRow2: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 13 },
+  lineupSquare: { width: 12, height: 12, borderRadius: 3 },
+  lineupDJName2: { fontSize: 16, fontWeight: '700', flex: 1 },
+  lineupGigs2: { fontSize: 14 },
+  lineupAmount2: { fontSize: 16, fontWeight: '800' },
   lineupTopDivider: { height: StyleSheet.hairlineWidth * 2 },
   lineupHeader: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
   lineupTitle: { fontSize: 20, fontWeight: '600' },

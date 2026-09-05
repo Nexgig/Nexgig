@@ -86,12 +86,6 @@ those into ONE build.
   `isConnected`, so a non-connected manager never sees it. OTA.
 
 #### 🏢 For managers
-- **Roster tab counts should follow INVOICES, not "completed this month".** (Added 4 Sep 2026.) Today each
-  Roster-tab artist row shows their COMPLETED gigs in the picked month + the sum of those fees. Change the
-  count + amount to follow INVOICING instead: count the completed gigs that have been INVOICED and show
-  their invoiced amount (not completed-this-month + fee sum). NEEDS a one-line spec first: all-time vs a
-  month, and whether the amount is the invoice total or the gig fees. (`gigCount` / `gigCost` in
-  `(manager)/(tabs)/network.tsx`.) OTA.
 - **Availability-first booking flow.** (Added 29 Aug 2026.) Manager creates a slot → sends an
   AVAILABILITY request to several artists ("are you free for this?") → after they reply, the
   manager sends the actual BOOKING to the one they pick. A new two-step flow (availability → then
