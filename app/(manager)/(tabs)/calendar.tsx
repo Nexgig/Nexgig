@@ -580,9 +580,10 @@ export default function CalendarScreen() {
     if (!currentUser) return [];
     const lineupEntries = getGlobalLineupByManager(currentUser.id);
 
-    // Build a slot-date lookup for quick access
+    // Build slot lookups (date + venue) for quick access.
     const slotDateMap: Record<string, string> = {};
-    allSlots.forEach((s) => { slotDateMap[s.id] = s.date; });
+    const slotVenueMap: Record<string, string> = {};
+    allSlots.forEach((s) => { slotDateMap[s.id] = s.date; slotVenueMap[s.id] = s.venueId; });
 
     // Determine the date range for the active view
     let periodStart: string;
@@ -605,7 +606,7 @@ export default function CalendarScreen() {
     // 1. Drafts (only if 'draft' is in the active filter)
     if (lineupStatuses.includes('draft')) {
       allDrafts
-        .filter((d) => d.managerId === currentUser.id)
+        .filter((d) => d.managerId === currentUser.id && (venueFilter === 'all' || slotVenueMap[d.slotId] === venueFilter))
         .forEach((d) => {
           const date = slotDateMap[d.slotId];
           if (date && date >= periodStart && date <= periodEnd) {
@@ -623,7 +624,7 @@ export default function CalendarScreen() {
       .filter((s) => lineupStatuses.includes(s));
     if (allowedBookingStatuses.length > 0) {
       allBookings
-        .filter((b) => b.managerId === currentUser.id && allowedBookingStatuses.includes(b.status as any))
+        .filter((b) => b.managerId === currentUser.id && allowedBookingStatuses.includes(b.status as any) && (venueFilter === 'all' || (b.venueId ?? slotVenueMap[b.slotId]) === venueFilter))
         .forEach((b) => {
           if (draftSlotIds.has(b.slotId)) return; // already counted as draft
           const date = slotDateMap[b.slotId];
@@ -642,7 +643,7 @@ export default function CalendarScreen() {
       })
       .filter((row): row is { artistId: string; user: NonNullable<ReturnType<typeof getArtistUser>>; gigCount: number; cost: number } => row !== null && row.gigCount > 0)
       .sort((a, b) => b.gigCount - a.gigCount || a.user.fullName.localeCompare(b.user.fullName));
-  }, [currentUser, allDrafts, allBookings, allSlots, calendarMode, weekDays, monthPeriodBounds, getGlobalLineupByManager, getArtistUser, lineupStatuses, todayDateStr, viewedDayStr]);
+  }, [currentUser, allDrafts, allBookings, allSlots, calendarMode, weekDays, monthPeriodBounds, getGlobalLineupByManager, getArtistUser, lineupStatuses, todayDateStr, viewedDayStr, venueFilter]);
 
   // Period-aware draft count for the Send Bookings button
   const periodDraftSlotIds = useMemo(() => {
