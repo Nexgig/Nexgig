@@ -72,31 +72,36 @@ export default function NetworkScreen() {
     return out;
   }, []);
 
-  // Per-artist COMPLETED-gig count for the picked calendar month (1st→last, live).
   const bookings = useBookingStore((s) => s.bookings);
-  const gigCount = useCallback((artistId: string) => bookings.filter((b) =>
-    b.artistId === artistId &&
-    b.managerId === currentUser?.id &&
-    (b.isCompleted || b.status === 'completed') &&
-    (b.slotDate ?? '').startsWith(monthPrefix)
-  ).length, [bookings, currentUser?.id, monthPrefix]);
-
-  // Per-artist COST for the picked month = sum of the price on this manager's COMPLETED gigs that
-  // month — the SAME set the gig count uses, so the money and the count always agree.
-  const isCompletedThisMonth = useCallback((b: (typeof bookings)[number], artistId?: string) =>
-    b.managerId === currentUser?.id &&
-    (artistId ? b.artistId === artistId : true) &&
-    (b.isCompleted || b.status === 'completed') &&
-    (b.slotDate ?? '').startsWith(monthPrefix), [currentUser?.id, monthPrefix]);
-  const gigCost = useCallback((artistId: string) =>
-    bookings.filter((b) => isCompletedThisMonth(b, artistId)).reduce((sum, b) => sum + (b.price ?? 0), 0),
-    [bookings, isCompletedThisMonth]);
-
-  // How many of an artist's completed gigs (with this manager) no non-cancelled invoice covers yet.
   const allInvoices = useInvoiceStore((s) => s.invoices);
+  // Gigs (bookings) covered by a non-cancelled invoice.
   const invoicedBookingIds = useMemo(() =>
     new Set(allInvoices.filter((inv) => inv.status !== 'cancelled').flatMap((inv) => inv.gigs.map((g) => g.bookingId))),
     [allInvoices]);
+
+  // An invoice is bucketed to the month of its LAST gig (matches the invoice-list grouping) — so an
+  // invoice whose last gig is in August counts FULLY under August (all its gigs + its total amount),
+  // even if some of its gigs were in July.
+  const invoiceMonth = useCallback((inv: (typeof allInvoices)[number]) => {
+    const dates = (inv.gigs ?? []).map((g) => g.date).filter(Boolean);
+    const last = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : (inv.sentAt ?? '').slice(0, 10);
+    return last.slice(0, 7); // 'YYYY-MM'
+  }, []);
+  const monthInvoices = useCallback((artistId: string) =>
+    allInvoices.filter((inv) =>
+      inv.managerId === currentUser?.id && inv.artistId === artistId &&
+      inv.status !== 'cancelled' && invoiceMonth(inv) === monthPrefix),
+    [allInvoices, currentUser?.id, monthPrefix, invoiceMonth]);
+  // Per-artist for the picked month: total gigs across those invoices, and their total amount.
+  const gigCount = useCallback((artistId: string) =>
+    monthInvoices(artistId).reduce((sum, inv) => sum + (inv.gigs?.length ?? 0), 0),
+    [monthInvoices]);
+  const gigCost = useCallback((artistId: string) =>
+    monthInvoices(artistId).reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0),
+    [monthInvoices]);
+
+  // How many of an artist's completed gigs (with this manager) no non-cancelled invoice covers yet
+  // (all-time — drives the "N not invoiced" subtitle).
   const uninvoicedCount = useCallback((artistId: string) =>
     bookings.filter((b) =>
       b.artistId === artistId && b.managerId === currentUser?.id &&
@@ -570,7 +575,7 @@ export default function NetworkScreen() {
                     {count > 0 ? `AED ${cost.toLocaleString()}` : '—'}
                   </Text>
                   <Text style={[styles.gigCompleted, { color: colors.muted }]}>
-                    {count > 0 ? `${count} completed` : 'No gigs'}
+                    {count > 0 ? `${count} invoiced` : 'None invoiced'}
                   </Text>
                 </View>
               </Pressable>
