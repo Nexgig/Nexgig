@@ -8,7 +8,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { Section, Divider, StatRow, Chip } from '@/components/ui/card-free';
-import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore } from '@/lib/store';
+import { useLineupStore, useBookingStore, useVenueStore, useAuthStore, useSlotStore, useNotificationStore, useArtistDirectoryStore, useInvoiceStore } from '@/lib/store';
 import { fonts } from '@/lib/fonts';
 import { SHOW_ARTIST_HISTORY, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { ArtistBookingsList } from '@/components/artist-bookings-list';
@@ -45,7 +45,7 @@ function Skeleton({ width, height, radius = 6, color, style }: { width: number; 
 export default function ArtistProfileViewScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { artistId, name: paramName, photo: paramPhoto, genre: paramGenre } = useLocalSearchParams<{ artistId: string; name?: string; photo?: string; genre?: string }>();
+  const { artistId, name: paramName, photo: paramPhoto, genre: paramGenre, tab: paramTab } = useLocalSearchParams<{ artistId: string; name?: string; photo?: string; genre?: string; tab?: string }>();
 
   // ── Stores ────────────────────────────────────────────────────────────────
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
@@ -73,7 +73,19 @@ export default function ArtistProfileViewScreen() {
 
   // Bookings lives here rather than on its own screen (the old artist-bookings route).
   // Only meaningful for a connected artist — see the tab bar's isConnected gate.
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'invoices'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'invoices'>(paramTab === 'invoices' ? 'invoices' : 'overview');
+
+  // Mark this artist's unread invoices READ whenever the Invoices tab is on-screen — clears the Roster
+  // tab badge + the "N new invoice received" line, however the manager got here (Roster row, or an
+  // invoice's "See all invoices" button).
+  const allInvoices = useInvoiceStore((s) => s.invoices);
+  const markInvoiceReadByManager = useInvoiceStore((s) => s.markInvoiceReadByManager);
+  useEffect(() => {
+    if (activeTab !== 'invoices' || !isConnected || !currentUser?.id) return;
+    allInvoices
+      .filter((inv) => inv.managerId === currentUser.id && inv.artistId === artistId && !inv.isReadByManager && inv.status !== 'cancelled' && !inv.isDeletedByManager)
+      .forEach((inv) => markInvoiceReadByManager(inv.id));
+  }, [activeTab, isConnected, currentUser?.id, artistId, allInvoices, markInvoiceReadByManager]);
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const myVenues = useMemo(

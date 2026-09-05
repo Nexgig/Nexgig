@@ -3,7 +3,7 @@ import { View, Text } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAuthStore, useProfileInvoicesSeenStore, usePendingAppsStore, useDraftStore, useSlotStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, usePendingAppsStore, useDraftStore, useSlotStore, useInvoiceStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { isPastStart } from '@/lib/utils';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
@@ -52,46 +52,9 @@ export default function ManagerTabsLayout() {
     return () => { cancelled = true; clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
   }, [currentUser?.id, fetchPendingCount]);
 
-  // ── Profile tab invoice badge ─────────────────────────────────────────────
-  // Badge counts invoices that arrived since the manager last opened the Profile
-  // tab. Tapping the Profile tab clears it (per-invoice red dots are separate).
-  const profileSeenAt = useProfileInvoicesSeenStore((s) => (currentUser?.id ? s.lastSeen[currentUser.id] : undefined));
-  const markProfileInvoicesSeen = useProfileInvoicesSeenStore((s) => s.markProfileInvoicesSeen);
-  const [invoiceSentDates, setInvoiceSentDates] = useState<string[]>([]);
-
-  const fetchInvoiceDates = useCallback(async () => {
-    if (!currentUser?.id) return;
-    const { data } = await supabase.from('invoices').select('sent_at').eq('manager_id', currentUser.id);
-    setInvoiceSentDates((data ?? []).map((i: any) => i.sent_at).filter(Boolean));
-  }, [currentUser?.id]);
-
-  // First run for this user: anchor "seen" to now so existing invoices don't all badge
-  useEffect(() => {
-    if (currentUser?.id && !profileSeenAt) markProfileInvoicesSeen(currentUser.id);
-  }, [currentUser?.id, profileSeenAt, markProfileInvoicesSeen]);
-
-  useFocusEffect(useCallback(() => { fetchInvoiceDates(); }, [fetchInvoiceDates]));
-
-  // Realtime: refresh when an invoice row changes for this manager
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    let cancelled = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-      channel = supabase
-        .channel(`invoices-badge-${currentUser.id}-${Date.now()}`)
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'invoices', filter: `manager_id=eq.${currentUser.id}` },
-          () => { fetchInvoiceDates(); }
-        )
-        .subscribe();
-    }, 200);
-    return () => { cancelled = true; clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
-  }, [currentUser?.id, fetchInvoiceDates]);
-
-  // Badge = invoices the manager RECEIVED but hasn't OPENED yet (clears per-invoice as each is
-  // opened), not "new since last profile visit". Reads the merged read-state from the store.
+  // ── Roster tab badge: unread invoices received ────────────────────────────
+  // Invoices the manager has RECEIVED but not yet opened (isReadByManager). Shown on the ROSTER tab
+  // now — the Profile tab no longer carries it, since invoices live on each artist's profile.
   const allInvoices = useInvoiceStore((s) => s.invoices);
   const invoiceBadge = useMemo(
     () => allInvoices.filter((inv) => inv.managerId === currentUser?.id && !inv.isReadByManager && inv.status !== 'cancelled' && !inv.isDeletedByManager).length,
@@ -155,18 +118,10 @@ export default function ManagerTabsLayout() {
         name="network"
         options={{
           title: 'Roster',
-          tabBarIcon: ({ color }) => <MaterialIcons name="people" size={24} color={color} />,
-          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          // Custom coral badge beside the icon — same style as the Calendar tab (not the default red).
+          // Custom coral badge beside the icon — unread invoices received (same style as Calendar).
           tabBarIcon: ({ color }) => (
             <View>
-              <MaterialIcons name="person" size={24} color={color} />
+              <MaterialIcons name="people" size={24} color={color} />
               {invoiceBadge > 0 && (
                 <View style={{ position: 'absolute', top: -5, right: -15, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
                   <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{invoiceBadge}</Text>
@@ -175,8 +130,12 @@ export default function ManagerTabsLayout() {
             </View>
           ),
         }}
-        listeners={{
-          tabPress: () => { if (currentUser?.id) markProfileInvoicesSeen(currentUser.id); },
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={24} color={color} />,
         }}
       />
     </Tabs>

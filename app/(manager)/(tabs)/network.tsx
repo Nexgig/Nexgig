@@ -108,6 +108,14 @@ export default function NetworkScreen() {
       (b.isCompleted || b.status === 'completed') && !invoicedBookingIds.has(b.id)
     ).length, [bookings, currentUser?.id, invoicedBookingIds]);
 
+  // Invoices RECEIVED from this artist but not yet opened — drives the "N new invoice received" line
+  // + the Roster tab badge; cleared when the manager views the artist's Invoices tab.
+  const newInvoiceCount = useCallback((artistId: string) =>
+    allInvoices.filter((inv) =>
+      inv.managerId === currentUser?.id && inv.artistId === artistId &&
+      !inv.isReadByManager && inv.status !== 'cancelled' && !inv.isDeletedByManager
+    ).length, [allInvoices, currentUser?.id]);
+
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -551,10 +559,11 @@ export default function NetworkScreen() {
             const count = gigCount(user.id);
             const cost = gigCost(user.id);
             const uninv = uninvoicedCount(user.id);
+            const newInv = newInvoiceCount(user.id);
             return (
               <Pressable
                 style={({ pressed }) => [styles.rowCard, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '')) as Href)}
+                onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '') + (newInv > 0 ? '&tab=invoices' : '')) as Href)}
               >
                 <View style={styles.cardLeft}>
                   <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId ?? undefined} seed={user.id} name={user.fullName} size={48} />
@@ -565,8 +574,8 @@ export default function NetworkScreen() {
                         <MaterialIcons name="verified" size={15} color={colors.primary} />
                       )}
                     </View>
-                    <Text style={[styles.cardSub, { color: uninv > 0 ? colors.warning : colors.muted }]} numberOfLines={1}>
-                      {uninv > 0 ? `${uninv} gig${uninv === 1 ? '' : 's'} not invoiced` : 'Up to date'}
+                    <Text style={[styles.cardSub, { color: newInv > 0 ? colors.primary : uninv > 0 ? colors.warning : colors.muted }]} numberOfLines={1}>
+                      {newInv > 0 ? `${newInv} new invoice${newInv === 1 ? '' : 's'} received` : uninv > 0 ? `${uninv} gig${uninv === 1 ? '' : 's'} not invoiced` : 'Up to date'}
                     </Text>
                   </View>
                 </View>

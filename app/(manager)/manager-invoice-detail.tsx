@@ -305,6 +305,15 @@ export default function ManagerInvoiceDetailScreen() {
             <Text style={[styles.totalValue, { color: colors.primary }]}>AED {Math.round(invoice.totalAmount).toLocaleString()}</Text>
           </View>
         </View>
+
+        {/* See all invoices — jumps to this artist's Invoices tab (which marks them read). */}
+        <Pressable
+          onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + invoice.artistId + '&tab=invoices') as any)}
+          style={({ pressed }) => [styles.seeAllBtn, { borderColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <MaterialIcons name="receipt-long" size={18} color={colors.primary} />
+          <Text style={[styles.seeAllText, { color: colors.primary }]}>See all invoices</Text>
+        </Pressable>
       </ScrollView>
     </ScreenContainer>
   );
@@ -323,6 +332,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700' },
   pdfBtn: { width: 40, alignItems: 'flex-end' },
   scroll: { padding: 16, paddingBottom: 32 },
+  seeAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, marginTop: 20 },
+  seeAllText: { fontSize: 15, fontWeight: '700' },
   invoiceCard: {
     borderRadius: 16,
     borderWidth: 1,
