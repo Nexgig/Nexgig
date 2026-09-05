@@ -148,6 +148,10 @@ export default function ManagerDashboard() {
   // Tapping another square swaps the panel in place — moving it to the new row if the venue
   // differs; tapping the same square closes it. Expand/collapse animates via LayoutAnimation.
   const [selected, setSelected] = useState<{ venueId: string; date: string } | null>(null);
+  // Measured width of the day strip → size each day column to an even fraction so a WHOLE number of
+  // days fills it (no partial 7th-day cell peeking on the right). Falls back to 44 before measuring.
+  const [stripW, setStripW] = useState(0);
+  const dayW = stripW > 0 ? stripW / Math.max(1, Math.round(stripW / 44)) : 44;
   const [showLegend, setShowLegend] = useState(false);
   const toggleDay = (venueId: string, date: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -454,14 +458,14 @@ export default function ManagerDashboard() {
 
             {/* Scrollable days: the weekday/date header row + all venue cell rows, moving together.
                 flex:1 bounds the viewport width in the row so the 31-day content actually scrolls. */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.daysScroll}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.daysScroll} onLayout={(e) => setStripW(e.nativeEvent.layout.width)}>
               <View>
                 {/* Day header — weekday letter over the date number; today's number in coral. */}
                 <View style={styles.stripHeaderRow}>
                   {coverage.nights.map((date) => {
                     const d = new Date(date + 'T00:00:00');
                     return (
-                      <View key={date} style={styles.dayCol}>
+                      <View key={date} style={[styles.dayCol, { width: dayW }]}>
                         <Text style={[styles.stripDow, { color: colors.muted }]}>
                           {d.toLocaleDateString('en-US', { weekday: 'narrow' })}
                         </Text>
@@ -489,7 +493,7 @@ export default function ManagerDashboard() {
                         : (state === 'empty' || state === 'drafted') ? colors.foreground
                         : colors.muted;
                       return (
-                        <View key={i} style={styles.dayCol}>
+                        <View key={i} style={[styles.dayCol, { width: dayW }]}>
                           <Pressable
                             style={({ pressed }) => [styles.cellPress, { opacity: pressed ? 0.5 : 1 }]}
                             onPress={() => toggleDay(r.venue.id, coverage.nights[i])}
