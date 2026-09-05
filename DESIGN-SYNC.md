@@ -70,6 +70,28 @@ foreground) over a muted **"N completed"** line — "—" / "No gigs" when the a
 Also removed the roster-wide **month total** from the header (Tuts: "doesn't mean anything"). Counts + costs
 (completed gigs in the picked month) unchanged. Shipped to preview 4 Sep (groups `2e35aa12` + `beb9940d`).
 
+## 2026-09-05 · Manager Calendar → Roster Balance FULLY REWORKED (Claude Design mockup out of date)
+The Roster Balance panel changed a lot after the handoff. Current state to mock:
+- **Card-free section** at the bottom of the calendar's month view (full-bleed hairline above it). **Always
+  expanded** — no collapse.
+- **Header:** "Roster Balance" (General Sans ~20/600) + a small **settings gear** (MaterialIcons `tune`, ~20,
+  muted) right next to the title; the **month name** ("September 2026", ~13, muted) as a subtitle underneath.
+  No equalizer icon, no chevron.
+- **Artist rows (tight):** 34px avatar · name + **"AED {amount}"** grouped together on one line (left,
+  baseline-aligned — NOT pushed to opposite edges), both **black**; below, a **coral progress bar** (track
+  `#EFE8DE`, fill coral, width = cost / maxCost) with **"N gigs"** (muted) to its right. Hairline divider
+  between rows, inset past the avatar.
+- **Total** at the BOTTOM (after all artists, above an inset divider): "Total" (muted, left) + "AED {total}"
+  (black, right — the total is the one place the amount stays on the right).
+- **Settings popup:** tapping the gear opens a centered modal (dim backdrop, rounded card, like the Overview
+  legend) titled "Roster Balance" with COUNT chips (Draft / Sent / Booked / Completed) + a "MONTH STARTS ON"
+  1–31 day picker. Tap outside to close.
+- **Bars scale by AED (fee), not gig count.**
+
+Also on the calendar: the selected-day header below the grid shows the date with the **+ add-slot button
+right next to it** (no divider line). NOTE: the "Open under the day" inline day-view was tried + reverted —
+the calendar day view is the standard day-list-below-the-grid.
+
 ---
 
 ## Later · one comprehensive dead-code sweep
