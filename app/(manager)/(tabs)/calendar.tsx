@@ -1618,7 +1618,7 @@ export default function CalendarScreen() {
             {/* Month total */}
             <View style={styles.lineupTotalRow}>
               <Text style={[styles.lineupTotalLabel, { color: colors.muted }]}>Month total</Text>
-              <Text style={[styles.lineupTotalValue, { color: colors.primary }]}>AED {totalCost.toLocaleString()}</Text>
+              <Text style={[styles.lineupTotalValue, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
             </View>
             <View style={[styles.lineupInsetDivider, { backgroundColor: colors.border }]} />
 
@@ -1635,7 +1635,7 @@ export default function CalendarScreen() {
                       <View style={styles.lineupRowInfo}>
                         <View style={styles.lineupRowTop}>
                           <Text style={[styles.lineupDJName, { color: colors.foreground }]} numberOfLines={1}>{row.user.fullName}</Text>
-                          <Text style={[styles.lineupAmount, { color: colors.primary }]}>AED {row.cost.toLocaleString()}</Text>
+                          <Text style={[styles.lineupAmount, { color: colors.foreground }]}>AED {row.cost.toLocaleString()}</Text>
                         </View>
                         <View style={styles.lineupBarLine}>
                           <View style={styles.lineupBarTrack}>
