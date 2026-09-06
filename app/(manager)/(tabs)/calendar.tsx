@@ -2184,9 +2184,9 @@ const styles = StyleSheet.create({
   dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   dayRowSub: { fontSize: 13 },
   dayDismissBtn: { padding: 4, marginLeft: 2 },
-  assignBtn: { height: 34, borderRadius: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // matches the assign-page price box (height 34, radius 10)
+  assignBtn: { height: 34, minWidth: 86, borderRadius: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // shared size w/ Send (height 34, minWidth 86)
   assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  sendRowBtn: { height: 34, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // outlined, same size as Assign
+  sendRowBtn: { height: 34, minWidth: 86, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // outlined, same size as Assign
   sendRowBtnText: { fontSize: 14, fontWeight: '700' },
   dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
