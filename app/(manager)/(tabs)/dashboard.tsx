@@ -451,7 +451,7 @@ export default function ManagerDashboard() {
                   style={({ pressed }) => [styles.pinnedNameRow, { opacity: pressed ? 0.5 : 1 }]}
                   onPress={() => router.push(('/(manager)/venue-detail?id=' + r.venue.id) as Href)}
                 >
-                  <Text style={[styles.stripVenueName, { color: colors.muted }]} numberOfLines={1}>{r.venue.name}</Text>
+                  <Text style={[styles.stripVenueName, { color: colors.foreground }]} numberOfLines={1}>{r.venue.name}</Text>
                 </Pressable>
               ))}
             </View>
