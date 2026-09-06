@@ -1,5 +1,5 @@
 import { Text, View } from '@/lib/rn';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle, type TextStyle } from 'react-native';
 import { useColors } from '@/hooks/use-colors';
 import { useAuthStore } from '@/lib/store';
 import type { BookingStatus, LineupStatus, InviteStatus } from '@/lib/types';
@@ -36,6 +36,8 @@ import { STATUS_COLORS } from './date-badge';
 interface StatusBadgeProps {
   status: BadgeVariant;
   label?: string;
+  style?: StyleProp<ViewStyle>;      // override the pill (e.g. centre it + size it like a button)
+  textStyle?: StyleProp<TextStyle>;
 }
 
 /**
@@ -49,7 +51,7 @@ interface StatusBadgeProps {
 // "Pending". Same status, different word depending on who's looking.
 const PENDING_STATUSES = new Set<string>(['requested', 'past_confirmation', 'pending']);
 
-export function StatusBadge({ status, label }: StatusBadgeProps) {
+export function StatusBadge({ status, label, style, textStyle }: StatusBadgeProps) {
   const colors = useColors();
   const isManager = useAuthStore((s) => s.currentUser?.accountType === 'manager');
   const entry = BADGE_MAP[status] ?? { tone: 'muted' as Tone, label: String(status) };
@@ -64,8 +66,8 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
     colors.muted;
 
   return (
-    <View style={[styles.pill, { backgroundColor: color + '1F' }]}>
-      <Text style={[styles.text, { color }]}>{label ?? autoLabel}</Text>
+    <View style={[styles.pill, { backgroundColor: color + '1F' }, style]}>
+      <Text style={[styles.text, { color }, textStyle]}>{label ?? autoLabel}</Text>
     </View>
   );
 }

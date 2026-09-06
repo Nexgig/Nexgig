@@ -124,6 +124,7 @@ export default function DJBookingDetailScreen() {
       // drafting stages an artist without creating a booking, so the set has 0 bookings
       // and lands here — the drafts must show, or the manager sees "nothing assigned".
       const slotDrafts = allDrafts.filter((d) => d.slotId === emptySlot.id);
+      const slotBookings = allBookings.filter((b) => b.slotId === emptySlot.id && !b.hiddenFromManagerCalendar);
       // Send one drafted (not-yet-sent) artist straight from the detail — mirrors the calendar's
       // sendSlotDrafts: create the booking, persist it, notify the artist, then go back.
       const sendDraft = (d: (typeof slotDrafts)[number]) => {
@@ -152,7 +153,8 @@ export default function DJBookingDetailScreen() {
                   body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${emptyVenue?.name ?? 'a venue'}, ${formatDate(emptySlot.date)}`,
                   isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
                 });
-                router.back();
+                // Stay on this page — the sent draft becomes a booking below and the row updates
+                // in place (its Send pill turns into the status chip).
               },
             },
           ]
@@ -167,31 +169,47 @@ export default function DJBookingDetailScreen() {
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>Booking Details</Text>
           </View>
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <Section label={slotDrafts.length > 0 ? 'Artists' : 'Artist'}>
-              {slotDrafts.length === 0 ? (
+            <Section label={(slotBookings.length + slotDrafts.length) > 1 ? 'Artists' : 'Artist'}>
+              {slotBookings.length === 0 && slotDrafts.length === 0 ? (
                 <Text style={{ color: colors.muted, fontSize: 14, paddingVertical: 6 }}>No artist assigned yet.</Text>
               ) : (
-                slotDrafts.map((d, i) => {
-                  const dArtist = getArtistUser(d.artistId);
-                  return (
-                    <ListRow
-                      key={'draft-' + d.artistId}
-                      leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
-                      title={dArtist?.fullName ?? 'Artist'}
-                      subtitle="Not sent yet"
-                      trailing={
-                        <Pressable
-                          onPress={() => sendDraft(d)}
-                          style={({ pressed }) => [styles.detailSendPill, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-                          hitSlop={6}
-                        >
-                          <Text style={styles.detailSendPillText}>Send</Text>
-                        </Pressable>
-                      }
-                      divider
-                    />
-                  );
-                })
+                <>
+                  {slotBookings.map((b) => {
+                    const bArtist = getArtistUser(b.artistId);
+                    const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
+                    return (
+                      <ListRow
+                        key={'bk-' + b.id}
+                        leading={<AvatarImage uri={bArtist?.profilePhotoUrl} avatarId={(bArtist as any)?.avatarId} seed={bArtist?.id} name={bArtist?.fullName ?? 'Artist'} size={44} />}
+                        title={bArtist?.fullName ?? 'Artist'}
+                        trailing={<StatusBadge status={shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />}
+                        onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
+                        divider
+                      />
+                    );
+                  })}
+                  {slotDrafts.map((d) => {
+                    const dArtist = getArtistUser(d.artistId);
+                    return (
+                      <ListRow
+                        key={'draft-' + d.artistId}
+                        leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
+                        title={dArtist?.fullName ?? 'Artist'}
+                        subtitle="Not sent yet"
+                        trailing={
+                          <Pressable
+                            onPress={() => sendDraft(d)}
+                            style={({ pressed }) => [styles.detailSendPill, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                            hitSlop={6}
+                          >
+                            <Text style={styles.detailSendPillText}>Send</Text>
+                          </Pressable>
+                        }
+                        divider
+                      />
+                    );
+                  })}
+                </>
               )}
               <AddArtistRow slotId={emptySlot.id} />
             </Section>
@@ -683,6 +701,9 @@ const styles = StyleSheet.create({
   addArtistText: { fontSize: 15, fontWeight: '700' },
   detailSendPill: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
   detailSendPillText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  // Status chip sized + centred like the Send pill (middle-right, not top-right).
+  statusChip: { alignSelf: 'center', height: 30, minWidth: 76, borderRadius: 9, paddingVertical: 0, justifyContent: 'center' },
+  statusChipText: { fontSize: 13 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   detailLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 92 },
   detailValueWrap: { flex: 1 },
