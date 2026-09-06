@@ -73,6 +73,14 @@ export default function AddSlotScreen() {
   const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const [guestName, setGuestName] = useState('');
   const [guestFee, setGuestFee] = useState('');
+  // Keyboard-open flag: drop the big bottom padding while the keyboard is up (the keyboard inset
+  // already makes room), so the focused field doesn't float ~2 rows above the keyboard.
+  const [kbOpen, setKbOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', () => setKbOpen(true));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKbOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const blocks = useAvailabilityStore((s) => s.blocks);
   const addNotification = useNotificationStore((s) => s.addNotification);
 
@@ -667,7 +675,7 @@ export default function AddSlotScreen() {
           ScrollView inside the native formSheet (its onLayout reports content height). */}
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 44 }}
+        contentContainerStyle={{ paddingBottom: kbOpen ? 8 : insets.bottom + 44 }}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}

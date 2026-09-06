@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, FlatList, ScrollView, Alert, Keyboard } from '@/lib/rn';
 import { useWindowDimensions, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -43,6 +43,14 @@ export default function AssignDJScreen() {
   const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const [guestName, setGuestName] = useState('');
   const [guestFee, setGuestFee] = useState('');
+  // Keyboard-open flag: drop the big bottom padding while the keyboard is up (the keyboard inset
+  // already makes room), so the focused field doesn't float ~2 rows above the keyboard.
+  const [kbOpen, setKbOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', () => setKbOpen(true));
+    const hide = Keyboard.addListener('keyboardWillHide', () => setKbOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const confirmedBookings = useMemo(
     () => allBookings.filter((b) => b.status === 'confirmed' || b.status === 'requested'),
     [allBookings]
@@ -660,7 +668,7 @@ export default function AssignDJScreen() {
 
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 44 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: kbOpen ? 8 : insets.bottom + 44 }]}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
