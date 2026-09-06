@@ -630,7 +630,7 @@ export default function DJHomeScreen() {
           <Pressable style={({ pressed }) => [styles.stickyTitle, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
             <View style={styles.stickyTitleRow}>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
-              <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} />
+              <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} style={{ marginTop: 2 }} />
             </View>
           </Pressable>
         ) : <View />}

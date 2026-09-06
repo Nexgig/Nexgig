@@ -621,35 +621,8 @@ export default function DJAvailabilityScreen() {
     // Determine the right action icon for non-artist-created bookings
     const renderActionBtn = () => {
       if (b.isArtistCreated) {
-        // Artist-created events: just the X to remove. (Add-to-phone-calendar export removed.)
-        return (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Pressable
-              style={({ pressed }) => [styles.slotMenuBtn, { opacity: pressed ? 0.5 : 1 }]}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                Alert.alert(
-                  'Remove Private Booking',
-                  `Remove "${b.slotName ?? b.resolvedVenueName ?? 'this booking'}" from your calendar? This cannot be undone.`,
-                  [
-                    { text: 'Keep', style: 'cancel' },
-                    {
-                      text: 'Remove', style: 'destructive',
-                      onPress: () => {
-                        deleteBooking(b.id);
-                        supabase.from('availability_blocks').delete().eq('id', b.id)
-                          .then(({ error }) => { if (error) console.warn('availability_blocks delete error:', error.message); });
-                        markRelatedNotificationsRead(b.id);
-                      }
-                    },
-                  ]
-                );
-              }}
-            >
-              <MaterialIcons name="delete-outline" size={20} color={colors.error} />
-            </Pressable>
-          </View>
-        );
+        // Private events: no calendar delete icon — tap the card to open its booking detail and remove it there.
+        return null;
       }
       if (isCancelled || isDeclined || isExpired) {
         // X to dismiss a cancelled/declined/expired row (declined never actually reaches the
