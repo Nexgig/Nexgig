@@ -93,13 +93,79 @@ export default function DJBookingDetailScreen() {
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
   const setDraft = useDraftStore((s) => s.setDraft);
   const allInvoices = useInvoiceStore((s) => s.invoices);
-  const [feeModalOpen, setFeeModalOpen] = useState(false);
-  const [draftFeeOpen, setDraftFeeOpen] = useState(false);   // edit a draft-only slot's fee (slot-only view)
+  // Fee editing is per artist: `feeTarget` names which booking OR draft the price modal is editing.
+  const [feeTarget, setFeeTarget] = useState<
+    | { kind: 'booking'; bookingId: string; bookingStatus: Booking['status']; artistId: string; venueName: string | null; slotDate: string; price?: number }
+    | { kind: 'draft'; slotId: string; venueId: string; artistId: string; price?: number }
+    | null
+  >(null);
   // Invoiced gigs are settled — the invoice locked that number, so editing the booking price
   // would let the two disagree. Block the edit once any non-cancelled invoice covers this gig.
-  const isInvoiced = useMemo(() =>
-    !!booking && allInvoices.some((inv) => inv.status !== 'cancelled' && inv.gigs.some((g) => g.bookingId === booking.id)),
-    [allInvoices, booking]);
+  // A gig is locked (fee can't change) once a non-cancelled invoice covers it.
+  const bookingInvoiced = (bId: string) =>
+    allInvoices.some((inv) => inv.status !== 'cancelled' && inv.gigs.some((g) => g.bookingId === bId));
+
+  // Fee editing is PER ARTIST. Bookings confirm + notify (an agreed fee changed); drafts just save.
+  const openBookingFee = (b: Booking) => {
+    if (bookingInvoiced(b.id)) return;   // invoiced is locked — FeeLine shows "Invoiced", not tappable
+    setFeeTarget({
+      kind: 'booking', bookingId: b.id, bookingStatus: b.status, artistId: b.artistId,
+      venueName: bookingVenueName(b, getVenueById(b.venueId)?.name), slotDate: b.slotDate ?? '', price: b.price ?? undefined,
+    });
+  };
+  const openDraftFee = (d: { slotId: string; venueId: string; artistId: string; price?: number }) =>
+    setFeeTarget({ kind: 'draft', slotId: d.slotId, venueId: d.venueId, artistId: d.artistId, price: d.price });
+
+  const saveTargetFee = (price: number | undefined) => {
+    const t = feeTarget;
+    setFeeTarget(null);
+    if (!t || price == null) return;
+    if (t.kind === 'draft') {
+      if (!currentUser) return;
+      setDraft(t.slotId, t.venueId, t.artistId, currentUser.id, price);
+      return;
+    }
+    // Booking: confirm first — it changes an agreed fee AND notifies the artist.
+    const artistName = getArtistUser(t.artistId)?.fullName ?? 'the artist';
+    const dateStr = t.slotDate ? formatDate(t.slotDate) : '';
+    Alert.alert(
+      'Update fee',
+      `Set ${artistName}'s fee for ${t.venueName ?? 'the venue'}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}? They'll be notified of the change.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Update & notify',
+          onPress: () => {
+            updateBookingStatus(t.bookingId, t.bookingStatus, { price });
+            addNotification({
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: t.artistId,
+              type: 'booking_fee_updated',
+              title: 'Fee updated',
+              body: `${firstName(currentUser?.fullName, 'Your manager')} set your fee for ${t.venueName ?? 'the venue'}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}`,
+              isRead: false,
+              relatedId: t.bookingId,
+              relatedType: 'booking',
+              createdAt: new Date().toISOString(),
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  // Tappable fee line shown under each artist's name (per-artist). Invoiced gigs are read-only.
+  const FeeLine = ({ price, invoiced, onPress }: { price?: number | null; invoiced?: boolean; onPress?: () => void }) => {
+    if (invoiced) {
+      return <Text style={[styles.rowFeeMuted, { color: colors.muted }]}>{price != null ? `AED ${price.toLocaleString()} · Invoiced` : 'Invoiced'}</Text>;
+    }
+    return (
+      <Pressable onPress={onPress} hitSlop={6} style={({ pressed }) => [styles.rowFee, { opacity: pressed ? 0.6 : 1 }]}>
+        <Text style={[styles.rowFeeText, { color: colors.primary }]}>{price != null ? `AED ${price.toLocaleString()}` : 'Set fee'}</Text>
+        <MaterialIcons name="edit" size={12} color={colors.primary} />
+      </Pressable>
+    );
+  };
 
   // Dashed "+ Add Artist" row — opens the picker (assign-artist) for this slot.
   const AddArtistRow = ({ slotId }: { slotId: string }) => (
@@ -125,13 +191,6 @@ export default function DJBookingDetailScreen() {
       // and lands here — the drafts must show, or the manager sees "nothing assigned".
       const slotDrafts = allDrafts.filter((d) => d.slotId === emptySlot.id);
       const slotBookings = allBookings.filter((b) => b.slotId === emptySlot.id && !b.hiddenFromManagerCalendar);
-      // A draft-only slot with exactly one pencilled artist shows an editable FEE row (like a booking).
-      const singleDraft = slotDrafts.length === 1 && slotBookings.length === 0 ? slotDrafts[0] : null;
-      const saveDraftFee = (price?: number) => {
-        setDraftFeeOpen(false);
-        if (!currentUser || !singleDraft) return;
-        setDraft(emptySlot.id, emptySlot.venueId, singleDraft.artistId, currentUser.id, price);
-      };
       // Send one drafted (not-yet-sent) artist straight from the detail — mirrors the calendar's
       // sendSlotDrafts: create the booking, persist it, notify the artist, then go back.
       const sendDraft = (d: (typeof slotDrafts)[number]) => {
@@ -177,6 +236,7 @@ export default function DJBookingDetailScreen() {
                         key={'bk-' + b.id}
                         leading={<AvatarImage uri={bArtist?.profilePhotoUrl} avatarId={(bArtist as any)?.avatarId} seed={bArtist?.id} name={bArtist?.fullName ?? 'Artist'} size={44} />}
                         title={bArtist?.fullName ?? 'Artist'}
+                        subtitleNode={<FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                         trailing={<StatusBadge status={shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />}
                         onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
                         divider
@@ -190,7 +250,7 @@ export default function DJBookingDetailScreen() {
                         key={'draft-' + d.artistId}
                         leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                         title={dArtist?.fullName ?? 'Artist'}
-                        subtitle={slotDrafts.length === 1 ? 'Not sent yet' : (d.price != null ? `AED ${d.price.toLocaleString()} · Not sent yet` : 'Not sent yet')}
+                        subtitleNode={<FeeLine price={d.price} onPress={() => openDraftFee(d)} />}
                         trailing={
                           <Pressable
                             onPress={() => sendDraft(d)}
@@ -221,22 +281,6 @@ export default function DJBookingDetailScreen() {
             ) : null}
 
             <Section label="Details">
-              {singleDraft && (
-                <DetailRow
-                  label="FEE"
-                  value={singleDraft.price != null ? `AED ${singleDraft.price.toLocaleString()}` : undefined}
-                  trailing={
-                    <Pressable
-                      onPress={() => setDraftFeeOpen(true)}
-                      hitSlop={8}
-                      style={({ pressed }) => [styles.feeEditBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
-                    >
-                      <MaterialIcons name="edit" size={13} color={colors.primary} />
-                      <Text style={[styles.feeEditText, { color: colors.primary }]}>{singleDraft.price != null ? 'Edit' : 'Set fee'}</Text>
-                    </Pressable>
-                  }
-                />
-              )}
               <DetailRow label="DATE" value={formatDate(emptySlot.date)} />
               <DetailRow label="TIME" value={`${fmtTime(emptySlot.startTime)} – ${fmtTime(emptySlot.endTime)}`} />
               <DetailRow label="VENUE TYPE" value={emptyVenue?.venueType} />
@@ -256,14 +300,14 @@ export default function DJBookingDetailScreen() {
             </Section>
           </ScrollView>
           <PastGigPriceModal
-            visible={draftFeeOpen}
-            title="Set fee"
+            visible={feeTarget != null}
+            title={feeTarget?.price != null ? 'Edit fee' : 'Set fee'}
             confirmLabel="Save"
-            artistName={singleDraft ? (getArtistUser(singleDraft.artistId)?.fullName ?? 'this artist') : 'this artist'}
+            artistName={feeTarget ? (getArtistUser(feeTarget.artistId)?.fullName ?? 'this artist') : 'this artist'}
             subtitle={`${emptyVenue?.name ?? 'Venue'} · ${formatDate(emptySlot.date)}`}
-            defaultPrice={singleDraft?.price}
-            onCancel={() => setDraftFeeOpen(false)}
-            onConfirm={saveDraftFee}
+            defaultPrice={feeTarget?.price}
+            onCancel={() => setFeeTarget(null)}
+            onConfirm={saveTargetFee}
           />
         </ScreenContainer>
       );
@@ -435,40 +479,6 @@ export default function DJBookingDetailScreen() {
     );
   };
 
-  // Save an edited fee: write it to the booking (local + Supabase) and notify the artist, since
-  // it changes a deal they may have already accepted. Blocked while invoiced (see isInvoiced).
-  const saveFee = (price: number | undefined) => {
-    setFeeModalOpen(false);
-    if (!booking || price == null) return;
-    const vName = bookingVenueName(booking, venue?.name);
-    const dateStr = booking.slotDate ? formatDate(booking.slotDate) : (slot ? formatDate(slot.date) : '');
-    const artistName = getArtistUser(booking.artistId)?.fullName ?? 'the artist';
-    // Confirm first — saving changes an agreed fee AND notifies the artist.
-    Alert.alert(
-      'Update fee',
-      `Set ${artistName}'s fee for ${vName}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}? They'll be notified of the change.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Update & notify',
-          onPress: () => {
-            updateBookingStatus(booking.id, booking.status, { price });
-            addNotification({
-              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              userId: booking.artistId,
-              type: 'booking_fee_updated',
-              title: 'Fee updated',
-              body: `${firstName(currentUser?.fullName, 'Your manager')} set your fee for ${vName}${dateStr ? `, ${dateStr}` : ''} to AED ${price.toLocaleString()}`,
-              isRead: false,
-              relatedId: booking.id,
-              relatedType: 'booking',
-              createdAt: new Date().toISOString(),
-            });
-          },
-        },
-      ]
-    );
-  };
 
   return (
     <ScreenContainer>
@@ -496,7 +506,7 @@ export default function DJBookingDetailScreen() {
                       key={b.id}
                       leading={<AvatarImage uri={rArtist?.profilePhotoUrl} avatarId={(rArtist as any)?.avatarId} seed={rArtist?.id} name={rArtist?.fullName ?? 'Former Artist'} size={44} />}
                       title={rArtist?.fullName ?? 'Former Artist'}
-                      subtitle="Artist"
+                      subtitleNode={<FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                       onPress={rArtist?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + b.artistId + '&name=' + encodeURIComponent(rArtist.fullName ?? '')) as Href) : undefined}
                       trailing={<StatusWithX b={b} onX={rowDismiss(b)} />}
                       divider
@@ -510,7 +520,7 @@ export default function DJBookingDetailScreen() {
                       key={'draft-' + d.artistId}
                       leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                       title={dArtist?.fullName ?? 'Artist'}
-                      subtitle="Not sent yet"
+                      subtitleNode={<FeeLine price={d.price} onPress={() => openDraftFee(d)} />}
                       trailing={
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <StatusBadge status="draft" style={styles.statusChip} textStyle={styles.statusChipText} />
@@ -554,24 +564,6 @@ export default function DJBookingDetailScreen() {
           {/* Details — document-style label/value table. Replaces the icon-tile rows:
               the coral tiles added colour but said nothing the label didn't. */}
           <Section label="Details">
-            <DetailRow
-              label="FEE"
-              value={booking.price != null ? `AED ${booking.price.toLocaleString()}` : undefined}
-              trailing={
-                isInvoiced ? (
-                  <Text style={[styles.feeInvoiced, { color: colors.muted }]}>Invoiced</Text>
-                ) : (
-                  <Pressable
-                    onPress={() => setFeeModalOpen(true)}
-                    hitSlop={8}
-                    style={({ pressed }) => [styles.feeEditBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
-                  >
-                    <MaterialIcons name="edit" size={13} color={colors.primary} />
-                    <Text style={[styles.feeEditText, { color: colors.primary }]}>{booking.price != null ? 'Edit' : 'Set fee'}</Text>
-                  </Pressable>
-                )
-              }
-            />
             <DetailRow label="DATE" value={slot ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : undefined)} />
             <DetailRow
               label="TIME"
@@ -699,14 +691,14 @@ export default function DJBookingDetailScreen() {
       </ScrollView>
 
       <PastGigPriceModal
-        visible={feeModalOpen}
-        title="Edit fee"
+        visible={feeTarget != null}
+        title={feeTarget?.price != null ? 'Edit fee' : 'Set fee'}
         confirmLabel="Save"
-        artistName={getArtistUser(booking.artistId)?.fullName ?? 'this artist'}
+        artistName={feeTarget ? (getArtistUser(feeTarget.artistId)?.fullName ?? 'this artist') : 'this artist'}
         subtitle={`${bookingVenueName(booking, venue?.name)} · ${slot ? formatDate(slot.date) : (booking.slotDate ? formatDate(booking.slotDate) : '')}`}
-        defaultPrice={booking.price}
-        onCancel={() => setFeeModalOpen(false)}
-        onConfirm={saveFee}
+        defaultPrice={feeTarget?.price}
+        onCancel={() => setFeeTarget(null)}
+        onConfirm={saveTargetFee}
       />
     </ScreenContainer>
   );
@@ -725,6 +717,9 @@ const styles = StyleSheet.create({
   // Status chip sized + centred like the Send pill (middle-right, not top-right).
   statusChip: { alignSelf: 'center', height: 30, minWidth: 76, borderRadius: 9, paddingVertical: 0, justifyContent: 'center' },
   statusChipText: { fontSize: 13 },
+  rowFee: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2, alignSelf: 'flex-start' },   // tappable per-artist fee line
+  rowFeeText: { fontSize: 13, fontWeight: '600' },
+  rowFeeMuted: { fontSize: 13, fontWeight: '500', marginTop: 2 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   detailLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 92 },
   detailValueWrap: { flex: 1 },

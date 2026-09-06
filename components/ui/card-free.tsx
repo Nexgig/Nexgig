@@ -77,9 +77,10 @@ export function StatRow({ items }: { items: { value: string | number; label: str
 
 /** Generic open list row: [leading] · title + subtitle · [trailing]. */
 export function ListRow({
-  leading, title, subtitle, titleAccessory, trailing, onPress, divider = true,
+  leading, title, subtitle, subtitleNode, titleAccessory, trailing, onPress, divider = true,
 }: {
   leading?: ReactNode; title: string; subtitle?: string;
+  subtitleNode?: ReactNode;   // rich subtitle (e.g. a tappable fee line) — rendered instead of `subtitle`
   titleAccessory?: ReactNode; trailing?: ReactNode;
   onPress?: () => void; divider?: boolean;
 }) {
@@ -96,7 +97,7 @@ export function ListRow({
           <Text style={[styles.rowTitle, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
           {titleAccessory}
         </View>
-        {subtitle ? <Text style={[styles.rowSub, { color: colors.muted }]}>{subtitle}</Text> : null}
+        {subtitleNode ? subtitleNode : (subtitle ? <Text style={[styles.rowSub, { color: colors.muted }]}>{subtitle}</Text> : null)}
       </View>
       {trailing}
     </>
