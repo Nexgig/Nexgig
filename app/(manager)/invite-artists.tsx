@@ -119,7 +119,8 @@ export default function InviteArtists() {
       isRead: false, relatedId: currentUser.id, relatedType: 'manager', createdAt: now,
     });
     setBusyId(null);
-    router.back();
+    // Stay on the screen so the manager can add another — the added artist drops out of the
+    // list on its own (results excludes roster members), which is the confirmation.
   };
 
   // Confirm before adding — no direct add.
@@ -157,7 +158,7 @@ export default function InviteArtists() {
     });
     sendRosterInviteEmail(e, currentUser.fullName ?? 'A venue manager', undefined);
     Alert.alert('Invite sent', `We've emailed ${e} an invite. They'll join your roster automatically when they sign up.`);
-    router.back();
+    setQuery('');   // clear the search so they can add/invite another without the sheet closing
   };
 
   return (

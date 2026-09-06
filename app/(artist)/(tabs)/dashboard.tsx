@@ -427,23 +427,22 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      {/* Frozen header — "Overview" + legend + notifications, stays put while content scrolls. */}
-      <View style={styles.header}>
-        <View style={styles.overviewHead}>
-          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
-          <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
-            <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
+        {/* Header — "Overview" + legend + notifications. Scrolls WITH the content now (no longer pinned). */}
+        <View style={styles.header}>
+          <View style={styles.overviewHead}>
+            <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
+            <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
+              <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
+          <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
+            <MaterialIcons name="notifications" size={22} color={colors.foreground} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
+            )}
           </Pressable>
         </View>
-        <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
-          <MaterialIcons name="notifications" size={22} color={colors.foreground} />
-          {unreadCount > 0 && (
-            <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
-          )}
-        </Pressable>
-      </View>
-
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Overview strip — one horizontal row of the next 31 days, colored by status. */}
         <View style={styles.strip}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysScroll} onLayout={(e) => setStripW(e.nativeEvent.layout.width)}>
@@ -587,7 +586,7 @@ export default function DJHomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },

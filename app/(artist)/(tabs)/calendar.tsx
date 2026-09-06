@@ -875,7 +875,7 @@ export default function DJAvailabilityScreen() {
       <View style={styles.venueBalSection}>
         <View style={[styles.venueBalDivider, { backgroundColor: colors.surface }]} />
         <View style={styles.venueBalHead}>
-          <Text style={[styles.venueBalLabel, { color: colors.muted }]}>VENUE BALANCE</Text>
+          <Text style={[styles.venueBalLabel, { color: colors.muted }]}>MONTHLY INCOME</Text>
         </View>
         <Text style={[styles.venueBalTotal, { color: colors.foreground }]}>AED {totalEarnings.toLocaleString()}</Text>
         <Text style={[styles.venueBalSummary, { color: colors.muted }]}>
@@ -909,27 +909,27 @@ export default function DJAvailabilityScreen() {
 
   return (
     <ScreenContainer>
+      {/* Frozen month title (left) + calendar-sync (right, coral) — pinned while the grid/details
+          scroll underneath. Swipe left/right on the grid to change month. */}
+      {viewMode === 'month' && (
+        <View style={[styles.monthNav, { backgroundColor: colors.background }]}>
+          <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => {
+              setSelectedGigIds(new Set(unexportedGigs.map((g) => g.id)));
+              setShowSyncModal(true);
+            }}
+            hitSlop={8}
+          >
+            <MaterialIcons name="event-available" size={22} color={colors.primary} />
+          </Pressable>
+        </View>
+      )}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={calRefreshing} onRefresh={handleCalRefresh} tintColor={colors.primary} />}>
         {/* ─── MONTH VIEW ─── */}
         {viewMode === 'month' && (
           <View>
-            {/* Month title (left, CAPS) + sync-to-calendar (right, where Today used to be).
-                Swipe left/right on the grid below to change month. No screen header — the month
-                row is the top of the screen now. */}
-            <View style={styles.monthNav}>
-              <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
-              <Pressable
-                style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => {
-                  setSelectedGigIds(new Set(unexportedGigs.map((g) => g.id)));
-                  setShowSyncModal(true);
-                }}
-                hitSlop={8}
-              >
-                <MaterialIcons name="event-available" size={22} color={colors.foreground} />
-              </Pressable>
-            </View>
-
             {/* Day Labels (fixed above the swipe pager) */}
             <View style={styles.dayLabels}>
               {DAYS_SHORT.map((d) => (

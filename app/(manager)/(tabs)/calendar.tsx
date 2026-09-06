@@ -1546,7 +1546,7 @@ export default function CalendarScreen() {
         <View style={styles.lineupHead}>
           <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>ROSTER BALANCE</Text>
           <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
-            <MaterialIcons name="tune" size={18} color={colors.muted} />
+            <MaterialIcons name="tune" size={18} color={colors.primary} />
           </Pressable>
         </View>
 
