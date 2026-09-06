@@ -171,6 +171,40 @@ export default function DJHomeScreen() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [dashboardBookings]);
 
+  // ── History: COMPLETED gigs grouped by MONTH (collapsible), then by venue. Newest month first;
+  // venues within a month sorted by earnings. The artist's own private events bucket as "Private events".
+  const historyByMonth = useMemo(() => {
+    const completed = dashboardBookings.filter((b) => b.isDone);
+    type Venue = { key: string; name: string; earnings: number; gigCount: number };
+    type Month = { key: string; label: string; earnings: number; gigCount: number; venues: Map<string, Venue> };
+    const months = new Map<string, Month>();
+    for (const b of completed) {
+      const date = b.slot?.date ?? b.slotDate ?? '';
+      if (!date) continue;
+      const mKey = date.slice(0, 7); // YYYY-MM
+      let m = months.get(mKey);
+      if (!m) {
+        m = { key: mKey, label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), earnings: 0, gigCount: 0, venues: new Map() };
+        months.set(mKey, m);
+      }
+      const vKey = b.isArtistCreated ? '__private__' : (b.venueId ?? '__unknown__');
+      const vName = b.isArtistCreated ? 'Private events' : bookingVenueName(b, b.venue?.name);
+      let v = m.venues.get(vKey);
+      if (!v) { v = { key: vKey, name: vName, earnings: 0, gigCount: 0 }; m.venues.set(vKey, v); }
+      const price = b.price ?? 0;
+      v.earnings += price; v.gigCount++;
+      m.earnings += price; m.gigCount++;
+    }
+    return Array.from(months.values())
+      .sort((a, b) => (a.key < b.key ? 1 : -1))   // newest month first
+      .map((m) => ({ ...m, venues: Array.from(m.venues.values()).sort((x, y) => y.earnings - x.earnings) }));
+  }, [dashboardBookings]);
+  const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
+  const toggleMonth = (key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenMonths((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  };
+
   // ── Overview strip: the artist's own schedule across the next 31 nights ───────────────
   // One row of days, each colored by that day's winning status (pending > booked > cancelled).
   // Completed gigs are NOT colored on the strip (only the color goes away — the booking still
@@ -560,6 +594,42 @@ export default function DJHomeScreen() {
           )}
         </View>
 
+        {/* History — completed gigs, grouped by month (tap a month to expand its venues). */}
+        {historyByMonth.length > 0 && (
+          <>
+            <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
+            <View style={styles.section}>
+              <View style={styles.bookingsHead}>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>History</Text>
+              </View>
+              {historyByMonth.map((m) => {
+                const isOpen = openMonths.has(m.key);
+                return (
+                  <View key={m.key}>
+                    <View style={[styles.histDivider, { backgroundColor: colors.border }]} />
+                    <Pressable
+                      style={({ pressed }) => [styles.histMonthRow, { opacity: pressed ? 0.6 : 1 }]}
+                      onPress={() => toggleMonth(m.key)}
+                    >
+                      <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
+                      <Text style={[styles.histMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                      <Text style={[styles.histMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
+                      <Text style={[styles.histMonthAmount, { color: colors.foreground }]}>AED {m.earnings.toLocaleString()}</Text>
+                    </Pressable>
+                    {isOpen && m.venues.map((v) => (
+                      <View key={v.key} style={styles.histVenueRow}>
+                        <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                        <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
+                        <Text style={[styles.histVenueAmount, { color: colors.muted }]}>AED {v.earnings.toLocaleString()}</Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+
       </ScrollView>
 
       {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
@@ -643,6 +713,16 @@ const styles = StyleSheet.create({
 
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // History — collapsible month rows + indented venue rows.
+  histDivider: { height: StyleSheet.hairlineWidth },
+  histMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14 },
+  histMonthLabel: { flex: 1, fontSize: 15, fontWeight: '700' },
+  histMonthGigs: { fontSize: 13 },
+  histMonthAmount: { fontSize: 15, fontWeight: '700', marginLeft: 12 },
+  histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingLeft: 30, paddingBottom: 10 },
+  histVenueName: { flex: 1, fontSize: 14 },
+  histVenueGigs: { fontSize: 13 },
+  histVenueAmount: { fontSize: 14, fontWeight: '600', marginLeft: 12 },
   dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
