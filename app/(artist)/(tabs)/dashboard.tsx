@@ -212,6 +212,11 @@ export default function DJHomeScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpenMonths((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   };
+  const [earningsOpen, setEarningsOpen] = useState(true);   // whole Earnings section collapse
+  const toggleEarnings = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setEarningsOpen((v) => !v);
+  };
 
   // ── Overview strip: the artist's own schedule across the next 31 nights ───────────────
   // One row of days, each colored by that day's winning status (pending > booked > cancelled).
@@ -620,14 +625,15 @@ export default function DJHomeScreen() {
 
         {/* 4 — Earnings divider (scrolls; empty when no earnings). */}
         {earningsByMonth.length > 0 ? <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} /> : <View />}
-        {/* 5 — Earnings title (STICKY; empty when no earnings). */}
+        {/* 5 — Earnings title (STICKY; tap to collapse the whole section; empty when no earnings). */}
         {earningsByMonth.length > 0 ? (
-          <View style={[styles.stickyTitle, { backgroundColor: colors.background }]}>
+          <Pressable style={({ pressed }) => [styles.stickyTitle, styles.stickyTitleRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
-          </View>
+            <MaterialIcons name={earningsOpen ? 'expand-less' : 'expand-more'} size={24} color={colors.muted} />
+          </Pressable>
         ) : <View />}
         {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
-        {earningsByMonth.length > 0 ? (
+        {earningsByMonth.length > 0 && earningsOpen ? (
           <View>
             <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
             <Text style={[styles.earnSummary, { color: colors.muted }]}>Earned this year · {earningsGigs} completed gig{earningsGigs !== 1 ? 's' : ''}</Text>
@@ -701,6 +707,7 @@ const styles = StyleSheet.create({
   // Section dividers + sticky titles. Gap divider->title = sectionBand.marginBottom(22) + stickyTitle.paddingTop(4) = 26.
   sectionBand: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 22 },
   stickyTitle: { marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 6 },
+  stickyTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
