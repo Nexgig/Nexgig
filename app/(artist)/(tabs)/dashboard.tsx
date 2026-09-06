@@ -348,20 +348,28 @@ export default function DJHomeScreen() {
 
   // Open the venue in Google Maps (directions). Prefers saved coordinates, else the address
   // or venue name. Mirrors app/(artist)/booking-detail.tsx.
+  // Confirm before leaving the app for Google Maps.
+  const confirmOpenMaps = (url: string) => {
+    Alert.alert('Open in Google Maps?', 'This opens the location in Google Maps.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open', onPress: () => Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link.")) },
+    ]);
+  };
+
   const openVenueMaps = (b: (typeof dashboardBookings)[number]) => {
     const venue = allVenues.find((v) => v.id === b.venueId);
     const loc = venue?.googleMapsLocation;
     const url = (loc?.lat && loc?.lng)
       ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
       : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || b.venueName || '')}`;
-    Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+    confirmOpenMaps(url);
   };
 
   // Private events have a free-text location the artist typed (e.g. "Dubai Marina"), not a
   // geocoded venue — open Maps as a search on that text.
   const openPrivateEventMaps = (loc: string) => {
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
-    Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+    confirmOpenMaps(url);
   };
 
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: (typeof dashboardBookings) }) => (
@@ -488,7 +496,7 @@ export default function DJHomeScreen() {
                     <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{g.startTime ? fmtTime(g.startTime) : ''}</Text>
                     <Text style={[styles.inlineName, { color: colors.foreground }]} numberOfLines={1}>{g.name}</Text>
                     <View style={styles.inlineRight}>
-                      <StatusBadge status={g.shown as any} />
+                      <StatusBadge status={g.shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />
                       {g.dismissable && (
                         <Pressable hitSlop={8} style={styles.inlineDismiss} onPress={() => dismissCancelled(g.id, g.status)}>
                           <MaterialIcons name="close" size={18} color={colors.muted} />
@@ -613,6 +621,8 @@ const styles = StyleSheet.create({
   inlineName: { fontSize: 15, fontWeight: '600', flex: 1 },
   inlineRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   inlineDismiss: { padding: 2 },
+  statusChip: { alignSelf: 'center', height: 30, minWidth: 76, borderRadius: 9, paddingVertical: 0, justifyContent: 'center' },   // centred + button-sized (matches manager)
+  statusChipText: { fontSize: 13 },
 
   // Needs your reply
   replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
