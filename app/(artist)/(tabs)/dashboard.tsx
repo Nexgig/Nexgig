@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // Earnings — big total + per-month rows with a proportional bar; tap a month to expand its venues.
-  earnTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5, marginTop: 6 },   // big headline
+  earnTotal: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, marginTop: 6 },   // matches the manager Roster Balance total
   earnSummary: { fontSize: 14, marginTop: 2, marginBottom: 8 },
   earnRowDivider: { height: StyleSheet.hairlineWidth },
   earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
