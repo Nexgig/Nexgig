@@ -427,6 +427,7 @@ export default function DJHomeScreen() {
           const isSoon = label === 'TODAY' || label === 'TOMORROW';
           return <Text style={[styles.dateHeaderLabel, { color: isSoon ? colors.foreground : colors.muted }]}>{label}</Text>;
         })()}
+        <View style={[styles.dateHeaderLine, { backgroundColor: colors.border }]} />
       </View>
       {gigs.map((b) => {
         const venueName = b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, b.venue?.name);
