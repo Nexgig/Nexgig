@@ -675,12 +675,12 @@ export default function AssignDJScreen() {
           assignRows.map((item, i) => renderRow(item, i))
         )}
 
-        {/* Guest DJs — one-time off-app performers, in the SAME roster list. Each is a name + fee row
-            like a normal artist; the "+" books them immediately (no request / notification / invoice). */}
+        {/* Guest DJs — one-time off-app performers, in the SAME roster list. Once added they read like a
+            staged artist: coral check on the right, tap the row to remove (no request / notification / invoice). */}
         {!isPastSlot && slotGuests.map((g) => (
           <Fragment key={g.id}>
             <Divider full />
-            <View style={styles.djRow}>
+            <Pressable style={({ pressed }) => [styles.djRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => removeGuest(g)}>
               <View style={[styles.guestAvatar, { backgroundColor: colors.primary + '22' }]}>
                 <Text style={[styles.guestInitial, { color: colors.primary }]}>{(g.guestName ?? '?').charAt(0).toUpperCase()}</Text>
               </View>
@@ -691,14 +691,13 @@ export default function AssignDJScreen() {
               {g.price != null && (
                 <Text style={[styles.guestFee, { color: colors.foreground }]}>AED {g.price.toLocaleString()}</Text>
               )}
-              <Pressable onPress={() => removeGuest(g)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-                <MaterialIcons name="close" size={22} color={colors.muted} />
-              </Pressable>
-            </View>
+              <MaterialIcons name="check-circle" size={26} color={colors.primary} />
+            </Pressable>
           </Fragment>
         ))}
 
-        {/* Add-a-guest row — sits under the last artist, styled like an artist row: name + inline fee + "+". */}
+        {/* Add-a-guest row — sits under the last artist, styled like an artist row: name + inline fee + "+".
+            Return only dismisses the keyboard; ONLY the "+" books the guest (mirrors a normal artist's toggle). */}
         {!isPastSlot && (
           <Fragment>
             <Divider full />
@@ -713,7 +712,6 @@ export default function AssignDJScreen() {
                 placeholder="Guest DJ name"
                 placeholderTextColor={colors.muted}
                 returnKeyType="done"
-                onSubmitEditing={addGuest}
               />
               <Pressable style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => {}}>
                 <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
@@ -725,11 +723,10 @@ export default function AssignDJScreen() {
                   placeholderTextColor={colors.muted}
                   keyboardType="number-pad"
                   returnKeyType="done"
-                  onSubmitEditing={addGuest}
                 />
               </Pressable>
               <Pressable onPress={addGuest} disabled={!guestName.trim()} hitSlop={6}>
-                <MaterialIcons name="add-circle" size={26} color={guestName.trim() ? colors.primary : colors.muted} />
+                <MaterialIcons name="add-circle-outline" size={26} color={colors.muted} />
               </Pressable>
             </View>
           </Fragment>
