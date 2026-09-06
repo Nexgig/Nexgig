@@ -91,8 +91,10 @@ export default function DJBookingDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const allDrafts = useDraftStore((s) => s.drafts);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const setDraft = useDraftStore((s) => s.setDraft);
   const allInvoices = useInvoiceStore((s) => s.invoices);
   const [feeModalOpen, setFeeModalOpen] = useState(false);
+  const [draftFeeOpen, setDraftFeeOpen] = useState(false);   // edit a draft-only slot's fee (slot-only view)
   // Invoiced gigs are settled — the invoice locked that number, so editing the booking price
   // would let the two disagree. Block the edit once any non-cancelled invoice covers this gig.
   const isInvoiced = useMemo(() =>
@@ -123,6 +125,13 @@ export default function DJBookingDetailScreen() {
       // and lands here — the drafts must show, or the manager sees "nothing assigned".
       const slotDrafts = allDrafts.filter((d) => d.slotId === emptySlot.id);
       const slotBookings = allBookings.filter((b) => b.slotId === emptySlot.id && !b.hiddenFromManagerCalendar);
+      // A draft-only slot with exactly one pencilled artist shows an editable FEE row (like a booking).
+      const singleDraft = slotDrafts.length === 1 && slotBookings.length === 0 ? slotDrafts[0] : null;
+      const saveDraftFee = (price?: number) => {
+        setDraftFeeOpen(false);
+        if (!currentUser || !singleDraft) return;
+        setDraft(emptySlot.id, emptySlot.venueId, singleDraft.artistId, currentUser.id, price);
+      };
       // Send one drafted (not-yet-sent) artist straight from the detail — mirrors the calendar's
       // sendSlotDrafts: create the booking, persist it, notify the artist, then go back.
       const sendDraft = (d: (typeof slotDrafts)[number]) => {
@@ -181,7 +190,7 @@ export default function DJBookingDetailScreen() {
                         key={'draft-' + d.artistId}
                         leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                         title={dArtist?.fullName ?? 'Artist'}
-                        subtitle={d.price != null ? `AED ${d.price.toLocaleString()} · Not sent yet` : 'Not sent yet'}
+                        subtitle={slotDrafts.length === 1 ? 'Not sent yet' : (d.price != null ? `AED ${d.price.toLocaleString()} · Not sent yet` : 'Not sent yet')}
                         trailing={
                           <Pressable
                             onPress={() => sendDraft(d)}
@@ -212,6 +221,22 @@ export default function DJBookingDetailScreen() {
             ) : null}
 
             <Section label="Details">
+              {singleDraft && (
+                <DetailRow
+                  label="FEE"
+                  value={singleDraft.price != null ? `AED ${singleDraft.price.toLocaleString()}` : undefined}
+                  trailing={
+                    <Pressable
+                      onPress={() => setDraftFeeOpen(true)}
+                      hitSlop={8}
+                      style={({ pressed }) => [styles.feeEditBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+                    >
+                      <MaterialIcons name="edit" size={13} color={colors.primary} />
+                      <Text style={[styles.feeEditText, { color: colors.primary }]}>{singleDraft.price != null ? 'Edit' : 'Set fee'}</Text>
+                    </Pressable>
+                  }
+                />
+              )}
               <DetailRow label="DATE" value={formatDate(emptySlot.date)} />
               <DetailRow label="TIME" value={`${fmtTime(emptySlot.startTime)} – ${fmtTime(emptySlot.endTime)}`} />
               <DetailRow label="VENUE TYPE" value={emptyVenue?.venueType} />
@@ -230,6 +255,16 @@ export default function DJBookingDetailScreen() {
               />
             </Section>
           </ScrollView>
+          <PastGigPriceModal
+            visible={draftFeeOpen}
+            title="Set fee"
+            confirmLabel="Save"
+            artistName={singleDraft ? (getArtistUser(singleDraft.artistId)?.fullName ?? 'this artist') : 'this artist'}
+            subtitle={`${emptyVenue?.name ?? 'Venue'} · ${formatDate(emptySlot.date)}`}
+            defaultPrice={singleDraft?.price}
+            onCancel={() => setDraftFeeOpen(false)}
+            onConfirm={saveDraftFee}
+          />
         </ScreenContainer>
       );
     }
@@ -475,7 +510,7 @@ export default function DJBookingDetailScreen() {
                       key={'draft-' + d.artistId}
                       leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                       title={dArtist?.fullName ?? 'Artist'}
-                      subtitle={d.price != null ? `AED ${d.price.toLocaleString()} · Not sent yet` : 'Not sent yet'}
+                      subtitle="Not sent yet"
                       trailing={
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <StatusBadge status="draft" style={styles.statusChip} textStyle={styles.statusChipText} />
