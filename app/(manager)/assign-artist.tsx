@@ -660,7 +660,7 @@ export default function AssignDJScreen() {
 
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 44 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

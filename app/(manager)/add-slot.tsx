@@ -667,7 +667,7 @@ export default function AddSlotScreen() {
           ScrollView inside the native formSheet (its onLayout reports content height). */}
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 44 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
