@@ -652,13 +652,19 @@ export default function DJHomeScreen() {
                     </Text>
                     <MaterialIcons name={isOpen ? 'expand-more' : 'chevron-right'} size={22} color={colors.muted} />
                   </Pressable>
-                  {isOpen && m.venues.map((v) => (
-                    <View key={v.key} style={styles.histVenueRow}>
-                      <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                      <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
-                      <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
-                    </View>
-                  ))}
+                  {isOpen && (
+                    <>
+                      {m.venues.map((v) => (
+                        <View key={v.key} style={styles.histVenueRow}>
+                          <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                          <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
+                          <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
+                        </View>
+                      ))}
+                      {/* Clear the last venue from the divider below it (matches the 12pt between venues). */}
+                      <View style={styles.venueBottomPad} />
+                    </>
+                  )}
                 </View>
               );
             })}
@@ -762,6 +768,7 @@ const styles = StyleSheet.create({
   earnMonthSub: { fontSize: 13, marginTop: 2 },
   earnMonthAmount: { fontSize: 16, fontWeight: '700' },
   histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 6, paddingTop: 12 },
+  venueBottomPad: { height: 12 },
   histVenueName: { flex: 1, fontSize: 14 },
   histVenueGigs: { fontSize: 13 },
   histVenueAmount: { fontSize: 14, fontWeight: '600', marginLeft: 12 },
