@@ -14,7 +14,7 @@ import { useColors } from '@/hooks/use-colors';
 import { detectConflicts, timesOverlap, formatDate, formatTime } from '@/lib/conflict-detection';
 import type { Booking, VenueAssignment, ConflictInfo } from '@/lib/types';
 import { isPastStart, addDaysStr, firstName } from '@/lib/utils';
-import { persistGigRequestBooking } from '@/lib/gig-requests';
+import { persistGigRequestBooking, addGuestBooking } from '@/lib/gig-requests';
 import { supabase } from '@/lib/supabase';
 
 export default function AssignDJScreen() {
@@ -40,6 +40,8 @@ export default function AssignDJScreen() {
   const getSlotById2 = useSlotStore((s) => s.getSlotById);
   const allBookings = useBookingStore((s) => s.bookings);
   const addBooking = useBookingStore((s) => s.addBooking);
+  const deleteBooking = useBookingStore((s) => s.deleteBooking);
+  const [guestName, setGuestName] = useState('');
   const confirmedBookings = useMemo(
     () => allBookings.filter((b) => b.status === 'confirmed' || b.status === 'requested'),
     [allBookings]
@@ -289,6 +291,23 @@ export default function AssignDJScreen() {
   // Determine if this is a past slot (uses date + startTime for accurate datetime comparison)
   const isPastSlot = isPastStart(slot!.date, slot!.startTime);
   const venue = getVenueById(slot!.venueId);
+
+  // Guest DJ — one-time off-app performers on this slot (name-only bookings, booked immediately).
+  const slotGuests = allBookings.filter((b) => b.slotId === slot?.id && !!b.guestName && b.status !== 'cancelled');
+  const addGuest = () => {
+    const name = guestName.trim();
+    if (!name || !currentUser || !slot) return;
+    addGuestBooking({
+      slotId: slot.id, venueId: slot.venueId, managerId: currentUser.id, guestName: name,
+      slotDate: slot.date, slotName: slot.name, slotStartTime: slot.startTime, slotEndTime: slot.endTime,
+      venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+    });
+    setGuestName('');
+  };
+  const removeGuest = (b: (typeof slotGuests)[number]) => {
+    deleteBooking(b.id);
+    supabase.from('bookings').delete().eq('id', b.id).then(({ error }) => { if (error) console.warn('guest delete error:', error.message); });
+  };
 
   const venueAssignmentsForSlot = venueAssignments.filter(
     (a) => a.venueId === slot!.venueId && a.status === 'active'
@@ -651,6 +670,42 @@ export default function AssignDJScreen() {
         ) : (
           assignRows.map((item, i) => renderRow(item, i))
         )}
+
+        {/* Guest DJ — a one-time off-app performer (name only). Booked immediately; no request/notify. */}
+        {!isPastSlot && (
+          <View style={styles.guestSection}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>GUEST DJ</Text>
+            {slotGuests.map((g) => (
+              <View key={g.id} style={styles.guestRow}>
+                <View style={[styles.guestAvatar, { backgroundColor: colors.primary + '22' }]}>
+                  <Text style={[styles.guestInitial, { color: colors.primary }]}>{(g.guestName ?? '?').charAt(0).toUpperCase()}</Text>
+                </View>
+                <Text style={[styles.guestName2, { color: colors.foreground }]} numberOfLines={1}>{g.guestName}</Text>
+                <Pressable onPress={() => removeGuest(g)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                  <MaterialIcons name="close" size={18} color={colors.muted} />
+                </Pressable>
+              </View>
+            ))}
+            <View style={styles.guestInputRow}>
+              <TextInput
+                style={[styles.guestInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+                value={guestName}
+                onChangeText={setGuestName}
+                placeholder="Guest DJ name"
+                placeholderTextColor={colors.muted}
+                returnKeyType="done"
+                onSubmitEditing={addGuest}
+              />
+              <Pressable
+                onPress={addGuest}
+                disabled={!guestName.trim()}
+                style={({ pressed }) => [styles.guestAddBtn, { backgroundColor: guestName.trim() ? colors.primary : colors.border, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Text style={[styles.guestAddText, { color: guestName.trim() ? '#fff' : colors.muted }]}>Add</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Footer once artists are staged: Draft (commit) + Send, side by side. The ✕ in the header
@@ -698,6 +753,15 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
   listHeaderRow: { marginBottom: 6 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
+  guestSection: { marginTop: 22, paddingTop: 4 },
+  guestRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  guestAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  guestInitial: { fontSize: 18, fontWeight: '800' },
+  guestName2: { flex: 1, fontSize: 15, fontWeight: '700' },
+  guestInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  guestInput: { flex: 1, height: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, fontSize: 15 },
+  guestAddBtn: { height: 44, minWidth: 64, borderRadius: 10, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
+  guestAddText: { fontSize: 15, fontWeight: '800' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   djInfo: { flex: 1 },
   djName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },

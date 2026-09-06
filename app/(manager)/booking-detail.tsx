@@ -230,13 +230,15 @@ export default function DJBookingDetailScreen() {
                 <>
                   {slotBookings.map((b) => {
                     const bArtist = getArtistUser(b.artistId);
+                    const isGuest = !!b.guestName;
+                    const name = b.guestName ?? bArtist?.fullName ?? 'Artist';
                     const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
                     return (
                       <ListRow
                         key={'bk-' + b.id}
-                        leading={<AvatarImage uri={bArtist?.profilePhotoUrl} avatarId={(bArtist as any)?.avatarId} seed={bArtist?.id} name={bArtist?.fullName ?? 'Artist'} size={44} />}
-                        title={bArtist?.fullName ?? 'Artist'}
-                        subtitleNode={<FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
+                        leading={<AvatarImage uri={isGuest ? undefined : bArtist?.profilePhotoUrl} avatarId={isGuest ? undefined : (bArtist as any)?.avatarId} seed={isGuest ? b.guestName : bArtist?.id} name={name} size={44} />}
+                        title={name}
+                        subtitleNode={isGuest ? <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>Guest DJ</Text> : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                         trailing={<StatusBadge status={shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />}
                         onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
                         divider
@@ -501,13 +503,15 @@ export default function DJBookingDetailScreen() {
                 )}
                 {slotBookings.map((b) => {
                   const rArtist = getArtistUser(b.artistId);
+                  const isGuest = !!b.guestName;
+                  const name = b.guestName ?? rArtist?.fullName ?? 'Former Artist';
                   return (
                     <ListRow
                       key={b.id}
-                      leading={<AvatarImage uri={rArtist?.profilePhotoUrl} avatarId={(rArtist as any)?.avatarId} seed={rArtist?.id} name={rArtist?.fullName ?? 'Former Artist'} size={44} />}
-                      title={rArtist?.fullName ?? 'Former Artist'}
-                      subtitleNode={<FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
-                      onPress={rArtist?.id ? () => router.push(('/(manager)/artist-profile-view?artistId=' + b.artistId + '&name=' + encodeURIComponent(rArtist.fullName ?? '')) as Href) : undefined}
+                      leading={<AvatarImage uri={isGuest ? undefined : rArtist?.profilePhotoUrl} avatarId={isGuest ? undefined : (rArtist as any)?.avatarId} seed={isGuest ? b.guestName : rArtist?.id} name={name} size={44} />}
+                      title={name}
+                      subtitleNode={isGuest ? <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>Guest DJ</Text> : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
+                      onPress={(rArtist?.id && !isGuest) ? () => router.push(('/(manager)/artist-profile-view?artistId=' + b.artistId + '&name=' + encodeURIComponent(rArtist.fullName ?? '')) as Href) : undefined}
                       trailing={<StatusWithX b={b} onX={rowDismiss(b)} />}
                       divider
                     />

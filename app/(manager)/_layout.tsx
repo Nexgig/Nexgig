@@ -71,6 +71,7 @@ export default function ManagerLayout() {
           slotId: b.slot_id,
           venueId: b.venue_id,
           artistId: b.artist_id,
+          guestName: b.guest_name ?? undefined,
           managerId: b.manager_id,
           status: b.status,
           isCompleted: b.is_completed ?? false,

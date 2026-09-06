@@ -174,6 +174,7 @@ function mapBooking(b: any): Booking {
     venueId: b.venue_id ?? undefined,
     managerId: b.manager_id,
     artistId: b.artist_id,
+    guestName: b.guest_name ?? undefined,
     status: b.status,
     slotDate: b.slot_date ?? undefined,
     slotName: b.slot_name ?? undefined,

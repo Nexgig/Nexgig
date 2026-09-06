@@ -324,7 +324,7 @@ export default function ManagerDashboard() {
     if (data) {
       clearBookings();
       data.forEach((b: any) => addBooking({
-        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
+        id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id, guestName: b.guest_name ?? undefined,
         managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
         confirmedAt: b.confirmed_at ?? undefined, cancelledAt: b.cancelled_at ?? undefined,
         cancellationReason: b.cancellation_reason ?? undefined,

@@ -328,6 +328,10 @@ export interface Booking {
   isArtistCreated?: boolean;    // true when artist created this booking (private event)
   privateEventLocation?: string; // only for artist-created private events, never shown to managers
   privateEventOccasion?: string; // occasion key (see lib/occasions.ts) — drives the private-event icon
+  /** One-time off-app GUEST DJ: a manager-typed name for a performer who isn't on Nexgig. When set,
+   *  the booking is name-only — no real artist (artistId is ''), no notifications, no invoices, no
+   *  profile. Immediately 'confirmed'. `bookings.guest_name`. */
+  guestName?: string;
 }
 
 // ─── Notification ────────────────────────────────────────────────────────────

@@ -1467,7 +1467,7 @@ export default function CalendarScreen() {
       ...(live.length > 0 ? [(
         <View key={'live-' + slot.id}>
           {dayRowMulti(
-            live.map((b) => getArtistUser(b.artistId)),
+            live.map((b) => b.guestName ? ({ id: b.guestName, fullName: b.guestName } as any) : getArtistUser(b.artistId)),
             <StatusBadge status={repShown as any} style={styles.dayStatusChip} textStyle={styles.dayStatusChipText} />,
             () => router.push(('/(manager)/booking-detail?id=' + live[0].id) as Href),
           )}
@@ -1476,7 +1476,7 @@ export default function CalendarScreen() {
       ...dead.map((b) => {
         const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
         // Swipe left to remove — no inline X; the whole row taps through to the booking.
-        const row = dayRow(getArtistUser(b.artistId), <StatusBadge status={shown as any} style={styles.dayStatusChip} textStyle={styles.dayStatusChipText} />,
+        const row = dayRow(b.guestName ? ({ id: b.guestName, fullName: b.guestName } as any) : getArtistUser(b.artistId), <StatusBadge status={shown as any} style={styles.dayStatusChip} textStyle={styles.dayStatusChipText} />,
           () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href));
         return withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row);
       }),
