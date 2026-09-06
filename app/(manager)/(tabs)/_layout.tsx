@@ -6,7 +6,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuthStore, usePendingAppsStore, useDraftStore, useSlotStore, useInvoiceStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { isPastStart } from '@/lib/utils';
-import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
+import { ALLOW_ARTIST_VENUE_APPLICATIONS, SHOW_REQUESTS_TAB } from '@/lib/features';
 
 export default function ManagerTabsLayout() {
   const colors = useColors();
@@ -107,6 +107,7 @@ export default function ManagerTabsLayout() {
         name="send"
         options={{
           title: 'Requests',
+          href: SHOW_REQUESTS_TAB ? undefined : null,   // hidden behind the flag for now (not in this production)
           // A normal tab → the Requests screen (send.tsx). Carries the unsent-drafts badge.
           tabBarIcon: ({ color }) => (
             <View>

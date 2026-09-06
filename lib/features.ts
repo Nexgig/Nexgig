@@ -65,3 +65,13 @@ export const ALLOW_ARTIST_VENUE_APPLICATIONS = false;
  * both modes. Both were product decisions, not oversights.
  */
 export const ALLOW_DUAL_ROLE = true;
+
+/**
+ * The manager's middle **"Requests"** tab (`app/(manager)/(tabs)/send.tsx`) — a full screen for
+ * bulk-sending drafted gig requests, with the shared venue filter. Built and working, but hidden
+ * for now (not in this production release). With the flag off the tab's `href` is null, so no tab
+ * button shows and the screen is unreachable from the bar; the per-slot Send buttons and the
+ * booking-detail Send flow are unaffected. The unsent-drafts badge that would live on this tab is
+ * hidden with it. Flip to `true` to bring the tab back exactly as built.
+ */
+export const SHOW_REQUESTS_TAB = false;
