@@ -1438,7 +1438,7 @@ export default function CalendarScreen() {
       ))];
     }
 
-    const dayRow = (artist: any, badge: React.ReactNode, onPress: () => void, onDismiss?: () => void) => (
+    const dayRow = (artist: any, badge: React.ReactNode, onPress: () => void) => (
       <Pressable style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
         <AvatarImage uri={artist?.profilePhotoUrl || undefined} avatarId={(artist as any)?.avatarId} seed={artist?.id} name={artist?.fullName ?? 'Former Artist'} size={44} />
         <View style={styles.dayRowInfo}>
@@ -1446,11 +1446,6 @@ export default function CalendarScreen() {
           <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName} · {time}</Text>
         </View>
         {badge}
-        {onDismiss && (
-          <Pressable hitSlop={8} onPress={(e) => { e.stopPropagation?.(); onDismiss(); }} style={({ pressed }) => [styles.dayDismissBtn, { opacity: pressed ? 0.5 : 1 }]}>
-            <MaterialIcons name="close" size={18} color={colors.muted} />
-          </Pressable>
-        )}
       </Pressable>
     );
 
@@ -1500,10 +1495,9 @@ export default function CalendarScreen() {
       )] : []),
       ...dead.map((b) => {
         const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
-        // Visible X to dismiss (plus swipe still works).
+        // Swipe left to remove — no inline X; the whole row taps through to the booking.
         const row = dayRow(getArtistUser(b.artistId), <StatusBadge status={shown as any} style={styles.dayStatusChip} textStyle={styles.dayStatusChipText} />,
-          () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href),
-          () => dismissBooking(b));
+          () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href));
         return withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row);
       }),
       // Drafts on the slot collapse into ONE stacked-avatar row (mirrors the live-bookings group,
@@ -2183,7 +2177,6 @@ const styles = StyleSheet.create({
   dayRowInfo: { flex: 1 },
   dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   dayRowSub: { fontSize: 13 },
-  dayDismissBtn: { padding: 4, marginLeft: 2 },
   assignBtn: { height: 30, minWidth: 76, borderRadius: 9, borderWidth: 1.5, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // outlined: white bg, coral border/text
   assignBtnText: { fontSize: 13, fontWeight: '700' },   // colour set inline (coral)
   sendRowBtn: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // filled coral (white text)
