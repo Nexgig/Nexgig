@@ -73,7 +73,9 @@ export default function ManagerDashboard() {
       b.status === 'confirmed' || b.status === 'completed' || b.isCompleted)
     .map((b) => {
       const slot = slots.find((s) => s.id === b.slotId);
-      const dj = b.artistId == null
+      const dj = b.guestName
+        ? { fullName: b.guestName, profilePhotoUrl: undefined }
+        : b.artistId == null
         ? { fullName: 'Former Artist', profilePhotoUrl: undefined }
         : artistUsers.find((u) => u.id === b.artistId);
       const venue = allVenues.find((v) => v.id === b.venueId);
@@ -196,7 +198,7 @@ export default function ManagerDashboard() {
         continue;
       }
       bs.forEach((b) => {
-        const dj = b.artistId == null ? { fullName: 'Former Artist', profilePhotoUrl: undefined } : artistUsers.find((u) => u.id === b.artistId);
+        const dj = b.guestName ? { fullName: b.guestName, profilePhotoUrl: undefined } : b.artistId == null ? { fullName: 'Former Artist', profilePhotoUrl: undefined } : artistUsers.find((u) => u.id === b.artistId);
         items.push({ key: b.id, kind: 'booking', slot, booking: b, dj });
       });
       slotDrafts.forEach((d) => {
