@@ -1493,7 +1493,7 @@ export default function CalendarScreen() {
         <View key={'live-' + slot.id}>
           {dayRowMulti(
             live.map((b) => getArtistUser(b.artistId)),
-            <StatusBadge status={repShown as any} />,
+            <StatusBadge status={repShown as any} style={styles.dayStatusChip} textStyle={styles.dayStatusChipText} />,
             () => router.push(('/(manager)/booking-detail?id=' + live[0].id) as Href),
           )}
         </View>
@@ -1501,7 +1501,7 @@ export default function CalendarScreen() {
       ...dead.map((b) => {
         const shown = displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime);
         // Visible X to dismiss (plus swipe still works).
-        const row = dayRow(getArtistUser(b.artistId), <StatusBadge status={shown as any} />,
+        const row = dayRow(getArtistUser(b.artistId), <StatusBadge status={shown as any} style={styles.dayStatusChip} textStyle={styles.dayStatusChipText} />,
           () => router.push(('/(manager)/booking-detail?id=' + b.id) as Href),
           () => dismissBooking(b));
         return withSwipeDelete('bk-' + b.id, () => dismissBooking(b), row);
@@ -2188,6 +2188,8 @@ const styles = StyleSheet.create({
   assignBtnText: { fontSize: 13, fontWeight: '700' },   // colour set inline (coral)
   sendRowBtn: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // filled coral (white text)
   sendRowBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  dayStatusChip: { alignSelf: 'center', height: 30, minWidth: 76, borderRadius: 9, paddingVertical: 0, justifyContent: 'center' },   // centred + button-sized (matches the slot detail)
+  dayStatusChipText: { fontSize: 13 },
   dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
