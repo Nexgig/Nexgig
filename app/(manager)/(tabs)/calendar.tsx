@@ -1425,8 +1425,8 @@ export default function CalendarScreen() {
             <MaterialIcons name="add" size={22} color={colors.primary} />
           </View>
           <View style={styles.dayRowInfo}>
-            <Text style={[styles.dayRowName, { color: colors.primary }]}>Needs artist</Text>
-            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName} · {time}</Text>
+            <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
+            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
           </View>
           <Pressable
             style={({ pressed }) => [styles.assignBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
