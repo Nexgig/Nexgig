@@ -13,7 +13,6 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { useSendSheetStore } from '@/lib/send-sheet';
 import { STATUS_COLORS } from '@/components/ui/date-badge';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useAuthStore, useVenueStore, useSlotStore, useBookingStore, useLineupStore, useDraftStore, useNotificationStore, useCalendarJumpStore, useVenueFilterStore, useCalendarSelectionStore, useCalendarBulkStore } from '@/lib/store';
@@ -703,21 +702,6 @@ export default function CalendarScreen() {
       })
       .sort((a, b) => a.slot.date.localeCompare(b.slot.date) || a.slot.startTime.localeCompare(b.slot.startTime));
   }, [currentUser, allDrafts, allSlots, nowDT, venueFilter, calendarMode, weekDays, standardMonthBounds, getArtistUser, getVenueById, viewedDayStr]);
-
-  // Open the send sheet when the "Requests" tab button asks (from any tab) — mirror the "Send all"
-  // button: reset the sheet's venue filter, preselect the period's drafts, open. Guarded by a ref so
-  // it fires once per press (not on every periodScopedDrafts change).
-  const sendRequestId = useSendSheetStore((s) => s.requestId);
-  const lastSendReq = useRef(0);
-  useEffect(() => {
-    if (sendRequestId === lastSendReq.current) return;
-    lastSendReq.current = sendRequestId;
-    if (sendRequestId > 0) {
-      setSendVenueFilter(null);
-      setSelectedDraftKeys(new Set(periodScopedDrafts.map((d) => d.key)));
-      setShowSendSheet(true);
-    }
-  }, [sendRequestId, periodScopedDrafts]);
 
   // Drafts grouped by date for the bulk send modal
   const periodDraftsByDate = useMemo(() => {

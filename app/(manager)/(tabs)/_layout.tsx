@@ -1,5 +1,5 @@
-import { Tabs, useFocusEffect, router } from 'expo-router';
-import { View, Text, Pressable } from '@/lib/rn';
+import { Tabs, useFocusEffect } from 'expo-router';
+import { View, Text } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -7,7 +7,6 @@ import { useAuthStore, usePendingAppsStore, useDraftStore, useSlotStore, useInvo
 import { supabase } from '@/lib/supabase';
 import { isPastStart } from '@/lib/utils';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS } from '@/lib/features';
-import { useSendSheetStore } from '@/lib/send-sheet';
 
 export default function ManagerTabsLayout() {
   const colors = useColors();
@@ -78,13 +77,6 @@ export default function ManagerTabsLayout() {
     }).length;
   }, [drafts, slots, currentUser?.id]);
 
-  // The "Requests" tab is an action: open the calendar's send sheet from anywhere.
-  const requestSend = useSendSheetStore((s) => s.requestOpen);
-  const handleSendPress = () => {
-    requestSend();
-    router.navigate('/(manager)/(tabs)/calendar');
-  };
-
   return (
     <Tabs
       screenOptions={{
@@ -115,22 +107,16 @@ export default function ManagerTabsLayout() {
         name="send"
         options={{
           title: 'Requests',
-          // An ACTION tab, not a screen (see send.tsx): the button opens the calendar's send sheet.
-          // Carries the unsent-drafts badge (moved here off the Calendar tab).
-          tabBarButton: () => (
-            <Pressable onPress={handleSendPress} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ alignItems: 'center' }}>
-                <View>
-                  <MaterialIcons name="outgoing-mail" size={24} color={colors.muted} />
-                  {draftBadge > 0 && (
-                    <View style={{ position: 'absolute', top: -5, right: -9, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{draftBadge}</Text>
-                    </View>
-                  )}
+          // A normal tab → the Requests screen (send.tsx). Carries the unsent-drafts badge.
+          tabBarIcon: ({ color }) => (
+            <View>
+              <MaterialIcons name="outgoing-mail" size={24} color={color} />
+              {draftBadge > 0 && (
+                <View style={{ position: 'absolute', top: -5, right: -9, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{draftBadge}</Text>
                 </View>
-                <Text style={{ color: colors.muted, fontSize: 10, marginTop: 3, fontWeight: '500' }}>Requests</Text>
-              </View>
-            </Pressable>
+              )}
+            </View>
           ),
         }}
       />
