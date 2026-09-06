@@ -1439,13 +1439,10 @@ export default function CalendarScreen() {
       <Pressable style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={onPress}>
         <AvatarImage uri={artist?.profilePhotoUrl || undefined} avatarId={(artist as any)?.avatarId} seed={artist?.id} name={artist?.fullName ?? 'Former Artist'} size={44} />
         <View style={styles.dayRowInfo}>
-          <View style={styles.dayNameRow}>
-            <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{artist?.fullName ?? 'Former Artist'}</Text>
-            {badge}
-          </View>
-          <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+          <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{artist?.fullName ?? 'Former Artist'}</Text>
+          <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName} · {time}</Text>
         </View>
-        <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+        {badge}
         {onDismiss && (
           <Pressable hitSlop={8} onPress={(e) => { e.stopPropagation?.(); onDismiss(); }} style={({ pressed }) => [styles.dayDismissBtn, { opacity: pressed ? 0.5 : 1 }]}>
             <MaterialIcons name="close" size={18} color={colors.muted} />
@@ -1469,13 +1466,10 @@ export default function CalendarScreen() {
             ))}
           </View>
           <View style={styles.dayRowInfo}>
-            <View style={styles.dayNameRow}>
-              <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
-              {badge}
-            </View>
-            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+            <Text style={[styles.dayRowName, { color: colors.foreground }]} numberOfLines={1}>{title}</Text>
+            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName} · {time}</Text>
           </View>
-          <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+          {badge}
         </Pressable>
       );
     };
@@ -2177,10 +2171,8 @@ const styles = StyleSheet.create({
   dayAvatarStack: { flexDirection: 'row', alignItems: 'center' },
   dayAvatarRing: { borderRadius: 24, borderWidth: 2 },
   dayRowInfo: { flex: 1 },
-  dayNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   dayRowSub: { fontSize: 13 },
-  dayRowTime: { fontSize: 13, fontWeight: '500' },
   dayDismissBtn: { padding: 4, marginLeft: 2 },
   assignBtn: { height: 34, borderRadius: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // matches the assign-page price box (height 34, radius 10)
   assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
