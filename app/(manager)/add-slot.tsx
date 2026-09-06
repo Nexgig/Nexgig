@@ -530,7 +530,9 @@ export default function AddSlotScreen() {
   );
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
+    // Root height MUST equal the sheet detent (0.78) so the inner ScrollView is bounded and scrolls to the last
+    // row: flex:1 alone doesn't bound inside an RN-screens formSheet (see assign-artist / invite-artists).
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.78 }]}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>

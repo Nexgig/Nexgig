@@ -622,7 +622,10 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
+    // Root height MUST equal the sheet detent (0.78) so the inner ScrollView is bounded and scrolls to the last
+    // row: flex:1 alone doesn't bound inside an RN-screens formSheet; the fixed winH*detent is the anchor (same
+    // as invite-artists' winH*0.7 @ 0.7 detent). winH*0.8 was 2% too tall → clipped + no scroll.
+    <View style={{ height: winH * 0.78, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
