@@ -124,35 +124,33 @@ export default function DJBookingDetailScreen() {
       // drafting stages an artist without creating a booking, so the set has 0 bookings
       // and lands here — the drafts must show, or the manager sees "nothing assigned".
       const slotDrafts = allDrafts.filter((d) => d.slotId === emptySlot.id);
-      // Send the drafted (not-yet-sent) artists straight from the detail — mirrors the calendar's
-      // sendSlotDrafts: create a booking per draft, persist it, notify the artist, then go back.
-      const sendDraftsForSlot = () => {
-        if (!currentUser || slotDrafts.length === 0) return;
-        const names = slotDrafts.map((d) => getArtistUser(d.artistId)?.fullName ?? 'artist').join(', ');
+      // Send one drafted (not-yet-sent) artist straight from the detail — mirrors the calendar's
+      // sendSlotDrafts: create the booking, persist it, notify the artist, then go back.
+      const sendDraft = (d: (typeof slotDrafts)[number]) => {
+        if (!currentUser) return;
+        const name = getArtistUser(d.artistId)?.fullName ?? 'artist';
         Alert.alert(
           'Send Gig Request',
-          slotDrafts.length === 1 ? `Send a gig request to ${names}?` : `Send gig requests to ${names}?`,
+          `Send a gig request to ${name}?`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Send',
               onPress: () => {
-                slotDrafts.forEach((d) => {
-                  const newBookingId = sendDraftByDJ(emptySlot.id, d.artistId, currentUser.id, addBooking);
-                  if (newBookingId) {
-                    persistGigRequestBooking({
-                      bookingId: newBookingId, slotId: emptySlot.id, venueId: emptySlot.venueId, artistId: d.artistId,
-                      managerId: currentUser.id, slotDate: emptySlot.date, slotName: emptySlot.name,
-                      slotStartTime: emptySlot.startTime, slotEndTime: emptySlot.endTime, price: d.price ?? null,
-                      venueName: emptyVenue?.name ?? null, venueType: emptyVenue?.venueType ?? null,
-                    });
-                  }
-                  addNotification({
-                    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                    userId: d.artistId, type: 'booking_request', title: 'New Booking Request',
-                    body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${emptyVenue?.name ?? 'a venue'}, ${formatDate(emptySlot.date)}`,
-                    isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
+                const newBookingId = sendDraftByDJ(emptySlot.id, d.artistId, currentUser.id, addBooking);
+                if (newBookingId) {
+                  persistGigRequestBooking({
+                    bookingId: newBookingId, slotId: emptySlot.id, venueId: emptySlot.venueId, artistId: d.artistId,
+                    managerId: currentUser.id, slotDate: emptySlot.date, slotName: emptySlot.name,
+                    slotStartTime: emptySlot.startTime, slotEndTime: emptySlot.endTime, price: d.price ?? null,
+                    venueName: emptyVenue?.name ?? null, venueType: emptyVenue?.venueType ?? null,
                   });
+                }
+                addNotification({
+                  id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                  userId: d.artistId, type: 'booking_request', title: 'New Booking Request',
+                  body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${emptyVenue?.name ?? 'a venue'}, ${formatDate(emptySlot.date)}`,
+                  isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
                 });
                 router.back();
               },
@@ -181,7 +179,15 @@ export default function DJBookingDetailScreen() {
                       leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                       title={dArtist?.fullName ?? 'Artist'}
                       subtitle="Not sent yet"
-                      trailing={<StatusBadge status="draft" />}
+                      trailing={
+                        <Pressable
+                          onPress={() => sendDraft(d)}
+                          style={({ pressed }) => [styles.detailSendPill, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                          hitSlop={6}
+                        >
+                          <Text style={styles.detailSendPillText}>Send</Text>
+                        </Pressable>
+                      }
                       divider
                     />
                   );
@@ -189,15 +195,6 @@ export default function DJBookingDetailScreen() {
               )}
               <AddArtistRow slotId={emptySlot.id} />
             </Section>
-
-            {slotDrafts.length > 0 && (
-              <Pressable
-                onPress={sendDraftsForSlot}
-                style={({ pressed }) => [styles.detailSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-              >
-                <Text style={styles.detailSendBtnText}>Send {slotDrafts.length > 1 ? 'Requests' : 'Request'}</Text>
-              </Pressable>
-            )}
 
             {emptyVenue ? (
               <Section label="Venue">
@@ -684,8 +681,8 @@ const styles = StyleSheet.create({
   addArtistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   addArtistCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   addArtistText: { fontSize: 15, fontWeight: '700' },
-  detailSendBtn: { height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 4, marginBottom: 8 },
-  detailSendBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  detailSendPill: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
+  detailSendPillText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   detailLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 92 },
   detailValueWrap: { flex: 1 },
