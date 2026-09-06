@@ -998,7 +998,7 @@ export default function DJAvailabilityScreen() {
               )}
             </View>
             )}
-            {renderVenueBalance()}
+            {/* Monthly Income panel removed — earnings now live in the dashboard "Earnings" section. */}
           </View>
         )}
 

@@ -171,17 +171,22 @@ export default function DJHomeScreen() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [dashboardBookings]);
 
-  // ── History: COMPLETED gigs grouped by MONTH (collapsible), then by venue. Newest month first;
-  // venues within a month sorted by earnings. The artist's own private events bucket as "Private events".
-  const historyByMonth = useMemo(() => {
-    const completed = dashboardBookings.filter((b) => b.isDone);
+  // ── Earnings: booked + completed gigs grouped by MONTH (collapsible, per-venue). PAST + CURRENT
+  // month only (no future months); the current month INCLUDES upcoming booked gigs (expected fees),
+  // past months are completed/booked that already happened. Newest month first; the artist's own
+  // private events bucket as "Private events". This is the ONE earnings home (calendar panel removed).
+  const earningsByMonth = useMemo(() => {
+    const curMonth = todayLocalStr().slice(0, 7);
     type Venue = { key: string; name: string; earnings: number; gigCount: number };
     type Month = { key: string; label: string; earnings: number; gigCount: number; venues: Map<string, Venue> };
     const months = new Map<string, Month>();
-    for (const b of completed) {
+    for (const b of dashboardBookings) {
+      const booked = b.statusKey === 'confirmed' || b.isDone;   // expected (booked) or earned (completed)
+      if (!booked) continue;
       const date = b.slot?.date ?? b.slotDate ?? '';
       if (!date) continue;
       const mKey = date.slice(0, 7); // YYYY-MM
+      if (mKey > curMonth) continue;  // past + current month only
       let m = months.get(mKey);
       if (!m) {
         m = { key: mKey, label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), earnings: 0, gigCount: 0, venues: new Map() };
@@ -199,6 +204,9 @@ export default function DJHomeScreen() {
       .sort((a, b) => (a.key < b.key ? 1 : -1))   // newest month first
       .map((m) => ({ ...m, venues: Array.from(m.venues.values()).sort((x, y) => y.earnings - x.earnings) }));
   }, [dashboardBookings]);
+  const earningsTotal = useMemo(() => earningsByMonth.reduce((s, m) => s + m.earnings, 0), [earningsByMonth]);
+  const earningsGigs = useMemo(() => earningsByMonth.reduce((s, m) => s + m.gigCount, 0), [earningsByMonth]);
+  const maxMonthEarnings = useMemo(() => Math.max(1, ...earningsByMonth.map((m) => m.earnings)), [earningsByMonth]);
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
   const toggleMonth = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -598,35 +606,43 @@ export default function DJHomeScreen() {
           )}
         </View>
 
-        {/* History — completed gigs, grouped by month (tap a month to expand its venues). */}
-        {historyByMonth.length > 0 && (
+        {/* Earnings — booked + completed gigs by month (past + this month). Big total on top, a bar per
+            month, "No fee recorded" when a month has no fees. Tap a month for the per-venue split. */}
+        {earningsByMonth.length > 0 && (
           <>
             <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
             <View style={styles.section}>
               <View style={styles.bookingsHead}>
-                {/* Whole History section reads muted — it's the past. */}
-                <Text style={[styles.sectionTitle, { color: colors.muted }]}>History</Text>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
               </View>
-              {historyByMonth.map((m, i) => {
+              <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
+              <Text style={[styles.earnSummary, { color: colors.muted }]}>{earningsGigs} gig{earningsGigs !== 1 ? 's' : ''}</Text>
+              <View style={[styles.earnTopDivider, { backgroundColor: colors.border }]} />
+              {earningsByMonth.map((m) => {
                 const isOpen = openMonths.has(m.key);
+                const hasFee = m.earnings > 0;
                 return (
-                  <View key={m.key}>
-                    {/* Divider only BETWEEN months — none directly under the History title. */}
-                    {i > 0 && <View style={[styles.histDivider, { backgroundColor: colors.border }]} />}
+                  <View key={m.key} style={styles.earnMonth}>
                     <Pressable
-                      style={({ pressed }) => [styles.histMonthRow, { opacity: pressed ? 0.6 : 1 }]}
+                      style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
                       onPress={() => toggleMonth(m.key)}
                     >
-                      <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
-                      <Text style={[styles.histMonthLabel, { color: colors.muted }]} numberOfLines={1}>{m.label}</Text>
-                      <Text style={[styles.histMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
-                      <Text style={[styles.histMonthAmount, { color: colors.muted }]}>AED {m.earnings.toLocaleString()}</Text>
+                      <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                      <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
+                      <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
+                        {hasFee ? `AED ${m.earnings.toLocaleString()}` : 'No fee recorded'}
+                      </Text>
                     </Pressable>
+                    <View style={[styles.earnBarTrack, { backgroundColor: colors.border }]}>
+                      {hasFee && (
+                        <View style={[styles.earnBarFill, { width: `${Math.max(4, (m.earnings / maxMonthEarnings) * 100)}%`, backgroundColor: STATUS_COLORS.completed }]} />
+                      )}
+                    </View>
                     {isOpen && m.venues.map((v) => (
                       <View key={v.key} style={styles.histVenueRow}>
-                        <Text style={[styles.histVenueName, { color: colors.muted }]} numberOfLines={1}>{v.name}</Text>
+                        <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
                         <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
-                        <Text style={[styles.histVenueAmount, { color: colors.muted }]}>AED {v.earnings.toLocaleString()}</Text>
+                        <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : 'No fee'}</Text>
                       </View>
                     ))}
                   </View>
@@ -721,13 +737,18 @@ const styles = StyleSheet.create({
 
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  // History — collapsible month rows + indented venue rows.
-  histDivider: { height: StyleSheet.hairlineWidth },
-  histMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 14 },
-  histMonthLabel: { flex: 1, fontSize: 15, fontWeight: '700' },
-  histMonthGigs: { fontSize: 13 },
-  histMonthAmount: { fontSize: 15, fontWeight: '700', marginLeft: 12 },
-  histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingLeft: 30, paddingBottom: 10 },
+  // Earnings — big total + per-month rows with a proportional bar; tap a month to expand its venues.
+  earnTotal: { fontSize: 34, fontFamily: fonts.bodyBold, letterSpacing: -0.5, marginTop: 6 },
+  earnSummary: { fontSize: 14, marginTop: 2 },
+  earnTopDivider: { height: StyleSheet.hairlineWidth, marginTop: 14, marginBottom: 2 },
+  earnMonth: { paddingTop: 14 },
+  earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  earnMonthLabel: { flex: 1, fontSize: 16, fontWeight: '700' },
+  earnMonthGigs: { fontSize: 14 },
+  earnMonthAmount: { fontSize: 16, fontWeight: '700' },
+  earnBarTrack: { height: 8, borderRadius: 4, marginTop: 10, overflow: 'hidden' },
+  earnBarFill: { height: '100%', borderRadius: 4 },
+  histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 6, paddingTop: 12 },
   histVenueName: { flex: 1, fontSize: 14 },
   histVenueGigs: { fontSize: 13 },
   histVenueAmount: { fontSize: 14, fontWeight: '600', marginLeft: 12 },
