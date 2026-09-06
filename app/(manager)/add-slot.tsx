@@ -443,9 +443,28 @@ export default function AddSlotScreen() {
         >
           <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId} seed={user.id} name={user.fullName} size={42} variant="artist" />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.artistName, { color: state === 'requested' ? colors.muted : colors.foreground }]}>{user.fullName}</Text>
+            <Text numberOfLines={1} style={[styles.artistName, { color: state === 'requested' ? colors.muted : colors.foreground }]}>{user.fullName}</Text>
             {subtitle && <Text style={[styles.artistSub, { color: subtitle.color }]} numberOfLines={2}>{subtitle.text}</Text>}
           </View>
+          {/* Per-artist price — inline between the name and the toggle, once staged. Wrapped in a
+              no-op Pressable so tapping the field edits the price instead of un-staging the row. */}
+          {state === 'drafted' && (
+            <Pressable style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => {}}>
+              <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
+              <TextInput
+                style={[styles.priceInput, { color: colors.foreground }]}
+                value={stagedPrices[artistId] != null ? String(stagedPrices[artistId]) : ''}
+                onChangeText={(t) => {
+                  const digits = t.replace(/[^0-9]/g, '');
+                  setStagedPrices((prev) => ({ ...prev, [artistId]: digits === '' ? undefined : parseInt(digits, 10) }));
+                }}
+                placeholder="Optional"
+                placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+                returnKeyType="done"
+              />
+            </Pressable>
+          )}
           {state === 'requested' ? (
             <Text style={[styles.requestedText, { color: colors.muted }]}>Requested</Text>
           ) : state === 'notInRoster' ? (
@@ -463,27 +482,6 @@ export default function AddSlotScreen() {
             <MaterialIcons name="add-circle-outline" size={26} color={colors.muted} />
           )}
         </Pressable>
-        {/* Per-artist price — appears once staged. Type what this artist is paid for the gig. */}
-        {state === 'drafted' && (
-          <View style={styles.priceRow}>
-            <Text style={[styles.priceRowLabel, { color: colors.muted }]}>Price for this gig</Text>
-            <View style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
-              <TextInput
-                style={[styles.priceInput, { color: colors.foreground }]}
-                value={stagedPrices[artistId] != null ? String(stagedPrices[artistId]) : ''}
-                onChangeText={(t) => {
-                  const digits = t.replace(/[^0-9]/g, '');
-                  setStagedPrices((prev) => ({ ...prev, [artistId]: digits === '' ? undefined : parseInt(digits, 10) }));
-                }}
-                placeholder="Optional"
-                placeholderTextColor={colors.muted}
-                keyboardType="number-pad"
-                returnKeyType="done"
-              />
-            </View>
-          </View>
-        )}
       </Fragment>
     );
   };
@@ -751,9 +749,7 @@ const styles = StyleSheet.create({
   requestedText: { fontSize: 13, fontWeight: '600' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 54, paddingRight: 4, paddingBottom: 12, marginTop: -2 },
-  priceRowLabel: { flex: 1, fontSize: 13, fontWeight: '600' },
-  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, minHeight: 38, minWidth: 120 },
+  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, minHeight: 38, minWidth: 108 },
   priceCurrency: { fontSize: 12, fontWeight: '700' },
   priceInput: { flex: 1, fontSize: 15, fontWeight: '700', paddingVertical: 8, textAlign: 'right' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
