@@ -422,7 +422,6 @@ export default function DJHomeScreen() {
           const isSoon = label === 'TODAY' || label === 'TOMORROW';
           return <Text style={[styles.dateHeaderLabel, { color: isSoon ? colors.foreground : colors.muted }]}>{label}</Text>;
         })()}
-        <View style={[styles.dateHeaderLine, { backgroundColor: colors.border }]} />
       </View>
       {gigs.map((b) => {
         const venueName = b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, b.venue?.name);
@@ -552,50 +551,63 @@ export default function DJHomeScreen() {
             </View>
           )}
         </View>
-        <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollBelow} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
-        {/* Needs your reply — only when there are live requests to answer. */}
-        {needsReply.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.replyHead}>
-              <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>NEEDS YOUR REPLY</Text>
-              <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
-            </View>
-            {needsReply.map((item) => (
-              <View key={item.id} style={styles.replyCard}>
-                <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
-                  <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
-                  <View style={styles.replyInfo}>
-                    <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
-                    <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
-                      {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
-                    </Text>
-                    {item.price != null && (
-                      <Text style={[styles.replyFee, { color: colors.primary }]} numberOfLines={1}>AED {item.price.toLocaleString()}</Text>
-                    )}
-                  </View>
-                </Pressable>
-                <View style={styles.replyActions}>
-                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
-                    <MaterialIcons name="close" size={20} color={colors.muted} />
-                  </Pressable>
-                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
-                    <MaterialIcons name="check" size={20} color="#fff" />
-                  </Pressable>
-                </View>
+      {/* Sticky section headers: "Bookings" pins under the frozen Overview, then "Earnings" takes over
+          when it scrolls up. Fixed 7-child layout so stickyHeaderIndices [2,5] never shifts (empty
+          <View/> placeholders fill the Needs-reply / Earnings slots when those are absent). */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollBelow}
+        stickyHeaderIndices={[2, 5]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+      >
+        {/* 0 — Needs your reply (non-sticky; empty slot when none). */}
+        <View>
+          {needsReply.length > 0 && (
+            <>
+              <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
+              <View style={styles.replyHead}>
+                <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>NEEDS YOUR REPLY</Text>
+                <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
               </View>
-            ))}
-          </View>
-        )}
+              {needsReply.map((item) => (
+                <View key={item.id} style={styles.replyCard}>
+                  <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
+                    <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                    <View style={styles.replyInfo}>
+                      <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                      <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                        {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
+                      </Text>
+                      {item.price != null && (
+                        <Text style={[styles.replyFee, { color: colors.primary }]} numberOfLines={1}>AED {item.price.toLocaleString()}</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                  <View style={styles.replyActions}>
+                    <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
+                      <MaterialIcons name="close" size={20} color={colors.muted} />
+                    </Pressable>
+                    <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
+                      <MaterialIcons name="check" size={20} color="#fff" />
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
 
-        {/* Bookings — booked (confirmed) gigs only, date-grouped (TODAY / FRI 14 AUG), venue
-            avatar + name + time, maps on right. The count of booked gigs sits by the title. */}
-        <View style={styles.section}>
-          <View style={styles.bookingsHead}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
-          </View>
+        {/* 1 — Bookings divider (scrolls). */}
+        <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
+        {/* 2 — Bookings title (STICKY). */}
+        <View style={[styles.stickyTitle, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
+        </View>
+        {/* 3 — Bookings content. */}
+        <View>
           {bookingsByDate.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialIcons name="event" size={32} color={colors.muted} />
@@ -606,52 +618,51 @@ export default function DJHomeScreen() {
           )}
         </View>
 
-        {/* Earnings — booked + completed gigs by month (past + this month). Big total on top, a bar per
-            month, "No fee recorded" when a month has no fees. Tap a month for the per-venue split. */}
-        {earningsByMonth.length > 0 && (
-          <>
-            <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
-            <View style={styles.section}>
-              <View style={styles.bookingsHead}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
-              </View>
-              <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
-              <Text style={[styles.earnSummary, { color: colors.muted }]}>{earningsGigs} gig{earningsGigs !== 1 ? 's' : ''}</Text>
-              <View style={[styles.earnTopDivider, { backgroundColor: colors.border }]} />
-              {earningsByMonth.map((m) => {
-                const isOpen = openMonths.has(m.key);
-                const hasFee = m.earnings > 0;
-                return (
-                  <View key={m.key} style={styles.earnMonth}>
-                    <Pressable
-                      style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
-                      onPress={() => toggleMonth(m.key)}
-                    >
-                      <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
-                      <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
-                      <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
-                        {hasFee ? `AED ${m.earnings.toLocaleString()}` : 'No fee recorded'}
-                      </Text>
-                    </Pressable>
-                    <View style={[styles.earnBarTrack, { backgroundColor: colors.border }]}>
-                      {hasFee && (
-                        <View style={[styles.earnBarFill, { width: `${Math.max(4, (m.earnings / maxMonthEarnings) * 100)}%`, backgroundColor: STATUS_COLORS.completed }]} />
-                      )}
-                    </View>
-                    {isOpen && m.venues.map((v) => (
-                      <View key={v.key} style={styles.histVenueRow}>
-                        <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                        <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
-                        <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : 'No fee'}</Text>
-                      </View>
-                    ))}
+        {/* 4 — Earnings divider (scrolls; empty when no earnings). */}
+        {earningsByMonth.length > 0 ? <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} /> : <View />}
+        {/* 5 — Earnings title (STICKY; empty when no earnings). */}
+        {earningsByMonth.length > 0 ? (
+          <View style={[styles.stickyTitle, { backgroundColor: colors.background }]}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
+          </View>
+        ) : <View />}
+        {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
+        {earningsByMonth.length > 0 ? (
+          <View>
+            <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
+            <View style={[styles.earnTopDivider, { backgroundColor: colors.border }]} />
+            {earningsByMonth.map((m) => {
+              const isOpen = openMonths.has(m.key);
+              const hasFee = m.earnings > 0;
+              return (
+                <View key={m.key} style={styles.earnMonth}>
+                  <Pressable
+                    style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
+                    onPress={() => toggleMonth(m.key)}
+                  >
+                    <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                    <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
+                    <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
+                      {hasFee ? `AED ${m.earnings.toLocaleString()}` : 'No fee recorded'}
+                    </Text>
+                  </Pressable>
+                  <View style={[styles.earnBarTrack, { backgroundColor: colors.border }]}>
+                    {hasFee && (
+                      <View style={[styles.earnBarFill, { width: `${Math.max(4, (m.earnings / maxMonthEarnings) * 100)}%`, backgroundColor: STATUS_COLORS.completed }]} />
+                    )}
                   </View>
-                );
-              })}
-            </View>
-          </>
-        )}
-
+                  {isOpen && m.venues.map((v) => (
+                    <View key={v.key} style={styles.histVenueRow}>
+                      <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                      <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
+                      <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : 'No fee'}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
+          </View>
+        ) : <View />}
       </ScrollView>
 
       {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
@@ -678,8 +689,11 @@ export default function DJHomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
-  frozenOverview: { paddingHorizontal: 20, paddingTop: 8 },   // pinned Overview block (header + strip + separator)
-  scrollBelow: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 },   // the scrolling area under the pinned Overview
+  frozenOverview: { paddingHorizontal: 20, paddingTop: 8 },   // pinned Overview block (header + strip)
+  scrollBelow: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 32 },   // scrolling area under the pinned Overview
+  // Section dividers + sticky titles. Gap divider->title = sectionBand.marginBottom(22) + stickyTitle.paddingTop(4) = 26.
+  sectionBand: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 22 },
+  stickyTitle: { marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 6 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
@@ -738,7 +752,7 @@ const styles = StyleSheet.create({
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // Earnings — big total + per-month rows with a proportional bar; tap a month to expand its venues.
-  earnTotal: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, marginTop: 6 },   // matches the manager Roster Balance total
+  earnTotal: { fontSize: 16, fontWeight: '700', marginTop: 6, marginBottom: 2 },   // small — same size as a month's amount
   earnSummary: { fontSize: 14, marginTop: 2 },
   earnTopDivider: { height: StyleSheet.hairlineWidth, marginTop: 14, marginBottom: 2 },
   earnMonth: { paddingTop: 14 },
