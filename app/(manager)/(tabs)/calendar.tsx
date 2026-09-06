@@ -1421,14 +1421,16 @@ export default function CalendarScreen() {
           style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
           onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
         >
-          <View style={[styles.dayDashedCircle, { borderColor: colors.primary }]}>
-            <MaterialIcons name="add" size={22} color={colors.primary} />
-          </View>
           <View style={styles.dayRowInfo}>
             <Text style={[styles.dayRowName, { color: colors.primary }]}>Needs artist</Text>
-            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName}</Text>
+            <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName} · {time}</Text>
           </View>
-          <Text style={[styles.dayRowTime, { color: colors.muted }]}>{time}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.assignBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
+          >
+            <Text style={styles.assignBtnText}>Assign</Text>
+          </Pressable>
         </Pressable>
       ))];
     }
@@ -2180,7 +2182,8 @@ const styles = StyleSheet.create({
   dayRowSub: { fontSize: 13 },
   dayRowTime: { fontSize: 13, fontWeight: '500' },
   dayDismissBtn: { padding: 4, marginLeft: 2 },
-  dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  assignBtn: { borderRadius: 12, paddingHorizontal: 22, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
+  assignBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
   swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
