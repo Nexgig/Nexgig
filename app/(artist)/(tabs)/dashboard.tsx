@@ -636,7 +636,8 @@ export default function DJHomeScreen() {
         {earningsByMonth.length > 0 && earningsOpen ? (
           <View>
             <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
-            <Text style={[styles.earnSummary, { color: colors.muted }]}>Earned this year · {earningsGigs} completed gig{earningsGigs !== 1 ? 's' : ''}</Text>
+            {/* earningsByMonth is newest-first, so the LAST entry is the artist's first-ever booking month. */}
+            <Text style={[styles.earnSummary, { color: colors.muted }]}>Earned this year · {earningsByMonth[earningsByMonth.length - 1].label} to date</Text>
             {earningsByMonth.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
