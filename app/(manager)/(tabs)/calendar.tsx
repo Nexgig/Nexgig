@@ -2184,10 +2184,10 @@ const styles = StyleSheet.create({
   dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   dayRowSub: { fontSize: 13 },
   dayDismissBtn: { padding: 4, marginLeft: 2 },
-  assignBtn: { height: 34, minWidth: 86, borderRadius: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // shared size w/ Send (height 34, minWidth 86)
-  assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  sendRowBtn: { height: 34, minWidth: 86, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // outlined, same size as Assign
-  sendRowBtnText: { fontSize: 14, fontWeight: '700' },
+  assignBtn: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // shared size w/ Send (height 30, minWidth 76)
+  assignBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  sendRowBtn: { height: 30, minWidth: 76, borderRadius: 9, borderWidth: 1.5, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // outlined, same size as Assign
+  sendRowBtnText: { fontSize: 13, fontWeight: '700' },
   dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
