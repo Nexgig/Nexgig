@@ -675,7 +675,11 @@ export default function AddSlotScreen() {
           ScrollView inside the native formSheet (its onLayout reports content height). */}
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingBottom: kbOpen ? 8 : insets.bottom + 44 }}
+        contentContainerStyle={
+          // Keyboard up: bottom-align so a short list drops to just above the keyboard (no dead gap under
+          // the last row). A long form overflows, so flex-end is a no-op and it scrolls normally.
+          kbOpen ? { flexGrow: 1, justifyContent: 'flex-end', paddingBottom: 8 } : { paddingBottom: insets.bottom + 44 }
+        }
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}

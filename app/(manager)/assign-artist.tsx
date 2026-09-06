@@ -668,7 +668,12 @@ export default function AssignDJScreen() {
 
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={[styles.listContent, { paddingBottom: kbOpen ? 8 : insets.bottom + 44 }]}
+        contentContainerStyle={[
+          styles.listContent,
+          // Keyboard up: bottom-align the list so a short roster drops to sit just above the keyboard
+          // (no dead gap under the last row). A long roster overflows, so flex-end is a no-op and it scrolls.
+          kbOpen ? { flexGrow: 1, justifyContent: 'flex-end', paddingBottom: 8 } : { paddingBottom: insets.bottom + 44 },
+        ]}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
