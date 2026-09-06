@@ -181,7 +181,7 @@ export default function DJBookingDetailScreen() {
                         key={'draft-' + d.artistId}
                         leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                         title={dArtist?.fullName ?? 'Artist'}
-                        subtitle="Not sent yet"
+                        subtitle={d.price != null ? `AED ${d.price.toLocaleString()} · Not sent yet` : 'Not sent yet'}
                         trailing={
                           <Pressable
                             onPress={() => sendDraft(d)}
@@ -372,7 +372,7 @@ export default function DJBookingDetailScreen() {
   };
   const StatusWithX = ({ b, onX }: { b: Booking; onX?: () => void }) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <StatusBadge status={displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime) as any} />
+      <StatusBadge status={displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime) as any} style={styles.statusChip} textStyle={styles.statusChipText} />
       {onX ? (
         <Pressable onPress={onX} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
           <MaterialIcons name="close" size={18} color={colors.muted} />
@@ -475,10 +475,10 @@ export default function DJBookingDetailScreen() {
                       key={'draft-' + d.artistId}
                       leading={<AvatarImage uri={dArtist?.profilePhotoUrl} avatarId={(dArtist as any)?.avatarId} seed={dArtist?.id} name={dArtist?.fullName ?? 'Artist'} size={44} />}
                       title={dArtist?.fullName ?? 'Artist'}
-                      subtitle="Not sent yet"
+                      subtitle={d.price != null ? `AED ${d.price.toLocaleString()} · Not sent yet` : 'Not sent yet'}
                       trailing={
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <StatusBadge status="draft" />
+                          <StatusBadge status="draft" style={styles.statusChip} textStyle={styles.statusChipText} />
                           <Pressable onPress={() => removeOneDraft(d.artistId)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
                             <MaterialIcons name="close" size={18} color={colors.muted} />
                           </Pressable>
