@@ -238,12 +238,13 @@ export default function AddSlotScreen() {
     const sid = await ensureSlot();
     if (!sid) return;
     const venue = venues.find((v) => v.id === createSlotVenueId);
-    const fee = guestFee.trim() ? parseInt(guestFee, 10) : null;
+    const parsed = guestFee.trim() ? parseInt(guestFee, 10) : 0;
+    const fee = Number.isNaN(parsed) ? 0 : parsed;   // guests default to AED 0, never the slot's default
     addGuestBooking({
       slotId: sid, venueId: createSlotVenueId, managerId: currentUser.id, guestName: name,
       slotDate: targetDate, slotName: slotForm.name, slotStartTime: slotForm.startTime, slotEndTime: slotForm.endTime,
       venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
-      price: fee != null && !Number.isNaN(fee) ? fee : null,
+      price: fee,
     });
     setGuestName('');
     setGuestFee('');
@@ -756,7 +757,7 @@ export default function AddSlotScreen() {
                   style={[styles.priceInput, { color: colors.foreground }]}
                   value={guestFee}
                   onChangeText={(t) => setGuestFee(t.replace(/[^0-9]/g, ''))}
-                  placeholder=""
+                  placeholder="0"
                   placeholderTextColor={colors.muted}
                   keyboardType="number-pad"
                   returnKeyType="done"

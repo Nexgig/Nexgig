@@ -306,12 +306,13 @@ export default function AssignDJScreen() {
   const addGuest = () => {
     const name = guestName.trim();
     if (!name || !currentUser || !slot) return;
-    const fee = guestFee.trim() ? parseInt(guestFee, 10) : null;
+    const parsed = guestFee.trim() ? parseInt(guestFee, 10) : 0;
+    const fee = Number.isNaN(parsed) ? 0 : parsed;   // guests default to AED 0, never the slot's default
     addGuestBooking({
       slotId: slot.id, venueId: slot.venueId, managerId: currentUser.id, guestName: name,
       slotDate: slot.date, slotName: slot.name, slotStartTime: slot.startTime, slotEndTime: slot.endTime,
       venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
-      price: fee != null && !Number.isNaN(fee) ? fee : null,
+      price: fee,
     });
     setGuestName('');
     setGuestFee('');
@@ -736,7 +737,7 @@ export default function AssignDJScreen() {
                   style={[styles.priceInput, { color: colors.foreground }]}
                   value={guestFee}
                   onChangeText={(t) => setGuestFee(t.replace(/[^0-9]/g, ''))}
-                  placeholder={slot?.defaultPrice != null ? String(slot.defaultPrice) : ''}
+                  placeholder="0"
                   placeholderTextColor={colors.muted}
                   keyboardType="number-pad"
                   returnKeyType="done"
