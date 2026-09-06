@@ -94,7 +94,7 @@ function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; s
   }
   if (b.status === 'expired') return 'Expired';
   if (b.status === 'requested' || b.status === 'past_confirmation') return 'Pending';
-  if (b.status === 'confirmed') return 'Confirmed';
+  if (b.status === 'confirmed') return 'Booked';
   if (b.status === 'completed') return 'Completed';
   if (b.status === 'cancelled') return 'Cancelled';
   if (b.status === 'declined') return 'Declined';
@@ -777,14 +777,6 @@ export default function DJAvailabilityScreen() {
             <Text style={[styles.bookingTitle, { color: colors.foreground }]} numberOfLines={1}>
               {b.isArtistCreated ? (b.slotName ?? b.resolvedVenueName) : (b.resolvedVenueName)}
             </Text>
-            {/* A booked (confirmed) gig gets NO badge — matches the manager calendar, where the
-                default/expected state is unlabelled and only exceptions (pending, completed,
-                cancelled) carry a pill. */}
-            {!(!b.isArtistCreated && b.status === 'confirmed') && (
-              <View style={[styles.statusPill, { backgroundColor: statusColor + '22' }]}>
-                <Text style={[styles.statusPillText, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
-              </View>
-            )}
           </View>
           {(b.resolvedStart || b.resolvedSlotName) && !b.isArtistCreated && (
             <Text style={[styles.bookingSub, { color: colors.muted }]}>
@@ -797,6 +789,10 @@ export default function DJAvailabilityScreen() {
               {b.slotStartTime === '00:00' && b.slotEndTime === '23:59' ? 'Full Day' : `${fmtTime(b.slotStartTime)} – ${fmtTime(b.slotEndTime)}`}
             </Text>
           )}
+        </View>
+        {/* Status on the RIGHT of the slot — centred, button-sized chip (matches the manager). */}
+        <View style={[styles.statusChip, { backgroundColor: statusColor + '22' }]}>
+          <Text style={[styles.statusChipText, { color: statusColor }]}>{getBookingStatusLabel(b)}</Text>
         </View>
         {renderActionBtn()}
       </Pressable>
@@ -843,23 +839,73 @@ export default function DJAvailabilityScreen() {
     { color: STATUS_COLORS.cancelled, label: 'Declined / Cancelled' },
   ];
 
-  // Expected earnings for the month being viewed — sum of the fee on this month's booked/completed
-  // venue gigs. Private events carry no manager price and are excluded. `missing` counts gigs the
-  // manager hasn't priced yet, so the total is never silently wrong.
-  const monthEarnings = useMemo(() => {
+  // Per-venue earnings for the month being viewed — the artist's "Venue Balance" (mirrors the manager's
+  // Roster Balance, grouped by venue). Counts booked/completed venue gigs + the artist's own private
+  // events (bucketed as "Private events"), summing each gig's fee.
+  const venueBalanceRows = useMemo(() => {
     const prefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-    let total = 0, counted = 0, missing = 0;
+    const map = new Map<string, { key: string; name: string; earnings: number; gigCount: number }>();
     myBookings.forEach((b) => {
       if (!(b.resolvedDate ?? '').startsWith(prefix)) return;
-      // Include private events now that they carry a fee — they're the artist's own gigs. Their
-      // status is always 'confirmed', so they pass the isBooked check below.
       const isBooked = b.status === 'confirmed' || b.status === 'completed' || b.isCompleted;
       if (!isBooked) return;
-      counted++;
-      if (b.price != null) total += b.price; else missing++;
+      const key = b.isArtistCreated ? '__private__' : (b.venueId ?? '__unknown__');
+      const name = b.isArtistCreated ? 'Private events' : (b.resolvedVenueName ?? b.venueName ?? 'Unknown venue');
+      const cur = map.get(key) ?? { key, name, earnings: 0, gigCount: 0 };
+      cur.gigCount++;
+      if (b.price != null) cur.earnings += b.price;
+      map.set(key, cur);
     });
-    return { total, counted, missing };
+    return Array.from(map.values());
   }, [myBookings, currentMonth, currentYear]);
+
+  // "Venue Balance" panel under the calendar — the artist analog of the manager's Roster Balance:
+  // a beige separator, big monthly total, a stacked coral bar, then a row per venue (earnings desc).
+  const renderVenueBalance = () => {
+    const rows = venueBalanceRows;
+    const totalEarnings = rows.reduce((s, r) => s + r.earnings, 0);
+    const totalGigs = rows.reduce((s, r) => s + r.gigCount, 0);
+    const sorted = [...rows].sort((a, b) => b.earnings - a.earnings);
+    const shadeAt = (i: number) => {
+      const n = sorted.length;
+      const alpha = n <= 1 ? 1 : Math.max(0.22, 1 - (i / (n - 1)) * 0.75);
+      return colors.primary + Math.round(alpha * 255).toString(16).padStart(2, '0');
+    };
+    return (
+      <View style={styles.venueBalSection}>
+        <View style={[styles.venueBalDivider, { backgroundColor: colors.surface }]} />
+        <View style={styles.venueBalHead}>
+          <Text style={[styles.venueBalLabel, { color: colors.muted }]}>VENUE BALANCE</Text>
+        </View>
+        <Text style={[styles.venueBalTotal, { color: colors.foreground }]}>AED {totalEarnings.toLocaleString()}</Text>
+        <Text style={[styles.venueBalSummary, { color: colors.muted }]}>
+          {MONTHS[currentMonth]} {currentYear} · {totalGigs} gig{totalGigs !== 1 ? 's' : ''} · {rows.length} venue{rows.length !== 1 ? 's' : ''}
+        </Text>
+        {totalEarnings > 0 && (
+          <View style={styles.venueBalBar}>
+            {sorted.map((r, i) => (r.earnings > 0 ? (
+              <View key={r.key} style={{ flex: r.earnings, backgroundColor: shadeAt(i), borderRadius: 4 }} />
+            ) : null))}
+          </View>
+        )}
+        {sorted.length === 0 ? (
+          <Text style={[styles.venueBalEmpty, { color: colors.muted }]}>No earnings this month yet.</Text>
+        ) : (
+          sorted.map((r, i) => (
+            <View key={r.key}>
+              <View style={[styles.venueBalRowDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.venueBalRow}>
+                <View style={[styles.venueBalSquare, { backgroundColor: shadeAt(i) }]} />
+                <Text style={[styles.venueBalName, { color: colors.foreground }]} numberOfLines={1}>{r.name}</Text>
+                <Text style={[styles.venueBalGigs, { color: colors.muted }]}>{r.gigCount} gig{r.gigCount !== 1 ? 's' : ''}</Text>
+                <Text style={[styles.venueBalAmount, { color: colors.foreground }]}>AED {r.earnings.toLocaleString()}</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+    );
+  };
 
   return (
     <ScreenContainer>
@@ -883,17 +929,6 @@ export default function DJAvailabilityScreen() {
                 <MaterialIcons name="event-available" size={22} color={colors.foreground} />
               </Pressable>
             </View>
-
-            {/* Expected earnings for the month being viewed. */}
-            {monthEarnings.counted > 0 && (
-              <View style={[styles.earningsStrip, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.earningsLabel, { color: colors.primary }]}>This month{monthEarnings.missing > 0 ? ` · ${monthEarnings.missing} without a price` : ''}</Text>
-                  <Text style={[styles.earningsValue, { color: colors.foreground }]}>AED {monthEarnings.total.toLocaleString()}</Text>
-                </View>
-                <MaterialIcons name="payments" size={22} color={colors.primary} />
-              </View>
-            )}
 
             {/* Day Labels (fixed above the swipe pager) */}
             <View style={styles.dayLabels}>
@@ -963,6 +998,7 @@ export default function DJAvailabilityScreen() {
               )}
             </View>
             )}
+            {renderVenueBalance()}
           </View>
         )}
 
@@ -1160,6 +1196,24 @@ const styles = StyleSheet.create({
   bookingSub: { fontSize: 13, fontWeight: '500' },
   statusPill: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 },
   statusPillText: { fontSize: 11, fontWeight: '700' },
+  // Status chip on the right of a slot — centred + button-sized (matches the manager).
+  statusChip: { alignSelf: 'center', height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
+  statusChipText: { fontSize: 13, fontWeight: '700' },
+  // Venue Balance panel (artist analog of the manager's Roster Balance).
+  venueBalSection: { paddingBottom: 24 },
+  venueBalDivider: { height: 8, marginTop: 8, marginBottom: 4 },   // thick beige band, like the dashboard/manager separator
+  venueBalHead: { paddingHorizontal: 20, paddingTop: 16 },
+  venueBalLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
+  venueBalTotal: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, paddingHorizontal: 20, marginTop: 6 },
+  venueBalSummary: { fontSize: 14, paddingHorizontal: 20, marginTop: 3 },
+  venueBalBar: { flexDirection: 'row', height: 14, gap: 3, marginHorizontal: 20, marginTop: 16, marginBottom: 6 },
+  venueBalRowDivider: { height: StyleSheet.hairlineWidth * 2, marginHorizontal: 20 },
+  venueBalRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 13 },
+  venueBalSquare: { width: 12, height: 12, borderRadius: 3 },
+  venueBalName: { fontSize: 16, fontWeight: '700', flex: 1 },
+  venueBalGigs: { fontSize: 14 },
+  venueBalAmount: { fontSize: 16, fontWeight: '800' },
+  venueBalEmpty: { fontSize: 14, paddingHorizontal: 20, paddingVertical: 8 },
 
   // Block cards (availability blocks — unchanged color-bar layout)
   slotCard: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, overflow: 'hidden', alignItems: 'center', marginBottom: 8 },
