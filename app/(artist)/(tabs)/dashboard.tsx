@@ -461,8 +461,10 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
-        {/* Header — "Overview" + legend + notifications. Scrolls WITH the content now (no longer pinned). */}
+      {/* Frozen Overview — the header + day-strip + separator stay PINNED at the top; only the
+          sections below (Needs reply / Bookings / History) scroll underneath. */}
+      <View style={styles.frozenOverview}>
+        {/* Header — "Overview" + legend + notifications. */}
         <View style={styles.header}>
           <View style={styles.overviewHead}>
             <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
@@ -543,7 +545,9 @@ export default function DJHomeScreen() {
           )}
         </View>
         <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
+      </View>
 
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollBelow} showsVerticalScrollIndicator={false} refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}>
         {/* Needs your reply — only when there are live requests to answer. */}
         {needsReply.length > 0 && (
           <View style={styles.section}>
@@ -600,25 +604,27 @@ export default function DJHomeScreen() {
             <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
             <View style={styles.section}>
               <View style={styles.bookingsHead}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>History</Text>
+                {/* Whole History section reads muted — it's the past. */}
+                <Text style={[styles.sectionTitle, { color: colors.muted }]}>History</Text>
               </View>
-              {historyByMonth.map((m) => {
+              {historyByMonth.map((m, i) => {
                 const isOpen = openMonths.has(m.key);
                 return (
                   <View key={m.key}>
-                    <View style={[styles.histDivider, { backgroundColor: colors.border }]} />
+                    {/* Divider only BETWEEN months — none directly under the History title. */}
+                    {i > 0 && <View style={[styles.histDivider, { backgroundColor: colors.border }]} />}
                     <Pressable
                       style={({ pressed }) => [styles.histMonthRow, { opacity: pressed ? 0.6 : 1 }]}
                       onPress={() => toggleMonth(m.key)}
                     >
                       <MaterialIcons name={isOpen ? 'expand-less' : 'expand-more'} size={22} color={colors.muted} />
-                      <Text style={[styles.histMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                      <Text style={[styles.histMonthLabel, { color: colors.muted }]} numberOfLines={1}>{m.label}</Text>
                       <Text style={[styles.histMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
-                      <Text style={[styles.histMonthAmount, { color: colors.foreground }]}>AED {m.earnings.toLocaleString()}</Text>
+                      <Text style={[styles.histMonthAmount, { color: colors.muted }]}>AED {m.earnings.toLocaleString()}</Text>
                     </Pressable>
                     {isOpen && m.venues.map((v) => (
                       <View key={v.key} style={styles.histVenueRow}>
-                        <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                        <Text style={[styles.histVenueName, { color: colors.muted }]} numberOfLines={1}>{v.name}</Text>
                         <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
                         <Text style={[styles.histVenueAmount, { color: colors.muted }]}>AED {v.earnings.toLocaleString()}</Text>
                       </View>
@@ -656,6 +662,8 @@ export default function DJHomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
+  frozenOverview: { paddingHorizontal: 20, paddingTop: 8 },   // pinned Overview block (header + strip + separator)
+  scrollBelow: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 },   // the scrolling area under the pinned Overview
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
