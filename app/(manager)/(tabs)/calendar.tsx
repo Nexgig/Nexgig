@@ -627,14 +627,31 @@ export default function CalendarScreen() {
         });
     }
 
-    return lineupEntries
-      .map((entry) => {
+    // Guest DJs aren't roster artists (no artist_id) — bucket ALL their fees for the period into one
+    // "Guests" row so the money is visible and counted (mirrors the artist's "Private events" bucket).
+    let guestGigs = 0, guestCost = 0;
+    if (allowedBookingStatuses.length > 0) {
+      allBookings
+        .filter((b) => b.managerId === currentUser.id && !!b.guestName && allowedBookingStatuses.includes(b.status as any) && (venueFilter === 'all' || (b.venueId ?? slotVenueMap[b.slotId]) === venueFilter))
+        .forEach((b) => {
+          if (draftSlotIds.has(b.slotId)) return;
+          const date = slotDateMap[b.slotId];
+          if (date && date >= periodStart && date <= periodEnd) { guestGigs += 1; guestCost += (b.price ?? 0); }
+        });
+    }
+
+    type LineupRow = { artistId: string; user: any; gigCount: number; cost: number };
+    const rows: LineupRow[] = lineupEntries
+      .map((entry): LineupRow | null => {
         const user = getArtistUser(entry.artistId);
         if (!user) return null;
         return { artistId: entry.artistId, user, gigCount: gigCounts[entry.artistId] ?? 0, cost: gigCosts[entry.artistId] ?? 0 };
       })
-      .filter((row): row is { artistId: string; user: NonNullable<ReturnType<typeof getArtistUser>>; gigCount: number; cost: number } => row !== null && row.gigCount > 0)
-      .sort((a, b) => b.gigCount - a.gigCount || a.user.fullName.localeCompare(b.user.fullName));
+      .filter((row): row is LineupRow => row !== null && row.gigCount > 0);
+    if (guestGigs > 0) {
+      rows.push({ artistId: '__guests__', user: { id: '__guests__', fullName: 'Guests' }, gigCount: guestGigs, cost: guestCost });
+    }
+    return rows.sort((a, b) => b.gigCount - a.gigCount || a.user.fullName.localeCompare(b.user.fullName));
   }, [currentUser, allDrafts, allBookings, allSlots, calendarMode, weekDays, monthPeriodBounds, getGlobalLineupByManager, getArtistUser, lineupStatuses, todayDateStr, viewedDayStr, venueFilter]);
 
   // Period-aware draft count for the Send Bookings button
@@ -1529,6 +1546,7 @@ export default function CalendarScreen() {
     if (lineupRows.length === 0 && !isMonthView) return null;
     const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
     const totalGigs = lineupRows.reduce((s, r) => s + r.gigCount, 0);
+    const artistCount = lineupRows.filter((r) => r.artistId !== '__guests__').length;   // Guests aren't an artist
     // Biggest earner first; each artist gets a coral shade by rank (darkest = most earned), shared by
     // the stacked bar segment and the row's square.
     const sortedRows = [...lineupRows].sort((a, b) => b.cost - a.cost);
@@ -1553,7 +1571,7 @@ export default function CalendarScreen() {
         {/* Big total + summary line. */}
         <Text style={[styles.lineupBigTotal, { color: colors.foreground }]}>AED {totalCost.toLocaleString()}</Text>
         <Text style={[styles.lineupSummary, { color: colors.muted }]}>
-          {lineupPeriodLabel} · {totalGigs} gig{totalGigs !== 1 ? 's' : ''} · {lineupRows.length} artist{lineupRows.length !== 1 ? 's' : ''}
+          {lineupPeriodLabel} · {totalGigs} gig{totalGigs !== 1 ? 's' : ''} · {artistCount} artist{artistCount !== 1 ? 's' : ''}
         </Text>
 
         {/* Stacked coral bar — one segment per artist, width ∝ their fee, shaded by rank. */}

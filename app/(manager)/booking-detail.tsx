@@ -95,7 +95,7 @@ export default function DJBookingDetailScreen() {
   const allInvoices = useInvoiceStore((s) => s.invoices);
   // Fee editing is per artist: `feeTarget` names which booking OR draft the price modal is editing.
   const [feeTarget, setFeeTarget] = useState<
-    | { kind: 'booking'; bookingId: string; bookingStatus: Booking['status']; artistId: string; venueName: string | null; slotDate: string; price?: number }
+    | { kind: 'booking'; bookingId: string; bookingStatus: Booking['status']; artistId: string; venueName: string | null; slotDate: string; price?: number; isGuest?: boolean }
     | { kind: 'draft'; slotId: string; venueId: string; artistId: string; price?: number }
     | null
   >(null);
@@ -111,6 +111,7 @@ export default function DJBookingDetailScreen() {
     setFeeTarget({
       kind: 'booking', bookingId: b.id, bookingStatus: b.status, artistId: b.artistId,
       venueName: bookingVenueName(b, getVenueById(b.venueId)?.name), slotDate: b.slotDate ?? '', price: b.price ?? undefined,
+      isGuest: !!b.guestName,
     });
   };
   const openDraftFee = (d: { slotId: string; venueId: string; artistId: string; price?: number }) =>
@@ -123,6 +124,11 @@ export default function DJBookingDetailScreen() {
     if (t.kind === 'draft') {
       if (!currentUser) return;
       setDraft(t.slotId, t.venueId, t.artistId, currentUser.id, price);
+      return;
+    }
+    // Guest DJ: no real artist to notify — just save the fee straight to the booking.
+    if (t.isGuest) {
+      updateBookingStatus(t.bookingId, t.bookingStatus, { price });
       return;
     }
     // Booking: confirm first — it changes an agreed fee AND notifies the artist.
@@ -238,7 +244,12 @@ export default function DJBookingDetailScreen() {
                         key={'bk-' + b.id}
                         leading={<AvatarImage uri={isGuest ? undefined : bArtist?.profilePhotoUrl} avatarId={isGuest ? undefined : (bArtist as any)?.avatarId} seed={isGuest ? b.guestName : bArtist?.id} name={name} size={44} />}
                         title={name}
-                        subtitleNode={isGuest ? <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>Guest DJ</Text> : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
+                        subtitleNode={isGuest
+                          ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <Text style={{ fontSize: 13, color: colors.muted }}>Guest DJ ·</Text>
+                              <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />
+                            </View>
+                          : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                         trailing={<StatusBadge status={shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />}
                         onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
                         divider
@@ -510,7 +521,12 @@ export default function DJBookingDetailScreen() {
                       key={b.id}
                       leading={<AvatarImage uri={isGuest ? undefined : rArtist?.profilePhotoUrl} avatarId={isGuest ? undefined : (rArtist as any)?.avatarId} seed={isGuest ? b.guestName : rArtist?.id} name={name} size={44} />}
                       title={name}
-                      subtitleNode={isGuest ? <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>Guest DJ</Text> : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
+                      subtitleNode={isGuest
+                        ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <Text style={{ fontSize: 13, color: colors.muted }}>Guest DJ ·</Text>
+                            <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />
+                          </View>
+                        : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                       onPress={(rArtist?.id && !isGuest) ? () => router.push(('/(manager)/artist-profile-view?artistId=' + b.artistId + '&name=' + encodeURIComponent(rArtist.fullName ?? '')) as Href) : undefined}
                       trailing={<StatusWithX b={b} onX={rowDismiss(b)} />}
                       divider
