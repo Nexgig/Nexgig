@@ -458,7 +458,7 @@ export default function AddSlotScreen() {
                   const digits = t.replace(/[^0-9]/g, '');
                   setStagedPrices((prev) => ({ ...prev, [artistId]: digits === '' ? undefined : parseInt(digits, 10) }));
                 }}
-                placeholder="Optional"
+                placeholder=""
                 placeholderTextColor={colors.muted}
                 keyboardType="number-pad"
                 returnKeyType="done"
@@ -749,9 +749,9 @@ const styles = StyleSheet.create({
   requestedText: { fontSize: 13, fontWeight: '600' },
   addPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   addPillText: { fontSize: 13, fontWeight: '700' },
-  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, minHeight: 38, minWidth: 108 },
+  priceInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, height: 34, minWidth: 108 },
   priceCurrency: { fontSize: 12, fontWeight: '700' },
-  priceInput: { flex: 1, fontSize: 15, fontWeight: '700', paddingVertical: 8, textAlign: 'right' },
+  priceInput: { flex: 1, fontSize: 15, fontWeight: '700', paddingVertical: 0, textAlign: 'right' },
   emptyText: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
   footer: { marginHorizontal: -13, paddingHorizontal: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
   footerRow: { flexDirection: 'row', gap: 10 },
