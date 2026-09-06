@@ -4,17 +4,17 @@ import { Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
-import { fonts } from '@/lib/fonts';
-import { useAuthStore, useDraftStore, useSlotStore, useVenueStore, useLineupStore } from '@/lib/store';
+import { ScreenContainer } from '@/components/screen-container';
+import { VenueFilterHeader } from '@/components/venue-filter-header';
+import { useAuthStore, useDraftStore, useSlotStore, useVenueStore, useLineupStore, useVenueFilterStore } from '@/lib/store';
 import { AvatarImage } from '@/components/ui/avatar-image';
-import { VenueFilterRow, type VenueChip } from '@/components/venue-filter-row';
 import { useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart } from '@/lib/utils';
 import { sendDraftRequest } from '@/lib/gig-requests';
 
-// The "Requests" tab: a full screen (not a slide-up) listing every drafted artist that hasn't been
-// sent yet — across ALL future slots — with a venue filter (All / one venue). Tick the ones to send
-// and hit Send; each becomes a real gig request the artist is notified about (via sendDraftRequest).
+// The "Requests" tab: a full screen listing every drafted artist that hasn't been sent yet — across
+// all future slots. Layout mirrors the Roster tab: the SHARED venue-filter header (the same one on
+// the calendar/overview) as the title, then a "REQUESTS" label bar. Tick the ones to send and Send.
 export default function RequestsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -23,11 +23,11 @@ export default function RequestsScreen() {
   const currentUser = useAuthStore((s) => s.currentUser);
   const drafts = useDraftStore((s) => s.drafts);
   const slots = useSlotStore((s) => s.slots);
-  const venues = useVenueStore((s) => s.venues);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
+  // The ONE shared venue filter — set by the header on any of calendar / overview / roster / here.
+  const venueId = useVenueFilterStore((s) => s.venueId);
 
-  const [venueFilter, setVenueFilter] = useState<string | null>(null);   // null = All venues
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Every future unsent draft of this manager, enriched with slot / artist / venue.
@@ -44,15 +44,10 @@ export default function RequestsScreen() {
       .sort((a, b) => a.slot.date.localeCompare(b.slot.date) || a.slot.startTime.localeCompare(b.slot.startTime));
   }, [drafts, slots, currentUser, getArtistUser, getVenueById]);
 
-  // Chips only for venues that actually have unsent drafts.
-  const venueChips: VenueChip[] = useMemo(() => {
-    const ids = new Set(allItems.map((i) => i.slot.venueId));
-    return venues.filter((v) => ids.has(v.id)).map((v) => ({ id: v.id, name: v.name }));
-  }, [allItems, venues]);
-
+  // Scope to the shared venue filter (null = All Venues).
   const items = useMemo(
-    () => (venueFilter ? allItems.filter((i) => i.slot.venueId === venueFilter) : allItems),
-    [allItems, venueFilter],
+    () => (venueId ? allItems.filter((i) => i.slot.venueId === venueId) : allItems),
+    [allItems, venueId],
   );
 
   const byDate = useMemo(() => {
@@ -105,26 +100,22 @@ export default function RequestsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 20, paddingBottom: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 26, fontFamily: fonts.bodyBold, letterSpacing: -0.5, color: colors.foreground }}>Requests</Text>
-          {items.length > 0 && (
-            <Pressable onPress={toggleAll} hitSlop={8}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>{allSelected ? 'Deselect all' : 'Select all'}</Text>
-            </Pressable>
-          )}
-        </View>
-        <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>
-          {allItems.length === 0 ? 'Nothing to send' : `${allItems.length} draft${allItems.length !== 1 ? 's' : ''} waiting to send`}
-        </Text>
+    <ScreenContainer edges={['top', 'left', 'right']}>
+      {/* Shared venue-filter header (the title) — same one on calendar / overview / roster */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 }}>
+        <VenueFilterHeader />
       </View>
 
-      {/* Venue filter (All / one venue) — hidden when fewer than 2 venues have drafts */}
-      <VenueFilterRow venues={venueChips} selectedId={venueFilter} onSelect={setVenueFilter} />
+      {/* REQUESTS label + Select all — mirrors the Roster tab's "ROSTER" bar */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 }}>
+        <Text style={{ fontSize: 12, fontWeight: '700', letterSpacing: 0.8, color: colors.muted }}>REQUESTS</Text>
+        {items.length > 0 && (
+          <Pressable onPress={toggleAll} hitSlop={8}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>{allSelected ? 'Deselect all' : 'Select all'}</Text>
+          </Pressable>
+        )}
+      </View>
 
-      {/* List */}
       {items.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 40 }}>
           <MaterialIcons name="outgoing-mail" size={48} color={colors.border} />
@@ -196,6 +187,6 @@ export default function RequestsScreen() {
           </Pressable>
         </View>
       )}
-    </View>
+    </ScreenContainer>
   );
 }
