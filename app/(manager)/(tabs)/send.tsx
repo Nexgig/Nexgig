@@ -125,7 +125,7 @@ export default function RequestsScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: selectedCount > 0 ? 120 : 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
           {byDate.map(([dateStr, group]) => {
             const d = new Date(dateStr + 'T00:00:00');
             const dateLabel = d.toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -172,21 +172,22 @@ export default function RequestsScreen() {
         </ScrollView>
       )}
 
-      {/* Footer: Send button (only when something's ticked) */}
-      {selectedCount > 0 && (
-        <View style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 14,
-          borderTopWidth: 0.5, borderTopColor: colors.border, backgroundColor: colors.background,
-        }}>
-          <Pressable
-            onPress={send}
-            style={({ pressed }) => [{ borderRadius: 14, paddingVertical: 15, alignItems: 'center', backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>Send {selectedCount} request{selectedCount !== 1 ? 's' : ''}</Text>
-          </Pressable>
-        </View>
-      )}
+      {/* Footer: Send button — always visible, muted until an artist is ticked */}
+      <View style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 14,
+        borderTopWidth: 0.5, borderTopColor: colors.border, backgroundColor: colors.background,
+      }}>
+        <Pressable
+          onPress={send}
+          disabled={selectedCount === 0}
+          style={({ pressed }) => [{ borderRadius: 14, paddingVertical: 15, alignItems: 'center', backgroundColor: selectedCount > 0 ? colors.primary : colors.border, opacity: pressed && selectedCount > 0 ? 0.85 : 1 }]}
+        >
+          <Text style={{ color: selectedCount > 0 ? '#fff' : colors.muted, fontSize: 15, fontWeight: '800' }}>
+            {selectedCount > 0 ? `Send ${selectedCount} request${selectedCount !== 1 ? 's' : ''}` : 'Send'}
+          </Text>
+        </Pressable>
+      </View>
     </ScreenContainer>
   );
 }
