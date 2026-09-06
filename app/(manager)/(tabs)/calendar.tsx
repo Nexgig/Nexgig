@@ -1421,6 +1421,9 @@ export default function CalendarScreen() {
           style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
           onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
         >
+          <View style={[styles.dayDashedCircle, { borderColor: colors.primary }]}>
+            <MaterialIcons name="add" size={22} color={colors.primary} />
+          </View>
           <View style={styles.dayRowInfo}>
             <Text style={[styles.dayRowName, { color: colors.primary }]}>Needs artist</Text>
             <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{venueName} · {time}</Text>
@@ -1479,7 +1482,8 @@ export default function CalendarScreen() {
     const dead = bs.filter((b) => b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired');
     const live = bs.filter((b) => !(b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired'));
     // One badge for the whole live group: highest-priority shown status (pending > confirmed >
-    // completed); a confirmed group shows no badge, mirroring the single-row rule.
+    // completed). Every live row shows its pill now — confirmed reads "Booked" (day panel labels
+    // every state, action button only where there's an action).
     const rankOf = (s: string) => (s === 'requested' || s === 'past_confirmation' || s === 'pending') ? 0 : s === 'confirmed' ? 1 : s === 'completed' ? 2 : 3;
     const liveShown = live.map((b) => displayStatus(b.status, b.createdAt, b.slotDate, b.slotStartTime, b.slotEndTime));
     const repShown = liveShown.reduce((acc, s) => (rankOf(s) < rankOf(acc) ? s : acc), liveShown[0] ?? 'confirmed');
@@ -1489,7 +1493,7 @@ export default function CalendarScreen() {
         <View key={'live-' + slot.id}>
           {dayRowMulti(
             live.map((b) => getArtistUser(b.artistId)),
-            repShown !== 'confirmed' ? <StatusBadge status={repShown as any} /> : null,
+            <StatusBadge status={repShown as any} />,
             () => router.push(('/(manager)/booking-detail?id=' + live[0].id) as Href),
           )}
         </View>
@@ -1509,7 +1513,13 @@ export default function CalendarScreen() {
         withSwipeDelete('drafts-' + slot.id, () => drafts.forEach((d) => removeDraftByDJ(slot.id, d.artistId)),
           dayRowMulti(
             drafts.map((d) => getArtistUser(d.artistId)),
-            <StatusBadge status="draft" />,
+            <Pressable
+              onPress={(e) => { e.stopPropagation?.(); sendSlotDrafts(slot); }}
+              style={({ pressed }) => [styles.sendRowBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+              hitSlop={6}
+            >
+              <Text style={[styles.sendRowBtnText, { color: colors.primary }]}>Send</Text>
+            </Pressable>,
             () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href),
           )),
       ] : []),
@@ -2176,6 +2186,9 @@ const styles = StyleSheet.create({
   dayDismissBtn: { padding: 4, marginLeft: 2 },
   assignBtn: { height: 34, borderRadius: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // matches the assign-page price box (height 34, radius 10)
   assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  sendRowBtn: { height: 34, borderRadius: 10, borderWidth: 1.5, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // outlined, same size as Assign
+  sendRowBtnText: { fontSize: 14, fontWeight: '700' },
+  dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
   swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
