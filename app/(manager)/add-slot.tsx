@@ -530,7 +530,7 @@ export default function AddSlotScreen() {
   );
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.8 }]}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, flex: 1 }]}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
@@ -710,11 +710,11 @@ export default function AddSlotScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={1} style={[styles.artistName, { color: colors.foreground }]}>{g.guestName}</Text>
-                    <Text style={[styles.artistSub, { color: colors.muted }]}>Guest DJ</Text>
+                    <Text style={styles.artistSub} numberOfLines={1}>
+                      <Text style={{ color: colors.success, fontWeight: '700' }}>Booked</Text>
+                      {g.price != null ? <Text style={{ color: colors.muted }}>{`  ·  AED ${g.price.toLocaleString()}`}</Text> : null}
+                    </Text>
                   </View>
-                  {g.price != null && (
-                    <Text style={[styles.guestFee, { color: colors.foreground }]}>AED {g.price.toLocaleString()}</Text>
-                  )}
                   <MaterialIcons name="check-circle" size={26} color={colors.primary} />
                 </Pressable>
               </Fragment>

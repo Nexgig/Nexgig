@@ -622,7 +622,7 @@ export default function AssignDJScreen() {
   };
 
   return (
-    <View style={{ height: winH * 0.8, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 8, overflow: 'hidden' }}>
       {/* Fixed top — header + past note stay put; only the list scrolls. */}
       <View style={styles.header}>
         <View style={styles.headerInfo}>
@@ -686,11 +686,11 @@ export default function AssignDJScreen() {
               </View>
               <View style={styles.djInfo}>
                 <Text numberOfLines={1} style={[styles.djName, { color: colors.foreground }]}>{g.guestName}</Text>
-                <Text style={[styles.djSub, { color: colors.muted }]}>Guest DJ</Text>
+                <Text style={styles.djSub} numberOfLines={1}>
+                  <Text style={{ color: colors.success, fontWeight: '700' }}>Booked</Text>
+                  {g.price != null ? <Text style={{ color: colors.muted }}>{`  ·  AED ${g.price.toLocaleString()}`}</Text> : null}
+                </Text>
               </View>
-              {g.price != null && (
-                <Text style={[styles.guestFee, { color: colors.foreground }]}>AED {g.price.toLocaleString()}</Text>
-              )}
               <MaterialIcons name="check-circle" size={26} color={colors.primary} />
             </Pressable>
           </Fragment>
