@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from '@/lib/rn';
 import { Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { ScreenContainer } from '@/components/screen-container';
@@ -17,7 +16,6 @@ import { sendDraftRequest } from '@/lib/gig-requests';
 // the calendar/overview) as the title, then a "REQUESTS" label bar. Tick the ones to send and Send.
 export default function RequestsScreen() {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
   const { formatTime: fmtTime } = useFormatTime();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -175,7 +173,7 @@ export default function RequestsScreen() {
       {/* Footer: Send button — always visible, muted until an artist is ticked */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 14,
+        paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14,
         borderTopWidth: 0.5, borderTopColor: colors.border, backgroundColor: colors.background,
       }}>
         <Pressable
