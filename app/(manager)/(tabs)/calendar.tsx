@@ -2182,8 +2182,8 @@ const styles = StyleSheet.create({
   dayRowSub: { fontSize: 13 },
   dayRowTime: { fontSize: 13, fontWeight: '500' },
   dayDismissBtn: { padding: 4, marginLeft: 2 },
-  assignBtn: { borderRadius: 9, paddingHorizontal: 15, paddingVertical: 7, alignItems: 'center', justifyContent: 'center' },
-  assignBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  assignBtn: { height: 34, borderRadius: 10, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },   // matches the assign-page price box (height 34, radius 10)
+  assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },
   swipeDeleteText: { color: '#fff', fontSize: 12, fontWeight: '700' },
