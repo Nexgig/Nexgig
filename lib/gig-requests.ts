@@ -1,4 +1,7 @@
 import { supabase } from './supabase';
+import { useBookingStore, useDraftStore, useNotificationStore } from './store';
+import { firstName } from './utils';
+import { formatDate } from './conflict-detection';
 
 /**
  * Persist a gig-request booking to Supabase — the SINGLE source of truth for the `bookings`
@@ -39,4 +42,47 @@ export async function persistGigRequestBooking(args: {
     venue_type: args.venueType,
   });
   if (error) console.warn('booking insert error:', JSON.stringify(error));
+}
+
+/**
+ * Send ONE drafted artist as a gig request: turn the draft into a local booking (via the draft
+ * store), persist that booking to Supabase, and notify the artist. This is the SINGLE shared
+ * implementation used by the calendar (set card + send sheet), the dashboard Overview day panel,
+ * and the slot booking-detail — so the create → persist → notify sequence can never drift between
+ * them. Returns the new booking id (undefined if the draft was already gone). Callers own the
+ * confirm dialog and any looping. Reads the stores via getState() (not hooks), so it's callable
+ * from any handler.
+ */
+export function sendDraftRequest(args: {
+  slotId: string;
+  artistId: string;
+  managerId: string;
+  managerName?: string | null;
+  slot: { venueId: string; date: string; name: string; startTime: string; endTime: string };
+  draftPrice?: number | null;
+  venueName?: string | null;
+  venueType?: string | null;
+}): string | undefined {
+  const { slotId, artistId, managerId, managerName, slot, draftPrice = null, venueName = null, venueType = null } = args;
+  const addBooking = useBookingStore.getState().addBooking;
+  const newBookingId = useDraftStore.getState().sendDraftByDJ(slotId, artistId, managerId, addBooking);
+  if (!newBookingId) return undefined;
+  // Fire-and-forget the Supabase write (matches every call site); errors are logged inside.
+  void persistGigRequestBooking({
+    bookingId: newBookingId, slotId, venueId: slot.venueId, artistId, managerId,
+    slotDate: slot.date, slotName: slot.name, slotStartTime: slot.startTime, slotEndTime: slot.endTime,
+    price: draftPrice, venueName, venueType,
+  });
+  useNotificationStore.getState().addNotification({
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    userId: artistId,
+    type: 'booking_request',
+    title: 'New Booking Request',
+    body: `${firstName(managerName ?? undefined, 'A manager')} wants you at ${venueName ?? 'a venue'}, ${formatDate(slot.date)}`,
+    isRead: false,
+    relatedId: newBookingId,
+    relatedType: 'booking',
+    createdAt: new Date().toISOString(),
+  });
+  return newBookingId;
 }

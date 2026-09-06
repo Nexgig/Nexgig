@@ -16,7 +16,7 @@ import { cityFromAddress } from '@/lib/places';
 import { displayStatus, bookingVenueName, firstName } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
-import { persistGigRequestBooking } from '@/lib/gig-requests';
+import { sendDraftRequest } from '@/lib/gig-requests';
 import { fetchReviews } from '@/lib/reviews';
 import type { Booking } from '@/lib/types';
 
@@ -85,14 +85,12 @@ export default function DJBookingDetailScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
-  const addBooking = useBookingStore((s) => s.addBooking);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const allDrafts = useDraftStore((s) => s.drafts);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
-  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
   const allInvoices = useInvoiceStore((s) => s.invoices);
   const [feeModalOpen, setFeeModalOpen] = useState(false);
   // Invoiced gigs are settled — the invoice locked that number, so editing the booking price
@@ -136,26 +134,14 @@ export default function DJBookingDetailScreen() {
           [
             { text: 'Cancel', style: 'cancel' },
             {
+              // Stay on this page — the sent draft becomes a booking below and the row updates
+              // in place (its Send pill turns into the status chip).
               text: 'Send',
-              onPress: () => {
-                const newBookingId = sendDraftByDJ(emptySlot.id, d.artistId, currentUser.id, addBooking);
-                if (newBookingId) {
-                  persistGigRequestBooking({
-                    bookingId: newBookingId, slotId: emptySlot.id, venueId: emptySlot.venueId, artistId: d.artistId,
-                    managerId: currentUser.id, slotDate: emptySlot.date, slotName: emptySlot.name,
-                    slotStartTime: emptySlot.startTime, slotEndTime: emptySlot.endTime, price: d.price ?? null,
-                    venueName: emptyVenue?.name ?? null, venueType: emptyVenue?.venueType ?? null,
-                  });
-                }
-                addNotification({
-                  id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                  userId: d.artistId, type: 'booking_request', title: 'New Booking Request',
-                  body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${emptyVenue?.name ?? 'a venue'}, ${formatDate(emptySlot.date)}`,
-                  isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
-                });
-                // Stay on this page — the sent draft becomes a booking below and the row updates
-                // in place (its Send pill turns into the status chip).
-              },
+              onPress: () => sendDraftRequest({
+                slotId: emptySlot.id, artistId: d.artistId, managerId: currentUser.id, managerName: currentUser.fullName,
+                slot: { venueId: emptySlot.venueId, date: emptySlot.date, name: emptySlot.name, startTime: emptySlot.startTime, endTime: emptySlot.endTime },
+                draftPrice: d.price ?? null, venueName: emptyVenue?.name ?? null, venueType: emptyVenue?.venueType ?? null,
+              }),
             },
           ]
         );

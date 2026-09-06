@@ -22,7 +22,7 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
-import { persistGigRequestBooking } from '@/lib/gig-requests';
+import { sendDraftRequest } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
@@ -118,7 +118,6 @@ export default function CalendarScreen() {
   const getDraftCountPerDJ = useDraftStore((s) => s.getDraftCountPerDJ);
   const sendAllDrafts = useDraftStore((s) => s.sendAllDrafts);
   const sendDraftsBySlotIds = useDraftStore((s) => s.sendDraftsBySlotIds);
-  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
   const addBooking = useBookingStore((s) => s.addBooking);
   const allBookings = useBookingStore((s) => s.bookings);
   const deleteBooking = useBookingStore((s) => s.deleteBooking);
@@ -134,13 +133,6 @@ export default function CalendarScreen() {
   // Thin wrapper over the shared persistGigRequestBooking (lib/gig-requests) — the pick
   // screens (add-slot / assign-artist) use the same helper, so the booking row shape stays
   // in lockstep. Signature kept so the call sites below don't change.
-  const saveBookingToSupabase = (bookingId: string, slotId: string, venueId: string, artistId: string, slotDate: string, slotName: string, slotStartTime: string, slotEndTime: string, venueName: string | null, price: number | null) =>
-    persistGigRequestBooking({
-      bookingId, slotId, venueId, artistId, managerId: currentUser?.id ?? '',
-      slotDate, slotName, slotStartTime, slotEndTime, price, venueName,
-      venueType: getVenueById(venueId)?.venueType ?? null,
-    });
-
   const clearSlots = useSlotStore((s) => s.clearSlots);
   const [calendarRefreshing, setCalendarRefreshing] = useState(false);
 
@@ -991,23 +983,11 @@ export default function CalendarScreen() {
         {
           text: 'Send',
           onPress: () => {
-            drafts.forEach((draft) => {
-              const newBookingId = sendDraftByDJ(slot.id, draft.artistId, currentUser.id, addBooking);
-              if (newBookingId) {
-                saveBookingToSupabase(newBookingId, slot.id, slot.venueId, draft.artistId, slot.date, slot.name, slot.startTime, slot.endTime, venue?.name ?? null, draft.price ?? null);
-              }
-              addNotification({
-                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                userId: draft.artistId,
-                type: 'booking_request',
-                title: 'New Booking Request',
-                body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(slot.date)}`,
-                isRead: false,
-                relatedId: newBookingId,
-                relatedType: 'booking',
-                createdAt: new Date().toISOString(),
-              });
-            });
+            drafts.forEach((draft) => sendDraftRequest({
+              slotId: slot.id, artistId: draft.artistId, managerId: currentUser.id, managerName: currentUser.fullName,
+              slot: { venueId: slot.venueId, date: slot.date, name: slot.name, startTime: slot.startTime, endTime: slot.endTime },
+              draftPrice: draft.price ?? null, venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+            }));
           },
         },
       ]
@@ -1886,29 +1866,20 @@ export default function CalendarScreen() {
                     {
                       text: 'Send',
                       onPress: () => {
-                        // Group selected keys by slotId and send each individually using sendDraftByDJ
+                        // Group selected keys by slotId and send each individually via the shared helper.
                         let sent = 0;
                         selectedDraftKeys.forEach((key) => {
                           const [slotId, artistId] = key.split('::');
                           const draftSlot = getSlotById(slotId);
-                          const draftVenue = draftSlot ? getVenueById(draftSlot.venueId) : undefined;
+                          if (!draftSlot) return;
+                          const draftVenue = getVenueById(draftSlot.venueId);
                           const draftPrice = getDraftsBySlot(slotId).find((d) => d.artistId === artistId)?.price ?? null;
-                          const newBookingId = sendDraftByDJ(slotId, artistId, currentUser.id, addBooking);
-                          if (newBookingId && draftSlot) {
-  saveBookingToSupabase(newBookingId, slotId, draftSlot.venueId, artistId, draftSlot.date, draftSlot.name, draftSlot.startTime, draftSlot.endTime, draftVenue?.name ?? null, draftPrice);
-}
-                          addNotification({
-                            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                            userId: artistId,
-                            type: 'booking_request',
-                            title: 'New Booking Request',
-                            body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${draftVenue?.name ?? 'a venue'}, ${draftSlot?.date ? formatDate(draftSlot.date) : ''}`,
-                            isRead: false,
-                            relatedId: newBookingId,
-                            relatedType: 'booking',
-                            createdAt: new Date().toISOString(),
+                          const newBookingId = sendDraftRequest({
+                            slotId, artistId, managerId: currentUser.id, managerName: currentUser.fullName,
+                            slot: { venueId: draftSlot.venueId, date: draftSlot.date, name: draftSlot.name, startTime: draftSlot.startTime, endTime: draftSlot.endTime },
+                            draftPrice, venueName: draftVenue?.name ?? null, venueType: draftVenue?.venueType ?? null,
                           });
-                          sent++;
+                          if (newBookingId) sent++;
                         });
                         setShowSendSheet(false);
                         Alert.alert('Sent!', `${sent} gig request${sent !== 1 ? 's' : ''} sent successfully.`);

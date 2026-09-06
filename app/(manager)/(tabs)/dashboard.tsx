@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { useFormatTime, formatDate } from '@/lib/conflict-detection';
 import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr, firstName } from '@/lib/utils';
-import { persistGigRequestBooking } from '@/lib/gig-requests';
+import { sendDraftRequest } from '@/lib/gig-requests';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 
 export default function ManagerDashboard() {
@@ -111,8 +111,6 @@ export default function ManagerDashboard() {
   // (empty OR draft-only) — it wants the manager's action, so it outranks Sent/Booked.
   // Priority: cancelled > needs-you > sent > booked > none.
   const drafts = useDraftStore((s) => s.drafts);
-  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
-  const addNotification = useNotificationStore((s) => s.addNotification);
   const coverage = useMemo(() => {
     const start = todayLocalStr();
     const nights = Array.from({ length: 31 }, (_, i) => addDaysStr(start, i));
@@ -223,23 +221,11 @@ export default function ManagerDashboard() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Send',
-          onPress: () => {
-            const newBookingId = sendDraftByDJ(slot.id, artistId, currentUser.id, addBooking);
-            if (newBookingId) {
-              persistGigRequestBooking({
-                bookingId: newBookingId, slotId: slot.id, venueId: slot.venueId, artistId,
-                managerId: currentUser.id, slotDate: slot.date, slotName: slot.name,
-                slotStartTime: slot.startTime, slotEndTime: slot.endTime, price: draft?.price ?? null,
-                venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
-              });
-            }
-            addNotification({
-              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              userId: artistId, type: 'booking_request', title: 'New Booking Request',
-              body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(slot.date)}`,
-              isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
-            });
-          },
+          onPress: () => sendDraftRequest({
+            slotId: slot.id, artistId, managerId: currentUser.id, managerName: currentUser.fullName,
+            slot: { venueId: slot.venueId, date: slot.date, name: slot.name, startTime: slot.startTime, endTime: slot.endTime },
+            draftPrice: draft?.price ?? null, venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+          }),
         },
       ]
     );
@@ -615,7 +601,7 @@ export default function ManagerDashboard() {
                             <Text style={styles.inlineSendPillText}>Send</Text>
                           </Pressable>
                         ) : item.kind === 'booking' ? (
-                          <StatusBadge status={b!.status as any} />
+                          <StatusBadge status={b!.status as any} style={styles.overviewStatusChip} textStyle={styles.overviewStatusChipText} />
                         ) : null}
                         {dead && (
                           <Pressable hitSlop={8} onPress={() => dismissBooking(b!)} style={styles.inlineDismiss}>
@@ -741,4 +727,6 @@ const styles = StyleSheet.create({
   inlineDismiss: { padding: 2 },
   inlineSendPill: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
   inlineSendPillText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  overviewStatusChip: { alignSelf: 'center', height: 30, minWidth: 76, borderRadius: 9, paddingVertical: 0, justifyContent: 'center' },   // centred + button-sized (matches calendar)
+  overviewStatusChipText: { fontSize: 13 },
 });
