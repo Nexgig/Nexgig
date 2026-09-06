@@ -1559,8 +1559,8 @@ export default function CalendarScreen() {
     };
     return (
       <View style={styles.lineupSection}>
-        {/* Full-bleed hairline above the section — card-free, no bordered box. */}
-        <View style={[styles.lineupTopDivider, { backgroundColor: colors.border }]} />
+        {/* Full-bleed thick band above the section — matches the dashboard Overview separator. */}
+        <View style={[styles.lineupTopDivider, { backgroundColor: colors.surface }]} />
 
         {/* Header — "ROSTER BALANCE" label + settings gear. */}
         <View style={styles.lineupHead}>
@@ -2208,7 +2208,7 @@ const styles = StyleSheet.create({
   lineupDJName2: { fontSize: 16, fontWeight: '700', flex: 1 },
   lineupGigs2: { fontSize: 14 },
   lineupAmount2: { fontSize: 16, fontWeight: '800' },
-  lineupTopDivider: { height: StyleSheet.hairlineWidth * 2 },
+  lineupTopDivider: { height: 8, marginTop: 8, marginBottom: 4 },   // thick beige band, like the dashboard sectionBreak
   lineupHeader: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
   lineupTitle: { fontSize: 20, fontWeight: '600' },
   lineupPeriod: { fontSize: 13, marginTop: 2 },
