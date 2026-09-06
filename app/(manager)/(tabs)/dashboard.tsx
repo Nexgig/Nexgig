@@ -2,7 +2,7 @@ import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl } from '@/lib/rn';
-import { LayoutAnimation, Modal } from 'react-native';
+import { LayoutAnimation, Modal, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -16,8 +16,9 @@ import { useAuthStore, useVenueStore, useBookingStore, useSlotStore, useLineupSt
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
-import { useFormatTime } from '@/lib/conflict-detection';
-import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
+import { useFormatTime, formatDate } from '@/lib/conflict-detection';
+import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr, firstName } from '@/lib/utils';
+import { persistGigRequestBooking } from '@/lib/gig-requests';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 
 export default function ManagerDashboard() {
@@ -110,6 +111,8 @@ export default function ManagerDashboard() {
   // (empty OR draft-only) — it wants the manager's action, so it outranks Sent/Booked.
   // Priority: cancelled > needs-you > sent > booked > none.
   const drafts = useDraftStore((s) => s.drafts);
+  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const coverage = useMemo(() => {
     const start = todayLocalStr();
     const nights = Array.from({ length: 31 }, (_, i) => addDaysStr(start, i));
@@ -204,6 +207,43 @@ export default function ManagerDashboard() {
     }
     return items;
   }, [selected, slots, bookings, drafts, artistUsers]);
+
+  // Send one drafted artist straight from the Overview panel — mirrors the calendar/detail send flow.
+  const sendDraftItem = (item: (typeof panelItems)[number]) => {
+    if (!currentUser || item.kind !== 'draft' || !item.artistId) return;
+    const slot = item.slot;
+    const artistId = item.artistId;
+    const name = item.dj?.fullName ?? 'artist';
+    const venue = allVenues.find((v) => v.id === slot.venueId);
+    const draft = drafts.find((d) => d.slotId === slot.id && d.artistId === artistId);
+    Alert.alert(
+      'Send Gig Request',
+      `Send a gig request to ${name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: () => {
+            const newBookingId = sendDraftByDJ(slot.id, artistId, currentUser.id, addBooking);
+            if (newBookingId) {
+              persistGigRequestBooking({
+                bookingId: newBookingId, slotId: slot.id, venueId: slot.venueId, artistId,
+                managerId: currentUser.id, slotDate: slot.date, slotName: slot.name,
+                slotStartTime: slot.startTime, slotEndTime: slot.endTime, price: draft?.price ?? null,
+                venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+              });
+            }
+            addNotification({
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              userId: artistId, type: 'booking_request', title: 'New Booking Request',
+              body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${venue?.name ?? 'a venue'}, ${formatDate(slot.date)}`,
+              isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
+            });
+          },
+        },
+      ]
+    );
+  };
 
   // Group bookings by slot so a slot with several artists shows as ONE row
   // (stacked avatars + joined names). Status dot uses the highest-priority
@@ -566,9 +606,17 @@ export default function ManagerDashboard() {
                         {item.kind === 'empty' ? 'Needs artist' : (item.dj?.fullName ?? 'Unknown Artist')}
                       </Text>
                       <View style={styles.inlineRight}>
-                        {item.kind !== 'empty' && (
-                          <StatusBadge status={item.kind === 'draft' ? 'draft' : (b!.status as any)} />
-                        )}
+                        {item.kind === 'draft' ? (
+                          <Pressable
+                            onPress={(e) => { e.stopPropagation?.(); sendDraftItem(item); }}
+                            style={({ pressed }) => [styles.inlineSendPill, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                            hitSlop={6}
+                          >
+                            <Text style={styles.inlineSendPillText}>Send</Text>
+                          </Pressable>
+                        ) : item.kind === 'booking' ? (
+                          <StatusBadge status={b!.status as any} />
+                        ) : null}
                         {dead && (
                           <Pressable hitSlop={8} onPress={() => dismissBooking(b!)} style={styles.inlineDismiss}>
                             <MaterialIcons name="close" size={18} color={colors.muted} />
@@ -691,4 +739,6 @@ const styles = StyleSheet.create({
   inlineName: { fontSize: 15, fontWeight: '600', flex: 1 },
   inlineRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   inlineDismiss: { padding: 2 },
+  inlineSendPill: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
+  inlineSendPillText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
