@@ -629,7 +629,7 @@ export default function DJHomeScreen() {
         {earningsByMonth.length > 0 ? (
           <Pressable style={({ pressed }) => [styles.stickyTitle, styles.stickyTitleRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
-            <MaterialIcons name={earningsOpen ? 'expand-less' : 'expand-more'} size={24} color={colors.muted} />
+            <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} />
           </Pressable>
         ) : <View />}
         {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
   // Section dividers + sticky titles. Gap divider->title = sectionBand.marginBottom(22) + stickyTitle.paddingTop(4) = 26.
   sectionBand: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 22 },
   stickyTitle: { marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 6 },
-  stickyTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stickyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },   // chevron sits right next to the title
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
