@@ -104,8 +104,9 @@ export function addGuestBooking(args: {
   slotEndTime: string;
   venueName?: string | null;
   venueType?: string | null;
+  price?: number | null;
 }): string {
-  const { slotId, venueId, managerId, slotDate, slotName, slotStartTime, slotEndTime, venueName = null, venueType = null } = args;
+  const { slotId, venueId, managerId, slotDate, slotName, slotStartTime, slotEndTime, venueName = null, venueType = null, price = null } = args;
   const guestName = args.guestName.trim();
   const now = new Date().toISOString();
   const bookingId = generateUUID();
@@ -113,6 +114,7 @@ export function addGuestBooking(args: {
     id: bookingId, slotId, venueId, artistId: '', managerId, guestName,
     status: 'confirmed', isCompleted: false, confirmedAt: now, createdAt: now, updatedAt: now,
     slotDate, slotName, slotStartTime, slotEndTime,
+    price: price ?? undefined,
     venueName: venueName ?? undefined,
     venueType: (venueType ?? undefined) as Booking['venueType'],
   };
@@ -121,7 +123,7 @@ export function addGuestBooking(args: {
     id: bookingId, slot_id: slotId, venue_id: venueId, artist_id: null, manager_id: managerId,
     guest_name: guestName, status: 'confirmed', is_completed: false, confirmed_at: now,
     slot_date: slotDate, slot_name: slotName, slot_start_time: slotStartTime, slot_end_time: slotEndTime,
-    venue_name: venueName, venue_type: venueType,
+    price: price, venue_name: venueName, venue_type: venueType,
   }).then(({ error }) => { if (error) console.warn('guest booking insert error:', JSON.stringify(error)); });
   return bookingId;
 }

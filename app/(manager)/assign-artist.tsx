@@ -42,6 +42,7 @@ export default function AssignDJScreen() {
   const addBooking = useBookingStore((s) => s.addBooking);
   const deleteBooking = useBookingStore((s) => s.deleteBooking);
   const [guestName, setGuestName] = useState('');
+  const [guestFee, setGuestFee] = useState('');
   const confirmedBookings = useMemo(
     () => allBookings.filter((b) => b.status === 'confirmed' || b.status === 'requested'),
     [allBookings]
@@ -297,12 +298,15 @@ export default function AssignDJScreen() {
   const addGuest = () => {
     const name = guestName.trim();
     if (!name || !currentUser || !slot) return;
+    const fee = guestFee.trim() ? parseInt(guestFee, 10) : null;
     addGuestBooking({
       slotId: slot.id, venueId: slot.venueId, managerId: currentUser.id, guestName: name,
       slotDate: slot.date, slotName: slot.name, slotStartTime: slot.startTime, slotEndTime: slot.endTime,
       venueName: venue?.name ?? null, venueType: venue?.venueType ?? null,
+      price: fee != null && !Number.isNaN(fee) ? fee : null,
     });
     setGuestName('');
+    setGuestFee('');
   };
   const removeGuest = (b: (typeof slotGuests)[number]) => {
     deleteBooking(b.id);
@@ -671,24 +675,39 @@ export default function AssignDJScreen() {
           assignRows.map((item, i) => renderRow(item, i))
         )}
 
-        {/* Guest DJ — a one-time off-app performer (name only). Booked immediately; no request/notify. */}
-        {!isPastSlot && (
-          <View style={styles.guestSection}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>GUEST DJ</Text>
-            {slotGuests.map((g) => (
-              <View key={g.id} style={styles.guestRow}>
-                <View style={[styles.guestAvatar, { backgroundColor: colors.primary + '22' }]}>
-                  <Text style={[styles.guestInitial, { color: colors.primary }]}>{(g.guestName ?? '?').charAt(0).toUpperCase()}</Text>
-                </View>
-                <Text style={[styles.guestName2, { color: colors.foreground }]} numberOfLines={1}>{g.guestName}</Text>
-                <Pressable onPress={() => removeGuest(g)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-                  <MaterialIcons name="close" size={18} color={colors.muted} />
-                </Pressable>
+        {/* Guest DJs — one-time off-app performers, in the SAME roster list. Each is a name + fee row
+            like a normal artist; the "+" books them immediately (no request / notification / invoice). */}
+        {!isPastSlot && slotGuests.map((g) => (
+          <Fragment key={g.id}>
+            <Divider full />
+            <View style={styles.djRow}>
+              <View style={[styles.guestAvatar, { backgroundColor: colors.primary + '22' }]}>
+                <Text style={[styles.guestInitial, { color: colors.primary }]}>{(g.guestName ?? '?').charAt(0).toUpperCase()}</Text>
               </View>
-            ))}
-            <View style={styles.guestInputRow}>
+              <View style={styles.djInfo}>
+                <Text numberOfLines={1} style={[styles.djName, { color: colors.foreground }]}>{g.guestName}</Text>
+                <Text style={[styles.djSub, { color: colors.muted }]}>Guest DJ</Text>
+              </View>
+              {g.price != null && (
+                <Text style={[styles.guestFee, { color: colors.foreground }]}>AED {g.price.toLocaleString()}</Text>
+              )}
+              <Pressable onPress={() => removeGuest(g)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                <MaterialIcons name="close" size={22} color={colors.muted} />
+              </Pressable>
+            </View>
+          </Fragment>
+        ))}
+
+        {/* Add-a-guest row — sits under the last artist, styled like an artist row: name + inline fee + "+". */}
+        {!isPastSlot && (
+          <Fragment>
+            <Divider full />
+            <View style={styles.djRow}>
+              <View style={[styles.guestDashedAvatar, { borderColor: colors.primary }]}>
+                <MaterialIcons name="person-add-alt-1" size={20} color={colors.primary} />
+              </View>
               <TextInput
-                style={[styles.guestInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+                style={[styles.guestNameInput, { color: colors.foreground }]}
                 value={guestName}
                 onChangeText={setGuestName}
                 placeholder="Guest DJ name"
@@ -696,15 +715,24 @@ export default function AssignDJScreen() {
                 returnKeyType="done"
                 onSubmitEditing={addGuest}
               />
-              <Pressable
-                onPress={addGuest}
-                disabled={!guestName.trim()}
-                style={({ pressed }) => [styles.guestAddBtn, { backgroundColor: guestName.trim() ? colors.primary : colors.border, opacity: pressed ? 0.85 : 1 }]}
-              >
-                <Text style={[styles.guestAddText, { color: guestName.trim() ? '#fff' : colors.muted }]}>Add</Text>
+              <Pressable style={[styles.priceInputWrap, { borderColor: colors.border, backgroundColor: colors.background }]} onPress={() => {}}>
+                <Text style={[styles.priceCurrency, { color: colors.muted }]}>AED</Text>
+                <TextInput
+                  style={[styles.priceInput, { color: colors.foreground }]}
+                  value={guestFee}
+                  onChangeText={(t) => setGuestFee(t.replace(/[^0-9]/g, ''))}
+                  placeholder={slot?.defaultPrice != null ? String(slot.defaultPrice) : ''}
+                  placeholderTextColor={colors.muted}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={addGuest}
+                />
+              </Pressable>
+              <Pressable onPress={addGuest} disabled={!guestName.trim()} hitSlop={6}>
+                <MaterialIcons name="add-circle" size={26} color={guestName.trim() ? colors.primary : colors.muted} />
               </Pressable>
             </View>
-          </View>
+          </Fragment>
         )}
       </ScrollView>
 
@@ -753,15 +781,11 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 },
   listHeaderRow: { marginBottom: 6 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
-  guestSection: { marginTop: 22, paddingTop: 4 },
-  guestRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  guestAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  guestAvatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   guestInitial: { fontSize: 18, fontWeight: '800' },
-  guestName2: { flex: 1, fontSize: 15, fontWeight: '700' },
-  guestInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
-  guestInput: { flex: 1, height: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, fontSize: 15 },
-  guestAddBtn: { height: 44, minWidth: 64, borderRadius: 10, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  guestAddText: { fontSize: 15, fontWeight: '800' },
+  guestDashedAvatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  guestNameInput: { flex: 1, fontSize: 15, fontWeight: '600', paddingVertical: 0 },
+  guestFee: { fontSize: 15, fontWeight: '700' },
   djRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   djInfo: { flex: 1 },
   djName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
