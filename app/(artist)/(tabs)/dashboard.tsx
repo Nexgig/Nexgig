@@ -212,7 +212,7 @@ export default function DJHomeScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpenMonths((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   };
-  const [earningsOpen, setEarningsOpen] = useState(true);   // whole Earnings section collapse
+  const [earningsOpen, setEarningsOpen] = useState(false);   // whole Earnings section — collapsed by default
   const toggleEarnings = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setEarningsOpen((v) => !v);
