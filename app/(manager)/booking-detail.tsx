@@ -244,12 +244,7 @@ export default function DJBookingDetailScreen() {
                         key={'bk-' + b.id}
                         leading={<AvatarImage uri={isGuest ? undefined : bArtist?.profilePhotoUrl} avatarId={isGuest ? undefined : (bArtist as any)?.avatarId} seed={isGuest ? b.guestName : bArtist?.id} name={name} size={44} />}
                         title={name}
-                        subtitleNode={isGuest
-                          ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                              <Text style={{ fontSize: 13, color: colors.muted }}>Guest DJ ·</Text>
-                              <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />
-                            </View>
-                          : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
+                        subtitleNode={<FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                         trailing={<StatusBadge status={shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />}
                         onPress={() => router.push(('/(manager)/booking-detail?id=' + b.id) as Href)}
                         divider
@@ -521,12 +516,7 @@ export default function DJBookingDetailScreen() {
                       key={b.id}
                       leading={<AvatarImage uri={isGuest ? undefined : rArtist?.profilePhotoUrl} avatarId={isGuest ? undefined : (rArtist as any)?.avatarId} seed={isGuest ? b.guestName : rArtist?.id} name={name} size={44} />}
                       title={name}
-                      subtitleNode={isGuest
-                        ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            <Text style={{ fontSize: 13, color: colors.muted }}>Guest DJ ·</Text>
-                            <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />
-                          </View>
-                        : <FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
+                      subtitleNode={<FeeLine price={b.price} invoiced={bookingInvoiced(b.id)} onPress={() => openBookingFee(b)} />}
                       onPress={(rArtist?.id && !isGuest) ? () => router.push(('/(manager)/artist-profile-view?artistId=' + b.artistId + '&name=' + encodeURIComponent(rArtist.fullName ?? '')) as Href) : undefined}
                       trailing={<StatusWithX b={b} onX={rowDismiss(b)} />}
                       divider
