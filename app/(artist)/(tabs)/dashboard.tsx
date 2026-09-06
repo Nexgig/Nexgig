@@ -627,9 +627,11 @@ export default function DJHomeScreen() {
         {earningsByMonth.length > 0 ? <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} /> : <View />}
         {/* 5 — Earnings title (STICKY; tap to collapse the whole section; empty when no earnings). */}
         {earningsByMonth.length > 0 ? (
-          <Pressable style={({ pressed }) => [styles.stickyTitle, styles.stickyTitleRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
-            <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} />
+          <Pressable style={({ pressed }) => [styles.stickyTitle, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
+            <View style={styles.stickyTitleRow}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
+              <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} />
+            </View>
           </Pressable>
         ) : <View />}
         {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
