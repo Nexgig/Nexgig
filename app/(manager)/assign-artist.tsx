@@ -662,6 +662,7 @@ export default function AssignDJScreen() {
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 44 }]}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.listHeaderRow}>
