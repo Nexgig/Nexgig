@@ -1419,7 +1419,7 @@ export default function CalendarScreen() {
       return [withSwipeDelete(slot.id, () => deleteSlotNow(slot), (
         <Pressable
           style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
-          onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
+          onPress={() => router.push(('/(manager)/booking-detail?slotId=' + slot.id) as Href)}
         >
           <View style={[styles.dayDashedCircle, { borderColor: colors.primary }]}>
             <MaterialIcons name="add" size={22} color={colors.primary} />
@@ -1429,10 +1429,10 @@ export default function CalendarScreen() {
             <Text style={[styles.dayRowSub, { color: colors.muted }]} numberOfLines={1}>{time}</Text>
           </View>
           <Pressable
-            style={({ pressed }) => [styles.assignBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.assignBtn, { backgroundColor: colors.background, borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
             onPress={() => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href)}
           >
-            <Text style={styles.assignBtnText}>Assign</Text>
+            <Text style={[styles.assignBtnText, { color: colors.primary }]}>Assign</Text>
           </Pressable>
         </Pressable>
       ))];
@@ -1515,12 +1515,12 @@ export default function CalendarScreen() {
             drafts.map((d) => getArtistUser(d.artistId)),
             <Pressable
               onPress={(e) => { e.stopPropagation?.(); sendSlotDrafts(slot); }}
-              style={({ pressed }) => [styles.sendRowBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}
+              style={({ pressed }) => [styles.sendRowBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
               hitSlop={6}
             >
-              <Text style={[styles.sendRowBtnText, { color: colors.primary }]}>Send</Text>
+              <Text style={styles.sendRowBtnText}>Send</Text>
             </Pressable>,
-            () => router.push(('/(manager)/assign-artist?slotId=' + slot.id) as Href),
+            () => router.push(('/(manager)/booking-detail?slotId=' + slot.id) as Href),
           )),
       ] : []),
     ];
@@ -2184,10 +2184,10 @@ const styles = StyleSheet.create({
   dayRowName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
   dayRowSub: { fontSize: 13 },
   dayDismissBtn: { padding: 4, marginLeft: 2 },
-  assignBtn: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // shared size w/ Send (height 30, minWidth 76)
-  assignBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  sendRowBtn: { height: 30, minWidth: 76, borderRadius: 9, borderWidth: 1.5, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // outlined, same size as Assign
-  sendRowBtnText: { fontSize: 13, fontWeight: '700' },
+  assignBtn: { height: 30, minWidth: 76, borderRadius: 9, borderWidth: 1.5, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // outlined: white bg, coral border/text
+  assignBtnText: { fontSize: 13, fontWeight: '700' },   // colour set inline (coral)
+  sendRowBtn: { height: 30, minWidth: 76, borderRadius: 9, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },   // filled coral (white text)
+  sendRowBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   dayDashedCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   swipeDeleteAction: { justifyContent: 'center', paddingVertical: 11, paddingLeft: 16, paddingRight: 8 },
   swipeDeleteBtn: { flex: 1, width: 77, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 2 },

@@ -16,6 +16,7 @@ import { cityFromAddress } from '@/lib/places';
 import { displayStatus, bookingVenueName, firstName } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
+import { persistGigRequestBooking } from '@/lib/gig-requests';
 import { fetchReviews } from '@/lib/reviews';
 import type { Booking } from '@/lib/types';
 
@@ -84,12 +85,14 @@ export default function DJBookingDetailScreen() {
   const allBookings = useBookingStore((s) => s.bookings);
   const updateBookingStatus = useBookingStore((s) => s.updateBookingStatus);
   const hideFromManagerCalendar = useBookingStore((s) => s.hideFromManagerCalendar);
+  const addBooking = useBookingStore((s) => s.addBooking);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const getSlotById = useSlotStore((s) => s.getSlotById);
   const getVenueById = useVenueStore((s) => s.getVenueById);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const allDrafts = useDraftStore((s) => s.drafts);
   const removeDraftByDJ = useDraftStore((s) => s.removeDraftByDJ);
+  const sendDraftByDJ = useDraftStore((s) => s.sendDraftByDJ);
   const allInvoices = useInvoiceStore((s) => s.invoices);
   const [feeModalOpen, setFeeModalOpen] = useState(false);
   // Invoiced gigs are settled — the invoice locked that number, so editing the booking price
@@ -121,6 +124,42 @@ export default function DJBookingDetailScreen() {
       // drafting stages an artist without creating a booking, so the set has 0 bookings
       // and lands here — the drafts must show, or the manager sees "nothing assigned".
       const slotDrafts = allDrafts.filter((d) => d.slotId === emptySlot.id);
+      // Send the drafted (not-yet-sent) artists straight from the detail — mirrors the calendar's
+      // sendSlotDrafts: create a booking per draft, persist it, notify the artist, then go back.
+      const sendDraftsForSlot = () => {
+        if (!currentUser || slotDrafts.length === 0) return;
+        const names = slotDrafts.map((d) => getArtistUser(d.artistId)?.fullName ?? 'artist').join(', ');
+        Alert.alert(
+          'Send Gig Request',
+          slotDrafts.length === 1 ? `Send a gig request to ${names}?` : `Send gig requests to ${names}?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Send',
+              onPress: () => {
+                slotDrafts.forEach((d) => {
+                  const newBookingId = sendDraftByDJ(emptySlot.id, d.artistId, currentUser.id, addBooking);
+                  if (newBookingId) {
+                    persistGigRequestBooking({
+                      bookingId: newBookingId, slotId: emptySlot.id, venueId: emptySlot.venueId, artistId: d.artistId,
+                      managerId: currentUser.id, slotDate: emptySlot.date, slotName: emptySlot.name,
+                      slotStartTime: emptySlot.startTime, slotEndTime: emptySlot.endTime, price: d.price ?? null,
+                      venueName: emptyVenue?.name ?? null, venueType: emptyVenue?.venueType ?? null,
+                    });
+                  }
+                  addNotification({
+                    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    userId: d.artistId, type: 'booking_request', title: 'New Booking Request',
+                    body: `${firstName(currentUser?.fullName, 'A manager')} wants you at ${emptyVenue?.name ?? 'a venue'}, ${formatDate(emptySlot.date)}`,
+                    isRead: false, relatedId: newBookingId, relatedType: 'booking', createdAt: new Date().toISOString(),
+                  });
+                });
+                router.back();
+              },
+            },
+          ]
+        );
+      };
       return (
         <ScreenContainer>
           <View style={styles.header}>
@@ -150,6 +189,15 @@ export default function DJBookingDetailScreen() {
               )}
               <AddArtistRow slotId={emptySlot.id} />
             </Section>
+
+            {slotDrafts.length > 0 && (
+              <Pressable
+                onPress={sendDraftsForSlot}
+                style={({ pressed }) => [styles.detailSendBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Text style={styles.detailSendBtnText}>Send {slotDrafts.length > 1 ? 'Requests' : 'Request'}</Text>
+              </Pressable>
+            )}
 
             {emptyVenue ? (
               <Section label="Venue">
@@ -636,6 +684,8 @@ const styles = StyleSheet.create({
   addArtistRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   addArtistCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   addArtistText: { fontSize: 15, fontWeight: '700' },
+  detailSendBtn: { height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 4, marginBottom: 8 },
+  detailSendBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   detailLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, width: 92 },
   detailValueWrap: { flex: 1 },
