@@ -630,32 +630,33 @@ export default function DJHomeScreen() {
         {earningsByMonth.length > 0 ? (
           <View>
             <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
-            <View style={[styles.earnTopDivider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.earnSummary, { color: colors.muted }]}>Earned this year · {earningsGigs} completed gig{earningsGigs !== 1 ? 's' : ''}</Text>
             {earningsByMonth.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
               return (
-                <View key={m.key} style={styles.earnMonth}>
+                <View key={m.key}>
+                  <View style={[styles.earnRowDivider, { backgroundColor: colors.border }]} />
                   <Pressable
                     style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
                     onPress={() => toggleMonth(m.key)}
                   >
-                    <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
-                    <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
+                    <View style={styles.earnMonthInfo}>
+                      <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                      <Text style={[styles.earnMonthSub, { color: colors.muted }]} numberOfLines={1}>
+                        {m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}{hasFee ? '' : ' · fee not set'}
+                      </Text>
+                    </View>
                     <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
-                      {hasFee ? `AED ${m.earnings.toLocaleString()}` : 'No fee recorded'}
+                      {hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}
                     </Text>
+                    <MaterialIcons name={isOpen ? 'expand-more' : 'chevron-right'} size={22} color={colors.muted} />
                   </Pressable>
-                  <View style={[styles.earnBarTrack, { backgroundColor: colors.border }]}>
-                    {hasFee && (
-                      <View style={[styles.earnBarFill, { width: `${Math.max(4, (m.earnings / maxMonthEarnings) * 100)}%`, backgroundColor: STATUS_COLORS.completed }]} />
-                    )}
-                  </View>
                   {isOpen && m.venues.map((v) => (
                     <View key={v.key} style={styles.histVenueRow}>
                       <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
                       <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
-                      <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : 'No fee'}</Text>
+                      <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
                     </View>
                   ))}
                 </View>
@@ -752,16 +753,14 @@ const styles = StyleSheet.create({
   // Bookings — date-grouped rows (venue avatar + name + time + maps)
   bookingsHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // Earnings — big total + per-month rows with a proportional bar; tap a month to expand its venues.
-  earnTotal: { fontSize: 16, fontWeight: '700', marginTop: 6, marginBottom: 2 },   // small — same size as a month's amount
-  earnSummary: { fontSize: 14, marginTop: 2 },
-  earnTopDivider: { height: StyleSheet.hairlineWidth, marginTop: 14, marginBottom: 2 },
-  earnMonth: { paddingTop: 14 },
-  earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  earnMonthLabel: { flex: 1, fontSize: 16, fontWeight: '700' },
-  earnMonthGigs: { fontSize: 14 },
+  earnTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5, marginTop: 6 },   // big headline
+  earnSummary: { fontSize: 14, marginTop: 2, marginBottom: 8 },
+  earnRowDivider: { height: StyleSheet.hairlineWidth },
+  earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
+  earnMonthInfo: { flex: 1 },
+  earnMonthLabel: { fontSize: 16, fontWeight: '700' },
+  earnMonthSub: { fontSize: 13, marginTop: 2 },
   earnMonthAmount: { fontSize: 16, fontWeight: '700' },
-  earnBarTrack: { height: 8, borderRadius: 4, marginTop: 10, overflow: 'hidden' },
-  earnBarFill: { height: '100%', borderRadius: 4 },
   histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 6, paddingTop: 12 },
   histVenueName: { flex: 1, fontSize: 14 },
   histVenueGigs: { fontSize: 13 },
