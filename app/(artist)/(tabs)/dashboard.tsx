@@ -213,15 +213,15 @@ export default function DJHomeScreen() {
   const curYear = curMonthKey.slice(0, 4);
   const thisMonthLabel = new Date(curMonthKey + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
   const thisMonth = useMemo(() => {
-    let earned = 0, booked = 0;
+    let earned = 0, booked = 0, gigs = 0;
     for (const b of dashboardBookings) {
       const date = b.slot?.date ?? b.slotDate ?? '';
       if (!date || date.slice(0, 7) !== curMonthKey) continue;
       const price = b.price ?? 0;
-      if (b.isDone) earned += price;
-      else if (b.statusKey === 'confirmed') booked += price;
+      if (b.isDone) { earned += price; gigs++; }
+      else if (b.statusKey === 'confirmed') { booked += price; gigs++; }
     }
-    return { earned, booked, total: earned + booked };
+    return { earned, booked, total: earned + booked, gigs };
   }, [dashboardBookings, curMonthKey]);
   const pastMonths = useMemo(() => earningsByMonth.filter((m) => m.key !== curMonthKey), [earningsByMonth, curMonthKey]);
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -514,220 +514,125 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      {/* Frozen Overview — the header + day-strip + separator stay PINNED at the top; only the
-          sections below (Needs reply / Bookings / History) scroll underneath. */}
-      <View style={styles.frozenOverview}>
-        {/* Header — "Overview" + legend + notifications. */}
-        <View style={styles.header}>
-          <View style={styles.overviewHead}>
-            <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
-            <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
-              <MaterialIcons name="info-outline" size={18} color={colors.muted} />
-            </Pressable>
-          </View>
-          <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
-            <MaterialIcons name="notifications" size={22} color={colors.foreground} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
-            )}
-          </Pressable>
-        </View>
-        {/* Overview strip — one horizontal row of the next 31 days, colored by status. */}
-        <View style={styles.strip}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysScroll} onLayout={(e) => setStripW(e.nativeEvent.layout.width)}>
-            <View>
-              <View style={styles.stripHeaderRow}>
-                {stripDays.map(({ date }) => (
-                  <View key={date} style={[styles.dayCol, { width: dayW }]}>
-                    <Text style={[styles.stripDow, { color: colors.muted }]}>
-                      {new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' })}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              <View style={styles.cellsRow}>
-                {stripDays.map(({ date, state }) => {
-                  const isSel = selected === date;
-                  // Today is rendered as a normal day for now (no coral).
-                  const numColor = state === 'none' ? colors.muted : '#fff';
-                  return (
-                    <View key={date} style={[styles.dayCol, { width: dayW }]}>
-                      <Pressable style={({ pressed }) => [styles.cellPress, { opacity: pressed ? 0.5 : 1 }]} onPress={() => toggleDay(date)}>
-                        <View style={[styles.cellRingWrap, isSel && { padding: 2, borderWidth: 2, borderColor: colors.primary, borderRadius: 12 }]}>
-                          <View style={[styles.cellBox, { backgroundColor: stripFill(state) }]}>
-                            <Text style={[styles.cellNum, { color: numColor }]}>
-                              {new Date(date + 'T00:00:00').getDate()}
-                            </Text>
-                          </View>
-                        </View>
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* Inline panel — the selected day's gigs (time · venue · status). */}
-          {selected && (
-            <View style={[styles.inlinePanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.inlinePanelHead}>
-                <Text style={[styles.inlinePanelDate, { color: colors.foreground }]}>{panelDateLabel}</Text>
-                <Text style={[styles.inlinePanelCount, { color: colors.muted }]}>{panelGigs.length} gig{panelGigs.length === 1 ? '' : 's'}</Text>
-              </View>
-              <View style={[styles.inlinePanelDivider, { backgroundColor: colors.border }]} />
-              {panelGigs.length === 0 ? (
-                <Text style={[styles.inlinePanelEmpty, { color: colors.muted }]}>No gigs on this day.</Text>
-              ) : (
-                panelGigs.map((g) => (
-                  <Pressable key={g.id} style={({ pressed }) => [styles.inlineRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as Href)}>
-                    <Text style={[styles.inlineTime, { color: colors.muted }]} numberOfLines={1}>{g.startTime ? fmtTime(g.startTime) : ''}</Text>
-                    <Text style={[styles.inlineName, { color: colors.foreground }]} numberOfLines={1}>{g.name}</Text>
-                    <View style={styles.inlineRight}>
-                      <StatusBadge status={g.shown as any} style={styles.statusChip} textStyle={styles.statusChipText} />
-                      {g.dismissable && (
-                        <Pressable hitSlop={8} style={styles.inlineDismiss} onPress={() => dismissCancelled(g.id, g.status)}>
-                          <MaterialIcons name="close" size={18} color={colors.muted} />
-                        </Pressable>
-                      )}
-                    </View>
-                  </Pressable>
-                ))
-              )}
-            </View>
+      {/* Frozen header — "This month" + notifications bell. */}
+      <View style={styles.header}>
+        <Text style={[styles.overviewTitle, { color: colors.foreground }]}>This month</Text>
+        <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
+          <MaterialIcons name="notifications" size={22} color={colors.foreground} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
           )}
-        </View>
+        </Pressable>
       </View>
 
-      {/* Sticky section headers: "Bookings" pins under the frozen Overview, then "Earnings" takes over
-          when it scrolls up. Fixed 7-child layout so stickyHeaderIndices [2,5] never shifts (empty
-          <View/> placeholders fill the Needs-reply / Earnings slots when those are absent). */}
+      {/* Everything scrolls: the "This month" card (earnings + Needs your reply) → Bookings → EARLIER. */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollBelow}
-        stickyHeaderIndices={[2]}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        {/* 0 — Needs your reply (non-sticky; empty slot when none). */}
-        <View>
-          {needsReply.length > 0 && (
-            <>
-              <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
-              <View style={styles.replyHead}>
-                <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>NEEDS YOUR REPLY</Text>
-                <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
-              </View>
-              {needsReply.map((item) => (
-                <View key={item.id} style={styles.replyCard}>
-                  <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
-                    <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
-                    <View style={styles.replyInfo}>
-                      <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
-                      <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
-                        {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
-                      </Text>
-                      {item.price != null && (
-                        <Text style={[styles.replyFee, { color: colors.primary }]} numberOfLines={1}>AED {item.price.toLocaleString()}</Text>
-                      )}
-                    </View>
-                  </Pressable>
-                  <View style={styles.replyActions}>
-                    <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
-                      <MaterialIcons name="close" size={20} color={colors.muted} />
-                    </Pressable>
-                    <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
-                      <MaterialIcons name="check" size={20} color="#fff" />
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </>
-          )}
-
-          {/* Cancelled heads-up (non-sticky; part of slot 0). A manager cancelled a booked gig —
-              surfaced here instead of on the calendar. "Got it" acknowledges + hides it. */}
-          {cancelledHeadsUp.length > 0 && (
-            <>
-              <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
-              <View style={styles.replyHead}>
-                <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>CANCELLED</Text>
-                <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
-              </View>
-              {cancelledHeadsUp.map((item) => (
-                <View key={item.id} style={styles.replyCard}>
-                  <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
-                    <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
-                    <View style={styles.replyInfo}>
-                      <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
-                      <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
-                        {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
-                      </Text>
-                    </View>
-                  </Pressable>
-                  <View style={styles.replyActions}>
-                    <Pressable style={({ pressed }) => [styles.gotItBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => dismissCancelled(item.id, item.status)}>
-                      <Text style={[styles.gotItText, { color: colors.muted }]}>Got it</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </>
-          )}
-        </View>
-
-        {/* 1 — Bookings divider (scrolls). */}
-        <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
-        {/* 2 — Bookings title (STICKY). */}
-        <View style={[styles.stickyTitle, { backgroundColor: colors.background }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
-        </View>
-        {/* 3 — Bookings content. */}
-        <View>
-          {bookingsByDate.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <MaterialIcons name="event" size={32} color={colors.muted} />
-              <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
-            </View>
-          ) : (
-            <View>{bookingsByDate.map(renderDateGroup)}</View>
-          )}
-        </View>
-
-        {/* 4 — Earnings divider (scrolls; empty when no earnings). */}
-        {earningsByMonth.length > 0 ? <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} /> : <View />}
-        {/* 5 — (Earnings title removed — the card + EARLIER list below always show.) */}
-        <View />
-        {/* 6 — Earnings content: this-month card + EARLIER months (tap a month for the venue split). */}
-        {earningsByMonth.length > 0 ? (
-          <View>
-            {/* This-month card — total + earned/booked split bar + legend. */}
-            <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
+        {/* This-month card — earnings summary + Needs your reply, folded together. */}
+        {(earningsByMonth.length > 0 || needsReply.length > 0) && (
+          <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.earnCardHead}>
               <Text style={[styles.earnCardMonth, { color: colors.muted }]}>{thisMonthLabel}</Text>
-              <Text style={[styles.earnCardTotal, { color: colors.foreground }]}>AED {thisMonth.total.toLocaleString()}</Text>
-              <View style={styles.earnCardBar}>
-                {thisMonth.total > 0 ? (
-                  <>
-                    {thisMonth.earned > 0 && <View style={{ flex: thisMonth.earned, backgroundColor: colors.primary }} />}
-                    {thisMonth.booked > 0 && <View style={{ flex: thisMonth.booked, backgroundColor: colors.muted + '55' }} />}
-                  </>
-                ) : (
-                  <View style={{ flex: 1, backgroundColor: colors.muted + '2E' }} />
-                )}
+              <Text style={[styles.earnCardGigs, { color: colors.muted }]}>{thisMonth.gigs} gig{thisMonth.gigs !== 1 ? 's' : ''}</Text>
+            </View>
+            <Text style={[styles.earnCardTotal, { color: colors.foreground }]}>AED {thisMonth.total.toLocaleString()}</Text>
+            <View style={styles.earnCardBar}>
+              {thisMonth.total > 0 ? (
+                <>
+                  {thisMonth.earned > 0 && <View style={{ flex: thisMonth.earned, backgroundColor: colors.primary }} />}
+                  {thisMonth.booked > 0 && <View style={{ flex: thisMonth.booked, backgroundColor: colors.muted + '55' }} />}
+                </>
+              ) : (
+                <View style={{ flex: 1, backgroundColor: colors.muted + '2E' }} />
+              )}
+            </View>
+            <View style={styles.earnLegendRow}>
+              <View style={styles.earnLegendItem}>
+                <View style={[styles.earnLegendDot, { backgroundColor: colors.primary }]} />
+                <Text style={[styles.earnLegendText, { color: colors.muted }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>AED {thisMonth.earned.toLocaleString()}</Text> earned</Text>
               </View>
-              <View style={styles.earnLegendRow}>
-                <View style={styles.earnLegendItem}>
-                  <View style={[styles.earnLegendDot, { backgroundColor: colors.primary }]} />
-                  <Text style={[styles.earnLegendText, { color: colors.muted }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>AED {thisMonth.earned.toLocaleString()}</Text> earned</Text>
-                </View>
-                <View style={styles.earnLegendItem}>
-                  <View style={[styles.earnLegendDot, { backgroundColor: colors.muted + '55' }]} />
-                  <Text style={[styles.earnLegendText, { color: colors.muted }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>AED {thisMonth.booked.toLocaleString()}</Text> booked</Text>
-                </View>
+              <View style={styles.earnLegendItem}>
+                <View style={[styles.earnLegendDot, { backgroundColor: colors.muted + '55' }]} />
+                <Text style={[styles.earnLegendText, { color: colors.muted }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>AED {thisMonth.booked.toLocaleString()}</Text> booked</Text>
               </View>
             </View>
-            {/* EARLIER — the past months. */}
-            {pastMonths.length > 0 && <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>EARLIER</Text>}
+
+            {/* NEEDS YOUR REPLY — folded into the card, with the fee on each request. */}
+            {needsReply.length > 0 && (
+              <>
+                <View style={[styles.earnCardDivider, { backgroundColor: colors.border }]} />
+                <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending, marginBottom: 2 }]}>NEEDS YOUR REPLY · {needsReply.length}</Text>
+                {needsReply.map((item) => (
+                  <View key={item.id} style={styles.replyCard}>
+                    <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
+                      <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                      <View style={styles.replyInfo}>
+                        <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                        <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                          {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}` : ''}
+                          {item.price != null ? <Text style={{ color: colors.primary, fontWeight: '700' }}> · AED {item.price.toLocaleString()}</Text> : null}
+                        </Text>
+                      </View>
+                    </Pressable>
+                    <View style={styles.replyActions}>
+                      <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.muted + '2E', opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
+                        <MaterialIcons name="close" size={20} color={colors.muted} />
+                      </Pressable>
+                      <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
+                        <MaterialIcons name="check" size={20} color="#fff" />
+                      </Pressable>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Cancelled heads-up — a manager cancelled a booked gig; surfaced here + "Got it" to clear. */}
+        {cancelledHeadsUp.length > 0 && (
+          <View style={styles.cancelledWrap}>
+            <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending, marginBottom: 2 }]}>CANCELLED · {cancelledHeadsUp.length}</Text>
+            {cancelledHeadsUp.map((item) => (
+              <View key={item.id} style={styles.replyCard}>
+                <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
+                  <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                  <View style={styles.replyInfo}>
+                    <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                    <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                      {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}` : ''}
+                    </Text>
+                  </View>
+                </Pressable>
+                <View style={styles.replyActions}>
+                  <Pressable style={({ pressed }) => [styles.gotItBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => dismissCancelled(item.id, item.status)}>
+                    <Text style={[styles.gotItText, { color: colors.muted }]}>Got it</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Bookings — upcoming gigs grouped by day. */}
+        <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24, marginBottom: 4 }]}>Bookings</Text>
+        {bookingsByDate.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <MaterialIcons name="event" size={32} color={colors.muted} />
+            <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
+          </View>
+        ) : (
+          <View>{bookingsByDate.map(renderDateGroup)}</View>
+        )}
+
+        {/* EARLIER — past months (the this-month card moved into the header card above). */}
+        {pastMonths.length > 0 && (
+          <>
+            <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>EARLIER</Text>
             {pastMonths.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
@@ -755,15 +660,14 @@ export default function DJHomeScreen() {
                           <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
                         </View>
                       ))}
-                      {/* Clear the last venue from the divider below it (matches the 12pt between venues). */}
                       <View style={styles.venueBottomPad} />
                     </>
                   )}
                 </View>
               );
             })}
-          </View>
-        ) : <View />}
+          </>
+        )}
       </ScrollView>
 
       {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
@@ -845,7 +749,7 @@ const styles = StyleSheet.create({
   replySub: { fontSize: 13, fontWeight: '500' },
   replyFee: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  replyBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  replyBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   gotItBtn: { height: 36, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   gotItText: { fontSize: 14, fontWeight: '600' },
 
@@ -861,6 +765,10 @@ const styles = StyleSheet.create({
   earnRowDivider: { height: StyleSheet.hairlineWidth },
   earnInsetDivider: { height: StyleSheet.hairlineWidth * 2 },
   earnCard: { borderRadius: 16, padding: 18, marginTop: 8, marginBottom: 4 },
+  earnCardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  earnCardGigs: { fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
+  earnCardDivider: { height: StyleSheet.hairlineWidth, marginTop: 16, marginBottom: 12 },
+  cancelledWrap: { marginTop: 20 },
   earnCardMonth: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
   earnCardTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
   earnCardBar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2, marginTop: 16, marginBottom: 14 },
