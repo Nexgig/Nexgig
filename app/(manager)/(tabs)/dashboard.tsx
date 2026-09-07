@@ -654,7 +654,7 @@ export default function ManagerDashboard() {
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: STATUS_COLORS.cancelled }]}>Artist cancelled</Text>
               {artistBackedOut.map((item) => (
-                <View key={item.id} style={styles.backedOutRow}>
+                <View key={item.id} style={[styles.backedOutRow, { backgroundColor: colors.background }]}>
                   <Pressable style={({ pressed }) => [styles.backedOutMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}>
                     <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={item.dj?.id} name={item.dj?.fullName ?? 'Former Artist'} size={44} />
                     <View style={styles.backedOutInfo}>
