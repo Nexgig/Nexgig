@@ -1,7 +1,7 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Image, Alert, Linking } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert, Linking } from '@/lib/rn';
 import { LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -265,6 +265,7 @@ export default function DJHomeScreen() {
   }, [bookings, dateOf]);
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
   // Measured width of the day strip → size each day column to an even fraction so a WHOLE number of
   // days fills it (no partial next-day cell peeking on the right). Falls back to 44 before measuring.
   const [stripW, setStripW] = useState(0);
@@ -513,9 +514,18 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      {/* Frozen header — "Overview" + legend info + notifications. */}
+      {/* Frozen header — "Overview" + about info + notifications. */}
       <View style={styles.header}>
-        <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
+        <View style={styles.overviewHead}>
+          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
+          <Pressable
+            style={({ pressed }) => [styles.infoBtn, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setShowAbout(true)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+          </Pressable>
+        </View>
         <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
           <MaterialIcons name="notifications" size={22} color={colors.foreground} />
           {unreadCount > 0 && (
@@ -673,12 +683,30 @@ export default function DJHomeScreen() {
         )}
       </ScrollView>
 
+      {/* About popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
+      <Modal visible={showAbout} transparent animationType="fade" onRequestClose={() => setShowAbout(false)}>
+        <Pressable style={styles.aboutBackdrop} onPress={() => setShowAbout(false)}>
+          <View style={[styles.aboutCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.aboutTitle, { color: colors.foreground }]}>Your overview</Text>
+            <Text style={[styles.aboutText, { color: colors.muted }]}>
+              This month's earnings, your upcoming bookings, and completed gigs — all in one place.
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
+
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32 },
+  overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoBtn: { padding: 2 },
+  aboutBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  aboutCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, maxWidth: 300, gap: 8 },
+  aboutTitle: { fontSize: 15, fontWeight: '700' },
+  aboutText: { fontSize: 14, lineHeight: 20 },
   frozenOverview: { paddingHorizontal: 20, paddingTop: 8 },   // pinned Overview block (header + strip)
   scrollBelow: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 32 },   // scrolling area under the pinned Overview
   // Section dividers + sticky titles. Gap divider->title = sectionBand.marginBottom(22) + stickyTitle.paddingTop(4) = 26.

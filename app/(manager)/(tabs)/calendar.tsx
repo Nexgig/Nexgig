@@ -236,6 +236,7 @@ export default function CalendarScreen() {
 
   // Create/Edit slot modal
   const [showSlotModal, setShowSlotModal] = useState(false);
+  const [showSwipeTip, setShowSwipeTip] = useState(false);
   const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
   const [createSlotVenueId, setCreateSlotVenueId] = useState('');
   const [createSlotDate, setCreateSlotDate] = useState(todayStr);
@@ -1684,6 +1685,13 @@ export default function CalendarScreen() {
               {/* Month label (CAPS). Swipe the grid to change month. Sending drafts now lives in the Requests tab. */}
               <View style={styles.monthNav}>
                 <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.infoBtn, { opacity: pressed ? 0.6 : 1 }]}
+                  onPress={() => setShowSwipeTip(true)}
+                  hitSlop={8}
+                >
+                  <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+                </Pressable>
               </View>
 
               {/* Day Labels - Monday first (fixed above the swipe pager) */}
@@ -1724,6 +1732,18 @@ export default function CalendarScreen() {
         </View>
       </ScrollView>
 
+
+      {/* Swipe tip — opened from the (i) next to the month title. Tap anywhere to dismiss. */}
+      <Modal visible={showSwipeTip} transparent animationType="fade" onRequestClose={() => setShowSwipeTip(false)}>
+        <Pressable style={styles.tipBackdrop} onPress={() => setShowSwipeTip(false)}>
+          <View style={[styles.tipCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.tipRow}>
+              <MaterialIcons name="swipe-left" size={18} color={colors.muted} />
+              <Text style={[styles.tipText, { color: colors.foreground }]}>Swipe left to remove a draft or delete a slot.</Text>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* ═══════════════════ ADD / EDIT SLOT SHEET ═══════════════════ */}
       <Modal
@@ -1957,6 +1977,11 @@ const styles = StyleSheet.create({
   sendAllBtn: { fontSize: 15, fontWeight: '700' },
 
   monthTitle: { fontSize: 20, fontWeight: '600' },
+  infoBtn: { padding: 2 },
+  tipBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  tipCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, maxWidth: 300 },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tipText: { fontSize: 14, flex: 1, lineHeight: 20 },
 
   // Calendar grid
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },

@@ -717,12 +717,6 @@ export default function ManagerDashboard() {
                 <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
               </View>
             ))}
-            {/* Tip — how to remove a slot from the calendar. */}
-            <View style={[styles.legendHintDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.legendCardRow}>
-              <MaterialIcons name="swipe-left" size={16} color={colors.muted} />
-              <Text style={[styles.legendHintText, { color: colors.muted }]}>Swipe a slot left to delete it</Text>
-            </View>
           </View>
         </Pressable>
       </Modal>
@@ -761,8 +755,6 @@ const styles = StyleSheet.create({
   legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   legendCardText: { fontSize: 14 },
-  legendHintDivider: { height: StyleSheet.hairlineWidth, marginTop: 2, marginBottom: 2 },
-  legendHintText: { fontSize: 13, flex: 1 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   // Bookings — date-grouped rows with a status bar + stacked avatars
