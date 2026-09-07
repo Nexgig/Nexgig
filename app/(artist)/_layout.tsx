@@ -343,7 +343,7 @@ export default function DJLayout() {
         name="add-block"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.78],
+          sheetAllowedDetents: [0.94],
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,
