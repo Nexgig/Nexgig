@@ -527,7 +527,7 @@ export default function DJAvailabilityScreen() {
                   <Text style={[styles.dayNumber, {
                     // Adjacent-month days show their status fill like a normal day; only an EMPTY
                     // adjacent day is greyed, to mark the month boundary.
-                    color: dayColor ? '#fff' : date === todayStr ? colors.primary : outside ? colors.muted : colors.foreground,
+                    color: date === todayStr ? colors.primary : dayColor ? '#fff' : outside ? colors.muted : colors.foreground,
                     opacity: (outside && !dayColor && !isSelected) ? 0.5 : 1,
                     fontSize: isSelected ? 20 : 16,
                     fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,

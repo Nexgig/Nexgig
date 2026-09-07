@@ -1333,7 +1333,7 @@ export default function CalendarScreen() {
       // colour legend reads as "this month only". Only the current month's days are coloured.
       if (outside) { fill = null; dashedRing = false; }
       const strongFill = !!fill && fill !== colors.surface;
-      const numColor = strongFill ? '#fff' : dateStr === todayStr ? colors.primary : (outside && !fill) ? colors.muted : colors.foreground;
+      const numColor = dateStr === todayStr ? colors.primary : strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
       return (
         <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
           <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
