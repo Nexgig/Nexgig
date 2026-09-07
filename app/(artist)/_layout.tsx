@@ -108,6 +108,7 @@ export default function DJLayout() {
             venueStore.addVenue({
               id: v.id, managerId: v.manager_id, name: v.name,
               venueType: v.venue_type,
+              adminPhotoUrl: v.admin_photo_url ?? undefined,
               genrePreferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
               preferredEnergy: Array.isArray(v.preferred_energy) ? v.preferred_energy : [],
               audienceType: Array.isArray(v.audience_type) ? v.audience_type : [],

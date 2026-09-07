@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform } from '@/lib/rn';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { pickImage, uploadImageAsync } from '@/lib/upload';
 import { useAuthStore, useLineupStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
@@ -58,6 +59,8 @@ export default function DJEditProfileScreen() {
   );
   const [avatarId, setAvatarId] = useState<string | null>(currentUser?.avatarId ?? null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(currentUser?.profilePhotoUrl ?? null);
+  const [uploading, setUploading] = useState(false);
   // Bumped after each successful save so the unsaved-changes memo recomputes
   // against the freshly-reset baseline (mutating the refs alone won't do that).
   const [baselineVersion, setBaselineVersion] = useState(0);
@@ -80,6 +83,32 @@ export default function DJEditProfileScreen() {
   const originalSecondary = useRef(secondaryGenres);
   const originalInstruments = useRef(instruments);
   const originalAvatar = useRef(avatarId);
+  const originalPhoto = useRef(photoUrl);
+
+  // Pick a photo from the library (square), upload it, and use it as the profile picture.
+  const pickProfilePhoto = async () => {
+    if (!currentUser || uploading) return;
+    const uri = await pickImage({ aspect: [1, 1] });
+    if (!uri) return;
+    setUploading(true);
+    try {
+      const url = await uploadImageAsync(uri, 'profile-photos', `artist-${currentUser.id}`);
+      setPhotoUrl(url);   // an uploaded photo wins over the chosen avatar (see AvatarImage)
+    } catch {
+      Alert.alert('Upload failed', "Couldn't upload that photo. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+  // Tap the avatar → choose between a real photo and a bundled avatar.
+  const chooseProfilePicture = () => {
+    Alert.alert('Profile picture', undefined, [
+      { text: 'Upload a photo', onPress: pickProfilePhoto },
+      { text: 'Choose an avatar', onPress: () => setShowAvatarPicker(true) },
+      ...(photoUrl ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => setPhotoUrl(null) }] : []),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
+  };
 
   const hasChanges = useMemo(() => {
     const f = originalForm.current;
@@ -97,9 +126,10 @@ export default function DJEditProfileScreen() {
       primaryGenre !== originalGenre.current ||
       JSON.stringify(secondaryGenres) !== JSON.stringify(originalSecondary.current) ||
       JSON.stringify(instruments) !== JSON.stringify(originalInstruments.current) ||
-      avatarId !== originalAvatar.current
+      avatarId !== originalAvatar.current ||
+      photoUrl !== originalPhoto.current
     );
-  }, [form, primaryGenre, secondaryGenres, instruments, avatarId, baselineVersion]);
+  }, [form, primaryGenre, secondaryGenres, instruments, avatarId, photoUrl, baselineVersion]);
 
   const handleBack = () => {
     if (hasChanges) {
@@ -198,15 +228,12 @@ export default function DJEditProfileScreen() {
     if (saving) return;
     setSaving(true);
 
-    // Avatar only — no photo upload anywhere in the app.
-    const photoUrl: string | undefined = undefined;
-
     updateProfile({
       fullName: form.fullName.trim(),
       fullLegalName: form.fullLegalName.trim(),
       phone: form.phone.trim(),
       bio: form.bio.trim() || undefined,
-      profilePhotoUrl: photoUrl,
+      profilePhotoUrl: photoUrl ?? undefined,
       avatarId: avatarId ?? undefined,
     });
 
@@ -274,6 +301,7 @@ export default function DJEditProfileScreen() {
     originalSecondary.current = secondaryGenres;
     originalInstruments.current = instruments;
     originalAvatar.current = avatarId;
+    originalPhoto.current = photoUrl;
     setBaselineVersion((v) => v + 1);
     setSaving(false);
     if (exitAfter) router.back();
@@ -299,13 +327,13 @@ export default function DJEditProfileScreen() {
 
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
-            <AvatarImage avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} />
+          <Pressable onPress={chooseProfilePicture} style={({ pressed }) => [styles.avatarWrapper, { opacity: pressed ? 0.8 : 1 }]}>
+            <AvatarImage uri={photoUrl ?? undefined} avatarId={avatarId ?? undefined} seed={currentUser?.id} name={currentUser?.fullName} size={90} />
             <View style={styles.cameraOverlay}>
-              <MaterialIcons name="face" size={18} color="#fff" />
+              {uploading ? <ActivityIndicator size="small" color="#fff" /> : <MaterialIcons name="photo-camera" size={18} color="#fff" />}
             </View>
           </Pressable>
-          <Pressable onPress={() => setShowAvatarPicker(true)}>
+          <Pressable onPress={chooseProfilePicture}>
             <Text style={[styles.changePhotoText, { color: colors.primary }]}>Change Photo</Text>
           </Pressable>
           <Text style={[styles.emailLabel, { color: colors.muted }]}>{currentUser?.email}</Text>
@@ -555,7 +583,7 @@ export default function DJEditProfileScreen() {
       <AvatarPicker
         visible={showAvatarPicker}
         selectedId={avatarId}
-        onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
+        onSelect={(id) => { setAvatarId(id); setPhotoUrl(null); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
       />
     </ScreenContainer>

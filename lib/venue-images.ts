@@ -29,10 +29,12 @@ export function venueImage(venueType?: VenueType | string | null): ImageSourcePr
 }
 
 /** For bookings: the venue row may be unreadable (artist disconnected, venue hidden),
- *  so bookings snapshot `venueType` and we resolve the image from that instead. */
+ *  so bookings snapshot `venueType` and we resolve the image from that instead.
+ *  An uploaded venue photo (`adminPhotoUrl`) wins over the type artwork when present. */
 export function venueImageFor(
-  venue?: { venueType?: VenueType | string } | null,
+  venue?: { venueType?: VenueType | string; adminPhotoUrl?: string | null } | null,
   snapshotType?: VenueType | string | null,
 ): ImageSourcePropType {
+  if (venue?.adminPhotoUrl) return { uri: venue.adminPhotoUrl };
   return venueImage(venue?.venueType ?? snapshotType);
 }

@@ -173,9 +173,10 @@ export interface Venue {
   preferredEnergy: EnergyType[];
   genrePreferences: GenreType[];
   vibeDescription?: string;
-  // NOTE: no photo fields. Venue images are derived from `venueType` — see
-  // lib/venue-images.ts. `photo_urls` / `admin_photo_url` still exist in Postgres but
-  // nothing reads them; they predate the type-derived images.
+  // Uploaded venue photo (16:9) → `admin_photo_url` column. When set it overrides the
+  // type-derived artwork (see lib/venue-images.ts venueImageFor). Optional; falls back
+  // to the venueType image. (`photo_urls` also exists in Postgres but is unused.)
+  adminPhotoUrl?: string;
   instagramUrl?: string;
   musicLink?: string;
   audienceType?: AudienceType[];

@@ -55,6 +55,7 @@ async function fetchVenues(managerId: string): Promise<Venue[] | null> {
     managerId: v.manager_id,
     name: v.name,
     venueType: v.venue_type ?? 'Lounge',
+    adminPhotoUrl: v.admin_photo_url ?? undefined,
     googleMapsLocation: { lat: v.lat ?? 0, lng: v.lng ?? 0, address: v.address ?? '', placeId: v.place_id ?? undefined },
     capacity: v.capacity ?? undefined,
     rulesTemplate: v.rules_template ?? undefined,

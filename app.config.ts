@@ -137,6 +137,13 @@ const config: ExpoConfig = {
       }
     ],
     [
+      "expo-image-picker",
+      {
+        // Library-only (no camera) — profile + venue photo upload.
+        photosPermission: "Nexgig uses your photos to set your profile and venue pictures.",
+      }
+    ],
+    [
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
