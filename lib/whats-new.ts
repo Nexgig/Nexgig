@@ -14,19 +14,23 @@ type Role = 'artist' | 'manager';
  * it when there's genuinely something to tell users.
  */
 export const RELEASE_NOTES = {
-  version: 3,
+  version: 4,
   // Shown to everyone:
-  both: [
-    "Say hello to What's New — we'll pop a note here whenever we ship something.",
-    'Got a feature idea? Tap "Send feedback" below — it goes straight to us, and we read every one.',
-  ] as string[],
+  both: [] as string[],
   // Shown only to artists:
   artist: [
-    'Your Venues tab is simpler: tap a venue to jump straight to invoicing, and "View Profile" to open the venue.',
+    "💰 Earnings, all in one place — this month and every past month, with a per-venue breakdown.",
+    "💵 See your fee up front — requests now show what you'll be paid. Older ones without a fee fill in once you invoice them.",
+    "📸 Upload your own profile photo instead of only picking an avatar.",
+    "✨ Small touches — a Maps confirmation, and cleaner private-event editing.",
   ] as string[],
   // Shown only to managers:
   manager: [
-    'Assigning artists is clearer: one slot can hold several artists, and the buttons now read "Send Request(s)" and "Save as Draft".',
+    "🎤 Guest DJs — book someone who isn't on Nexgig straight from the roster: name, fee, done.",
+    "💵 Fees live on the slot now and follow whoever you book — with an optional per-artist tweak before or after sending (the artist is notified).",
+    "🏢 Give each venue its own photo — it shows everywhere across the app.",
+    "📅 A cleaner calendar: venue and time on one line, one tag or button per row, and tap any row to open the gig.",
+    "🎯 Matching status tags everywhere, plus smaller touches across the roster and dashboard.",
   ] as string[],
 };
 
