@@ -23,6 +23,8 @@ import { UpdatingOverlay } from '@/components/updating-overlay';
 import { ForceUpdateGate } from '@/components/force-update-gate';
 import { WhatsNewModal } from '@/components/whats-new-modal';
 import { useWhatsNew } from '@/lib/whats-new';
+import { WelcomeModal } from '@/components/welcome-modal';
+import { useWelcome } from '@/lib/welcome';
 import { useRoleSwitching } from '@/lib/roles';
 import { useAuthStore, resetAllStores } from "@/lib/store";
 import { registerForPushNotifications } from "@/lib/notifications-push";
@@ -74,6 +76,9 @@ function RootLayout() {
   const currentUser = useAuthStore((s) => s.currentUser);
   // "What's New" card — shown once per RELEASE_NOTES.version, per role, only to signed-in users.
   const whatsNew = useWhatsNew(!!currentUser?.id, currentUser?.accountType as 'artist' | 'manager' | undefined);
+  // First-run "Welcome" card. Takes priority over What's New (a first-timer shouldn't get both) —
+  // What's New is suppressed while Welcome is up, and shows on a later launch if still pending.
+  const welcome = useWelcome(!!currentUser?.id, currentUser?.accountType as 'artist' | 'manager' | undefined);
   // "Send feedback" on the card → dismiss + open the role's feedback form, pre-set to Feature Request.
   const openFeedbackFromWhatsNew = () => {
     whatsNew.dismiss();
@@ -274,7 +279,10 @@ function RootLayout() {
         <ThemedStatusBar />
         <UpdatingOverlay visible={applyingUpdate || roleSwitching} label={applyingUpdate ? 'Updating…' : 'Switching…'} />
         <ForceUpdateGate />
-        <WhatsNewModal visible={whatsNew.show} onDismiss={whatsNew.dismiss} onSendFeedback={openFeedbackFromWhatsNew} items={whatsNew.items} />
+        <WhatsNewModal visible={whatsNew.show && !welcome.show} onDismiss={whatsNew.dismiss} onSendFeedback={openFeedbackFromWhatsNew} items={whatsNew.items} />
+        {welcome.content && (
+          <WelcomeModal visible={welcome.show} onDismiss={welcome.dismiss} title={welcome.content.title} intro={welcome.content.intro} bullets={welcome.content.bullets} />
+        )}
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
