@@ -1562,7 +1562,7 @@ export default function CalendarScreen() {
 
         {/* Header — "ROSTER BALANCE" label + settings gear. */}
         <View style={styles.lineupHead}>
-          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>ROSTER BALANCE</Text>
+          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>MONTHLY BUDGET</Text>
           <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
             <MaterialIcons name="tune" size={18} color={colors.primary} />
           </Pressable>
@@ -1604,7 +1604,7 @@ export default function CalendarScreen() {
         <Modal visible={showLineupSettings} transparent animationType="fade" onRequestClose={() => setShowLineupSettings(false)}>
           <Pressable style={styles.lineupSettingsBackdrop} onPress={() => setShowLineupSettings(false)}>
             <Pressable style={[styles.lineupSettingsCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => {}}>
-              <Text style={[styles.lineupSettingsCardTitle, { color: colors.foreground }]}>Roster Balance</Text>
+              <Text style={[styles.lineupSettingsCardTitle, { color: colors.foreground }]}>Monthly Budget</Text>
               <Text style={[styles.lineupSettingsLabel, { color: colors.muted }]}>COUNT</Text>
               <View style={styles.lineupChipRow}>
                 {(['draft', 'requested', 'confirmed', 'completed'] as LineupStatusFilter[]).map((status) => {
