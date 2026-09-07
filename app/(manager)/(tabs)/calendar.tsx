@@ -20,7 +20,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
+import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName, isArtistBackedOut } from '@/lib/utils';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { sendDraftRequest } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
@@ -1313,11 +1313,14 @@ export default function CalendarScreen() {
           (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
       );
       const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
-      const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
+      // Artist-backed-out (declined / artist-cancelled) bookings don't count — their slot reads as
+      // empty/needs-you, and they don't turn the day "cancelled" (only a manager cancel does).
+      const shownForSlot = (sid: string) => getBookingsBySlot(sid).filter((b) => !isArtistBackedOut(b));
+      const dCancelled = allDayBookings.some((b) => (b.status === 'cancelled' || b.status === 'declined') && !isArtistBackedOut(b));
       const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
       const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
-      const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
-      const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
+      const dDrafted = daySlots.some((s) => shownForSlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
+      const dEmpty = daySlots.some((s) => shownForSlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
       // cancelled > empty(beige+dashed) > drafted(beige) > sent(amber) > booked(green).
       let fill: string | null = null;
       let dashedRing = false;
@@ -1386,6 +1389,11 @@ export default function CalendarScreen() {
     const bookedIds = new Set(bs.map((b) => b.artistId));
     const drafts = getDraftsBySlot(slot.id).filter((d) => !bookedIds.has(d.artistId));
 
+    // An artist who DECLINED a request or CANCELLED a confirmed booking frees the slot — it
+    // returns to assign mode instead of showing a dead row. (Manager cancels + expired requests
+    // still show as dead rows.) The record stays in the DB as history; it's just not rendered here.
+    const shownBs = bs.filter((b) => !isArtistBackedOut(b));
+
     // Swipe-left reveals a delete action. Used for draft rows (remove the draft) and empty
     // slots (delete the slot) — not for real bookings (those are cancelled from the booking).
     const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
@@ -1411,8 +1419,9 @@ export default function CalendarScreen() {
       );
     };
 
-    // Truly empty — no booking, no draft → prompt to add an artist (swipe to delete the slot).
-    if (bs.length === 0 && drafts.length === 0) {
+    // Truly empty — nothing renderable (artist-backed-out bookings don't count, so a declined /
+    // cancelled slot returns to assign mode) and no draft → prompt to add an artist.
+    if (shownBs.length === 0 && drafts.length === 0) {
       return [withSwipeDelete(slot.id, () => deleteSlotNow(slot), (
         <Pressable
           style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
@@ -1471,8 +1480,8 @@ export default function CalendarScreen() {
 
     // Split the slot's bookings: dead ones (cancelled/declined/expired) stay individual so each
     // keeps its swipe-to-dismiss; the live ones collapse into ONE stacked row like the dashboard.
-    const dead = bs.filter((b) => b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired');
-    const live = bs.filter((b) => !(b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired'));
+    const dead = shownBs.filter((b) => b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired');
+    const live = shownBs.filter((b) => !(b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired'));
     // One badge for the whole live group: highest-priority shown status (pending > confirmed >
     // completed). Every live row shows its pill now — confirmed reads "Booked" (day panel labels
     // every state, action button only where there's an action).
