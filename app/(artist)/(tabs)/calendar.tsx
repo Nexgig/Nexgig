@@ -743,7 +743,7 @@ export default function DJAvailabilityScreen() {
             <MaterialIcons name={occasionIcon(b.privateEventOccasion)} size={24} color={colors.foreground} />
           </View>
         ) : (
-          <Image source={venueImageFor(undefined, b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
+          <Image source={venueImageFor(allVenues.find((v) => v.id === b.venueId), b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
         )}
         <View style={styles.bookingInfo}>
           <View style={styles.bookingTop}>
