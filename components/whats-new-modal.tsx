@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, Modal } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, Modal, ScrollView, useWindowDimensions } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
@@ -19,22 +19,29 @@ export function WhatsNewModal({
   items: string[];
 }) {
   const colors = useColors();
+  const { height: winH } = useWindowDimensions();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} statusBarTranslucent>
       <View style={styles.backdrop}>
-        <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border, maxHeight: winH * 0.82 }]}>
           <View style={[styles.iconWrap, { backgroundColor: colors.primary + '15' }]}>
             <MaterialIcons name="celebration" size={26} color={colors.primary} />
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>What&apos;s New</Text>
-          <View style={styles.items}>
+          {/* Bounded + scrollable so a long list can never push the buttons off-screen
+              (that traps the user behind an un-dismissable modal — reads as a freeze). */}
+          <ScrollView
+            style={styles.items}
+            contentContainerStyle={styles.itemsContent}
+            showsVerticalScrollIndicator={false}
+          >
             {items.map((it, i) => (
               <View key={i} style={styles.itemRow}>
                 <View style={[styles.dot, { backgroundColor: colors.primary }]} />
                 <Text style={[styles.itemText, { color: colors.foreground }]}>{it}</Text>
               </View>
             ))}
-          </View>
+          </ScrollView>
           <View style={styles.actions}>
             <Pressable
               onPress={onSendFeedback}
@@ -60,7 +67,8 @@ const styles = StyleSheet.create({
   card: { width: '100%', maxWidth: 360, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 24, alignItems: 'center' },
   iconWrap: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontSize: 20, fontFamily: fonts.displayBold, letterSpacing: -0.4, marginBottom: 14 },
-  items: { alignSelf: 'stretch', gap: 12, marginBottom: 22 },
+  items: { alignSelf: 'stretch', flexShrink: 1, marginBottom: 22 },
+  itemsContent: { gap: 12 },
   itemRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
   itemText: { flex: 1, fontSize: 14.5, lineHeight: 21 },
