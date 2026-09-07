@@ -14,7 +14,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/lib/supabase';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
-import { occasionIcon } from '@/lib/occasions';
+import { PRIVATE_EVENT_ICON } from '@/lib/occasions';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -465,7 +465,7 @@ export default function DJHomeScreen() {
             {b.isArtistCreated ? (
               // Private events get an occasion icon tile (matches the calendar), not a venue image.
               <View style={[styles.gigPrivateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <MaterialIcons name={occasionIcon(b.privateEventOccasion)} size={22} color={colors.foreground} />
+                <MaterialIcons name={PRIVATE_EVENT_ICON} size={22} color={colors.foreground} />
               </View>
             ) : (
               <Image source={venueImageFor(b.venue, b.venueType)} style={styles.gigVenueAvatar} resizeMode="cover" />

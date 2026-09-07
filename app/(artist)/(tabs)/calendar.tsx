@@ -11,7 +11,7 @@ import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useV
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
-import { occasionIcon } from '@/lib/occasions';
+import { PRIVATE_EVENT_ICON } from '@/lib/occasions';
 import { fonts } from '@/lib/fonts';
 import { SHOW_CALENDAR_LEGEND } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
@@ -745,7 +745,7 @@ export default function DJAvailabilityScreen() {
           // Private events (the artist's own) get an occasion icon tile, not a venue image.
           // The date still shows on the time line below; the occasion drives the glyph.
           <View style={[styles.privateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialIcons name={occasionIcon(b.privateEventOccasion)} size={24} color={colors.foreground} />
+            <MaterialIcons name={PRIVATE_EVENT_ICON} size={24} color={colors.foreground} />
           </View>
         ) : (
           <Image source={venueImageFor(allVenues.find((v) => v.id === b.venueId), b.venueType)} style={styles.bookingThumb} resizeMode="cover" />

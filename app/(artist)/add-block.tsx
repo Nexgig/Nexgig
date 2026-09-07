@@ -8,7 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { isPastEnd } from '@/lib/utils';
-import { OCCASIONS, DEFAULT_OCCASION } from '@/lib/occasions';
+import { DEFAULT_OCCASION } from '@/lib/occasions';
 import type { AvailabilityBlock, Booking } from '@/lib/types';
 
 const TIME_OPTIONS: string[] = [];
@@ -98,7 +98,9 @@ export default function AddBlockScreen() {
 
   const [kind, setKind] = useState<BlockKind>((params.kind as BlockKind) || 'private_event');
   const [eventName, setEventName] = useState(params.ev ?? '');
-  const [occasion, setOccasion] = useState<string>(params.occ ?? DEFAULT_OCCASION);
+  // Occasion was removed from the UI (one icon for all private events); kept as a constant only so
+  // the existing `occasion` DB column keeps a valid value. Not user-editable anymore.
+  const occasion = params.occ ?? DEFAULT_OCCASION;
   const [location, setLocation] = useState(params.loc ?? '');
   const [price, setPrice] = useState(params.price ?? '');
   const [startTime, setStartTime] = useState(params.st ?? '21:00');
@@ -281,7 +283,9 @@ export default function AddBlockScreen() {
 
             {/* DATE — a single day normally; a FROM→TO range when blocking full days, so an artist
                 can block a holiday/trip in one go. The two pickers sit where the single date was. */}
-            {kind === 'block' && fullDay ? (
+            {/* Date picker — BLOCKS only. A private event's date comes from the calendar day the
+                artist tapped (shown in the header), so it has no in-form date field. */}
+            {kind === 'block' && (fullDay ? (
             <View style={[styles.fieldBlock, { zIndex: (singleDateOpen || rangeEndOpen) ? 30 : 1 }]}>
               <View style={styles.timeRow}>
                 {/* FROM */}
@@ -373,46 +377,66 @@ export default function AddBlockScreen() {
                 )}
               </View>
             </View>
+            ))}
+
+            {/* THE GIG — event name, then location + fee below (private event). */}
+            {kind === 'private_event' && (
+              <>
+                <Text style={[styles.groupLabel, { color: colors.muted }]}>THE GIG</Text>
+                <View style={styles.fieldBlock}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>EVENT NAME *</Text>
+                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground }]}
+                      placeholder="e.g. Space Club, Tony & Jane's Wedding"
+                      placeholderTextColor={colors.muted}
+                      value={eventName}
+                      onChangeText={setEventName}
+                      returnKeyType="next"
+                    />
+                  </View>
+                </View>
+              </>
             )}
 
-            {/* Event name (private event) — the Time pickers follow directly below. */}
+            {/* Location + Fee (private event) — side by side (mockup's "THE GIG"). Both optional;
+                the fee feeds the artist's monthly earnings. Occasion removed (one icon for all). */}
             {kind === 'private_event' && (
-              <View style={styles.fieldBlock}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>EVENT NAME *</Text>
-                <View style={[styles.textInputBox, { borderColor: colors.border }]}>
-                  <TextInput
-                    style={[styles.textInputField, { color: colors.foreground }]}
-                    placeholder="e.g. Space Club, Tony & Jane's Wedding"
-                    placeholderTextColor={colors.muted}
-                    value={eventName}
-                    onChangeText={setEventName}
-                    returnKeyType="next"
-                  />
+              <View style={styles.gigRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION</Text>
+                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground }]}
+                      placeholder="e.g. Dubai Marina"
+                      placeholderTextColor={colors.muted}
+                      value={location}
+                      onChangeText={setLocation}
+                      returnKeyType="next"
+                    />
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>FEE (AED)</Text>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                    <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
+                      placeholder="Amount"
+                      placeholderTextColor={colors.muted}
+                      value={price}
+                      onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                    />
+                  </View>
                 </View>
               </View>
             )}
 
-            {/* Fee (private event) — the artist's own gig price; feeds their monthly earnings. */}
-            {kind === 'private_event' && (
-              <View style={styles.fieldBlock}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>FEE (AED)</Text>
-                <View style={[styles.textInputBox, { borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                  <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
-                  <TextInput
-                    style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
-                    placeholder="Optional"
-                    placeholderTextColor={colors.muted}
-                    value={price}
-                    onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Time pickers + Full Day — sits under Event name so the pickers aren't the last
-                field. Raised z-index when open so a dropdown paints over Occasion/Location below. */}
+            {/* WHEN — time pickers + Full Day. Raised z-index when open so a dropdown paints over
+                anything below it. */}
+            <Text style={[styles.groupLabel, { color: colors.muted }]}>WHEN</Text>
             <View style={[styles.timeRow, { zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
               {!fullDay && (
                 <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
@@ -492,42 +516,7 @@ export default function AddBlockScreen() {
               </View>
             </View>
 
-            {/* Occasion + Location (private event) — placed AFTER Time so the time pickers are
-                never the last field and the sheet needs no big bottom filler. */}
-            {kind === 'private_event' && (
-              <>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>OCCASION</Text>
-                  <View style={styles.occasionWrap}>
-                    {OCCASIONS.map((o) => {
-                      const on = occasion === o.key;
-                      return (
-                        <Pressable
-                          key={o.key}
-                          onPress={() => setOccasion(o.key)}
-                          style={[styles.occasionChip, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '15' : 'transparent' }]}
-                        >
-                          <Text style={[styles.occasionChipText, { color: on ? colors.primary : colors.foreground }]}>{o.label}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION (OPTIONAL)</Text>
-                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
-                    <TextInput
-                      style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Dubai Marina"
-                      placeholderTextColor={colors.muted}
-                      value={location}
-                      onChangeText={setLocation}
-                      returnKeyType="done"
-                    />
-                  </View>
-                </View>
-              </>
-            )}
+            {/* (Occasion removed — one icon for all private events. Location moved up next to Fee.) */}
 
         {/* Small bottom padding; the extra only appears while a time dropdown is open, so it can
             clear the Occasion/Location fields it paints over. */}
@@ -558,9 +547,8 @@ const styles = StyleSheet.create({
 
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
-  occasionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  occasionChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
-  occasionChipText: { fontSize: 13, fontWeight: '600' },
+  gigRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  groupLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginTop: 6 },
   helperText: { fontSize: 12, marginBottom: 12, lineHeight: 17 },
 
   // Segmented control (type toggle) — pill style consistent with app
