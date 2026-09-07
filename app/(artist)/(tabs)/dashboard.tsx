@@ -605,7 +605,7 @@ export default function DJHomeScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollBelow}
-        stickyHeaderIndices={[2, 5]}
+        stickyHeaderIndices={[2]}
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
@@ -696,17 +696,10 @@ export default function DJHomeScreen() {
 
         {/* 4 — Earnings divider (scrolls; empty when no earnings). */}
         {earningsByMonth.length > 0 ? <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} /> : <View />}
-        {/* 5 — Earnings title (STICKY; tap to collapse the whole section; empty when no earnings). */}
+        {/* 5 — (Earnings title removed — the card + EARLIER list below always show.) */}
+        <View />
+        {/* 6 — Earnings content: this-month card + EARLIER months (tap a month for the venue split). */}
         {earningsByMonth.length > 0 ? (
-          <Pressable style={({ pressed }) => [styles.stickyTitle, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
-            <View style={styles.stickyTitleRow}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
-              <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} style={{ marginTop: 2 }} />
-            </View>
-          </Pressable>
-        ) : <View />}
-        {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
-        {earningsByMonth.length > 0 && earningsOpen ? (
           <View>
             {/* This-month card — total + earned/booked split bar + legend. */}
             <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
