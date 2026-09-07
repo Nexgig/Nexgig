@@ -113,8 +113,11 @@ export function useSilentUpdates(): boolean {
         setUpdating(false);
         // A dropped connection / timeout on the update check is EXPECTED (the comment above),
         // so don't report it — it's just Sentry noise. Only surface genuinely unexpected failures.
+        // "Failed to load all assets" / "Failed to download …" are expo-updates' own wording for the
+        // SAME thing — the connection dropped part-way through downloading the update's assets — so
+        // they're silenced too (the app just keeps its current bundle and retries next foreground).
         const msg = e instanceof Error ? e.message : String(e);
-        if (!/tim(?:e|ed)\s?out|timeout|network|offline|unreachable|connection|internet|Unable to (?:connect|resolve)/i.test(msg)) {
+        if (!/tim(?:e|ed)\s?out|timeout|network|offline|unreachable|connection|internet|Unable to (?:connect|resolve)|Failed to load all assets|Failed to download/i.test(msg)) {
           reportError(e, { where: 'useSilentUpdates' });
         }
       } finally {
