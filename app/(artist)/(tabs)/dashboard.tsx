@@ -637,7 +637,7 @@ export default function DJHomeScreen() {
         {/* EARLIER — past months (the this-month card moved into the header card above). */}
         {pastMonths.length > 0 && (
           <>
-            <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
+            <View style={[styles.sectionBand, { backgroundColor: colors.surface, marginBottom: 10 }]} />
             <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>EARLIER</Text>
             {pastMonths.map((m) => {
               const isOpen = openMonths.has(m.key);
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   sectionBand: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 22 },
   stickyTitle: { marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 6 },
   stickyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },   // chevron sits right next to the title
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   notifBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, backgroundColor: '#E2674A', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   earnLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   earnLegendDot: { width: 9, height: 9, borderRadius: 5 },
   earnLegendText: { fontSize: 13 },
-  earnEarlierLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8, marginTop: 22, marginBottom: 2 },
+  earnEarlierLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8, marginTop: 4, marginBottom: 2 },
   earnSquare: { width: 12, height: 12, borderRadius: 3 },
   earnSegBar: { flexDirection: 'row', height: 14, gap: 3, marginTop: 16, marginBottom: 6 },
   earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
