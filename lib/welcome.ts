@@ -17,7 +17,7 @@ export const WELCOME: Record<Role, { title: string; intro: string; bullets: stri
     intro: "Here's how to start getting booked:",
     bullets: [
       'Venues send you gig requests — accept or decline right from your dashboard, and see your fee up front.',
-      "Track your monthly earnings and look back on every gig you've played.",
+      'Track your monthly earnings.',
       'Turn your gigs into an invoice in a tap, and watch your earnings add up.',
       "Add a profile photo and your genres so venues know exactly who they're booking.",
     ],
@@ -27,14 +27,14 @@ export const WELCOME: Record<Role, { title: string; intro: string; bullets: stri
     intro: "Here's how to book your first artist:",
     bullets: [
       "Add your venue — it's home to your schedule, roster, and bookings.",
-      "Build your roster — add artists, or book a guest DJ who isn't on Nexgig yet.",
+      "Build your roster — add artists to join you, or book guest DJ who isn't on Nexgig yet.",
       'Create sets on the calendar and send requests — set a default fee once and it follows every artist you book.',
       'Stay on budget — track spend with Monthly Budget, and get invoices from your artists automatically.',
     ],
   },
 };
 
-const WELCOME_VERSION = 2;
+const WELCOME_VERSION = 3;
 const keyFor = (role: Role) => `nexgig:welcomeSeenVersion:${role}`;
 
 /**
