@@ -1,12 +1,13 @@
-import { View, Text, Pressable, StyleSheet, Modal, ScrollView, useWindowDimensions } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions } from '@/lib/rn';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 
 /**
  * "Welcome to Nexgig" card — shown once to a brand-new account (per role). Same branded card
- * family as What's New: a coral-accented sheet with a title, a one-line intro, a short list of
- * what they can do, and a single "Let's go" button. Bounded + scrollable so the list can never
- * push the button off-screen.
+ * family as What's New, but rendered as an IN-APP overlay (an absolute-fill View), NOT a native
+ * <Modal>. Two native modals presenting at the same cold-start instant deadlock the screen (the
+ * app "freezes"); an in-app overlay can never race the What's New modal, so it's collision-proof.
+ * It's drawn last in the root tree, so it sits above the tabs; What's New is suppressed while it's up.
  */
 export function WelcomeModal({
   visible,
@@ -23,41 +24,40 @@ export function WelcomeModal({
 }) {
   const colors = useColors();
   const { height: winH } = useWindowDimensions();
+  if (!visible) return null;
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} statusBarTranslucent>
-      <View style={styles.backdrop}>
-        <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border, maxHeight: winH * 0.85 }]}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.primary + '15' }]}>
-            <Text style={styles.wave}>👋</Text>
-          </View>
-          <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
-          <Text style={[styles.intro, { color: colors.muted }]}>{intro}</Text>
-          <ScrollView
-            style={styles.items}
-            contentContainerStyle={styles.itemsContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {bullets.map((it, i) => (
-              <View key={i} style={styles.itemRow}>
-                <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-                <Text style={[styles.itemText, { color: colors.foreground }]}>{it}</Text>
-              </View>
-            ))}
-          </ScrollView>
-          <Pressable
-            onPress={onDismiss}
-            style={({ pressed }) => [styles.btnPrimary, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Text style={styles.btnPrimaryText}>Let&apos;s go</Text>
-          </Pressable>
+    <View style={styles.overlay}>
+      <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.border, maxHeight: winH * 0.85 }]}>
+        <View style={[styles.iconWrap, { backgroundColor: colors.primary + '15' }]}>
+          <Text style={styles.wave}>👋</Text>
         </View>
+        <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.intro, { color: colors.muted }]}>{intro}</Text>
+        <ScrollView
+          style={styles.items}
+          contentContainerStyle={styles.itemsContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {bullets.map((it, i) => (
+            <View key={i} style={styles.itemRow}>
+              <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+              <Text style={[styles.itemText, { color: colors.foreground }]}>{it}</Text>
+            </View>
+          ))}
+        </ScrollView>
+        <Pressable
+          onPress={onDismiss}
+          style={({ pressed }) => [styles.btnPrimary, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <Text style={styles.btnPrimaryText}>Let&apos;s go</Text>
+        </Pressable>
       </View>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28 },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 28, zIndex: 1000, elevation: 1000 },
   card: { width: '100%', maxWidth: 360, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 24, alignItems: 'center' },
   iconWrap: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   wave: { fontSize: 28 },

@@ -279,7 +279,7 @@ function RootLayout() {
         <ThemedStatusBar />
         <UpdatingOverlay visible={applyingUpdate || roleSwitching} label={applyingUpdate ? 'Updating…' : 'Switching…'} />
         <ForceUpdateGate />
-        <WhatsNewModal visible={whatsNew.show && !welcome.show} onDismiss={whatsNew.dismiss} onSendFeedback={openFeedbackFromWhatsNew} items={whatsNew.items} />
+        <WhatsNewModal visible={whatsNew.show && welcome.resolved && !welcome.show} onDismiss={whatsNew.dismiss} onSendFeedback={openFeedbackFromWhatsNew} items={whatsNew.items} />
         {welcome.content && (
           <WelcomeModal visible={welcome.show} onDismiss={welcome.dismiss} title={welcome.content.title} intro={welcome.content.intro} bullets={welcome.content.bullets} />
         )}
