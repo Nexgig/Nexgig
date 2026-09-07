@@ -908,7 +908,8 @@ export default function DJAvailabilityScreen() {
             }}
             hitSlop={8}
           >
-            <MaterialIcons name="event-available" size={22} color={colors.primary} />
+            {/* Coral when there are gigs left to sync; black once everything's already synced. */}
+            <MaterialIcons name="event-available" size={22} color={unexportedGigs.length > 0 ? colors.primary : colors.foreground} />
           </Pressable>
         </View>
       )}
