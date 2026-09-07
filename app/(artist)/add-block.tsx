@@ -425,7 +425,7 @@ export default function AddBlockScreen() {
             {/* WHEN card — full-day toggle in the header, time pickers below. */}
             <View style={[styles.card, { backgroundColor: colors.background, zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
               <View style={styles.whenHead}>
-                <Text style={[styles.groupLabel, { color: colors.muted, marginTop: 0, marginBottom: 0 }]}>WHEN</Text>
+                <Text style={[styles.groupLabel, { color: colors.muted, marginTop: 0, marginBottom: 0 }]}>TIME</Text>
                 <View style={styles.fullDayRow}>
                   <Text style={[styles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>FULL DAY</Text>
                   <Pressable
