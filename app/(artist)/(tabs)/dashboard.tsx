@@ -207,12 +207,16 @@ export default function DJHomeScreen() {
   const earningsTotal = useMemo(() => earningsByMonth.reduce((s, m) => s + m.earnings, 0), [earningsByMonth]);
   const earningsGigs = useMemo(() => earningsByMonth.reduce((s, m) => s + m.gigCount, 0), [earningsByMonth]);
   const maxMonthEarnings = useMemo(() => Math.max(1, ...earningsByMonth.map((m) => m.earnings)), [earningsByMonth]);
-  // Rank months by earnings (highest = 0) so each month's dot shades darkest→lightest, like the
-  // manager Monthly Budget. Only months WITH a fee are ranked/shaded.
+  // THIS MONTH is the big number up top; the list below is the PAST months only.
+  const curMonthKey = todayLocalStr().slice(0, 7);
+  const thisMonthEarn = useMemo(() => earningsByMonth.find((m) => m.key === curMonthKey)?.earnings ?? 0, [earningsByMonth, curMonthKey]);
+  const pastMonths = useMemo(() => earningsByMonth.filter((m) => m.key !== curMonthKey), [earningsByMonth, curMonthKey]);
+  // Rank the PAST months by earnings (highest = 0) so each month's dot shades darkest→lightest, like
+  // the manager Monthly Budget. Only months WITH a fee are ranked/shaded.
   const monthEarnRank = useMemo(() => {
-    const withFee = [...earningsByMonth].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings);
+    const withFee = [...pastMonths].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings);
     return { rank: new Map(withFee.map((m, i) => [m.key, i] as const)), n: withFee.length };
-  }, [earningsByMonth]);
+  }, [pastMonths]);
   const shadeMonth = (key: string) => {
     const { rank, n } = monthEarnRank;
     const r = rank.get(key) ?? Math.max(0, n - 1);
@@ -703,19 +707,18 @@ export default function DJHomeScreen() {
         {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
         {earningsByMonth.length > 0 && earningsOpen ? (
           <View>
-            <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
-            {/* earningsByMonth is newest-first, so the LAST entry is the artist's first-ever booking month. */}
-            <Text style={[styles.earnSummary, { color: colors.muted }]}>Earned this year · {earningsByMonth[earningsByMonth.length - 1].label} to date</Text>
-            {/* Stacked coral bar — one segment per fee-bearing month, width ∝ earnings, shaded by rank
-                (mirrors the manager Monthly Budget). */}
-            {earningsTotal > 0 && (
+            <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {thisMonthEarn.toLocaleString()}</Text>
+            <Text style={[styles.earnSummary, { color: colors.muted }]}>This month</Text>
+            {/* Stacked coral bar — one segment per fee-bearing PAST month, width ∝ earnings, shaded by
+                rank (mirrors the manager Monthly Budget). */}
+            {pastMonths.some((m) => m.earnings > 0) && (
               <View style={styles.earnSegBar}>
-                {[...earningsByMonth].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings).map((m) => (
+                {[...pastMonths].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings).map((m) => (
                   <View key={m.key} style={{ flex: m.earnings, backgroundColor: shadeMonth(m.key), borderRadius: 4 }} />
                 ))}
               </View>
             )}
-            {earningsByMonth.map((m) => {
+            {pastMonths.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
               return (
