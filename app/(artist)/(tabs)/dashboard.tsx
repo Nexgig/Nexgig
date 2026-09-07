@@ -207,22 +207,23 @@ export default function DJHomeScreen() {
   const earningsTotal = useMemo(() => earningsByMonth.reduce((s, m) => s + m.earnings, 0), [earningsByMonth]);
   const earningsGigs = useMemo(() => earningsByMonth.reduce((s, m) => s + m.gigCount, 0), [earningsByMonth]);
   const maxMonthEarnings = useMemo(() => Math.max(1, ...earningsByMonth.map((m) => m.earnings)), [earningsByMonth]);
-  // THIS MONTH is the big number up top; the list below is the PAST months only.
+  // THIS MONTH is the headline card — split into EARNED (completed) + BOOKED (confirmed upcoming).
+  // The list below ("EARLIER") is the past months only.
   const curMonthKey = todayLocalStr().slice(0, 7);
-  const thisMonthEarn = useMemo(() => earningsByMonth.find((m) => m.key === curMonthKey)?.earnings ?? 0, [earningsByMonth, curMonthKey]);
+  const curYear = curMonthKey.slice(0, 4);
+  const thisMonthLabel = new Date(curMonthKey + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+  const thisMonth = useMemo(() => {
+    let earned = 0, booked = 0;
+    for (const b of dashboardBookings) {
+      const date = b.slot?.date ?? b.slotDate ?? '';
+      if (!date || date.slice(0, 7) !== curMonthKey) continue;
+      const price = b.price ?? 0;
+      if (b.isDone) earned += price;
+      else if (b.statusKey === 'confirmed') booked += price;
+    }
+    return { earned, booked, total: earned + booked };
+  }, [dashboardBookings, curMonthKey]);
   const pastMonths = useMemo(() => earningsByMonth.filter((m) => m.key !== curMonthKey), [earningsByMonth, curMonthKey]);
-  // Rank the PAST months by earnings (highest = 0) so each month's dot shades darkest→lightest, like
-  // the manager Monthly Budget. Only months WITH a fee are ranked/shaded.
-  const monthEarnRank = useMemo(() => {
-    const withFee = [...pastMonths].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings);
-    return { rank: new Map(withFee.map((m, i) => [m.key, i] as const)), n: withFee.length };
-  }, [pastMonths]);
-  const shadeMonth = (key: string) => {
-    const { rank, n } = monthEarnRank;
-    const r = rank.get(key) ?? Math.max(0, n - 1);
-    const alpha = n <= 1 ? 1 : Math.max(0.22, 1 - (r / (n - 1)) * 0.75);
-    return colors.primary + Math.round(alpha * 255).toString(16).padStart(2, '0');
-  };
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
   const toggleMonth = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -699,7 +700,7 @@ export default function DJHomeScreen() {
         {earningsByMonth.length > 0 ? (
           <Pressable style={({ pressed }) => [styles.stickyTitle, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]} onPress={toggleEarnings}>
             <View style={styles.stickyTitleRow}>
-              <Text style={[styles.sectionTitle, { color: colors.muted }]}>EARNINGS</Text>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Earnings</Text>
               <MaterialIcons name={earningsOpen ? 'expand-more' : 'chevron-right'} size={24} color={colors.muted} style={{ marginTop: 2 }} />
             </View>
           </Pressable>
@@ -707,20 +708,37 @@ export default function DJHomeScreen() {
         {/* 6 — Earnings content: big total + summary + per-month rows (tap a month for the venue split). */}
         {earningsByMonth.length > 0 && earningsOpen ? (
           <View>
-            <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {thisMonthEarn.toLocaleString()}</Text>
-            <Text style={[styles.earnSummary, { color: colors.muted }]}>This month</Text>
-            {/* Stacked coral bar — one segment per fee-bearing PAST month, width ∝ earnings, shaded by
-                rank (mirrors the manager Monthly Budget). */}
-            {pastMonths.some((m) => m.earnings > 0) && (
-              <View style={styles.earnSegBar}>
-                {[...pastMonths].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings).map((m) => (
-                  <View key={m.key} style={{ flex: m.earnings, backgroundColor: shadeMonth(m.key), borderRadius: 4 }} />
-                ))}
+            {/* This-month card — total + earned/booked split bar + legend. */}
+            <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.earnCardMonth, { color: colors.muted }]}>{thisMonthLabel}</Text>
+              <Text style={[styles.earnCardTotal, { color: colors.foreground }]}>AED {thisMonth.total.toLocaleString()}</Text>
+              <View style={styles.earnCardBar}>
+                {thisMonth.total > 0 ? (
+                  <>
+                    {thisMonth.earned > 0 && <View style={{ flex: thisMonth.earned, backgroundColor: colors.primary }} />}
+                    {thisMonth.booked > 0 && <View style={{ flex: thisMonth.booked, backgroundColor: colors.muted + '55' }} />}
+                  </>
+                ) : (
+                  <View style={{ flex: 1, backgroundColor: colors.muted + '2E' }} />
+                )}
               </View>
-            )}
+              <View style={styles.earnLegendRow}>
+                <View style={styles.earnLegendItem}>
+                  <View style={[styles.earnLegendDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.earnLegendText, { color: colors.muted }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>AED {thisMonth.earned.toLocaleString()}</Text> earned</Text>
+                </View>
+                <View style={styles.earnLegendItem}>
+                  <View style={[styles.earnLegendDot, { backgroundColor: colors.muted + '55' }]} />
+                  <Text style={[styles.earnLegendText, { color: colors.muted }]}><Text style={{ color: colors.foreground, fontWeight: '700' }}>AED {thisMonth.booked.toLocaleString()}</Text> booked</Text>
+                </View>
+              </View>
+            </View>
+            {/* EARLIER — the past months. */}
+            {pastMonths.length > 0 && <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>EARLIER</Text>}
             {pastMonths.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
+              const shortLabel = m.key.slice(0, 4) === curYear ? m.label.replace(/\s\d{4}$/, '') : m.label;
               return (
                 <View key={m.key}>
                   <View style={[styles.earnInsetDivider, { backgroundColor: colors.border }]} />
@@ -728,8 +746,7 @@ export default function DJHomeScreen() {
                     style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
                     onPress={() => toggleMonth(m.key)}
                   >
-                    <View style={[styles.earnSquare, { backgroundColor: hasFee ? shadeMonth(m.key) : colors.border }]} />
-                    <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                    <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{shortLabel}</Text>
                     <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
                     <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
                       {hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}
@@ -850,6 +867,15 @@ const styles = StyleSheet.create({
   earnSummary: { fontSize: 14, marginTop: 2, marginBottom: 8 },
   earnRowDivider: { height: StyleSheet.hairlineWidth },
   earnInsetDivider: { height: StyleSheet.hairlineWidth * 2 },
+  earnCard: { borderRadius: 16, padding: 18, marginTop: 8, marginBottom: 4 },
+  earnCardMonth: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  earnCardTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
+  earnCardBar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2, marginTop: 16, marginBottom: 14 },
+  earnLegendRow: { flexDirection: 'row', gap: 20 },
+  earnLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  earnLegendDot: { width: 9, height: 9, borderRadius: 5 },
+  earnLegendText: { fontSize: 13 },
+  earnEarlierLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8, marginTop: 22, marginBottom: 2 },
   earnSquare: { width: 12, height: 12, borderRadius: 3 },
   earnSegBar: { flexDirection: 'row', height: 14, gap: 3, marginTop: 16, marginBottom: 6 },
   earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
