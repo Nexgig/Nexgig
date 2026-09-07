@@ -17,6 +17,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS
 import { supabase } from '@/lib/supabase';
 import { sendEmail } from '@/lib/send-email';
 import { markWhatsNewSeen } from '@/lib/whats-new';
+import { markWelcomePending } from '@/lib/welcome';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { defaultAvatarId } from '@/lib/avatars';
@@ -395,8 +396,10 @@ export default function DJSetupScreen() {
     })();
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
-    // Brand-new account → mark the current "What's New" as seen so it doesn't pop on first sign-in.
+    // Brand-new account → mark the current "What's New" as seen so it doesn't pop on first sign-in,
+    // and arm the one-time "Welcome" card instead.
     await markWhatsNewSeen('artist');
+    await markWelcomePending('artist');
     router.replace('/(artist)/(tabs)/dashboard' as Href);
   };
 
