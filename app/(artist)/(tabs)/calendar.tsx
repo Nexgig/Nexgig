@@ -172,7 +172,11 @@ export default function DJAvailabilityScreen() {
   // My bookings with slot data resolved
   const myBookings = useMemo(() => {
     return allBookings
-      .filter((b) => b.artistId === currentUser?.id && !b.hiddenFromCalendar && !b.cancelledAsRequest)
+      // Cancelled / declined gigs are no longer shown on the artist calendar — they're just noise
+      // once there's a notification + the dashboard "Cancelled" heads-up. (A blocked date still
+      // colours slate via the separate hasCancelled path in the month grid.)
+      .filter((b) => b.artistId === currentUser?.id && !b.hiddenFromCalendar && !b.cancelledAsRequest
+        && b.status !== 'cancelled' && b.status !== 'declined')
       .map((b) => {
         const slot = allSlots.find((s) => s.id === b.slotId);
         const resolvedDate = slot?.date ?? b.slotDate;
@@ -809,7 +813,7 @@ export default function DJAvailabilityScreen() {
     { color: STATUS_COLORS.pending, label: 'Requested' },
     { color: STATUS_COLORS.confirmed, label: 'Booked' },
     { color: STATUS_COLORS.completed, label: 'Completed' },
-    { color: STATUS_COLORS.cancelled, label: 'Declined / Cancelled' },
+    { color: STATUS_COLORS.cancelled, label: 'Unavailable' },
   ];
 
   // Per-venue earnings for the month being viewed — the artist's "Venue Balance" (mirrors the manager's

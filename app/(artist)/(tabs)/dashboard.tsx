@@ -310,6 +310,29 @@ export default function DJHomeScreen() {
     [bookings, slots, allVenues]
   );
 
+  // ── "Cancelled": a manager cancelled a gig the artist had — surfaced here (+ a notification)
+  // instead of on the calendar. Only unacknowledged MANAGER cancellations (not the artist's own,
+  // and not a withdrawn request, which auto-acknowledges). "Got it" clears it everywhere. ──────
+  const cancelledHeadsUp = useMemo(() => bookings
+    .filter((b) => !b.isArtistCreated && !b.hiddenFromCalendar && !b.cancelledAsRequest
+      && b.status === 'cancelled' && !b.cancellationAcknowledged && !b.cancelledByArtist)
+    .map((b) => {
+      const slot = slots.find((s) => s.id === b.slotId);
+      const venue = allVenues.find((v) => v.id === b.venueId) ?? (b.venueName ? { id: b.venueId, name: b.venueName } as any : undefined);
+      return {
+        ...b,
+        venue,
+        resolvedDate: slot?.date ?? b.slotDate,
+        resolvedStart: slot?.startTime ?? b.slotStartTime,
+        resolvedEnd: slot?.endTime ?? b.slotEndTime,
+        resolvedVenueName: venue?.name ?? b.venueName ?? 'Unknown Venue',
+        resolvedVenueType: venue?.venueType ?? b.venueType ?? '',
+      };
+    })
+    .sort((a, b) => (a.cancelledAt ?? '') < (b.cancelledAt ?? '') ? 1 : -1),
+    [bookings, slots, allVenues]
+  );
+
   // Confirm/decline logic — mirrors app/(artist)/pending-requests.tsx so the inline cards
   // behave identically to that screen.
   const notifyManager = (managerId: string, type: 'booking_confirmed' | 'booking_declined', bookingId: string, venueName: string, date: string) => {
@@ -604,6 +627,36 @@ export default function DJHomeScreen() {
               ))}
             </>
           )}
+
+          {/* Cancelled heads-up (non-sticky; part of slot 0). A manager cancelled a booked gig —
+              surfaced here instead of on the calendar. "Got it" acknowledges + hides it. */}
+          {cancelledHeadsUp.length > 0 && (
+            <>
+              <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
+              <View style={styles.replyHead}>
+                <Text style={[styles.replyLabel, { color: STATUS_COLORS.cancelled }]}>CANCELLED</Text>
+                <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
+              </View>
+              {cancelledHeadsUp.map((item) => (
+                <View key={item.id} style={styles.replyCard}>
+                  <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
+                    <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                    <View style={styles.replyInfo}>
+                      <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                      <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                        {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}–${fmtTime(item.resolvedEnd ?? '')}` : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <View style={styles.replyActions}>
+                    <Pressable style={({ pressed }) => [styles.gotItBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => dismissCancelled(item.id, item.status)}>
+                      <Text style={[styles.gotItText, { color: colors.muted }]}>Got it</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
         </View>
 
         {/* 1 — Bookings divider (scrolls). */}
@@ -762,6 +815,8 @@ const styles = StyleSheet.create({
   replyFee: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   replyBtn: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  gotItBtn: { height: 36, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  gotItText: { fontSize: 14, fontWeight: '600' },
 
   section: { marginTop: 24 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
