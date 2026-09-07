@@ -41,8 +41,9 @@ sign-up; fixed in build 21 via the official `AppleAuthenticationButton` + name f
     updated → run **`supabase functions deploy send-email`** to make it live (affects real emails).
   - **Reset-password email (edited, NEEDS DASHBOARD PASTE):** `supabase-reset-password-email.html`
     updated → paste into Supabase → Authentication → Email Templates → Reset Password.
-  - **App Store** (App Store Connect) — subtitle → "Book, Play, Manage"; redo/clean screenshots. (Tuts.)
-  - **Website** — `www.nexgigapp.com` (separate GitHub Pages repo, not in this repo). (Tuts, or point me to it.)
+  - **Website (DONE 7 Sep):** repo is **`Nexgig/nexgig.github.io`** (GitHub Pages → nexgigapp.com); title + hero
+    slogan pushed live (commit `3870935`).
+  - **App Store** (App Store Connect) — subtitle → "Book, Play, Manage"; redo/clean screenshots. (Tuts — ONLY thing left.)
 
 **2 · Android / Google Play — IN PROGRESS (started 18 Aug 2026).** Expo/cross-platform, so Android
 is config + store admin, not a rewrite.
