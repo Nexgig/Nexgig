@@ -14,7 +14,7 @@ type Role = 'artist' | 'manager';
  * it when there's genuinely something to tell users.
  */
 export const RELEASE_NOTES = {
-  version: 5,
+  version: 6,
   // Shown to everyone:
   both: [] as string[],
   // Shown only to artists:
@@ -27,7 +27,7 @@ export const RELEASE_NOTES = {
   // Shown only to managers:
   manager: [
     "🎤 Guest DJs — book someone who isn't on Nexgig straight from the roster: name, fee, done.",
-    "💵 Fees live on the slot now and follow whoever you book — with an optional per-artist tweak before or after sending (the artist is notified).",
+    "💵 Add a default fee right in your venue's schedule and it follows every artist you book — set it on your ongoing schedules now. You can still tweak an artist's fee before or after sending (they're notified).",
     "🏢 Give each venue its own photo — it shows everywhere across the app.",
     "📅 A cleaner calendar: venue and time on one line, one tag or button per row, and tap any row to open the gig.",
     "🎯 Matching status tags everywhere, plus smaller touches across the roster and dashboard.",
