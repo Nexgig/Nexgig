@@ -653,23 +653,28 @@ export default function ManagerDashboard() {
         {artistBackedOut.length > 0 && (
           <>
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: STATUS_COLORS.cancelled }]}>Artist cancelled</Text>
+              <View style={styles.replyHead}>
+                <Text style={[styles.replyLabel, { color: STATUS_COLORS.cancelled }]}>ARTIST CANCELLED</Text>
+                <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
+              </View>
               {artistBackedOut.map((item) => (
-                <View key={item.id} style={[styles.backedOutRow, { backgroundColor: colors.background }]}>
-                  <Pressable style={({ pressed }) => [styles.backedOutMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}>
-                    <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={item.dj?.id} name={item.dj?.fullName ?? 'Former Artist'} size={44} />
-                    <View style={styles.backedOutInfo}>
-                      <Text style={[styles.backedOutName, { color: colors.foreground }]} numberOfLines={1}>
+                <View key={item.id} style={[styles.replyCard, { backgroundColor: colors.background }]}>
+                  <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}>
+                    <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={item.dj?.id} name={item.dj?.fullName ?? 'Former Artist'} size={48} />
+                    <View style={styles.replyInfo}>
+                      <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>
                         {item.dj?.fullName ?? 'An artist'} {item.declined ? 'declined' : 'cancelled'}
                       </Text>
-                      <Text style={[styles.backedOutSub, { color: colors.muted }]} numberOfLines={1}>
+                      <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
                         {item.resolvedVenueName}{item.resolvedDate ? ` · ${formatDate(item.resolvedDate)}` : ''}
                       </Text>
                     </View>
                   </Pressable>
-                  <Pressable style={({ pressed }) => [styles.gotItBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => dismissBackedOut(item)}>
-                    <Text style={[styles.gotItText, { color: colors.muted }]}>Got it</Text>
-                  </Pressable>
+                  <View style={styles.replyActions}>
+                    <Pressable style={({ pressed }) => [styles.gotItBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => dismissBackedOut(item)}>
+                      <Text style={[styles.gotItText, { color: colors.muted }]}>Got it</Text>
+                    </Pressable>
+                  </View>
                 </View>
               ))}
             </View>
@@ -736,11 +741,15 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   section: { marginTop: 0 },
   sectionTitle: { fontSize: 22, fontWeight: '600' },
-  backedOutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  backedOutMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backedOutInfo: { flex: 1 },
-  backedOutName: { fontSize: 15, fontWeight: '600' },
-  backedOutSub: { fontSize: 13, marginTop: 2 },
+  replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  replyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  replyLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
+  replyCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  replyMain: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  replyInfo: { flex: 1 },
+  replyName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  replySub: { fontSize: 13, fontWeight: '500' },
+  replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gotItBtn: { height: 36, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   gotItText: { fontSize: 14, fontWeight: '600' },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 20 },
