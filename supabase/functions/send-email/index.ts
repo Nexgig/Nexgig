@@ -71,7 +71,7 @@ function shell(inner: string, opts: { category?: string; reason?: string } = {})
   </td></tr>
   <tr><td style="padding:24px 6px 4px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="left" valign="top" style="font-family:${BODY_FONT}; font-size:13px; line-height:1.6; color:${BRAND.muted};">Nexgig &middot; Book. Play. Discover.<br><a href="https://nexgigapp.com" style="color:${BRAND.muted}; text-decoration:underline;">nexgigapp.com</a> &middot; <a href="mailto:admin@nexgigapp.com" style="color:${BRAND.muted}; text-decoration:underline;">Support</a></td>
+      <td align="left" valign="top" style="font-family:${BODY_FONT}; font-size:13px; line-height:1.6; color:${BRAND.muted};">Nexgig &middot; Book, Play, Manage<br><a href="https://nexgigapp.com" style="color:${BRAND.muted}; text-decoration:underline;">nexgigapp.com</a> &middot; <a href="mailto:admin@nexgigapp.com" style="color:${BRAND.muted}; text-decoration:underline;">Support</a></td>
       ${reasonCell}
     </tr></table>
     <div style="font-family:${BODY_FONT}; font-size:12px; color:${BRAND.faint}; margin-top:16px;">Dubai, United Arab Emirates &middot; admin@nexgigapp.com</div>
@@ -275,7 +275,7 @@ function renderTemplate(
             'Send your first booking request',
           ]) +
           ctaButton('Open Nexgig', APP_STORE_URL) +
-          footnote('Book. Play. Discover. — everything for the night in one place.'),
+          footnote('Book, Play, Manage — everything for the night in one place.'),
           { category: 'WELCOME', reason: 'You get this because you created a manager account on Nexgig.' },
         ),
       };

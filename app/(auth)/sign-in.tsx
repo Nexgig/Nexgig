@@ -120,7 +120,7 @@ export default function SignInScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.tagline} numberOfLines={1}>{email || 'Book. Play. Discover.'}</Text>
+            <Text style={styles.tagline} numberOfLines={1}>{email || 'Book, Play, Manage'}</Text>
           </View>
 
           {/* (email input slot -> password input) + (Continue -> Sign In) */}

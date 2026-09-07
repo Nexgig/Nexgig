@@ -66,7 +66,7 @@ export default function WelcomeScreen() {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.tagline}>Book. Play. Discover.</Text>
+            <Text style={styles.tagline}>Book, Play, Manage</Text>
           </View>
 
           {/* Email entry */}
