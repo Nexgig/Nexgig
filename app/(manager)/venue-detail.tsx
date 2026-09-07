@@ -9,7 +9,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 import { setsForDay, DAY_SHORT } from '@/lib/venue-schedule';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
@@ -304,7 +304,7 @@ export default function VenueDetailScreen() {
 
         {/* Venue Photo — manager's upload, else admin-curated fallback */}
         <View style={styles.venuePhotoWrap}>
-          <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
+          <Image source={venueImageFor(venue)} style={styles.venuePhoto} resizeMode="cover" />
         </View>
 
         {/* Venue Info */}

@@ -8,7 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { isPastEnd } from '@/lib/utils';
-import { OCCASIONS, DEFAULT_OCCASION } from '@/lib/occasions';
+import { DEFAULT_OCCASION } from '@/lib/occasions';
 import type { AvailabilityBlock, Booking } from '@/lib/types';
 
 const TIME_OPTIONS: string[] = [];
@@ -98,7 +98,9 @@ export default function AddBlockScreen() {
 
   const [kind, setKind] = useState<BlockKind>((params.kind as BlockKind) || 'private_event');
   const [eventName, setEventName] = useState(params.ev ?? '');
-  const [occasion, setOccasion] = useState<string>(params.occ ?? DEFAULT_OCCASION);
+  // Occasion was removed from the UI (one icon for all private events); kept as a constant only so
+  // the existing `occasion` DB column keeps a valid value. Not user-editable anymore.
+  const occasion = params.occ ?? DEFAULT_OCCASION;
   const [location, setLocation] = useState(params.loc ?? '');
   const [price, setPrice] = useState(params.price ?? '');
   const [startTime, setStartTime] = useState(params.st ?? '21:00');
@@ -240,7 +242,7 @@ export default function AddBlockScreen() {
   };
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.8 }]}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.94 }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
@@ -258,7 +260,7 @@ export default function AddBlockScreen() {
             {/* Type toggle: Block / Private Event */}
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
-              <View style={[styles.segment, { borderColor: colors.border }]}>
+              <View style={[styles.segment, { borderColor: colors.border, backgroundColor: colors.background }]}>
                 {(['private_event', 'block'] as const).map((t) => (
                   <Pressable
                     key={t}
@@ -266,22 +268,24 @@ export default function AddBlockScreen() {
                     onPress={() => setKind(t)}
                   >
                     <Text style={[styles.segmentText, { color: kind === t ? '#fff' : colors.muted }]}>
-                      {t === 'block' ? 'Block' : 'Private Event'}
+                      {t === 'block' ? 'Block' : 'Private Booking'}
                     </Text>
                   </Pressable>
                 ))}
               </View>
               {/* Explain what each type does — these terms aren't self-evident. */}
-              <Text style={[styles.helperText, { color: colors.muted, marginTop: 8 }]}>
+              <Text style={[styles.helperText, { color: colors.foreground, marginTop: 8 }]}>
                 {kind === 'block'
-                  ? 'Block: marks you unavailable for this period. Managers will see you as unavailable but can still send you requests.'
-                  : 'Private Event: save your own gigs here to keep track of them. Managers will see you as unavailable but can still send you requests.'}
+                  ? 'Mark yourself unavailable for this period.'
+                  : 'Save your own gigs to keep track of them.'}
               </Text>
             </View>
 
             {/* DATE — a single day normally; a FROM→TO range when blocking full days, so an artist
                 can block a holiday/trip in one go. The two pickers sit where the single date was. */}
-            {kind === 'block' && fullDay ? (
+            {/* Date picker — BLOCKS only. A private event's date comes from the calendar day the
+                artist tapped (shown in the header), so it has no in-form date field. */}
+            {kind === 'block' && (fullDay ? (
             <View style={[styles.fieldBlock, { zIndex: (singleDateOpen || rangeEndOpen) ? 30 : 1 }]}>
               <View style={styles.timeRow}>
                 {/* FROM */}
@@ -373,115 +377,57 @@ export default function AddBlockScreen() {
                 )}
               </View>
             </View>
-            )}
+            ))}
 
-            {/* Event name (private event) — the Time pickers follow directly below. */}
+            {/* THE GIG card (private event) — event name, then location + fee side by side. */}
             {kind === 'private_event' && (
-              <View style={styles.fieldBlock}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>EVENT NAME *</Text>
-                <View style={[styles.textInputBox, { borderColor: colors.border }]}>
-                  <TextInput
-                    style={[styles.textInputField, { color: colors.foreground }]}
-                    placeholder="e.g. Space Club, Tony & Jane's Wedding"
-                    placeholderTextColor={colors.muted}
-                    value={eventName}
-                    onChangeText={setEventName}
-                    returnKeyType="next"
-                  />
+              <View style={styles.card}>
+                <Text style={[styles.groupLabel, { color: colors.muted }]}>THE GIG</Text>
+                <View style={styles.fieldBlock}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground }]}
+                      placeholder="Event name (e.g. Tony & Jane's Wedding)"
+                      placeholderTextColor={colors.muted}
+                      value={eventName}
+                      onChangeText={setEventName}
+                      returnKeyType="next"
+                    />
+                  </View>
+                </View>
+                <View style={[styles.gigRow, { marginBottom: 0 }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background, flex: 1 }]}>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground }]}
+                      placeholder="Location"
+                      placeholderTextColor={colors.muted}
+                      value={location}
+                      onChangeText={setLocation}
+                      returnKeyType="next"
+                    />
+                  </View>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                    <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
+                    <TextInput
+                      style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
+                      placeholder="Fee"
+                      placeholderTextColor={colors.muted}
+                      value={price}
+                      onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                    />
+                  </View>
                 </View>
               </View>
             )}
 
-            {/* Fee (private event) — the artist's own gig price; feeds their monthly earnings. */}
-            {kind === 'private_event' && (
-              <View style={styles.fieldBlock}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>FEE (AED)</Text>
-                <View style={[styles.textInputBox, { borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                  <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
-                  <TextInput
-                    style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
-                    placeholder="Optional"
-                    placeholderTextColor={colors.muted}
-                    value={price}
-                    onChangeText={(t) => setPrice(t.replace(/[^0-9]/g, ''))}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Time pickers + Full Day — sits under Event name so the pickers aren't the last
-                field. Raised z-index when open so a dropdown paints over Occasion/Location below. */}
-            <View style={[styles.timeRow, { zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
-              {!fullDay && (
-                <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
-                  <Pressable
-                    style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.border }]}
-                    onPress={() => { Keyboard.dismiss(); setStartOpen((v) => !v); setEndOpen(false); }}
-                  >
-                    <MaterialIcons name="access-time" size={14} color={startOpen ? colors.primary : colors.muted} />
-                    <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{startTime}</Text>
-                    <MaterialIcons name={startOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
-                  </Pressable>
-                  {startOpen && (
-                    <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                      <ScrollView ref={startScrollRef} onLayout={() => scrollToTime(startScrollRef, startTime)} style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                        {TIME_OPTIONS.map((t) => {
-                          const sel = startTime === t;
-                          return (
-                            <Pressable key={t} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setStartTime(t); setStartOpen(false); }}>
-                              <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{t}</Text>
-                              {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                            </Pressable>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {!fullDay && (
-                <View style={styles.timeSep}>
-                  <MaterialIcons name="arrow-forward" size={16} color={colors.muted} />
-                </View>
-              )}
-
-              {!fullDay && (
-                <View style={{ flex: 1, zIndex: endOpen ? 20 : 1 }}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>END</Text>
-                  <Pressable
-                    style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.border }]}
-                    onPress={() => { Keyboard.dismiss(); setEndOpen((v) => !v); setStartOpen(false); }}
-                  >
-                    <MaterialIcons name="access-time" size={14} color={endOpen ? colors.primary : colors.muted} />
-                    <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{endTime}</Text>
-                    <MaterialIcons name={endOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
-                  </Pressable>
-                  {endOpen && (
-                    <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                      <ScrollView ref={endScrollRef} onLayout={() => scrollToTime(endScrollRef, endTime)} style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                        {TIME_OPTIONS.map((t) => {
-                          const sel = endTime === t;
-                          return (
-                            <Pressable key={t} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setEndTime(t); setEndOpen(false); }}>
-                              <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{t}</Text>
-                              {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                            </Pressable>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Full Day toggle */}
-              <View style={{ alignItems: 'flex-end', justifyContent: 'flex-start', paddingLeft: fullDay ? 0 : 4, flex: fullDay ? 1 : 0 }}>
-                <Text style={[styles.fieldLabel, { color: colors.muted, marginBottom: 6 }]}>FULL DAY</Text>
-                <View style={{ height: 42, justifyContent: 'center' }}>
+            {/* WHEN card — full-day toggle in the header, time pickers below. */}
+            <View style={[styles.card, { zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
+              <View style={styles.whenHead}>
+                <Text style={[styles.groupLabel, { color: colors.muted, marginTop: 0, marginBottom: 0 }]}>TIME</Text>
+                <View style={styles.fullDayRow}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted, marginBottom: 0 }]}>FULL DAY</Text>
                   <Pressable
                     style={[styles.toggle, fullDay ? { backgroundColor: colors.primary } : { backgroundColor: colors.border }]}
                     onPress={() => setFullDay((v) => !v)}
@@ -490,48 +436,72 @@ export default function AddBlockScreen() {
                   </Pressable>
                 </View>
               </View>
+              {!fullDay && (
+                <View style={[styles.timeRow, { marginTop: 14, zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
+                  <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
+                    <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
+                    <Pressable
+                      style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.border, backgroundColor: colors.background }]}
+                      onPress={() => { Keyboard.dismiss(); setStartOpen((v) => !v); setEndOpen(false); }}
+                    >
+                      <MaterialIcons name="access-time" size={14} color={startOpen ? colors.primary : colors.muted} />
+                      <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{startTime}</Text>
+                      <MaterialIcons name={startOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+                    </Pressable>
+                    {startOpen && (
+                      <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <ScrollView ref={startScrollRef} onLayout={() => scrollToTime(startScrollRef, startTime)} style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                          {TIME_OPTIONS.map((t) => {
+                            const sel = startTime === t;
+                            return (
+                              <Pressable key={t} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setStartTime(t); setStartOpen(false); }}>
+                                <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{t}</Text>
+                                {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.timeSep}>
+                    <MaterialIcons name="arrow-forward" size={16} color={colors.muted} />
+                  </View>
+                  <View style={{ flex: 1, zIndex: endOpen ? 20 : 1 }}>
+                    <Text style={[styles.fieldLabel, { color: colors.muted }]}>END</Text>
+                    <Pressable
+                      style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.border, backgroundColor: colors.background }]}
+                      onPress={() => { Keyboard.dismiss(); setEndOpen((v) => !v); setStartOpen(false); }}
+                    >
+                      <MaterialIcons name="access-time" size={14} color={endOpen ? colors.primary : colors.muted} />
+                      <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{endTime}</Text>
+                      <MaterialIcons name={endOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+                    </Pressable>
+                    {endOpen && (
+                      <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <ScrollView ref={endScrollRef} onLayout={() => scrollToTime(endScrollRef, endTime)} style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                          {TIME_OPTIONS.map((t) => {
+                            const sel = endTime === t;
+                            return (
+                              <Pressable key={t} style={[styles.timeOption, sel && { backgroundColor: colors.primary + '15' }]} onPress={() => { setEndTime(t); setEndOpen(false); }}>
+                                <Text style={[styles.timeOptionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{t}</Text>
+                                {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
             </View>
 
-            {/* Occasion + Location (private event) — placed AFTER Time so the time pickers are
-                never the last field and the sheet needs no big bottom filler. */}
-            {kind === 'private_event' && (
-              <>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>OCCASION</Text>
-                  <View style={styles.occasionWrap}>
-                    {OCCASIONS.map((o) => {
-                      const on = occasion === o.key;
-                      return (
-                        <Pressable
-                          key={o.key}
-                          onPress={() => setOccasion(o.key)}
-                          style={[styles.occasionChip, { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '15' : 'transparent' }]}
-                        >
-                          <Text style={[styles.occasionChipText, { color: on ? colors.primary : colors.foreground }]}>{o.label}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-                <View style={styles.fieldBlock}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>LOCATION (OPTIONAL)</Text>
-                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
-                    <TextInput
-                      style={[styles.textInputField, { color: colors.foreground }]}
-                      placeholder="e.g. Dubai Marina"
-                      placeholderTextColor={colors.muted}
-                      value={location}
-                      onChangeText={setLocation}
-                      returnKeyType="done"
-                    />
-                  </View>
-                </View>
-              </>
-            )}
+            {/* (Occasion removed — one icon for all private events. Location moved up next to Fee.) */}
 
-        {/* Small bottom padding; the extra only appears while a time dropdown is open, so it can
-            clear the Occasion/Location fields it paints over. */}
-        <View style={{ height: (startOpen || endOpen) ? 60 : 16 }} />
+        {/* Extra scroll room while a time dropdown is open so the (now taller) list has space to
+            open downward and be scrolled into view. */}
+        <View style={{ height: (startOpen || endOpen) ? 180 : 16 }} />
       </ScrollView>
 
       {/* Pinned footer — outside the scroll, so a tall form (occasion chips, etc.) never
@@ -558,9 +528,11 @@ const styles = StyleSheet.create({
 
   fieldBlock: { marginBottom: 12 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
-  occasionWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  occasionChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
-  occasionChipText: { fontSize: 13, fontWeight: '600' },
+  gigRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  groupLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginTop: 6 },
+  card: { marginBottom: 14 },
+  whenHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  fullDayRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   helperText: { fontSize: 12, marginBottom: 12, lineHeight: 17 },
 
   // Segmented control (type toggle) — pill style consistent with app
@@ -580,7 +552,7 @@ const styles = StyleSheet.create({
   timeDropdownText: { flex: 1, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
   timeDropdownAbsolute: { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100 },
   timeDropdownList: { borderWidth: 1, borderRadius: 12, marginTop: 4, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
-  timeDropdownScroll: { maxHeight: 160 },
+  timeDropdownScroll: { maxHeight: 200 },
   dateDropdownScroll: { maxHeight: 200 },
   timeOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
   timeOptionText: { fontSize: 14 },

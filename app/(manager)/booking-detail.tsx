@@ -433,17 +433,9 @@ export default function DJBookingDetailScreen() {
     const syncFields: any = { hiddenFromManagerCalendar: true };
     if (target?.cancelledByArtist) syncFields.hiddenFromCalendar = true;
     syncBookingStatus(targetId, (target?.status ?? 'cancelled') as any, syncFields);
-    // Clearing a dead booking clears the whole slot when nothing else remains on it (no
-    // "Needs artist" fallback).
-    const slotId = target?.slotId;
-    if (slotId) {
-      const others = useBookingStore.getState().bookings.some((x) => x.slotId === slotId && x.id !== targetId && !x.hiddenFromManagerCalendar);
-      const hasDraft = useDraftStore.getState().drafts.some((d) => d.slotId === slotId);
-      if (!others && !hasDraft) {
-        useSlotStore.getState().deleteSlot(slotId);
-        supabase.from('slots').delete().eq('id', slotId).then(({ error }) => { if (error) console.warn('dismiss slot delete:', error.message); });
-      }
-    }
+    // Keep the SLOT — dismissing a dead booking frees the slot back to assign mode ("Needs
+    // artist"), so the manager can re-assign it (e.g. via "Add Artist" here, which opens
+    // assign-artist for this slot) instead of the slot vanishing out from under them.
   };
   // The X handler for any artist row, by its real status.
   const rowDismiss = (b: Booking): (() => void) | undefined => {

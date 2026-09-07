@@ -577,34 +577,8 @@ export default function AddSlotScreen() {
           </ScrollView>
         </View>
 
-        <View style={[styles.fieldBlock, { zIndex: dateOpen ? 30 : 1 }]}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>DATE</Text>
-          <View style={{ position: 'relative', zIndex: dateOpen ? 30 : 1 }}>
-            <Pressable
-              style={[styles.timeDropdownBtn, { borderColor: dateOpen ? colors.primary : colors.border }]}
-              onPress={() => { Keyboard.dismiss(); setDateOpen(!dateOpen); setStartTimeOpen(false); setEndTimeOpen(false); }}
-            >
-              <MaterialIcons name="event" size={14} color={dateOpen ? colors.primary : colors.muted} />
-              <Text style={[styles.timeDropdownText, { color: colors.foreground }]}>{formatDateShort(targetDate)}</Text>
-              <MaterialIcons name={dateOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
-            </Pressable>
-            {dateOpen && (
-              <View style={[styles.timeDropdownList, styles.timeDropdownAbsolute, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                <ScrollView style={styles.timeDropdownScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                  {DATE_OPTIONS.map((d) => {
-                    const isSelected = targetDate === d;
-                    return (
-                      <Pressable key={d} style={[styles.timeOption, isSelected && { backgroundColor: colors.primary + '15' }]} onPress={() => { setTargetDate(d); setDateOpen(false); }}>
-                        <Text style={[styles.timeOptionText, { color: isSelected ? colors.primary : colors.foreground, fontWeight: isSelected ? '700' : '400' }]}>{formatDateShort(d)}</Text>
-                        {isSelected && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </View>
+        {/* No DATE picker — the slot's date comes from the calendar day the manager tapped
+            (shown in the header), so there's no in-form date field. */}
 
 
         <View style={styles.timeRow}>

@@ -521,7 +521,7 @@ export default function NetworkScreen() {
 
       {/* ROSTER label + month picker (the per-artist gig count is for this month) */}
       <View style={styles.rosterBar}>
-        <Text style={[styles.rosterLabel, { color: colors.muted }]}>ROSTER</Text>
+        <Text style={[styles.rosterLabel, { color: colors.muted }]}>INVOICES</Text>
         <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
           <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
           <MaterialIcons name="expand-more" size={18} color={colors.muted} />
@@ -544,14 +544,6 @@ export default function NetworkScreen() {
               <MaterialIcons name="people" size={44} color={colors.muted} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No artists in your roster</Text>
               <Text style={[styles.emptySubtitle, { color: colors.muted }]}>Invite artists to build your roster.</Text>
-            </View>
-          }
-          ListFooterComponent={
-            <View style={[styles.inviteFooter, { borderTopColor: colors.border }]}>
-              <Pressable style={({ pressed }) => [styles.inviteRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push('/(manager)/invite-artists' as Href)}>
-                <MaterialIcons name="person-add-alt-1" size={22} color={colors.primary} />
-                <Text style={[styles.inviteText, { color: colors.primary }]}>Add artists</Text>
-              </Pressable>
             </View>
           }
           renderItem={({ item: user }) => {

@@ -124,11 +124,11 @@ export default function ManagerTabsLayout() {
       <Tabs.Screen
         name="network"
         options={{
-          title: 'Roster',
+          title: 'Invoices',
           // Custom coral badge beside the icon — unread invoices received (same style as Calendar).
           tabBarIcon: ({ color }) => (
             <View>
-              <MaterialIcons name="people" size={24} color={color} />
+              <MaterialIcons name="receipt-long" size={24} color={color} />
               {invoiceBadge > 0 && (
                 <View style={{ position: 'absolute', top: -5, right: -15, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
                   <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{invoiceBadge}</Text>

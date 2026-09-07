@@ -26,6 +26,10 @@ export const OCCASIONS: Occasion[] = [
 // The chip pre-selected on a NEW private event.
 export const DEFAULT_OCCASION = 'club';
 
+// Single icon shown on EVERY private event tile (calendar card, dashboard row, booking detail).
+// Occasions were removed from the Add Private Event screen — one mark for all private events now.
+export const PRIVATE_EVENT_ICON = 'celebration' as const;
+
 const BY_KEY: Record<string, Occasion> = Object.fromEntries(OCCASIONS.map((o) => [o.key, o]));
 
 /**
@@ -38,5 +42,5 @@ export function occasionIcon(occasion?: string | null): IconName {
 }
 
 export function occasionLabel(occasion?: string | null): string {
-  return (occasion && BY_KEY[occasion]?.label) || 'Private Event';
+  return (occasion && BY_KEY[occasion]?.label) || 'Private Booking';
 }

@@ -44,6 +44,7 @@ export default function DJLayout() {
             cancellationReason: b.cancellation_reason ?? undefined,
             cancellationAcknowledged: b.cancellation_acknowledged ?? false,
             cancelledAsRequest: b.cancelled_as_request ?? false,
+            cancelledByArtist: b.cancelled_by_artist ?? undefined,
             hiddenFromCalendar: b.hidden_from_calendar ?? false,
             hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
             slotDate: b.slot_date ?? undefined,
@@ -108,6 +109,7 @@ export default function DJLayout() {
             venueStore.addVenue({
               id: v.id, managerId: v.manager_id, name: v.name,
               venueType: v.venue_type,
+              adminPhotoUrl: v.admin_photo_url ?? undefined,
               genrePreferences: Array.isArray(v.genre_preferences) ? v.genre_preferences : [],
               preferredEnergy: Array.isArray(v.preferred_energy) ? v.preferred_energy : [],
               audienceType: Array.isArray(v.audience_type) ? v.audience_type : [],
@@ -313,6 +315,7 @@ export default function DJLayout() {
                     cancellationReason: b.cancellation_reason ?? undefined,
                     cancellationAcknowledged: b.cancellation_acknowledged ?? false,
                     cancelledAsRequest: b.cancelled_as_request ?? false,
+            cancelledByArtist: b.cancelled_by_artist ?? undefined,
                     hiddenFromCalendar: b.hidden_from_calendar ?? false,
                     hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
                     slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
@@ -340,7 +343,7 @@ export default function DJLayout() {
         name="add-block"
         options={{
           presentation: 'formSheet',
-          sheetAllowedDetents: [0.78],
+          sheetAllowedDetents: [0.94],
           sheetExpandsWhenScrolledToEdge: false,
           sheetGrabberVisible: true,
           sheetCornerRadius: 20,

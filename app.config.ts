@@ -64,7 +64,7 @@ const config: ExpoConfig = {
   // (Apple closes a released version), but OTAs stay keyed to "1.1" so a version bump doesn't
   // strand the live 1.1 users on an OTA lane they can't reach. Bump this string BY HAND only
   // for a NATIVE change (new native module / permission / icon) — JS/OTA changes keep it "1.1".
-  runtimeVersion: "1.1",
+  runtimeVersion: "1.2",
   updates: {
     url: "https://u.expo.dev/eae9c0e4-5f95-4c8b-ba5f-09303b81ecbe",
   },
@@ -134,6 +134,13 @@ const config: ExpoConfig = {
       "expo-calendar",
       {
         calendarPermission: "Allow $(PRODUCT_NAME) to access your calendar to export your gigs."
+      }
+    ],
+    [
+      "expo-image-picker",
+      {
+        // Library-only (no camera) — profile + venue photo upload.
+        photosPermission: "Nexgig uses your photos to set your profile and venue pictures.",
       }
     ],
     [

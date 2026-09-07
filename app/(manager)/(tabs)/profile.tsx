@@ -162,6 +162,19 @@ export default function ManagerProfileScreen() {
 
         <Divider />
 
+        {/* Manage — moved off the Roster/Invoices tab. Coral rows, same look as the old Add artists. */}
+        <View style={styles.manageWrap}>
+          <Pressable style={({ pressed }) => [styles.manageRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push('/(manager)/invite-artists' as Href)}>
+            <MaterialIcons name="person-add-alt-1" size={22} color={colors.primary} />
+            <Text style={[styles.manageText, { color: colors.primary }]}>Add artists</Text>
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.manageRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => router.push('/(manager)/create-venue' as Href)}>
+            <MaterialIcons name="add-business" size={22} color={colors.primary} />
+            <Text style={[styles.manageText, { color: colors.primary }]}>Create venue</Text>
+          </Pressable>
+        </View>
+
+        <Divider />
 
         {/* Account */}
         <Section label="Account">
@@ -207,6 +220,9 @@ const styles = StyleSheet.create({
   card: { borderRadius: 14, borderWidth: 1, padding: 12, gap: 10 },
   cardLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  manageWrap: { paddingHorizontal: 20 },
+  manageRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  manageText: { fontSize: 16, fontWeight: '700' },
   accountText: { fontSize: 14 },
   signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14 },
   signOutText: { fontSize: 15, fontWeight: '700' },

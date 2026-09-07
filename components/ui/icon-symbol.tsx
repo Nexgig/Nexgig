@@ -23,6 +23,7 @@ const MAPPING = {
   "headphones": "headset",
   "tray.fill": "inbox",
   "storefront": "storefront",
+  "doc.text": "receipt-long",
 } as IconMapping;
 
 export function IconSymbol({

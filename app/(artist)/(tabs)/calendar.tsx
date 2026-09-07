@@ -11,7 +11,6 @@ import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useV
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
-import { occasionIcon } from '@/lib/occasions';
 import { fonts } from '@/lib/fonts';
 import { SHOW_CALENDAR_LEGEND } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
@@ -90,7 +89,7 @@ function getBookingStatusColor(b: { status: string; isArtistCreated?: boolean; s
 function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; slotDate?: string; slotStartTime?: string; slotEndTime?: string }): string {
   if (b.isArtistCreated) {
     const isPast = isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime);
-    return isPast ? 'Completed' : 'Private Event';
+    return isPast ? 'Completed' : 'Private Booking';
   }
   if (b.status === 'expired') return 'Expired';
   if (b.status === 'requested' || b.status === 'past_confirmation') return 'Pending';
@@ -172,7 +171,11 @@ export default function DJAvailabilityScreen() {
   // My bookings with slot data resolved
   const myBookings = useMemo(() => {
     return allBookings
-      .filter((b) => b.artistId === currentUser?.id && !b.hiddenFromCalendar && !b.cancelledAsRequest)
+      // Cancelled / declined gigs are no longer shown on the artist calendar — they're just noise
+      // once there's a notification + the dashboard "Cancelled" heads-up. (A blocked date still
+      // colours slate via the separate hasCancelled path in the month grid.)
+      .filter((b) => b.artistId === currentUser?.id && !b.hiddenFromCalendar && !b.cancelledAsRequest
+        && b.status !== 'cancelled' && b.status !== 'declined')
       .map((b) => {
         const slot = allSlots.find((s) => s.id === b.slotId);
         const resolvedDate = slot?.date ?? b.slotDate;
@@ -241,6 +244,7 @@ export default function DJAvailabilityScreen() {
         cancellationReason: b.cancellation_reason ?? undefined,
         cancellationAcknowledged: b.cancellation_acknowledged ?? false,
         cancelledAsRequest: b.cancelled_as_request ?? false,
+        cancelledByArtist: b.cancelled_by_artist ?? undefined,
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
         isArtistCreated: b.is_artist_created ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
@@ -254,6 +258,7 @@ export default function DJAvailabilityScreen() {
 
   // Calendar Sync modal
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
   // Set of booking IDs that have already been exported to device calendar
   const [exportedGigIds, setExportedGigIds] = useState<Set<string>>(new Set());
   const EXPORTED_GIGS_KEY = `exported_gig_ids_${currentUser?.id ?? 'unknown'}`;
@@ -375,7 +380,7 @@ export default function DJAvailabilityScreen() {
       const startTimeStr = b.slotStartTime ?? '00:00';
       const startDate = new Date(`${dateStr}T${startTimeStr}:00`);
       const endDate = new Date(startDate);
-      const title = b.slotName ?? 'Private Event';
+      const title = b.slotName ?? 'Private Booking';
       await Calendar.createEventAsync(calendarId, {
         title,
         startDate,
@@ -523,7 +528,7 @@ export default function DJAvailabilityScreen() {
                   <Text style={[styles.dayNumber, {
                     // Adjacent-month days show their status fill like a normal day; only an EMPTY
                     // adjacent day is greyed, to mark the month boundary.
-                    color: dayColor ? '#fff' : outside ? colors.muted : colors.foreground,
+                    color: date === todayStr ? colors.primary : dayColor ? '#fff' : outside ? colors.muted : colors.foreground,
                     opacity: (outside && !dayColor && !isSelected) ? 0.5 : 1,
                     fontSize: isSelected ? 20 : 16,
                     fontFamily: isSelected ? fonts.bodyBold : fonts.bodySemibold,
@@ -740,10 +745,10 @@ export default function DJAvailabilityScreen() {
           // Private events (the artist's own) get an occasion icon tile, not a venue image.
           // The date still shows on the time line below; the occasion drives the glyph.
           <View style={[styles.privateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialIcons name={occasionIcon(b.privateEventOccasion)} size={24} color={colors.foreground} />
+            <Text style={{ fontSize: 16, fontWeight: '800', letterSpacing: 0.5, color: colors.primary }}>PB</Text>
           </View>
         ) : (
-          <Image source={venueImageFor(undefined, b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
+          <Image source={venueImageFor(allVenues.find((v) => v.id === b.venueId), b.venueType)} style={styles.bookingThumb} resizeMode="cover" />
         )}
         <View style={styles.bookingInfo}>
           <View style={styles.bookingTop}>
@@ -808,8 +813,7 @@ export default function DJAvailabilityScreen() {
   const LEGEND = [
     { color: STATUS_COLORS.pending, label: 'Requested' },
     { color: STATUS_COLORS.confirmed, label: 'Booked' },
-    { color: STATUS_COLORS.completed, label: 'Completed' },
-    { color: STATUS_COLORS.cancelled, label: 'Declined / Cancelled' },
+    { color: STATUS_COLORS.cancelled, label: 'Unavailable' },
   ];
 
   // Per-venue earnings for the month being viewed — the artist's "Venue Balance" (mirrors the manager's
@@ -886,7 +890,16 @@ export default function DJAvailabilityScreen() {
           scroll underneath. Swipe left/right on the grid to change month. */}
       {viewMode === 'month' && (
         <View style={[styles.monthNav, { backgroundColor: colors.background }]}>
-          <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+          <View style={styles.monthTitleRow}>
+            <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.infoBtn, { opacity: pressed ? 0.6 : 1 }]}
+              onPress={() => setShowLegend(true)}
+              hitSlop={8}
+            >
+              <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
           <Pressable
             style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => {
@@ -895,7 +908,8 @@ export default function DJAvailabilityScreen() {
             }}
             hitSlop={8}
           >
-            <MaterialIcons name="event-available" size={22} color={colors.primary} />
+            {/* Coral when there are gigs left to sync; black once everything's already synced. */}
+            <MaterialIcons name="event-available" size={22} color={unexportedGigs.length > 0 ? colors.primary : colors.foreground} />
           </Pressable>
         </View>
       )}
@@ -1088,6 +1102,21 @@ export default function DJAvailabilityScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Legend popover — opened from the (i) next to the month title. Tap anywhere to dismiss. */}
+      <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
+        <Pressable style={styles.legendBackdrop} onPress={() => setShowLegend(false)}>
+          <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
+            {LEGEND.map((row) => (
+              <View key={row.label} style={styles.legendCardRow}>
+                <View style={[styles.legendSwatch, { backgroundColor: row.color }]} />
+                <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -1140,6 +1169,14 @@ const styles = StyleSheet.create({
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthTitle: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },   // matches the dashboard "Overview"
+  monthTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoBtn: { padding: 2 },
+  legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  legendCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, minWidth: 220, gap: 12 },
+  legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendCardText: { fontSize: 14 },
   todayBtnText: { fontSize: 15, fontWeight: '700' },
   earningsStrip: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12 },
   earningsLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.2, marginBottom: 2 },

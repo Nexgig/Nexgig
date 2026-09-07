@@ -135,6 +135,7 @@ export default function ArtistProfileScreen() {
         id: b.id, slotId: b.slot_id, venueId: b.venue_id, artistId: b.artist_id,
         managerId: b.manager_id, status: b.status, isCompleted: b.is_completed ?? false,
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
+        cancelledByArtist: b.cancelled_by_artist ?? undefined,
         isArtistCreated: b.is_artist_created ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
         slotStartTime: b.slot_start_time ?? undefined, slotEndTime: b.slot_end_time ?? undefined, price: b.price ?? undefined,

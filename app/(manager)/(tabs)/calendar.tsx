@@ -20,7 +20,7 @@ import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
-import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName } from '@/lib/utils';
+import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName, isArtistBackedOut } from '@/lib/utils';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { sendDraftRequest } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
@@ -236,6 +236,7 @@ export default function CalendarScreen() {
 
   // Create/Edit slot modal
   const [showSlotModal, setShowSlotModal] = useState(false);
+  const [showSwipeTip, setShowSwipeTip] = useState(false);
   const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
   const [createSlotVenueId, setCreateSlotVenueId] = useState('');
   const [createSlotDate, setCreateSlotDate] = useState(todayStr);
@@ -1313,11 +1314,14 @@ export default function CalendarScreen() {
           (b.slotDate === dateStr || (daySlots.some((s) => s.id === b.slotId)))
       );
       const allDayBookings = daySlots.flatMap((s) => getBookingsBySlot(s.id));
-      const dCancelled = allDayBookings.some((b) => b.status === 'cancelled' || b.status === 'declined');
+      // Artist-backed-out (declined / artist-cancelled) bookings don't count — their slot reads as
+      // empty/needs-you, and they don't turn the day "cancelled" (only a manager cancel does).
+      const shownForSlot = (sid: string) => getBookingsBySlot(sid).filter((b) => !isArtistBackedOut(b));
+      const dCancelled = allDayBookings.some((b) => (b.status === 'cancelled' || b.status === 'declined') && !isArtistBackedOut(b));
       const dPending = allDayBookings.some((b) => b.status === 'requested' || b.status === 'past_confirmation') || pastPendingOnDay.length > 0;
       const dConfirmed = allDayBookings.some((b) => b.status === 'confirmed');
-      const dDrafted = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
-      const dEmpty = daySlots.some((s) => getBookingsBySlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
+      const dDrafted = daySlots.some((s) => shownForSlot(s.id).length === 0 && getDraftsBySlot(s.id).length > 0);
+      const dEmpty = daySlots.some((s) => shownForSlot(s.id).length === 0 && getDraftsBySlot(s.id).length === 0);
       // cancelled > empty(beige+dashed) > drafted(beige) > sent(amber) > booked(green).
       let fill: string | null = null;
       let dashedRing = false;
@@ -1330,7 +1334,7 @@ export default function CalendarScreen() {
       // colour legend reads as "this month only". Only the current month's days are coloured.
       if (outside) { fill = null; dashedRing = false; }
       const strongFill = !!fill && fill !== colors.surface;
-      const numColor = strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
+      const numColor = dateStr === todayStr ? colors.primary : strongFill ? '#fff' : (outside && !fill) ? colors.muted : colors.foreground;
       return (
         <Pressable key={dateStr} style={styles.calendarCell} onPress={() => setSelectedDate(dateStr)}>
           <View style={[styles.dayCircle, fill ? { backgroundColor: fill } : null,
@@ -1386,6 +1390,11 @@ export default function CalendarScreen() {
     const bookedIds = new Set(bs.map((b) => b.artistId));
     const drafts = getDraftsBySlot(slot.id).filter((d) => !bookedIds.has(d.artistId));
 
+    // An artist who DECLINED a request or CANCELLED a confirmed booking frees the slot — it
+    // returns to assign mode instead of showing a dead row. (Manager cancels + expired requests
+    // still show as dead rows.) The record stays in the DB as history; it's just not rendered here.
+    const shownBs = bs.filter((b) => !isArtistBackedOut(b));
+
     // Swipe-left reveals a delete action. Used for draft rows (remove the draft) and empty
     // slots (delete the slot) — not for real bookings (those are cancelled from the booking).
     const withSwipeDelete = (key: string, onDelete: () => void, child: React.ReactNode) => {
@@ -1411,8 +1420,9 @@ export default function CalendarScreen() {
       );
     };
 
-    // Truly empty — no booking, no draft → prompt to add an artist (swipe to delete the slot).
-    if (bs.length === 0 && drafts.length === 0) {
+    // Truly empty — nothing renderable (artist-backed-out bookings don't count, so a declined /
+    // cancelled slot returns to assign mode) and no draft → prompt to add an artist.
+    if (shownBs.length === 0 && drafts.length === 0) {
       return [withSwipeDelete(slot.id, () => deleteSlotNow(slot), (
         <Pressable
           style={({ pressed }) => [styles.dayRow, { backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
@@ -1471,8 +1481,8 @@ export default function CalendarScreen() {
 
     // Split the slot's bookings: dead ones (cancelled/declined/expired) stay individual so each
     // keeps its swipe-to-dismiss; the live ones collapse into ONE stacked row like the dashboard.
-    const dead = bs.filter((b) => b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired');
-    const live = bs.filter((b) => !(b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired'));
+    const dead = shownBs.filter((b) => b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired');
+    const live = shownBs.filter((b) => !(b.status === 'cancelled' || b.status === 'declined' || b.status === 'expired'));
     // One badge for the whole live group: highest-priority shown status (pending > confirmed >
     // completed). Every live row shows its pill now — confirmed reads "Booked" (day panel labels
     // every state, action button only where there's an action).
@@ -1562,7 +1572,7 @@ export default function CalendarScreen() {
 
         {/* Header — "ROSTER BALANCE" label + settings gear. */}
         <View style={styles.lineupHead}>
-          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>ROSTER BALANCE</Text>
+          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>MONTHLY BUDGET</Text>
           <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
             <MaterialIcons name="tune" size={18} color={colors.primary} />
           </Pressable>
@@ -1604,7 +1614,7 @@ export default function CalendarScreen() {
         <Modal visible={showLineupSettings} transparent animationType="fade" onRequestClose={() => setShowLineupSettings(false)}>
           <Pressable style={styles.lineupSettingsBackdrop} onPress={() => setShowLineupSettings(false)}>
             <Pressable style={[styles.lineupSettingsCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => {}}>
-              <Text style={[styles.lineupSettingsCardTitle, { color: colors.foreground }]}>Roster Balance</Text>
+              <Text style={[styles.lineupSettingsCardTitle, { color: colors.foreground }]}>Monthly Budget</Text>
               <Text style={[styles.lineupSettingsLabel, { color: colors.muted }]}>COUNT</Text>
               <View style={styles.lineupChipRow}>
                 {(['draft', 'requested', 'confirmed', 'completed'] as LineupStatusFilter[]).map((status) => {
@@ -1675,6 +1685,13 @@ export default function CalendarScreen() {
               {/* Month label (CAPS). Swipe the grid to change month. Sending drafts now lives in the Requests tab. */}
               <View style={styles.monthNav}>
                 <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.infoBtn, { opacity: pressed ? 0.6 : 1 }]}
+                  onPress={() => setShowSwipeTip(true)}
+                  hitSlop={8}
+                >
+                  <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+                </Pressable>
               </View>
 
               {/* Day Labels - Monday first (fixed above the swipe pager) */}
@@ -1715,6 +1732,18 @@ export default function CalendarScreen() {
         </View>
       </ScrollView>
 
+
+      {/* Swipe tip — opened from the (i) next to the month title. Tap anywhere to dismiss. */}
+      <Modal visible={showSwipeTip} transparent animationType="fade" onRequestClose={() => setShowSwipeTip(false)}>
+        <Pressable style={styles.tipBackdrop} onPress={() => setShowSwipeTip(false)}>
+          <View style={[styles.tipCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <View style={styles.tipRow}>
+              <MaterialIcons name="swipe-left" size={18} color={colors.muted} />
+              <Text style={[styles.tipText, { color: colors.foreground }]}>Swipe left to remove a draft or delete a slot.</Text>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* ═══════════════════ ADD / EDIT SLOT SHEET ═══════════════════ */}
       <Modal
@@ -1948,6 +1977,11 @@ const styles = StyleSheet.create({
   sendAllBtn: { fontSize: 15, fontWeight: '700' },
 
   monthTitle: { fontSize: 20, fontWeight: '600' },
+  infoBtn: { padding: 2 },
+  tipBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  tipCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, maxWidth: 300 },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tipText: { fontSize: 14, flex: 1, lineHeight: 20 },
 
   // Calendar grid
   dayLabels: { flexDirection: 'row', paddingHorizontal: 12 },

@@ -977,6 +977,7 @@ export function mapVenueRow(data: any): Venue {
     googleMapsLocation: { address: data.address ?? '', lat: data.lat ?? 0, lng: data.lng ?? 0, placeId: data.place_id ?? undefined },
     capacity: data.capacity ?? undefined,
     vibeDescription: data.vibe_description ?? undefined,
+    adminPhotoUrl: data.admin_photo_url ?? undefined,
     preferredEnergy: Array.isArray(data.preferred_energy) ? data.preferred_energy : [],
     genrePreferences: Array.isArray(data.genre_preferences) ? data.genre_preferences : [],
     audienceType: Array.isArray(data.audience_type) ? data.audience_type : [],

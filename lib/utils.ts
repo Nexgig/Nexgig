@@ -270,3 +270,13 @@ export function performerLabel(instruments?: (InstrumentType | string)[] | null)
   if (!instruments || instruments.length === 0) return 'Artist';
   return instruments.includes('CDJ / Turntables') ? 'DJ' : 'Musician';
 }
+
+/**
+ * "An artist backed out" — the artist DECLINED a request or CANCELLED a confirmed booking
+ * (as opposed to the manager cancelling, or a request quietly expiring). On the manager side
+ * these free the slot back to assign mode and surface in the dashboard "Artist cancelled" section,
+ * rather than lingering as a dead calendar row. Keep this the single source of truth for that set.
+ */
+export function isArtistBackedOut(b: { status?: string | null; cancelledByArtist?: boolean | null }): boolean {
+  return b.status === 'declined' || (b.status === 'cancelled' && !!b.cancelledByArtist);
+}

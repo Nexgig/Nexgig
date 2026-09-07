@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
 import { Divider } from '@/components/ui/card-free';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import type { Venue } from '@/lib/types';
@@ -44,7 +44,7 @@ export default function ArtistMyVenuesScreen() {
       if (venuesData) {
         venuesData.forEach((v: any) => {
           useVenueStore.getState().addVenue({
-            id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
+            id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type, adminPhotoUrl: v.admin_photo_url ?? undefined,
             genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
             googleMapsLocation: { address: v.address ?? '', lat: v.lat ?? 0, lng: v.lng ?? 0, placeId: v.place_id ?? undefined }, color: v.color ?? '#2563EB',
             isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
@@ -141,7 +141,7 @@ export default function ArtistMyVenuesScreen() {
             >
               <View style={styles.cardLeft}>
                 <Image
-                  source={venueImage(venue.venueType)}
+                  source={venueImageFor(venue)}
                   style={[styles.iconWrap, { borderColor: colors.border }]}
                   resizeMode="cover"
                 />

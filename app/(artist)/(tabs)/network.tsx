@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useInvoiceStore } from '@/lib/store';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useRoleSwitching } from '@/lib/roles';
@@ -46,7 +46,7 @@ export default function ArtistVenuesScreen() {
       const { data: venuesData } = await supabase.from('venues').select('*').in('id', missing);
       venuesData?.forEach((v: any) => {
         useVenueStore.getState().addVenue({
-          id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type,
+          id: v.id, managerId: v.manager_id, name: v.name, venueType: v.venue_type, adminPhotoUrl: v.admin_photo_url ?? undefined,
           genrePreferences: v.genre_preferences ?? [], preferredEnergy: v.preferred_energy ?? [],
           googleMapsLocation: { address: v.address ?? '', lat: v.lat ?? 0, lng: v.lng ?? 0, placeId: v.place_id ?? undefined }, color: v.color ?? '#2563EB',
           isHidden: v.is_hidden ?? false, isComplete: v.is_complete ?? false,
@@ -87,7 +87,7 @@ export default function ArtistVenuesScreen() {
   return (
     <ScreenContainer>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Venues</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Invoices</Text>
         <Text style={[styles.count, { color: colors.muted }]}>{rows.length} venue{rows.length === 1 ? '' : 's'}</Text>
       </View>
 
@@ -116,7 +116,7 @@ export default function ArtistVenuesScreen() {
                 ? `/(artist)/invoice-gigs?venueId=${item.venue.id}`
                 : `/(artist)/venue-detail?id=${item.venue.id}&tab=invoices`) as Href)}
             >
-              <Image source={venueImage(item.venue.venueType)} style={[styles.thumb, { borderColor: colors.border }]} resizeMode="cover" />
+              <Image source={venueImageFor(item.venue)} style={[styles.thumb, { borderColor: colors.border }]} resizeMode="cover" />
               <View style={styles.info}>
                 <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>{item.venue.name}</Text>
                 <Text style={[styles.sub, { color: hasUninvoiced ? colors.primary : colors.muted }]} numberOfLines={1}>

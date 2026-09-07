@@ -17,7 +17,7 @@ import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { useFormatTime, formatDate } from '@/lib/conflict-detection';
-import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr, firstName } from '@/lib/utils';
+import { isPastEnd, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr, firstName, isArtistBackedOut } from '@/lib/utils';
 import { sendDraftRequest } from '@/lib/gig-requests';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 
@@ -52,6 +52,31 @@ export default function ManagerDashboard() {
     () => allBookings.filter((b) => b.managerId === currentUser?.id),
     [allBookings, currentUser?.id]
   );
+
+  // ── "Artist cancelled": an artist DECLINED a request or CANCELLED a confirmed booking. The slot
+  // is freed back to assign mode (see the calendar); this surfaces it so the manager can refill.
+  // "Got it" hides it from the manager — the slot stays as an empty, assignable slot. ───────────
+  const artistBackedOut = useMemo(() => bookings
+    .filter((b) => isArtistBackedOut(b) && !b.hiddenFromManagerCalendar)
+    .map((b) => {
+      const slot = slots.find((s) => s.id === b.slotId);
+      const venue = allVenues.find((v) => v.id === b.venueId);
+      return {
+        ...b,
+        dj: b.artistId ? artistUsers.find((u) => u.id === b.artistId) : undefined,
+        resolvedDate: slot?.date ?? b.slotDate,
+        resolvedVenueName: bookingVenueName(b, venue?.name),
+        declined: b.status === 'declined',
+      };
+    })
+    .sort((a, b) => (a.cancelledAt ?? a.createdAt ?? '') < (b.cancelledAt ?? b.createdAt ?? '') ? 1 : -1),
+    [bookings, slots, allVenues, artistUsers]
+  );
+  const dismissBackedOut = (b: (typeof artistBackedOut)[number]) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    useBookingStore.getState().hideFromManagerCalendar(b.id);
+    syncBookingStatus(b.id, b.status as any, { hiddenFromManagerCalendar: true });
+  };
 
   // Booking ids that appear in a non-cancelled invoice → "Invoiced" chip.
   const allInvoices = useInvoiceStore((s) => s.invoices);
@@ -131,7 +156,9 @@ export default function ManagerDashboard() {
         const daySlots = slots.filter((s) => s.venueId === v.id && s.date === date);
         let cancelled = false, drafted = false, empty = false, sent = false, booked = false;
         for (const s of daySlots) {
-          const bs = bySlot.get(s.id) ?? [];               // non-hidden manager bookings for this slot
+          // Artist-backed-out (declined / artist-cancelled) bookings free the slot → it counts as
+          // empty/needs-you here, and doesn't mark the night "cancelled" (only a manager cancel does).
+          const bs = (bySlot.get(s.id) ?? []).filter((b) => !isArtistBackedOut(b));
           if (bs.length === 0) {                            // no booking → drafted or empty
             if (draftSlotIds.has(s.id)) drafted = true; else empty = true;
             continue;
@@ -190,7 +217,7 @@ export default function ManagerDashboard() {
     type Item = { key: string; kind: 'booking' | 'draft' | 'empty'; slot: typeof daySlots[number]; booking?: (typeof bookings)[number]; dj?: any; artistId?: string };
     const items: Item[] = [];
     for (const slot of daySlots) {
-      const bs = bookings.filter((b) => b.slotId === slot.id && !b.hiddenFromManagerCalendar && (SHOWN.has(b.status) || b.isCompleted));
+      const bs = bookings.filter((b) => b.slotId === slot.id && !b.hiddenFromManagerCalendar && !isArtistBackedOut(b) && (SHOWN.has(b.status) || b.isCompleted));
       const bookedIds = new Set(bs.map((b) => b.artistId));
       const slotDrafts = drafts.filter((d) => d.slotId === slot.id && !bookedIds.has(d.artistId));
       if (bs.length === 0 && slotDrafts.length === 0) {
@@ -332,6 +359,7 @@ export default function ManagerDashboard() {
         cancellationReason: b.cancellation_reason ?? undefined,
         cancellationAcknowledged: b.cancellation_acknowledged ?? false,
         cancelledAsRequest: b.cancelled_as_request ?? false,
+        cancelledByArtist: b.cancelled_by_artist ?? undefined,
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
@@ -620,6 +648,40 @@ export default function ManagerDashboard() {
         </View>
         <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
 
+        {/* Artist cancelled — an artist declined/cancelled; the slot is freed for reassignment.
+            "Got it" hides it (the freed slot stays on the calendar in assign mode). */}
+        {artistBackedOut.length > 0 && (
+          <>
+            <View style={styles.section}>
+              <View style={styles.replyHead}>
+                <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>CANCELLED</Text>
+                <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
+              </View>
+              {artistBackedOut.map((item) => (
+                <View key={item.id} style={[styles.replyCard, { backgroundColor: colors.background }]}>
+                  <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(manager)/booking-detail?id=' + item.id) as Href)}>
+                    <AvatarImage uri={item.dj?.profilePhotoUrl || undefined} avatarId={(item.dj as any)?.avatarId} seed={item.dj?.id} name={item.dj?.fullName ?? 'Former Artist'} size={48} />
+                    <View style={styles.replyInfo}>
+                      <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>
+                        {item.dj?.fullName ?? 'An artist'} {item.declined ? 'declined' : 'cancelled'}
+                      </Text>
+                      <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                        {item.resolvedVenueName}{item.resolvedDate ? ` · ${formatDate(item.resolvedDate)}` : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <View style={styles.replyActions}>
+                    <Pressable style={({ pressed }) => [styles.gotItBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => dismissBackedOut(item)}>
+                      <Text style={[styles.gotItText, { color: colors.muted }]}>Got it</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <View style={[styles.sectionBreak, { backgroundColor: colors.surface }]} />
+          </>
+        )}
+
         {/* Bookings */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Bookings</Text>
@@ -655,12 +717,6 @@ export default function ManagerDashboard() {
                 <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
               </View>
             ))}
-            {/* Tip — how to remove a slot from the calendar. */}
-            <View style={[styles.legendHintDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.legendCardRow}>
-              <MaterialIcons name="swipe-left" size={16} color={colors.muted} />
-              <Text style={[styles.legendHintText, { color: colors.muted }]}>Swipe a slot left to delete it</Text>
-            </View>
           </View>
         </Pressable>
       </Modal>
@@ -679,6 +735,17 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   section: { marginTop: 0 },
   sectionTitle: { fontSize: 22, fontWeight: '600' },
+  replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  replyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  replyLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
+  replyCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  replyMain: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  replyInfo: { flex: 1 },
+  replyName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  replySub: { fontSize: 13, fontWeight: '500' },
+  replyActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  gotItBtn: { height: 36, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  gotItText: { fontSize: 14, fontWeight: '600' },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 20 },
   overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   overviewInfo: { padding: 2 },
@@ -688,8 +755,6 @@ const styles = StyleSheet.create({
   legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   legendCardText: { fontSize: 14 },
-  legendHintDivider: { height: StyleSheet.hairlineWidth, marginTop: 2, marginBottom: 2 },
-  legendHintText: { fontSize: 13, flex: 1 },
   emptyCard: { padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
   // Bookings — date-grouped rows with a status bar + stacked avatars

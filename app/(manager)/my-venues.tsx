@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore } from '@/lib/store';
 import { Divider } from '@/components/ui/card-free';
 import { useColors } from '@/hooks/use-colors';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 
 /** "night_club" -> "Night club" */
 function typeLabel(t?: string | null): string {
@@ -62,7 +62,7 @@ export default function MyVenuesScreen() {
               style={({ pressed }) => [styles.row, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => router.push(('/(manager)/venue-detail?id=' + venue.id) as Href)}
             >
-              <Image source={venueImage(venue.venueType)} style={styles.thumb} resizeMode="cover" />
+              <Image source={venueImageFor(venue)} style={styles.thumb} resizeMode="cover" />
               <View style={styles.info}>
                 <View style={styles.titleRow}>
                   <Text style={[styles.name, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{venue.name}</Text>

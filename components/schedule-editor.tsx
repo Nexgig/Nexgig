@@ -118,7 +118,7 @@ export function ScheduleEditor({ value, onChange }: ScheduleEditorProps) {
                       const digits = t.replace(/[^0-9]/g, '');
                       patchSet(set.id, { defaultPrice: digits === '' ? undefined : parseInt(digits, 10) });
                     }}
-                    placeholder="Optional"
+                    placeholder=""
                     placeholderTextColor={colors.muted}
                     keyboardType="number-pad"
                     returnKeyType="done"

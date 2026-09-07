@@ -17,7 +17,6 @@ import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { submitReview, fetchReviews } from '@/lib/reviews';
 import { isPastEnd, displayStatus, isExpiredRequest, firstName, bookingVenueName } from '@/lib/utils';
-import { occasionIcon } from '@/lib/occasions';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -114,6 +113,7 @@ export default function DJBookingDetailScreen() {
         cancellationReason: b.cancellation_reason ?? undefined,
         cancellationAcknowledged: b.cancellation_acknowledged ?? false,
         cancelledAsRequest: b.cancelled_as_request ?? false,
+        cancelledByArtist: b.cancelled_by_artist ?? undefined,
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         slotDate: b.slot_date ?? undefined, slotName: b.slot_name ?? undefined,
@@ -386,14 +386,14 @@ export default function DJBookingDetailScreen() {
             </>
           ) : booking.isArtistCreated ? (
             <>
-              <Section label="Private Event">
+              <Section label="Private Booking">
                 <ListRow
                   leading={
                     <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
-                      <MaterialIcons name={occasionIcon(booking.privateEventOccasion)} size={22} color={colors.foreground} />
+                      <Text style={{ fontSize: 15, fontWeight: '800', letterSpacing: 0.5, color: colors.primary }}>PB</Text>
                     </View>
                   }
-                  title={booking.slotName ?? 'Private Event'}
+                  title={booking.slotName ?? 'Private Booking'}
                   subtitle={booking.privateEventLocation ?? undefined}
                   divider={false}
                 />

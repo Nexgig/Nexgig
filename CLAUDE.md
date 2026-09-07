@@ -19,6 +19,13 @@ Two route groups mirror the two sides: `app/(manager)/…` and `app/(artist)/…
     and `eas update --branch preview` — don't ask.** This carve-out is ONLY `--branch preview`.
     `--branch production` (real phones) and `eas build`/`eas submit` (native) still each get their
     own explicit yes, always.
+  - **EXCEPTION — pushing a FEATURE/working branch is pre-authorized (added 7 Sep 2026).**
+    `git push origin <feature-branch>` (a fast-forward to Tuts's own PRIVATE repo) auto-runs after
+    committing — **don't ask.** This keeps GitHub current for tools that read it (Claude Design) and
+    gives continuous backup, since shipping via EAS uploads from local and never touches GitHub (so
+    GitHub silently drifted 17 commits behind before this). This carve-out is ONLY a non-`main`
+    feature branch, fast-forward. **Pushing `main`, any force / non-fast-forward push, and every
+    `eas build`/`eas submit`/`--branch production` still each get their own explicit yes.**
   - Read-only checks (`git log`, `git status`, `eas update:list`) need no permission — just run
     them. **Prefer them to asking**: never claim something is committed/shipped when you could
     have checked in one command. That mistake was made repeatedly on 17 Jul.
