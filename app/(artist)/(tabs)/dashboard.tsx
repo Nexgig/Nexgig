@@ -207,6 +207,18 @@ export default function DJHomeScreen() {
   const earningsTotal = useMemo(() => earningsByMonth.reduce((s, m) => s + m.earnings, 0), [earningsByMonth]);
   const earningsGigs = useMemo(() => earningsByMonth.reduce((s, m) => s + m.gigCount, 0), [earningsByMonth]);
   const maxMonthEarnings = useMemo(() => Math.max(1, ...earningsByMonth.map((m) => m.earnings)), [earningsByMonth]);
+  // Rank months by earnings (highest = 0) so each month's dot shades darkest→lightest, like the
+  // manager Monthly Budget. Only months WITH a fee are ranked/shaded.
+  const monthEarnRank = useMemo(() => {
+    const withFee = [...earningsByMonth].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings);
+    return { rank: new Map(withFee.map((m, i) => [m.key, i] as const)), n: withFee.length };
+  }, [earningsByMonth]);
+  const shadeMonth = (key: string) => {
+    const { rank, n } = monthEarnRank;
+    const r = rank.get(key) ?? Math.max(0, n - 1);
+    const alpha = n <= 1 ? 1 : Math.max(0.22, 1 - (r / (n - 1)) * 0.75);
+    return colors.primary + Math.round(alpha * 255).toString(16).padStart(2, '0');
+  };
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
   const toggleMonth = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -694,26 +706,32 @@ export default function DJHomeScreen() {
             <Text style={[styles.earnTotal, { color: colors.foreground }]}>AED {earningsTotal.toLocaleString()}</Text>
             {/* earningsByMonth is newest-first, so the LAST entry is the artist's first-ever booking month. */}
             <Text style={[styles.earnSummary, { color: colors.muted }]}>Earned this year · {earningsByMonth[earningsByMonth.length - 1].label} to date</Text>
+            {/* Stacked coral bar — one segment per fee-bearing month, width ∝ earnings, shaded by rank
+                (mirrors the manager Monthly Budget). */}
+            {earningsTotal > 0 && (
+              <View style={styles.earnSegBar}>
+                {[...earningsByMonth].filter((m) => m.earnings > 0).sort((a, b) => b.earnings - a.earnings).map((m) => (
+                  <View key={m.key} style={{ flex: m.earnings, backgroundColor: shadeMonth(m.key), borderRadius: 4 }} />
+                ))}
+              </View>
+            )}
             {earningsByMonth.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
               return (
                 <View key={m.key}>
-                  <View style={[styles.earnRowDivider, { backgroundColor: colors.border }]} />
+                  <View style={[styles.earnInsetDivider, { backgroundColor: colors.border }]} />
                   <Pressable
                     style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
                     onPress={() => toggleMonth(m.key)}
                   >
-                    <View style={styles.earnMonthInfo}>
-                      <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
-                      <Text style={[styles.earnMonthSub, { color: colors.muted }]} numberOfLines={1}>
-                        {m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}{hasFee ? '' : ' · fee not set'}
-                      </Text>
-                    </View>
+                    <View style={[styles.earnSquare, { backgroundColor: hasFee ? shadeMonth(m.key) : colors.border }]} />
+                    <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{m.label}</Text>
+                    <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
                     <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
                       {hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}
                     </Text>
-                    <MaterialIcons name={isOpen ? 'expand-more' : 'chevron-right'} size={22} color={colors.muted} />
+                    <MaterialIcons name={isOpen ? 'expand-more' : 'chevron-right'} size={20} color={colors.muted} />
                   </Pressable>
                   {isOpen && (
                     <>
@@ -828,11 +846,15 @@ const styles = StyleSheet.create({
   earnTotal: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, marginTop: 6 },   // matches the manager Roster Balance total
   earnSummary: { fontSize: 14, marginTop: 2, marginBottom: 8 },
   earnRowDivider: { height: StyleSheet.hairlineWidth },
-  earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
+  earnInsetDivider: { height: StyleSheet.hairlineWidth * 2 },
+  earnSquare: { width: 12, height: 12, borderRadius: 3 },
+  earnSegBar: { flexDirection: 'row', height: 14, gap: 3, marginTop: 16, marginBottom: 6 },
+  earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
   earnMonthInfo: { flex: 1 },
-  earnMonthLabel: { fontSize: 16, fontWeight: '700' },
+  earnMonthLabel: { fontSize: 16, fontWeight: '700', flex: 1 },
   earnMonthSub: { fontSize: 13, marginTop: 2 },
-  earnMonthAmount: { fontSize: 16, fontWeight: '700' },
+  earnMonthGigs: { fontSize: 14 },
+  earnMonthAmount: { fontSize: 16, fontWeight: '800' },
   histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 6, paddingTop: 12 },
   venueBottomPad: { height: 12 },
   histVenueName: { flex: 1, fontSize: 14 },

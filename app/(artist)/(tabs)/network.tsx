@@ -87,7 +87,7 @@ export default function ArtistVenuesScreen() {
   return (
     <ScreenContainer>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Venues</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Invoices</Text>
         <Text style={[styles.count, { color: colors.muted }]}>{rows.length} venue{rows.length === 1 ? '' : 's'}</Text>
       </View>
 

@@ -47,8 +47,8 @@ export default function DJTabLayout() {
         options={{
           // The route file stays `network.tsx` (renaming it would break every push
           // deep-link and router.push in the app); it now renders the Venues list.
-          title: 'Venues',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="storefront" color={color} />,
+          title: 'Invoices',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="doc.text" color={color} />,
         }}
       />
       <Tabs.Screen
