@@ -274,10 +274,10 @@ export default function AddBlockScreen() {
                 ))}
               </View>
               {/* Explain what each type does — these terms aren't self-evident. */}
-              <Text style={[styles.helperText, { color: colors.muted, marginTop: 8 }]}>
+              <Text style={[styles.helperText, { color: colors.foreground, marginTop: 8 }]}>
                 {kind === 'block'
-                  ? 'Block: marks you unavailable for this period. Managers will see you as unavailable but can still send you requests.'
-                  : 'Private Event: save your own gigs here to keep track of them. Managers will see you as unavailable but can still send you requests.'}
+                  ? 'Mark yourself unavailable for this period.'
+                  : 'Save your own gigs to keep track of them.'}
               </Text>
             </View>
 
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   timeDropdownText: { flex: 1, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
   timeDropdownAbsolute: { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100 },
   timeDropdownList: { borderWidth: 1, borderRadius: 12, marginTop: 4, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
-  timeDropdownScroll: { maxHeight: 240 },
+  timeDropdownScroll: { maxHeight: 200 },
   dateDropdownScroll: { maxHeight: 200 },
   timeOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
   timeOptionText: { fontSize: 14 },
