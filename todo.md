@@ -37,10 +37,8 @@ sign-up; fixed in build 21 via the official `AppleAuthenticationButton` + name f
   29 Aug 2026; tagline code done 7 Sep.) IN-APP + email/template CODE is done (commit `20628b1`); the
   surfaces below are what's LEFT (off-repo / need a deploy):
   - **App (DONE, OTA `01a07ac4`):** welcome + sign-in screens now say "Book, Play, Manage".
-  - **Emails (edited, NEEDS DEPLOY):** `supabase/functions/send-email/index.ts` footer + footnote
-    updated → run **`supabase functions deploy send-email`** to make it live (affects real emails).
-  - **Reset-password email (edited, NEEDS DASHBOARD PASTE):** `supabase-reset-password-email.html`
-    updated → paste into Supabase → Authentication → Email Templates → Reset Password.
+  - **Emails (DONE 7 Sep):** `send-email` footer + footnote redeployed (Tuts, via dashboard editor);
+    reset-password template (`supabase-reset-password-email.html`) saved in Supabase Auth templates.
   - **Website (DONE 7 Sep):** repo is **`Nexgig/nexgig.github.io`** (GitHub Pages → nexgigapp.com); title + hero
     slogan pushed live (commit `3870935`).
   - **App Store** (App Store Connect) — subtitle → "Book, Play, Manage"; redo/clean screenshots. (Tuts — ONLY thing left.)
