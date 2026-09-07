@@ -25,6 +25,7 @@ import { WhatsNewModal } from '@/components/whats-new-modal';
 import { useWhatsNew } from '@/lib/whats-new';
 import { useRoleSwitching } from '@/lib/roles';
 import { useAuthStore, resetAllStores } from "@/lib/store";
+import { recordAppVersion } from "@/lib/record-app-version";
 import { registerForPushNotifications } from "@/lib/notifications-push";
 import * as Notifications from "expo-notifications";
 import { useFonts } from "expo-font";
@@ -141,6 +142,12 @@ function RootLayout() {
     if (currentUser?.id) {
       registerForPushNotifications(currentUser.id);
     }
+  }, [currentUser?.id]);
+
+  // OPS-ONLY: stamp the running app version on the user's row so one query shows who's on an
+  // old bundle. Fire-and-forget; not user-facing. See lib/record-app-version.ts.
+  useEffect(() => {
+    if (currentUser?.id) void recordAppVersion(currentUser.id);
   }, [currentUser?.id]);
 
   // Route a tapped push notification to the right screen from its data payload.
