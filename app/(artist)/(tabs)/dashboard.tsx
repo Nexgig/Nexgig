@@ -1,7 +1,7 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert, Linking } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Image, Alert, Linking } from '@/lib/rn';
 import { LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -265,7 +265,6 @@ export default function DJHomeScreen() {
   }, [bookings, dateOf]);
 
   const [selected, setSelected] = useState<string | null>(null);
-  const [showLegend, setShowLegend] = useState(false);
   // Measured width of the day strip → size each day column to an even fraction so a WHOLE number of
   // days fills it (no partial next-day cell peeking on the right). Falls back to 44 before measuring.
   const [stripW, setStripW] = useState(0);
@@ -516,12 +515,7 @@ export default function DJHomeScreen() {
     <ScreenContainer>
       {/* Frozen header — "Overview" + legend info + notifications. */}
       <View style={styles.header}>
-        <View style={styles.overviewHead}>
-          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
-          <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
-            <MaterialIcons name="info-outline" size={18} color={colors.muted} />
-          </Pressable>
-        </View>
+        <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
         <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
           <MaterialIcons name="notifications" size={22} color={colors.foreground} />
           {unreadCount > 0 && (
@@ -652,9 +646,6 @@ export default function DJHomeScreen() {
                   >
                     <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{shortLabel}</Text>
                     <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
-                    <Text style={[styles.earnMonthAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
-                      {hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}
-                    </Text>
                     <MaterialIcons name={isOpen ? 'expand-more' : 'chevron-right'} size={20} color={colors.muted} />
                   </Pressable>
                   {isOpen && (
@@ -666,6 +657,12 @@ export default function DJHomeScreen() {
                           <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
                         </View>
                       ))}
+                      <View style={[styles.histTotalRow, { borderTopColor: colors.border }]}>
+                        <Text style={[styles.histTotalLabel, { color: colors.muted }]}>Total</Text>
+                        <Text style={[styles.histTotalAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
+                          {hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}
+                        </Text>
+                      </View>
                       <View style={styles.venueBottomPad} />
                     </>
                   )}
@@ -676,24 +673,6 @@ export default function DJHomeScreen() {
         )}
       </ScrollView>
 
-      {/* Legend popover — opened from the (i) next to Overview. Tap anywhere to dismiss. */}
-      <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
-        <Pressable style={styles.legendBackdrop} onPress={() => setShowLegend(false)}>
-          <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
-            {[
-              { label: 'Booked', swatch: { backgroundColor: STATUS_COLORS.confirmed } },
-              { label: 'Pending', swatch: { backgroundColor: STATUS_COLORS.pending } },
-              { label: 'Cancelled', swatch: { backgroundColor: colors.cancelled } },
-            ].map((row) => (
-              <View key={row.label} style={styles.legendCardRow}>
-                <View style={[styles.legendSwatch, row.swatch]} />
-                <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
-              </View>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
     </ScreenContainer>
   );
 }
@@ -712,7 +691,6 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   sectionTitle: { fontSize: 22, fontWeight: '600' },
   overviewTitle: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },   // "Overview" — GS Bold, title case
-  overviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   overviewInfo: { padding: 2 },
   sectionBreak: { height: 8, marginHorizontal: -20, marginTop: 8, marginBottom: 4 },      // thick full-bleed divider under Overview
 
@@ -790,12 +768,14 @@ const styles = StyleSheet.create({
   earnMonthLabel: { fontSize: 16, fontWeight: '700', flex: 1 },
   earnMonthSub: { fontSize: 13, marginTop: 2 },
   earnMonthGigs: { fontSize: 14 },
-  earnMonthAmount: { fontSize: 16, fontWeight: '800' },
   histVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 6, paddingTop: 12 },
   venueBottomPad: { height: 12 },
   histVenueName: { flex: 1, fontSize: 14 },
   histVenueGigs: { fontSize: 13 },
   histVenueAmount: { fontSize: 14, fontWeight: '600', marginLeft: 12 },
+  histTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  histTotalLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
+  histTotalAmount: { fontSize: 16, fontWeight: '800' },
   dateHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8 },
   dateHeaderLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   dateHeaderLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
@@ -810,10 +790,4 @@ const styles = StyleSheet.create({
   gigMapsText: { fontSize: 12, fontWeight: '500' },
 
   // Legend popover
-  legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  legendCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, minWidth: 220, gap: 12 },
-  legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
-  legendCardText: { fontSize: 14 },
 });

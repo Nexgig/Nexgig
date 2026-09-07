@@ -258,6 +258,7 @@ export default function DJAvailabilityScreen() {
 
   // Calendar Sync modal
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
   // Set of booking IDs that have already been exported to device calendar
   const [exportedGigIds, setExportedGigIds] = useState<Set<string>>(new Set());
   const EXPORTED_GIGS_KEY = `exported_gig_ids_${currentUser?.id ?? 'unknown'}`;
@@ -890,7 +891,16 @@ export default function DJAvailabilityScreen() {
           scroll underneath. Swipe left/right on the grid to change month. */}
       {viewMode === 'month' && (
         <View style={[styles.monthNav, { backgroundColor: colors.background }]}>
-          <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+          <View style={styles.monthTitleRow}>
+            <Text style={[styles.monthTitle, { color: colors.foreground }]}>{MONTHS[currentMonth]} {currentYear}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.infoBtn, { opacity: pressed ? 0.6 : 1 }]}
+              onPress={() => setShowLegend(true)}
+              hitSlop={8}
+            >
+              <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
           <Pressable
             style={({ pressed }) => [styles.notifBtn, { opacity: pressed ? 0.7 : 1 }]}
             onPress={() => {
@@ -1092,6 +1102,21 @@ export default function DJAvailabilityScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Legend popover — opened from the (i) next to the month title. Tap anywhere to dismiss. */}
+      <Modal visible={showLegend} transparent animationType="fade" onRequestClose={() => setShowLegend(false)}>
+        <Pressable style={styles.legendBackdrop} onPress={() => setShowLegend(false)}>
+          <View style={[styles.legendCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.legendCardTitle, { color: colors.foreground }]}>What the colors mean</Text>
+            {LEGEND.map((row) => (
+              <View key={row.label} style={styles.legendCardRow}>
+                <View style={[styles.legendSwatch, { backgroundColor: row.color }]} />
+                <Text style={[styles.legendCardText, { color: colors.foreground }]}>{row.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -1144,6 +1169,14 @@ const styles = StyleSheet.create({
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
   monthNavLeft: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthTitle: { fontSize: 24, fontFamily: fonts.bodyBold, letterSpacing: -0.5 },   // matches the dashboard "Overview"
+  monthTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoBtn: { padding: 2 },
+  legendBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  legendCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, minWidth: 220, gap: 12 },
+  legendCardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  legendCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendCardText: { fontSize: 14 },
   todayBtnText: { fontSize: 15, fontWeight: '700' },
   earningsStrip: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12 },
   earningsLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.2, marginBottom: 2 },
