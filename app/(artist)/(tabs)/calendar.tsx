@@ -813,7 +813,6 @@ export default function DJAvailabilityScreen() {
   const LEGEND = [
     { color: STATUS_COLORS.pending, label: 'Requested' },
     { color: STATUS_COLORS.confirmed, label: 'Booked' },
-    { color: STATUS_COLORS.completed, label: 'Completed' },
     { color: STATUS_COLORS.cancelled, label: 'Unavailable' },
   ];
 
