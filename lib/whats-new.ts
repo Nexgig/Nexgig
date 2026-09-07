@@ -21,6 +21,7 @@ export const RELEASE_NOTES = {
   artist: [
     "Earnings, all in one place — this month and every past month, with a per-venue breakdown.",
     "See your fee up front — requests now show what you'll be paid. Older ones without a fee fill in once you invoice them.",
+    "Your invoices have their own tab — what was Venues is now Invoices.",
     "Upload your own profile photo instead of only picking an avatar.",
     "Small touches — a refreshed dashboard, a Maps confirmation, and cleaner private-event editing.",
   ] as string[],
@@ -28,10 +29,11 @@ export const RELEASE_NOTES = {
   manager: [
     "Guest DJs — book someone who isn't on Nexgig straight from the roster: name, fee, done.",
     "Add a default fee right in your venue's schedule and it follows every artist you book — set it on your ongoing schedules now. You can still tweak an artist's fee before or after sending (they're notified).",
+    "Your invoices have their own tab — what was Roster is now Invoices.",
+    "Add artists and create venues right from your Profile.",
     "Give each venue its own photo — it shows everywhere across the app.",
     "A cleaner calendar: venue and time on one line, one tag or button per row, and tap any row to open the gig.",
     "Keep an eye on spend with the new Monthly Budget on your calendar.",
-    "Matching status tags everywhere, plus smaller touches across the roster and dashboard.",
   ] as string[],
 };
 
