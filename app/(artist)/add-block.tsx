@@ -384,7 +384,7 @@ export default function AddBlockScreen() {
               <View style={[styles.card, { backgroundColor: colors.background }]}>
                 <Text style={[styles.groupLabel, { color: colors.muted }]}>THE GIG</Text>
                 <View style={styles.fieldBlock}>
-                  <View style={[styles.textInputBox, { borderColor: colors.border }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '15' }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
                       placeholder="Event name (e.g. Tony & Jane's Wedding)"
@@ -396,7 +396,7 @@ export default function AddBlockScreen() {
                   </View>
                 </View>
                 <View style={[styles.gigRow, { marginBottom: 0 }]}>
-                  <View style={[styles.textInputBox, { borderColor: colors.border, flex: 1 }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '15', flex: 1 }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
                       placeholder="Location"
@@ -406,7 +406,7 @@ export default function AddBlockScreen() {
                       returnKeyType="next"
                     />
                   </View>
-                  <View style={[styles.textInputBox, { borderColor: colors.border, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '15', flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                     <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
@@ -441,7 +441,7 @@ export default function AddBlockScreen() {
                   <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
                     <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
                     <Pressable
-                      style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.border }]}
+                      style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.primary + '30', backgroundColor: colors.primary + '15' }]}
                       onPress={() => { Keyboard.dismiss(); setStartOpen((v) => !v); setEndOpen(false); }}
                     >
                       <MaterialIcons name="access-time" size={14} color={startOpen ? colors.primary : colors.muted} />
@@ -470,7 +470,7 @@ export default function AddBlockScreen() {
                   <View style={{ flex: 1, zIndex: endOpen ? 20 : 1 }}>
                     <Text style={[styles.fieldLabel, { color: colors.muted }]}>END</Text>
                     <Pressable
-                      style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.border }]}
+                      style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.primary + '30', backgroundColor: colors.primary + '15' }]}
                       onPress={() => { Keyboard.dismiss(); setEndOpen((v) => !v); setStartOpen(false); }}
                     >
                       <MaterialIcons name="access-time" size={14} color={endOpen ? colors.primary : colors.muted} />
