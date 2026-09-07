@@ -654,7 +654,7 @@ export default function ManagerDashboard() {
           <>
             <View style={styles.section}>
               <View style={styles.replyHead}>
-                <Text style={[styles.replyLabel, { color: STATUS_COLORS.cancelled }]}>ARTIST CANCELLED</Text>
+                <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>CANCELLED</Text>
                 <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
               </View>
               {artistBackedOut.map((item) => (
