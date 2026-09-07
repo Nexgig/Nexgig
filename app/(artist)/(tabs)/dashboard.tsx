@@ -514,9 +514,14 @@ export default function DJHomeScreen() {
 
   return (
     <ScreenContainer>
-      {/* Frozen header — "This month" + notifications bell. */}
+      {/* Frozen header — "Overview" + legend info + notifications. */}
       <View style={styles.header}>
-        <Text style={[styles.overviewTitle, { color: colors.foreground }]}>This month</Text>
+        <View style={styles.overviewHead}>
+          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
+          <Pressable hitSlop={10} onPress={() => setShowLegend(true)} style={styles.overviewInfo}>
+            <MaterialIcons name="info-outline" size={18} color={colors.muted} />
+          </Pressable>
+        </View>
         <Pressable style={styles.notifBtn} onPress={() => router.push('/(artist)/notifications' as Href)}>
           <MaterialIcons name="notifications" size={22} color={colors.foreground} />
           {unreadCount > 0 && (
