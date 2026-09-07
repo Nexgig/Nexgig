@@ -242,7 +242,7 @@ export default function AddBlockScreen() {
   };
 
   return (
-    <View style={[styles.sheet, { backgroundColor: colors.surface, height: winH * 0.94 }]}>
+    <View style={[styles.sheet, { backgroundColor: colors.background, height: winH * 0.94 }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{headerTitle}</Text>
@@ -252,7 +252,7 @@ export default function AddBlockScreen() {
       </View>
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.surface }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ paddingBottom: 8 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -260,7 +260,7 @@ export default function AddBlockScreen() {
             {/* Type toggle: Block / Private Event */}
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
-              <View style={[styles.segment, { borderColor: colors.border, backgroundColor: colors.background }]}>
+              <View style={[styles.segment, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                 {(['private_event', 'block'] as const).map((t) => (
                   <Pressable
                     key={t}
@@ -381,10 +381,10 @@ export default function AddBlockScreen() {
 
             {/* THE GIG card (private event) — event name, then location + fee side by side. */}
             {kind === 'private_event' && (
-              <View style={[styles.card, { backgroundColor: colors.background }]}>
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.groupLabel, { color: colors.muted }]}>THE GIG</Text>
                 <View style={styles.fieldBlock}>
-                  <View style={[styles.textInputBox, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '15' }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
                       placeholder="Event name (e.g. Tony & Jane's Wedding)"
@@ -396,7 +396,7 @@ export default function AddBlockScreen() {
                   </View>
                 </View>
                 <View style={[styles.gigRow, { marginBottom: 0 }]}>
-                  <View style={[styles.textInputBox, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '15', flex: 1 }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background, flex: 1 }]}>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground }]}
                       placeholder="Location"
@@ -406,7 +406,7 @@ export default function AddBlockScreen() {
                       returnKeyType="next"
                     />
                   </View>
-                  <View style={[styles.textInputBox, { borderColor: colors.primary + '30', backgroundColor: colors.primary + '15', flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                  <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background, flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                     <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>AED</Text>
                     <TextInput
                       style={[styles.textInputField, { color: colors.foreground, flex: 1 }]}
@@ -423,7 +423,7 @@ export default function AddBlockScreen() {
             )}
 
             {/* WHEN card — full-day toggle in the header, time pickers below. */}
-            <View style={[styles.card, { backgroundColor: colors.background, zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
+            <View style={[styles.card, { backgroundColor: colors.surface, zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
               <View style={styles.whenHead}>
                 <Text style={[styles.groupLabel, { color: colors.muted, marginTop: 0, marginBottom: 0 }]}>TIME</Text>
                 <View style={styles.fullDayRow}>
@@ -441,7 +441,7 @@ export default function AddBlockScreen() {
                   <View style={{ flex: 1, zIndex: startOpen ? 20 : 1 }}>
                     <Text style={[styles.fieldLabel, { color: colors.muted }]}>START</Text>
                     <Pressable
-                      style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.primary + '30', backgroundColor: colors.primary + '15' }]}
+                      style={[styles.timeDropdownBtn, { borderColor: startOpen ? colors.primary : colors.border, backgroundColor: colors.background }]}
                       onPress={() => { Keyboard.dismiss(); setStartOpen((v) => !v); setEndOpen(false); }}
                     >
                       <MaterialIcons name="access-time" size={14} color={startOpen ? colors.primary : colors.muted} />
@@ -470,7 +470,7 @@ export default function AddBlockScreen() {
                   <View style={{ flex: 1, zIndex: endOpen ? 20 : 1 }}>
                     <Text style={[styles.fieldLabel, { color: colors.muted }]}>END</Text>
                     <Pressable
-                      style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.primary + '30', backgroundColor: colors.primary + '15' }]}
+                      style={[styles.timeDropdownBtn, { borderColor: endOpen ? colors.primary : colors.border, backgroundColor: colors.background }]}
                       onPress={() => { Keyboard.dismiss(); setEndOpen((v) => !v); setStartOpen(false); }}
                     >
                       <MaterialIcons name="access-time" size={14} color={endOpen ? colors.primary : colors.muted} />
