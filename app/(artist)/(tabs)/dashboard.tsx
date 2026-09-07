@@ -65,6 +65,7 @@ export default function DJHomeScreen() {
         cancellationReason: b.cancellation_reason ?? undefined,
         cancellationAcknowledged: b.cancellation_acknowledged ?? false,
         cancelledAsRequest: b.cancelled_as_request ?? false,
+        cancelledByArtist: b.cancelled_by_artist ?? undefined,
         hiddenFromCalendar: b.hidden_from_calendar ?? false,
         hiddenFromManagerCalendar: b.hidden_from_manager_calendar ?? false,
         isArtistCreated: b.is_artist_created ?? false,

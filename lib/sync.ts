@@ -187,6 +187,7 @@ function mapBooking(b: any): Booking {
     isArtistCreated: b.is_artist_created ?? false,
     confirmedAt: b.confirmed_at ?? undefined,
     cancelledAt: b.cancelled_at ?? undefined,
+    cancelledByArtist: b.cancelled_by_artist ?? undefined,
     cancellationReason: b.cancellation_reason ?? undefined,
     createdAt: b.created_at,
     updatedAt: b.updated_at,
