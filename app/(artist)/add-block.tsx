@@ -260,7 +260,7 @@ export default function AddBlockScreen() {
             {/* Type toggle: Block / Private Event */}
             <View style={styles.fieldBlock}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>TYPE</Text>
-              <View style={[styles.segment, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <View style={[styles.segment, { borderColor: colors.border, backgroundColor: colors.background }]}>
                 {(['private_event', 'block'] as const).map((t) => (
                   <Pressable
                     key={t}
@@ -381,7 +381,7 @@ export default function AddBlockScreen() {
 
             {/* THE GIG card (private event) — event name, then location + fee side by side. */}
             {kind === 'private_event' && (
-              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+              <View style={styles.card}>
                 <Text style={[styles.groupLabel, { color: colors.muted }]}>THE GIG</Text>
                 <View style={styles.fieldBlock}>
                   <View style={[styles.textInputBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
@@ -423,7 +423,7 @@ export default function AddBlockScreen() {
             )}
 
             {/* WHEN card — full-day toggle in the header, time pickers below. */}
-            <View style={[styles.card, { backgroundColor: colors.surface, zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
+            <View style={[styles.card, { zIndex: (startOpen || endOpen) ? 30 : 1 }]}>
               <View style={styles.whenHead}>
                 <Text style={[styles.groupLabel, { color: colors.muted, marginTop: 0, marginBottom: 0 }]}>TIME</Text>
                 <View style={styles.fullDayRow}>
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   gigRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   groupLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginTop: 6 },
-  card: { borderRadius: 16, padding: 16, marginBottom: 14 },
+  card: { marginBottom: 14 },
   whenHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fullDayRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   helperText: { fontSize: 12, marginBottom: 12, lineHeight: 17 },
