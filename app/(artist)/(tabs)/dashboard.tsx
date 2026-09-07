@@ -637,6 +637,7 @@ export default function DJHomeScreen() {
         {/* EARLIER — past months (the this-month card moved into the header card above). */}
         {pastMonths.length > 0 && (
           <>
+            <View style={[styles.sectionBand, { backgroundColor: colors.surface }]} />
             <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>EARLIER</Text>
             {pastMonths.map((m) => {
               const isOpen = openMonths.has(m.key);
