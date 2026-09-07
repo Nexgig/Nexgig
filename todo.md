@@ -34,13 +34,15 @@ screenshots + "What's New", and the held post-launch OTA batch went out the same
 (History: build 17 was REJECTED — a custom Apple-logo sign-in button + re-asking full name at
 sign-up; fixed in build 21 via the official `AppleAuthenticationButton` + name from Apple.)
 - **Refresh App Store screenshots + roll out the "Book, Play, Manage" tagline EVERYWHERE.** (Added
-  29 Aug 2026, expanded ~1 Sep.) Redo/clean the App Store screenshots. The **"Book, Play, Manage"**
-  tagline must be updated **consistently across all three surfaces**:
-  - **App Store** (App Store Connect) — screenshots + subtitle/caption.
-  - **Emails** — the `send-email` edge function footer currently reads **"Book. Play. Discover."**
-    (`supabase/functions/send-email/index.ts`); change to the new tagline → needs an edge-function
-    **REDEPLOY** (not an OTA).
-  - **Website** — `www.nexgigapp.com` (GitHub Pages repo), wherever the tagline appears.
+  29 Aug 2026; tagline code done 7 Sep.) IN-APP + email/template CODE is done (commit `20628b1`); the
+  surfaces below are what's LEFT (off-repo / need a deploy):
+  - **App (DONE, OTA `01a07ac4`):** welcome + sign-in screens now say "Book, Play, Manage".
+  - **Emails (edited, NEEDS DEPLOY):** `supabase/functions/send-email/index.ts` footer + footnote
+    updated → run **`supabase functions deploy send-email`** to make it live (affects real emails).
+  - **Reset-password email (edited, NEEDS DASHBOARD PASTE):** `supabase-reset-password-email.html`
+    updated → paste into Supabase → Authentication → Email Templates → Reset Password.
+  - **App Store** (App Store Connect) — subtitle → "Book, Play, Manage"; redo/clean screenshots. (Tuts.)
+  - **Website** — `www.nexgigapp.com` (separate GitHub Pages repo, not in this repo). (Tuts, or point me to it.)
 
 **2 · Android / Google Play — IN PROGRESS (started 18 Aug 2026).** Expo/cross-platform, so Android
 is config + store admin, not a rewrite.
