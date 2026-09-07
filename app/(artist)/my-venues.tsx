@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { cityFromAddress } from '@/lib/places';
 import { Divider } from '@/components/ui/card-free';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import type { Venue } from '@/lib/types';
@@ -141,7 +141,7 @@ export default function ArtistMyVenuesScreen() {
             >
               <View style={styles.cardLeft}>
                 <Image
-                  source={venueImage(venue.venueType)}
+                  source={venueImageFor(venue)}
                   style={[styles.iconWrap, { borderColor: colors.border }]}
                   resizeMode="cover"
                 />

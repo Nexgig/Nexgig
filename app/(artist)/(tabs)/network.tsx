@@ -5,7 +5,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useBookingStore, useInvoiceStore } from '@/lib/store';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 import { fonts } from '@/lib/fonts';
 import { useColors } from '@/hooks/use-colors';
 import { useRoleSwitching } from '@/lib/roles';
@@ -116,7 +116,7 @@ export default function ArtistVenuesScreen() {
                 ? `/(artist)/invoice-gigs?venueId=${item.venue.id}`
                 : `/(artist)/venue-detail?id=${item.venue.id}&tab=invoices`) as Href)}
             >
-              <Image source={venueImage(item.venue.venueType)} style={[styles.thumb, { borderColor: colors.border }]} resizeMode="cover" />
+              <Image source={venueImageFor(item.venue)} style={[styles.thumb, { borderColor: colors.border }]} resizeMode="cover" />
               <View style={styles.info}>
                 <Text style={[styles.venueName, { color: colors.foreground }]} numberOfLines={1}>{item.venue.name}</Text>
                 <Text style={[styles.sub, { color: hasUninvoiced ? colors.primary : colors.muted }]} numberOfLines={1}>

@@ -12,7 +12,7 @@ import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthSt
 import { Section, Divider, Chip } from '@/components/ui/card-free';
 import { supabase } from '@/lib/supabase';
 import { fonts } from '@/lib/fonts';
-import { venueImage } from '@/lib/venue-images';
+import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
@@ -184,7 +184,7 @@ export default function ArtistVenueDetailScreen() {
 
         {/* Venue Photo */}
         <View style={styles.venuePhotoWrap}>
-          <Image source={venueImage(venue.venueType)} style={styles.venuePhoto} resizeMode="cover" />
+          <Image source={venueImageFor(venue)} style={styles.venuePhoto} resizeMode="cover" />
         </View>
 
         {/* Venue Info Card */}
