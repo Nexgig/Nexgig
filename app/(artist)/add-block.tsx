@@ -268,7 +268,7 @@ export default function AddBlockScreen() {
                     onPress={() => setKind(t)}
                   >
                     <Text style={[styles.segmentText, { color: kind === t ? '#fff' : colors.muted }]}>
-                      {t === 'block' ? 'Block' : 'Private Event'}
+                      {t === 'block' ? 'Block' : 'Private Booking'}
                     </Text>
                   </Pressable>
                 ))}

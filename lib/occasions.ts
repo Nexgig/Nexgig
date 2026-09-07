@@ -42,5 +42,5 @@ export function occasionIcon(occasion?: string | null): IconName {
 }
 
 export function occasionLabel(occasion?: string | null): string {
-  return (occasion && BY_KEY[occasion]?.label) || 'Private Event';
+  return (occasion && BY_KEY[occasion]?.label) || 'Private Booking';
 }

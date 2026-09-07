@@ -11,7 +11,6 @@ import { useAuthStore, useAvailabilityStore, useBookingStore, useSlotStore, useV
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
-import { PRIVATE_EVENT_ICON } from '@/lib/occasions';
 import { fonts } from '@/lib/fonts';
 import { SHOW_CALENDAR_LEGEND } from '@/lib/features';
 import { useColors } from '@/hooks/use-colors';
@@ -90,7 +89,7 @@ function getBookingStatusColor(b: { status: string; isArtistCreated?: boolean; s
 function getBookingStatusLabel(b: { status: string; isArtistCreated?: boolean; slotDate?: string; slotStartTime?: string; slotEndTime?: string }): string {
   if (b.isArtistCreated) {
     const isPast = isPastEnd(b.slotDate ?? '', b.slotStartTime, b.slotEndTime);
-    return isPast ? 'Completed' : 'Private Event';
+    return isPast ? 'Completed' : 'Private Booking';
   }
   if (b.status === 'expired') return 'Expired';
   if (b.status === 'requested' || b.status === 'past_confirmation') return 'Pending';
@@ -380,7 +379,7 @@ export default function DJAvailabilityScreen() {
       const startTimeStr = b.slotStartTime ?? '00:00';
       const startDate = new Date(`${dateStr}T${startTimeStr}:00`);
       const endDate = new Date(startDate);
-      const title = b.slotName ?? 'Private Event';
+      const title = b.slotName ?? 'Private Booking';
       await Calendar.createEventAsync(calendarId, {
         title,
         startDate,
@@ -745,7 +744,7 @@ export default function DJAvailabilityScreen() {
           // Private events (the artist's own) get an occasion icon tile, not a venue image.
           // The date still shows on the time line below; the occasion drives the glyph.
           <View style={[styles.privateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <MaterialIcons name={PRIVATE_EVENT_ICON} size={24} color={colors.foreground} />
+            <Text style={{ fontSize: 16, fontWeight: '800', letterSpacing: 0.5, color: colors.primary }}>PB</Text>
           </View>
         ) : (
           <Image source={venueImageFor(allVenues.find((v) => v.id === b.venueId), b.venueType)} style={styles.bookingThumb} resizeMode="cover" />

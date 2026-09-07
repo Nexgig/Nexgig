@@ -17,7 +17,6 @@ import { cityFromAddress } from '@/lib/places';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { submitReview, fetchReviews } from '@/lib/reviews';
 import { isPastEnd, displayStatus, isExpiredRequest, firstName, bookingVenueName } from '@/lib/utils';
-import { PRIVATE_EVENT_ICON } from '@/lib/occasions';
 import { rescheduleArtistReminders } from '@/lib/reminders';
 import { Section, Divider, ListRow, IconTile, Chip, SoftButton } from '@/components/ui/card-free';
 
@@ -387,14 +386,14 @@ export default function DJBookingDetailScreen() {
             </>
           ) : booking.isArtistCreated ? (
             <>
-              <Section label="Private Event">
+              <Section label="Private Booking">
                 <ListRow
                   leading={
                     <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
-                      <MaterialIcons name={PRIVATE_EVENT_ICON} size={22} color={colors.foreground} />
+                      <Text style={{ fontSize: 15, fontWeight: '800', letterSpacing: 0.5, color: colors.primary }}>PB</Text>
                     </View>
                   }
-                  title={booking.slotName ?? 'Private Event'}
+                  title={booking.slotName ?? 'Private Booking'}
                   subtitle={booking.privateEventLocation ?? undefined}
                   divider={false}
                 />

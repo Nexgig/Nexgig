@@ -14,7 +14,6 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { supabase } from '@/lib/supabase';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
-import { PRIVATE_EVENT_ICON } from '@/lib/occasions';
 import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
@@ -272,7 +271,7 @@ export default function DJHomeScreen() {
       .map((b) => ({
         id: b.id,
         startTime: slots.find((s) => s.id === b.slotId)?.startTime ?? b.slotStartTime ?? '',
-        name: b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, allVenues.find((v) => v.id === b.venueId)?.name),
+        name: b.isArtistCreated ? (b.slotName ?? 'Private Booking') : bookingVenueName(b, allVenues.find((v) => v.id === b.venueId)?.name),
         shown: displayStatus(b.status, b.createdAt, selected, b.slotStartTime, b.slotEndTime),
         dismissable: b.status === 'cancelled' || b.status === 'declined',
         status: b.status,
@@ -454,7 +453,7 @@ export default function DJHomeScreen() {
         <View style={[styles.dateHeaderLine, { backgroundColor: colors.border }]} />
       </View>
       {gigs.map((b) => {
-        const venueName = b.isArtistCreated ? (b.slotName ?? 'Private Event') : bookingVenueName(b, b.venue?.name);
+        const venueName = b.isArtistCreated ? (b.slotName ?? 'Private Booking') : bookingVenueName(b, b.venue?.name);
         const startTime = b.slot?.startTime ?? b.slotStartTime ?? '';
         return (
           <Pressable
@@ -465,7 +464,7 @@ export default function DJHomeScreen() {
             {b.isArtistCreated ? (
               // Private events get an occasion icon tile (matches the calendar), not a venue image.
               <View style={[styles.gigPrivateTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <MaterialIcons name={PRIVATE_EVENT_ICON} size={22} color={colors.foreground} />
+                <Text style={{ fontSize: 15, fontWeight: '800', letterSpacing: 0.5, color: colors.primary }}>PB</Text>
               </View>
             ) : (
               <Image source={venueImageFor(b.venue, b.venueType)} style={styles.gigVenueAvatar} resizeMode="cover" />
