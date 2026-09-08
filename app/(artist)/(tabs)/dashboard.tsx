@@ -171,22 +171,34 @@ export default function DJHomeScreen() {
     return order.map((d) => ({ date: d, gigs: map.get(d)! }));
   }, [dashboardBookings]);
 
-  // ── Earnings: booked + completed gigs grouped by MONTH (collapsible, per-venue). PAST + CURRENT
-  // month only (no future months); the current month INCLUDES upcoming booked gigs (expected fees),
-  // past months are completed/booked that already happened. Newest month first; the artist's own
-  // private events bucket as "Private events". This is the ONE earnings home (calendar panel removed).
-  const earningsByMonth = useMemo(() => {
-    const curMonth = todayLocalStr().slice(0, 7);
+  // THIS MONTH is the headline card — split into EARNED (completed) + BOOKED (confirmed upcoming).
+  // "Past bookings" (pastMonths) below lists COMPLETED gigs by month, INCLUDING the current one.
+  const curMonthKey = todayLocalStr().slice(0, 7);
+  const curYear = curMonthKey.slice(0, 4);
+  const thisMonthLabel = new Date(curMonthKey + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+  const thisMonth = useMemo(() => {
+    let earned = 0, booked = 0, gigs = 0;
+    for (const b of dashboardBookings) {
+      const date = b.slot?.date ?? b.slotDate ?? '';
+      if (!date || date.slice(0, 7) !== curMonthKey) continue;
+      const price = b.price ?? 0;
+      if (b.isDone) { earned += price; gigs++; }
+      else if (b.statusKey === 'confirmed') { booked += price; gigs++; }
+    }
+    return { earned, booked, total: earned + booked, gigs };
+  }, [dashboardBookings, curMonthKey]);
+  // "Past bookings" — COMPLETED gigs grouped by month, newest first, INCLUDING the current month
+  // (a gig that finished this month shows here too, the moment it completes). Only isDone gigs count;
+  // upcoming confirmed ones stay in the "this month" card above until they complete.
+  const pastMonths = useMemo(() => {
     type Venue = { key: string; name: string; earnings: number; gigCount: number };
     type Month = { key: string; label: string; earnings: number; gigCount: number; venues: Map<string, Venue> };
     const months = new Map<string, Month>();
     for (const b of dashboardBookings) {
-      const booked = b.statusKey === 'confirmed' || b.isDone;   // expected (booked) or earned (completed)
-      if (!booked) continue;
+      if (!b.isDone) continue;   // completed gigs only
       const date = b.slot?.date ?? b.slotDate ?? '';
       if (!date) continue;
       const mKey = date.slice(0, 7); // YYYY-MM
-      if (mKey > curMonth) continue;  // past + current month only
       let m = months.get(mKey);
       if (!m) {
         m = { key: mKey, label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), earnings: 0, gigCount: 0, venues: new Map() };
@@ -204,26 +216,6 @@ export default function DJHomeScreen() {
       .sort((a, b) => (a.key < b.key ? 1 : -1))   // newest month first
       .map((m) => ({ ...m, venues: Array.from(m.venues.values()).sort((x, y) => y.earnings - x.earnings) }));
   }, [dashboardBookings]);
-  const earningsTotal = useMemo(() => earningsByMonth.reduce((s, m) => s + m.earnings, 0), [earningsByMonth]);
-  const earningsGigs = useMemo(() => earningsByMonth.reduce((s, m) => s + m.gigCount, 0), [earningsByMonth]);
-  const maxMonthEarnings = useMemo(() => Math.max(1, ...earningsByMonth.map((m) => m.earnings)), [earningsByMonth]);
-  // THIS MONTH is the headline card — split into EARNED (completed) + BOOKED (confirmed upcoming).
-  // The list below ("EARLIER") is the past months only.
-  const curMonthKey = todayLocalStr().slice(0, 7);
-  const curYear = curMonthKey.slice(0, 4);
-  const thisMonthLabel = new Date(curMonthKey + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
-  const thisMonth = useMemo(() => {
-    let earned = 0, booked = 0, gigs = 0;
-    for (const b of dashboardBookings) {
-      const date = b.slot?.date ?? b.slotDate ?? '';
-      if (!date || date.slice(0, 7) !== curMonthKey) continue;
-      const price = b.price ?? 0;
-      if (b.isDone) { earned += price; gigs++; }
-      else if (b.statusKey === 'confirmed') { booked += price; gigs++; }
-    }
-    return { earned, booked, total: earned + booked, gigs };
-  }, [dashboardBookings, curMonthKey]);
-  const pastMonths = useMemo(() => earningsByMonth.filter((m) => m.key !== curMonthKey), [earningsByMonth, curMonthKey]);
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
   const toggleMonth = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
