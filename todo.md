@@ -120,6 +120,14 @@ those into ONE build.
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
 ### Parked — post-launch (not now)
+- **IP protection — TRADEMARK the brand (a patent is probably NOT worth it)** — added 8 Sep 2026
+  (business/legal, not app code — really belongs in HQ `09_LEGAL SETUP`). Protect **"Nexgig"** with a
+  trademark (name + logo) — the practical, affordable IP move for an app. A **patent** on the idea
+  ("an app to book DJs / a venue↔artist marketplace") is very unlikely to be grantable (abstract
+  business method) and is expensive / slow / **public** even if it were — the real moat is being
+  first + the two-sided network + brand + execution, not the idea. Action: consult an IP lawyer (UAE
+  + wherever we operate) for a proper read; prioritise the trademark, patent only if a lawyer flags a
+  specific novel *technical* invention. Keep any genuinely clever method a trade secret, not patented.
 - **Monthly report export / bulk data extract** — future (added 8 Sep 2026). A way to pull the app's
   data out in bulk — export a monthly report (bookings, fees, gigs, per-venue totals) as a file
   (CSV/PDF) the manager (and/or artist) can keep or share. Builds on the existing bulk calendar export.
