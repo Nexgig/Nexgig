@@ -42,6 +42,19 @@ export async function ensureScheduleSlots(fromStr: string, toStr: string): Promi
     ...(dbRows ?? []).map((r: any) => slotKey(r.venue_id, r.date, r.start_time, r.end_time)),
   ]);
 
+  // Fold in "skip this date" exclusions — nights the manager DELIBERATELY deleted. Adding them to
+  // `have` makes the loop below treat them exactly like an existing slot, so they're never re-created.
+  // Best-effort: if the table isn't migrated yet, this is empty and behaviour is unchanged.
+  try {
+    const { data: exRows } = await supabase
+      .from('schedule_slot_exclusions')
+      .select('venue_id, date, start_time, end_time')
+      .in('venue_id', venueIds)
+      .gte('date', fromStr)
+      .lte('date', toStr);
+    for (const r of (exRows ?? []) as any[]) have.add(slotKey(r.venue_id, r.date, r.start_time, r.end_time));
+  } catch { /* table may not exist yet — regenerate as before */ }
+
   type Pending = { venueId: string; date: string; startTime: string; endTime: string; defaultPrice?: number };
   const pending: Pending[] = [];
 
@@ -124,4 +137,25 @@ export async function reconcileScheduleSlots(venueId: string): Promise<void> {
   const deleteSlot = useSlotStore.getState().deleteSlot;
   toDelete.forEach((id) => deleteSlot(id));
   await supabase.from('slots').delete().in('id', toDelete);
+}
+
+/**
+ * Record a "skip this date" exclusion so a deliberately-deleted schedule night is NOT re-created by
+ * ensureScheduleSlots on the next calendar/dashboard view. Only recurring (schedule-generated) slots
+ * need this — a manual one-off never regenerates. Best-effort: a failure (offline, or the table not
+ * migrated yet) must never block the delete, so it's swallowed. Idempotent (unique key upsert), so a
+ * later manual add on the same night can bring it back and re-deleting it just re-skips.
+ */
+export async function excludeScheduleSlot(slot: Slot): Promise<void> {
+  if (!slot.scheduleGenerated) return;
+  const user = useAuthStore.getState().currentUser;
+  if (!user) return;
+  try {
+    await supabase
+      .from('schedule_slot_exclusions')
+      .upsert(
+        { venue_id: slot.venueId, manager_id: user.id, date: slot.date, start_time: slot.startTime, end_time: slot.endTime },
+        { onConflict: 'venue_id,date,start_time,end_time' }
+      );
+  } catch { /* best-effort — the slot is deleted regardless */ }
 }

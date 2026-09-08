@@ -21,7 +21,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName, isArtistBackedOut } from '@/lib/utils';
-import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
+import { ensureScheduleSlots, excludeScheduleSlot } from '@/lib/venue-schedule-sync';
 import { sendDraftRequest } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -954,6 +954,9 @@ export default function CalendarScreen() {
   const { error } = await supabase.from('slots').delete().eq('id', slot.id);
   if (error) { Alert.alert('Error deleting slot', error.message); return; }
   deleteSlot(slot.id);
+  // A deleted recurring night must stay gone — otherwise the schedule sync re-creates it on the
+  // next calendar/dashboard view. Record a "skip this date" exclusion (no-op for one-off slots).
+  excludeScheduleSlot(slot);
 }},
       ]
     );
@@ -964,6 +967,8 @@ export default function CalendarScreen() {
     const { error } = await supabase.from('slots').delete().eq('id', slot.id);
     if (error) { Alert.alert('Error deleting slot', error.message); return; }
     deleteSlot(slot.id);
+    // Keep a deleted recurring night gone (see handleDeleteSlot) — otherwise it regenerates.
+    excludeScheduleSlot(slot);
   };
 
   // Dismiss a cancelled / declined / expired booking (swipe-to-delete on a dead row) — hides it
