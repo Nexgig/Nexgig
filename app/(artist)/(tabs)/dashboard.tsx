@@ -541,9 +541,9 @@ export default function DJHomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        {/* This-month card — earnings summary + Needs your reply, folded together. */}
-        {(earningsByMonth.length > 0 || needsReply.length > 0) && (
-          <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
+        {/* This-month card — earnings summary + Needs your reply, folded together. Always shown, so a
+            brand-new artist (no bookings yet) still sees a "this month · AED 0" card, not a bare screen. */}
+        <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
             <View style={styles.earnCardHead}>
               <Text style={[styles.earnCardMonth, { color: colors.muted }]}>{thisMonthLabel}</Text>
               <Text style={[styles.earnCardGigs, { color: colors.muted }]}>{thisMonth.gigs} gig{thisMonth.gigs !== 1 ? 's' : ''}</Text>
@@ -599,8 +599,7 @@ export default function DJHomeScreen() {
                 ))}
               </>
             )}
-          </View>
-        )}
+        </View>
 
         {/* Cancelled heads-up — a manager cancelled a booked gig; surfaced here + "Got it" to clear. */}
         {cancelledHeadsUp.length > 0 && (
