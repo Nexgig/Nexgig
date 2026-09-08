@@ -20,6 +20,7 @@ export const WELCOME: Record<Role, { title: string; intro: string; bullets: stri
       'Venues send you gig requests — accept or decline right from your dashboard, and see your fee up front.',
       'Track your monthly earnings.',
       'Turn your gigs into an invoice in a tap, and watch your earnings add up.',
+      'Create your own bookings to keep track of them.',
       "Add a profile photo and your genres so venues know exactly who they're booking.",
     ],
   },
