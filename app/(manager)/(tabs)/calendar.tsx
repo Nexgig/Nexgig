@@ -1739,7 +1739,7 @@ export default function CalendarScreen() {
           <View style={[styles.tipCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={styles.tipRow}>
               <MaterialIcons name="swipe-left" size={18} color={colors.muted} />
-              <Text style={[styles.tipText, { color: colors.foreground }]}>Swipe left to remove a draft or delete a slot.</Text>
+              <Text style={[styles.tipText, { color: colors.foreground }]}>Slide left to cancel a draft or delete a booking.</Text>
             </View>
           </View>
         </Pressable>
