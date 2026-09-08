@@ -517,7 +517,7 @@ export default function DJHomeScreen() {
       {/* Frozen header — "Overview" + about info + notifications. */}
       <View style={styles.header}>
         <View style={styles.overviewHead}>
-          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Overview</Text>
+          <Text style={[styles.overviewTitle, { color: colors.foreground }]}>Bookings</Text>
           <Pressable
             style={({ pressed }) => [styles.infoBtn, { opacity: pressed ? 0.6 : 1 }]}
             onPress={() => setShowAbout(true)}
@@ -626,22 +626,21 @@ export default function DJHomeScreen() {
           </View>
         )}
 
-        {/* Bookings — upcoming gigs grouped by day. */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24, marginBottom: 4 }]}>Bookings</Text>
+        {/* Upcoming gigs grouped by day. The tab header now reads "Bookings", so no section title here. */}
         {bookingsByDate.length === 0 ? (
-          <View style={styles.emptyCard}>
+          <View style={[styles.emptyCard, { marginTop: 20 }]}>
             <MaterialIcons name="event" size={32} color={colors.muted} />
             <Text style={[styles.emptyText, { color: colors.muted }]}>No bookings yet</Text>
           </View>
         ) : (
-          <View>{bookingsByDate.map(renderDateGroup)}</View>
+          <View style={{ marginTop: 16 }}>{bookingsByDate.map(renderDateGroup)}</View>
         )}
 
         {/* EARLIER — past months (the this-month card moved into the header card above). */}
         {pastMonths.length > 0 && (
           <>
             <View style={[styles.sectionBand, { backgroundColor: colors.surface, marginBottom: 10 }]} />
-            <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>EARLIER</Text>
+            <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>Past bookings</Text>
             {pastMonths.map((m) => {
               const isOpen = openMonths.has(m.key);
               const hasFee = m.earnings > 0;
@@ -686,7 +685,7 @@ export default function DJHomeScreen() {
       <Modal visible={showAbout} transparent animationType="fade" onRequestClose={() => setShowAbout(false)}>
         <Pressable style={styles.aboutBackdrop} onPress={() => setShowAbout(false)}>
           <View style={[styles.aboutCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Text style={[styles.aboutTitle, { color: colors.foreground }]}>Your overview</Text>
+            <Text style={[styles.aboutTitle, { color: colors.foreground }]}>Your bookings</Text>
             <Text style={[styles.aboutText, { color: colors.muted }]}>
               This month's earnings, your upcoming bookings, and completed gigs — all in one place.
             </Text>

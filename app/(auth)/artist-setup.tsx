@@ -312,6 +312,13 @@ export default function DJSetupScreen() {
       return;
     }
 
+    // Brand-new account → set the one-time-card flags BEFORE signing in (setCurrentUser below).
+    // useWelcome/useWhatsNew read these the instant currentUser is set; setting them AFTER meant the
+    // Welcome card was missed until the next launch. markWhatsNewSeen suppresses What's New for the
+    // new user; markWelcomePending arms the Welcome card so it shows on the very first screen.
+    await markWhatsNewSeen('artist');
+    await markWelcomePending('artist');
+
     // ✅ Set current user in store
     setCurrentUser({
       id: user.id,
@@ -396,10 +403,6 @@ export default function DJSetupScreen() {
     })();
 
     await AsyncStorage.setItem(DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW, 'month');
-    // Brand-new account → mark the current "What's New" as seen so it doesn't pop on first sign-in,
-    // and arm the one-time "Welcome" card instead.
-    await markWhatsNewSeen('artist');
-    await markWelcomePending('artist');
     router.replace('/(artist)/(tabs)/dashboard' as Href);
   };
 
