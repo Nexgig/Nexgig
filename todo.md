@@ -120,6 +120,15 @@ those into ONE build.
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
 ### Parked — post-launch (not now)
+- **Monthly report export / bulk data extract** — future (added 8 Sep 2026). A way to pull the app's
+  data out in bulk — export a monthly report (bookings, fees, gigs, per-venue totals) as a file
+  (CSV/PDF) the manager (and/or artist) can keep or share. Builds on the existing bulk calendar export.
+- **Automated + editable invoice system for artists** — future (added 8 Sep 2026). Make invoicing more
+  hands-off: auto-generate invoices from completed gigs, and let the artist EDIT an invoice (line
+  items, amounts, details) before sending, instead of today's fixed flow.
+- **Per-venue monthly budget, shown in the venue tabs** — future (added 8 Sep 2026). A monthly budget
+  set PER VENUE, surfaced/managed inside the venue tab(s) — distinct from the manager calendar's
+  overall "Monthly Budget" (whole-roster spend). Lets a manager cap/track spend for each venue.
 - **Artist gig ledger → monthly income + insights** — PARKED 2 Sep 2026 (Tuts wants something else
   first). NOT a public profile section (the old SHOW_ARTIST_HISTORY flag is the WRONG tool — that's
   profile-facing; don't flip it). Aim: the artist's OWN private place to track ALL his gigs (venue
