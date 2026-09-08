@@ -3,7 +3,7 @@ import { View, Text } from '@/lib/rn';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useAuthStore, usePendingAppsStore, useDraftStore, useSlotStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, usePendingAppsStore, useDraftStore, useSlotStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { isPastStart } from '@/lib/utils';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS, SHOW_REQUESTS_TAB } from '@/lib/features';
@@ -51,15 +51,6 @@ export default function ManagerTabsLayout() {
     }, 200);
     return () => { cancelled = true; clearTimeout(timer); if (channel) supabase.removeChannel(channel); };
   }, [currentUser?.id, fetchPendingCount]);
-
-  // ── Roster tab badge: unread invoices received ────────────────────────────
-  // Invoices the manager has RECEIVED but not yet opened (isReadByManager). Shown on the ROSTER tab
-  // now — the Profile tab no longer carries it, since invoices live on each artist's profile.
-  const allInvoices = useInvoiceStore((s) => s.invoices);
-  const invoiceBadge = useMemo(
-    () => allInvoices.filter((inv) => inv.managerId === currentUser?.id && !inv.isReadByManager && inv.status !== 'cancelled' && !inv.isDeletedByManager).length,
-    [allInvoices, currentUser?.id]
-  );
 
   // ── Calendar tab badge: unsent gigs ───────────────────────────────────────
   // Count the manager's drafts (staged, not sent) on FUTURE slots — the same set
@@ -125,17 +116,7 @@ export default function ManagerTabsLayout() {
         name="network"
         options={{
           title: 'Invoices',
-          // Custom coral badge beside the icon — unread invoices received (same style as Calendar).
-          tabBarIcon: ({ color }) => (
-            <View>
-              <MaterialIcons name="receipt-long" size={24} color={color} />
-              {invoiceBadge > 0 && (
-                <View style={{ position: 'absolute', top: -5, right: -15, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{invoiceBadge}</Text>
-                </View>
-              )}
-            </View>
-          ),
+          tabBarIcon: ({ color }) => <MaterialIcons name="receipt-long" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
