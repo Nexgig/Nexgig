@@ -21,6 +21,7 @@ import { markWelcomePending } from '@/lib/welcome';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { defaultAvatarId } from '@/lib/avatars';
+import { pickImage, uploadImageAsync } from '@/lib/upload';
 import { validateEmail } from '@/lib/validate-email';
 
 const DJ_STORAGE_KEY_DEFAULT_CALENDAR_VIEW = 'nexgig:dj:defaultCalendarView';
@@ -91,6 +92,8 @@ export default function DJSetupScreen() {
   // Profile photo / avatar (optional, chosen on the Profile Photo step).
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  // A real uploaded photo the artist picked (local URI until submit uploads it). Wins over the avatar.
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   // The signed-in user's id, captured as soon as a session exists (signUp at step 1, OTP
   // verify, or an OAuth/resume session already present on mount). The avatar step's default
   // preview is seeded by THIS id so it matches the id-seeded default the profile renders
@@ -265,8 +268,13 @@ export default function DJSetupScreen() {
       username = `${baseUsername}${n}`;
     }
 
-    // Avatar only — no photo upload anywhere in the app.
-    const photoUrl: string | null = null;
+    // Upload the artist's own photo if they picked one on the Profile Photo step; otherwise fall
+    // back to the avatar. Never block signup on an upload hiccup — the avatar always covers it.
+    let photoUrl: string | null = null;
+    if (photoUri) {
+      try { photoUrl = await uploadImageAsync(photoUri, 'profile-photos', `artist-${user.id}`); }
+      catch { photoUrl = null; }
+    }
     // Always persist a CONCRETE avatar: an explicit pick, or the deterministic default
     // seeded by the user id (the same seed every display screen uses). Never leave it null —
     // a null makes each screen recompute its own default, and those can differ (the bug that
@@ -531,11 +539,23 @@ export default function DJSetupScreen() {
           {displayStep === 3 && (
             <View style={styles.form}>
               <View style={styles.photoStep}>
-                <AvatarImage avatarId={avatarId ?? undefined} seed={authUserId ?? form.fullName} name={form.fullName} size={120} />
+                <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={authUserId ?? form.fullName} name={form.fullName} size={120} />
+                <Pressable
+                  onPress={async () => { const uri = await pickImage({ aspect: [1, 1] }); if (uri) setPhotoUri(uri); }}
+                  style={({ pressed }) => [styles.photoSecondaryBtn, { backgroundColor: colors.primary, borderColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <MaterialIcons name="photo-camera" size={18} color="#fff" />
+                  <Text style={[styles.photoSecondaryBtnText, { color: '#fff' }]}>{photoUri ? 'Change photo' : 'Upload a photo'}</Text>
+                </Pressable>
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                   <MaterialIcons name="face" size={18} color={colors.foreground} />
                   <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
                 </Pressable>
+                {photoUri && (
+                  <Pressable onPress={() => setPhotoUri(null)} hitSlop={8} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+                    <Text style={[styles.photoSecondaryBtnText, { color: colors.muted }]}>Remove photo</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           )}

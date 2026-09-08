@@ -14,6 +14,8 @@ import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { todayLocalStr, addDaysStr } from '@/lib/utils';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
+import { pickImage, uploadImageAsync } from '@/lib/upload';
+import { Image } from '@/lib/rn';
 
 const VENUE_TYPES: VenueType[] = [
   'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Rooftop', 'Live Music Venue',
@@ -73,6 +75,8 @@ export default function CreateVenueScreen() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [searchingPlaces, setSearchingPlaces] = useState(false);
+  // Optional venue photo the manager adds during creation (local URI until submit uploads it).
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '',
     venueType: '' as VenueType | '',
@@ -237,12 +241,23 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
   return;
 }
 
+  // Upload the venue photo (if the manager added one) now that we have the venue id, and stamp it
+  // on the row. Optional — with no photo the app falls back to the venue-type artwork everywhere.
+  let adminPhotoUrl: string | null = null;
+  if (photoUri) {
+    try {
+      adminPhotoUrl = await uploadImageAsync(photoUri, 'venue-photos', `venue-${venueData.id}`);
+      await supabase.from('venues').update({ admin_photo_url: adminPhotoUrl }).eq('id', venueData.id);
+    } catch { adminPhotoUrl = null; }
+  }
+
   // ✅ Also add to local store so it shows immediately without refetch
   const newVenue: Venue = {
     id: venueData.id,
     managerId: user.id,
     name: form.name,
     venueType: form.venueType as VenueType,
+    adminPhotoUrl: adminPhotoUrl ?? undefined,
     googleMapsLocation: { lat: addressCoords?.lat ?? 0, lng: addressCoords?.lng ?? 0, address: form.address || '', placeId: selectedPlaceId ?? undefined },
     capacity: form.capacity || undefined,
     vibeDescription: form.vibeDescription || undefined,
@@ -350,6 +365,31 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
 
           {displayStep === 1 && (
             <View style={styles.form}>
+              {/* Optional venue photo — tap to add now, or skip and the app uses the venue-type artwork. */}
+              <Pressable
+                onPress={async () => { const uri = await pickImage({ aspect: [16, 9] }); if (uri) setPhotoUri(uri); }}
+                style={({ pressed }) => [styles.photoBanner, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
+              >
+                {photoUri ? (
+                  <>
+                    <Image source={{ uri: photoUri }} style={styles.photoBannerImg} resizeMode="cover" />
+                    <View style={styles.photoBannerEdit}>
+                      <MaterialIcons name="photo-camera" size={16} color="#fff" />
+                      <Text style={styles.photoBannerEditText}>Change photo</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.photoBannerEmpty}>
+                    <MaterialIcons name="add-a-photo" size={26} color={colors.muted} />
+                    <Text style={[styles.photoBannerHint, { color: colors.muted }]}>Add a venue photo (optional)</Text>
+                  </View>
+                )}
+              </Pressable>
+              {photoUri && (
+                <Pressable onPress={() => setPhotoUri(null)} hitSlop={8} style={({ pressed }) => [{ alignSelf: 'center', opacity: pressed ? 0.6 : 1, marginBottom: 10 }]}>
+                  <Text style={[styles.label, { color: colors.muted }]}>Remove photo</Text>
+                </Pressable>
+              )}
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Venue Name *</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. Space Dubai" placeholderTextColor={colors.muted} value={form.name} onChangeText={(v) => update('name', v)} returnKeyType="done" />
@@ -477,6 +517,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700' },
   subtitle: { fontSize: 14 },
   form: { gap: 20, marginBottom: 32 },
+  photoBanner: { width: '100%', aspectRatio: 16 / 9, borderRadius: 14, borderWidth: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  photoBannerImg: { ...StyleSheet.absoluteFillObject },
+  photoBannerEdit: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  photoBannerEditText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  photoBannerEmpty: { alignItems: 'center', gap: 6 },
+  photoBannerHint: { fontSize: 13, fontWeight: '500' },
   fieldGroup: { gap: 8 },
   label: { fontSize: 15, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
