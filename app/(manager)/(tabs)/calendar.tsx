@@ -1979,7 +1979,7 @@ const styles = StyleSheet.create({
   monthTitle: { fontSize: 20, fontWeight: '600' },
   infoBtn: { padding: 2 },
   tipBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  tipCard: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18, maxWidth: 300 },
+  tipCard: { width: '100%', maxWidth: 320, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingVertical: 18 },
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tipText: { fontSize: 14, flex: 1, lineHeight: 20 },
 
