@@ -528,15 +528,15 @@ export default function CalendarScreen() {
         label: `${MONTHS[currentMonth]} ${currentYear}`,
       };
     }
-    // Custom cycle: STARTS on monthStartDay of the VIEWED month and runs to (monthStartDay - 1) of
-    // the NEXT month. e.g. monthStartDay=2, viewing Sep → Sep 2 to Oct 1 (start=1 is the plain month above).
+    // Custom cycle: from monthStartDay of PREVIOUS month to (monthStartDay - 1) of CURRENT month
+    // e.g. monthStartDay=21, viewing May → Apr 21 to May 20
+    const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+    const clampedStartDay = Math.min(monthStartDay, prevMonthLastDay);
+    const startDate = new Date(currentYear, currentMonth - 1, clampedStartDay);
+    // End: (monthStartDay - 1) of current month, clamped to last valid day of current month
     const curMonthLastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const clampedStartDay = Math.min(monthStartDay, curMonthLastDay);
-    const startDate = new Date(currentYear, currentMonth, clampedStartDay);
-    // End: (monthStartDay - 1) of the NEXT month, clamped to that month's last valid day.
-    const nextMonthLastDay = new Date(currentYear, currentMonth + 2, 0).getDate();
-    const endDay = Math.min(monthStartDay - 1, nextMonthLastDay);
-    const endDate = new Date(currentYear, currentMonth + 1, endDay);
+    const endDay = Math.min(monthStartDay - 1, curMonthLastDay);
+    const endDate = new Date(currentYear, currentMonth, endDay);
     const startLabel = `${MONTHS[startDate.getMonth()].slice(0, 3)} ${startDate.getDate()}`;
     const endLabel = `${MONTHS[endDate.getMonth()].slice(0, 3)} ${endDate.getDate()}, ${endDate.getFullYear()}`;
     return {
@@ -1658,7 +1658,7 @@ export default function CalendarScreen() {
                   );
                 })}
               </View>
-              <Text style={[styles.lineupSettingsLabel, { color: colors.muted, marginTop: 14 }]}>MONTH STARTS ON</Text>
+              <Text style={[styles.lineupSettingsLabel, { color: colors.muted, marginTop: 14 }]}>BILLING CYCLE ENDS ON</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lineupDayRow}>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
                   const active = monthStartDay === day;
