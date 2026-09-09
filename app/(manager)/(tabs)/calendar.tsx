@@ -26,7 +26,7 @@ import { ensureScheduleSlots, excludeScheduleSlot } from '@/lib/venue-schedule-s
 import { sendDraftRequest } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEY_MONTH_START_DAY, STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
+import { STORAGE_KEY_SHOW_LINEUP_BALANCE, STORAGE_KEY_DEFAULT_CALENDAR_VIEW, STORAGE_KEY_LINEUP_STATUSES, LINEUP_STATUS_DEFAULT, type LineupStatusFilter } from '@/app/(manager)/settings';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -316,11 +316,9 @@ export default function CalendarScreen() {
   const [showLineupBalance, setShowLineupBalance] = useState(false);   // off by default; managers opt in
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   // Custom month-cycle start day — loaded from AsyncStorage (set in Settings screen)
-  // Default 31 = the billing cycle ends on the last day of each month = the normal calendar month.
-  const [monthStartDay, setMonthStartDay] = useState(31);
   const [showLineupSettings, setShowLineupSettings] = useState(false);   // inline Roster-Balance settings strip
 
-  // On every focus: sync monthStartDay, showLineupBalance, and the saved default view label.
+  // On every focus: sync showLineupBalance and the saved default view label.
   // calendarMode (the active view) is only set from the default on FIRST mount —
   // after that the user's in-session choice is preserved when navigating between tabs.
   // If a pendingDate was set (via Show on Calendar), jump to that date in month view.
@@ -342,14 +340,12 @@ export default function CalendarScreen() {
     useCallback(() => {
       let active = true;
       (async () => {
-        const [msd, slb, dcv, ls] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEY_MONTH_START_DAY),
+        const [slb, dcv, ls] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_SHOW_LINEUP_BALANCE),
           AsyncStorage.getItem(STORAGE_KEY_DEFAULT_CALENDAR_VIEW),
           AsyncStorage.getItem(STORAGE_KEY_LINEUP_STATUSES),
         ]);
         if (!active) return;
-        if (msd !== null) setMonthStartDay(Number(msd));
         if (slb !== null) setShowLineupBalance(slb !== 'false');
         if (ls !== null) {
           try {
@@ -490,10 +486,9 @@ export default function CalendarScreen() {
   }, [selectedSlots, getVenueById, venues]);
 
   // ─── Lineup Balance Data ──────────────────────────────────────────────────
-  // Compute the monthly period boundaries respecting the custom monthStartDay
   // Standard calendar month bounds — always 1st to last day of the displayed month.
   // Used for: calendar dots, Send modal, slot display, draft counts.
-  // monthStartDay does NOT affect this — it only affects Lineup Balance.
+  // The billing cycle day does NOT affect this — it only affects the Monthly Actual panel.
   const standardMonthBounds = useMemo(() => {
     const m = String(currentMonth + 1).padStart(2, '0');
     const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -518,17 +513,24 @@ export default function CalendarScreen() {
     if (from <= standardMonthBounds.end) ensureScheduleSlots(from, standardMonthBounds.end);
   }, [standardMonthBounds.start, standardMonthBounds.end, scheduleSig]);
 
-  // Custom period bounds — the billing cycle ENDS on `monthStartDay`. Used ONLY for Lineup Balance.
+  // The billing cycle end day driving the Monthly Actual period. Per selected venue (default 31);
+  // "All venues" uses 31 = the normal calendar month, since venues can each have their own cycle.
+  const cycleEndDay = useMemo(() => {
+    if (venueFilter === 'all') return 31;
+    return venues.find((v) => v.id === venueFilter)?.billingCycleEndDay ?? 31;
+  }, [venueFilter, venues]);
+
+  // Custom period bounds — the billing cycle ENDS on `cycleEndDay`. Used ONLY for Lineup Balance.
   const monthPeriodBounds = useMemo(() => {
-    // `monthStartDay` = the day the billing cycle ENDS on (clamped to the month's length).
+    // `cycleEndDay` = the day the billing cycle ENDS on (clamped to the month's length).
     // End: day D of the CURRENT month. e.g. ends-on=21, viewing May → ends May 21.
     const curMonthLastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const endDay = Math.min(monthStartDay, curMonthLastDay);
+    const endDay = Math.min(cycleEndDay, curMonthLastDay);
     const endDate = new Date(currentYear, currentMonth, endDay);
     // Start: the day AFTER the previous cycle's end (day D of the PREVIOUS month, clamped), so
     // consecutive cycles are contiguous — no gap, no overlap. e.g. ends-on=21 → Apr 22 to May 21.
     const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
-    const prevEndDay = Math.min(monthStartDay, prevMonthLastDay);
+    const prevEndDay = Math.min(cycleEndDay, prevMonthLastDay);
     const startDate = new Date(currentYear, currentMonth - 1, prevEndDay + 1);
     // When the cycle spans a full calendar month (e.g. ends-on 31), show a clean "September 2025".
     const isWholeMonth =
@@ -540,7 +542,7 @@ export default function CalendarScreen() {
       end: formatDateStr(endDate),
       label: isWholeMonth ? `${MONTHS[currentMonth]} ${currentYear}` : `${startLabel} – ${endLabel}`,
     };
-  }, [monthStartDay, currentMonth, currentYear]);
+  }, [cycleEndDay, currentMonth, currentYear]);
 
   const lineupPeriodLabel = useMemo(() => {
     if (calendarMode === 'week') return weekLabel;
@@ -548,7 +550,7 @@ export default function CalendarScreen() {
       const d = new Date(viewedDayStr + 'T00:00:00');
       return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     }
-    // Month view: use custom period bounds so the label reflects the monthStartDay setting
+    // Month view: use custom period bounds so the label reflects the venue's billing cycle
     return monthPeriodBounds.label;
   }, [calendarMode, weekLabel, monthPeriodBounds, viewedDayStr]);
 
@@ -1531,10 +1533,6 @@ export default function CalendarScreen() {
   // ─── Lineup Balance Panel ──────────────────────────────────────────────────────────────────────────
   // Inline Roster-Balance settings — write the SAME AsyncStorage keys as the Settings page so
   // the two stay in sync. Local state updates immediately; the settings screen re-reads on focus.
-  const persistMonthStartDay = (day: number) => {
-    setMonthStartDay(day);
-    AsyncStorage.setItem(STORAGE_KEY_MONTH_START_DAY, String(day));
-  };
   const persistLineupStatus = (status: LineupStatusFilter) => {
     setLineupStatuses((prev) => {
       let next: LineupStatusFilter[];
@@ -1656,21 +1654,9 @@ export default function CalendarScreen() {
                   );
                 })}
               </View>
-              <Text style={[styles.lineupSettingsLabel, { color: colors.muted, marginTop: 14 }]}>BILLING CYCLE ENDS ON</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.lineupDayRow}>
-                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                  const active = monthStartDay === day;
-                  return (
-                    <Pressable
-                      key={day}
-                      onPress={() => persistMonthStartDay(day)}
-                      style={[styles.lineupDayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : 'transparent' }]}
-                    >
-                      <Text style={[styles.lineupDayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+              <Text style={[styles.lineupSettingsHint, { color: colors.muted }]}>
+                The billing cycle is set per venue — change it in the venue’s ⋯ → Edit profile → Billing Details.
+              </Text>
             </Pressable>
           </Pressable>
         </Modal>
@@ -2084,6 +2070,7 @@ const styles = StyleSheet.create({
   lineupGear: { marginRight: 6, marginTop: 1 },
   lineupSettings: { paddingHorizontal: 20, paddingTop: 2, paddingBottom: 2 },
   lineupSettingsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8 },
+  lineupSettingsHint: { fontSize: 12, lineHeight: 17, marginTop: 14 },
   lineupChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   lineupChip: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   lineupChipText: { fontSize: 13, fontWeight: '600' },

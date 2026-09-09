@@ -97,6 +97,7 @@ export default function EditVenueScreen() {
     billingCompanyName: venue?.billing?.companyName ?? '',
     billingCompanyAddress: venue?.billing?.companyAddress ?? '',
     billingTrnNumber: venue?.billing?.trnNumber ?? '',
+    billingCycleEndDay: venue?.billingCycleEndDay ?? 31,
   });
 
   const [saving, setSaving] = useState(false);
@@ -138,6 +139,7 @@ export default function EditVenueScreen() {
       form.billingCompanyName !== o.billingCompanyName ||
       form.billingCompanyAddress !== o.billingCompanyAddress ||
       form.billingTrnNumber !== o.billingTrnNumber ||
+      form.billingCycleEndDay !== o.billingCycleEndDay ||
       photoUrl !== originalPhoto.current
     );
   }, [form, savedTick, photoUrl]);
@@ -267,6 +269,7 @@ export default function EditVenueScreen() {
         companyAddress: form.billingCompanyAddress.trim(),
         trnNumber: form.billingTrnNumber.trim(),
       } : undefined,
+      billingCycleEndDay: form.billingCycleEndDay,
     };
     updateVenue(venue.id, updates);
     await supabase.from('venues').update({
@@ -290,6 +293,7 @@ export default function EditVenueScreen() {
       billing_company_name: form.billingCompanyName || null,
       billing_company_address: form.billingCompanyAddress || null,
       billing_trn_number: form.billingTrnNumber || null,
+      billing_cycle_end_day: form.billingCycleEndDay,
       updated_at: new Date().toISOString(),
     }).eq('id', venue.id);
     originalForm.current = { ...form };
@@ -610,6 +614,20 @@ export default function EditVenueScreen() {
               returnKeyType="done"
             />
           </View>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Billing cycle ends on</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled contentContainerStyle={styles.dayRow} keyboardShouldPersistTaps="handled">
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                const active = form.billingCycleEndDay === day;
+                return (
+                  <Pressable key={day} onPress={() => setForm((f) => ({ ...f, billingCycleEndDay: day }))} style={[styles.dayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.surface }]}>
+                    <Text style={[styles.dayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Text style={[{ color: colors.muted, fontSize: 12, marginTop: 4 }]}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -631,6 +649,9 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 13, fontWeight: '700' },
   fieldInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
+  dayRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  dayBtn: { minWidth: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  dayText: { fontSize: 15, fontWeight: '700' },
   fieldInputMulti: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 80 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
