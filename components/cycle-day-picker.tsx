@@ -17,7 +17,7 @@ export function CycleDayPicker({ value, onChange }: CycleDayPickerProps) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
   return (
-    <View style={{ position: 'relative', zIndex: open ? 1000 : 1 }}>
+    <View style={{ position: 'relative', zIndex: open ? 1000 : 1, alignSelf: 'flex-start', width: 180 }}>
       <Pressable
         style={[styles.pill, { borderColor: open ? colors.primary : colors.border, backgroundColor: colors.background }]}
         onPress={() => setOpen((o) => !o)}
@@ -27,7 +27,7 @@ export function CycleDayPicker({ value, onChange }: CycleDayPickerProps) {
       </Pressable>
       {open && (
         <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ maxHeight: 176 }} nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
               const sel = value === day;
               return (
