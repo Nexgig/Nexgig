@@ -17,13 +17,13 @@ export function CycleDayPicker({ value, onChange }: CycleDayPickerProps) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
   return (
-    <View style={{ position: 'relative', zIndex: open ? 1000 : 1, alignSelf: 'flex-start', width: 180 }}>
+    <View style={{ position: 'relative', zIndex: open ? 1000 : 1, alignSelf: 'flex-start', width: 60 }}>
       <Pressable
         style={[styles.pill, { borderColor: open ? colors.primary : colors.border, backgroundColor: colors.background }]}
         onPress={() => setOpen((o) => !o)}
       >
         <Text style={[styles.pillText, { color: colors.foreground }]}>{value}</Text>
-        <MaterialIcons name={open ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={20} color={colors.muted} />
+        <MaterialIcons name={open ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
       </Pressable>
       {open && (
         <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -49,13 +49,13 @@ export function CycleDayPicker({ value, onChange }: CycleDayPickerProps) {
 }
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, minHeight: 46 },
+  pill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, minHeight: 46 },
   pillText: { fontSize: 15, fontWeight: '700' },
   dropdown: {
     position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6, zIndex: 1000,
     borderWidth: 1, borderRadius: 12, overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 20,
   },
-  option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 11, minHeight: 42 },
+  option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 11, minHeight: 42 },
   optionText: { fontSize: 15 },
 });
