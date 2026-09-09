@@ -182,9 +182,12 @@ export interface Venue {
   audienceType?: AudienceType[];
   subVibe?: SubVibe[];
   billing?: VenueBilling;
-  /** Manager-only monthly budget target (AED) for this venue → `monthly_budget` column. When set,
-   *  the calendar's Monthly Budget panel shows spend against it. Undefined = no target (spend only). */
+  /** Legacy flat monthly budget target (AED) → `monthly_budget` column. Fallback applied to every
+   *  month when no per-month `monthlyBudgets` entry exists. Undefined = no fallback target. */
   monthlyBudget?: number;
+  /** Per-month budget targets (AED) → rides the `monthly_budgets` JSON column, same pattern as
+   *  `schedule`. An entry matching the viewed month wins over `monthlyBudget`. Manager-only. */
+  monthlyBudgets?: VenueMonthlyBudget[];
   /** Weekly programme — recurring set templates the calendar auto-fills forever. */
   schedule?: VenueSchedule;
   color: string; // hex color chosen by manager
@@ -267,6 +270,17 @@ export interface VenueScheduleSet {
 }
 
 export type VenueSchedule = VenueScheduleSet[];
+
+// ─── Venue Monthly Budget ─────────────────────────────────────────────────────
+
+/** One month's budget target for a venue → rides the `venues.monthly_budgets` JSON column
+ *  (same pattern as `schedule`). `month` is 1-12. Only the manager sees it; the calendar's
+ *  Monthly Budget panel shows spend against the entry matching the viewed month. */
+export interface VenueMonthlyBudget {
+  year: number;
+  month: number;   // 1-12
+  amount: number;  // AED
+}
 
 // ─── Slot ────────────────────────────────────────────────────────────────────
 

@@ -21,6 +21,7 @@ import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastStart, isUpcoming, nowLocalDateTimeStr, displayStatus, isExpiredRequest, firstName, isArtistBackedOut } from '@/lib/utils';
+import { venueBudgetFor } from '@/lib/venue-budget';
 import { ensureScheduleSlots, excludeScheduleSlot } from '@/lib/venue-schedule-sync';
 import { sendDraftRequest } from '@/lib/gig-requests';
 import type { Slot, Booking } from '@/lib/types';
@@ -1557,10 +1558,12 @@ export default function CalendarScreen() {
     const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
     const totalGigs = lineupRows.reduce((s, r) => s + r.gigCount, 0);
     const artistCount = lineupRows.filter((r) => r.artistId !== '__guests__').length;   // Guests aren't an artist
-    // Budget target for what's in view: the selected venue's budget, or every venue's summed for "All".
+    // Budget target for the viewed month: the selected venue's, or every venue's summed for "All".
+    // Uses the per-month budget matching the month on screen, falling back to a venue's flat budget.
+    const budgetMonth = currentMonth + 1; // 1-12
     const budget = venueFilter !== 'all'
-      ? (venues.find((v) => v.id === venueFilter)?.monthlyBudget ?? 0)
-      : venues.reduce((s, v) => s + (v.monthlyBudget ?? 0), 0);
+      ? (() => { const v = venues.find((vv) => vv.id === venueFilter); return v ? (venueBudgetFor(v, currentYear, budgetMonth) ?? 0) : 0; })()
+      : venues.reduce((s, v) => s + (venueBudgetFor(v, currentYear, budgetMonth) ?? 0), 0);
     const overBudget = budget > 0 && totalCost > budget;
     // Biggest earner first; each artist gets a coral shade by rank (darkest = most earned), shared by
     // the stacked bar segment and the row's square.
