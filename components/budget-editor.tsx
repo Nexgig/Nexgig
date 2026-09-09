@@ -30,6 +30,10 @@ export function BudgetEditor({ value, onChange }: BudgetEditorProps) {
     .map((b, idx) => ({ ...b, _idx: idx }))
     .sort((a, b) => a.year - b.year || a.month - b.month);
   const years = [...new Set(view.map((v) => v.year))];
+  // Which entry/year currently has a dropdown open — used to lift it above sibling rows so the
+  // menu floats OVER the content below instead of stretching the card.
+  const openIdx = open != null ? Number(open.split(':')[0]) : -1;
+  const openYear = openIdx >= 0 ? value[openIdx]?.year : undefined;
 
   const patch = (idx: number, p: Partial<VenueMonthlyBudget>) =>
     onChange(value.map((b, i) => (i === idx ? { ...b, ...p } : b)));
@@ -55,34 +59,36 @@ export function BudgetEditor({ value, onChange }: BudgetEditorProps) {
     const key = `${idx}:${field}`;
     const isOpen = open === key;
     return (
-      <View style={{ flex: field === 'month' ? 1.4 : 1 }}>
+      <View style={{ flex: field === 'month' ? 1.4 : 1, zIndex: isOpen ? 1000 : 1 }}>
         <Text style={[styles.fieldLabel, { color: colors.muted }]}>{label}</Text>
-        <Pressable
-          style={[styles.pill, { borderColor: isOpen ? colors.primary : colors.border, backgroundColor: colors.background }]}
-          onPress={() => setOpen(isOpen ? null : key)}
-        >
-          <Text style={[styles.pillText, { color: colors.foreground }]} numberOfLines={1}>{display}</Text>
-          <MaterialIcons name={isOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
-        </Pressable>
-        {isOpen && (
-          <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <ScrollView style={{ maxHeight: 168 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-              {options.map((o) => {
-                const sel = current === o.key;
-                return (
-                  <Pressable
-                    key={o.key}
-                    style={[styles.option, sel && { backgroundColor: colors.primary + '15' }]}
-                    onPress={() => { patch(idx, field === 'month' ? { month: o.key } : { year: o.key }); setOpen(null); }}
-                  >
-                    <Text style={[styles.optionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{o.text}</Text>
-                    {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
+        <View style={{ position: 'relative' }}>
+          <Pressable
+            style={[styles.pill, { borderColor: isOpen ? colors.primary : colors.border, backgroundColor: colors.background }]}
+            onPress={() => setOpen(isOpen ? null : key)}
+          >
+            <Text style={[styles.pillText, { color: colors.foreground }]} numberOfLines={1}>{display}</Text>
+            <MaterialIcons name={isOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
+          </Pressable>
+          {isOpen && (
+            <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <ScrollView style={{ maxHeight: 168 }} nestedScrollEnabled showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {options.map((o) => {
+                  const sel = current === o.key;
+                  return (
+                    <Pressable
+                      key={o.key}
+                      style={[styles.option, sel && { backgroundColor: colors.primary + '15' }]}
+                      onPress={() => { patch(idx, field === 'month' ? { month: o.key } : { year: o.key }); setOpen(null); }}
+                    >
+                      <Text style={[styles.optionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{o.text}</Text>
+                      {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
       </View>
     );
   };
@@ -97,11 +103,11 @@ export function BudgetEditor({ value, onChange }: BudgetEditorProps) {
         <Text style={[styles.empty, { color: colors.muted }]}>No budgets yet. Add a month below.</Text>
       ) : (
         years.map((year) => (
-          <View key={year} style={{ marginBottom: 6 }}>
+          <View key={year} style={[{ marginBottom: 6 }, year === openYear && { zIndex: 1000 }]}>
             <Text style={[styles.yearHeading, { color: colors.foreground }]}>{year}</Text>
             {view.filter((v) => v.year === year).map((entry) => (
-              <View key={entry._idx} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.topRow}>
+              <View key={entry._idx} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, entry._idx === openIdx && styles.cardRaised]}>
+                <View style={[styles.topRow, entry._idx === openIdx && { zIndex: 1000 }]}>
                   {pill(entry._idx, 'month', 'MONTH', MONTHS[entry.month - 1], MONTHS.map((m, i) => ({ key: i + 1, text: m })), entry.month)}
                   {pill(entry._idx, 'year', 'YEAR', String(entry.year), YEARS.map((y) => ({ key: y, text: String(y) })), entry.year)}
                   <Pressable onPress={() => remove(entry._idx)} hitSlop={8} style={styles.trash}>
@@ -147,11 +153,16 @@ const styles = StyleSheet.create({
   empty: { fontSize: 14, marginBottom: 4 },
   yearHeading: { fontSize: 18, fontWeight: '700', marginBottom: 10 },
   card: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
+  cardRaised: { zIndex: 1000, elevation: 20 },
   topRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   fieldLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 10, minHeight: 42 },
   pillText: { flex: 1, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
-  dropdown: { borderWidth: 1, borderRadius: 12, marginTop: 8, overflow: 'hidden' },
+  dropdown: {
+    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6, zIndex: 1000,
+    borderWidth: 1, borderRadius: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 20,
+  },
   option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 9, minHeight: 38 },
   optionText: { fontSize: 15 },
   trash: { padding: 6, marginBottom: 2 },
