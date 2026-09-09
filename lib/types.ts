@@ -182,6 +182,9 @@ export interface Venue {
   audienceType?: AudienceType[];
   subVibe?: SubVibe[];
   billing?: VenueBilling;
+  /** Manager-only monthly budget target (AED) for this venue → `monthly_budget` column. When set,
+   *  the calendar's Monthly Budget panel shows spend against it. Undefined = no target (spend only). */
+  monthlyBudget?: number;
   /** Weekly programme — recurring set templates the calendar auto-fills forever. */
   schedule?: VenueSchedule;
   color: string; // hex color chosen by manager

@@ -1562,6 +1562,11 @@ export default function CalendarScreen() {
     const totalCost = lineupRows.reduce((s, r) => s + r.cost, 0);
     const totalGigs = lineupRows.reduce((s, r) => s + r.gigCount, 0);
     const artistCount = lineupRows.filter((r) => r.artistId !== '__guests__').length;   // Guests aren't an artist
+    // Budget target for what's in view: the selected venue's budget, or every venue's summed for "All".
+    const budget = venueFilter !== 'all'
+      ? (venues.find((v) => v.id === venueFilter)?.monthlyBudget ?? 0)
+      : venues.reduce((s, v) => s + (v.monthlyBudget ?? 0), 0);
+    const overBudget = budget > 0 && totalCost > budget;
     // Biggest earner first; each artist gets a coral shade by rank (darkest = most earned), shared by
     // the stacked bar segment and the row's square.
     const sortedRows = [...lineupRows].sort((a, b) => b.cost - a.cost);
@@ -1588,6 +1593,20 @@ export default function CalendarScreen() {
         <Text style={[styles.lineupSummary, { color: colors.muted }]}>
           {lineupPeriodLabel} · {totalGigs} gig{totalGigs !== 1 ? 's' : ''} · {artistCount} artist{artistCount !== 1 ? 's' : ''}
         </Text>
+
+        {/* Budget target — spend against the venue's monthly budget (only when a budget is set). */}
+        {budget > 0 && (
+          <>
+            <View style={[styles.budgetTrack, { backgroundColor: colors.muted + '2E' }]}>
+              <View style={{ width: `${Math.min(100, (totalCost / budget) * 100)}%`, height: '100%', borderRadius: 4, backgroundColor: overBudget ? colors.error : totalCost >= budget * 0.85 ? colors.warning : colors.success }} />
+            </View>
+            <Text style={[styles.budgetLine, { color: overBudget ? colors.error : colors.muted }]}>
+              {overBudget
+                ? `AED ${(totalCost - budget).toLocaleString()} over your AED ${budget.toLocaleString()} budget`
+                : `AED ${(budget - totalCost).toLocaleString()} left of AED ${budget.toLocaleString()}`}
+            </Text>
+          </>
+        )}
 
         {/* Stacked coral bar — one segment per artist, width ∝ their fee, shaded by rank. */}
         {totalCost > 0 && (
@@ -2034,6 +2053,8 @@ const styles = StyleSheet.create({
   lineupHeadLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8 },
   lineupBigTotal: { fontSize: 26, fontWeight: '800', letterSpacing: -0.4, paddingHorizontal: 20, marginTop: 6 },
   lineupSummary: { fontSize: 14, paddingHorizontal: 20, marginTop: 3 },
+  budgetTrack: { height: 8, borderRadius: 4, marginHorizontal: 20, marginTop: 12, overflow: 'hidden' },
+  budgetLine: { fontSize: 13, fontWeight: '600', paddingHorizontal: 20, marginTop: 6 },
   lineupSegBar: { flexDirection: 'row', height: 14, gap: 3, marginHorizontal: 20, marginTop: 16, marginBottom: 6 },
   lineupRow2: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 13 },
   lineupSquare: { width: 12, height: 12, borderRadius: 3 },

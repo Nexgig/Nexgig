@@ -1,6 +1,6 @@
 import { VenueInvoicesList } from '@/components/venue-invoices-list';
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator } from '@/lib/rn';
+import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator, Modal, TextInput } from '@/lib/rn';
 import { openLink } from '@/lib/open-link';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -51,6 +51,7 @@ export default function VenueDetailScreen() {
   // hideVenue is NOT the (removed) hide feature — it's the soft-delete used by
   // handleDelete below. Keep.
   const hideVenue = useVenueStore((s) => s.hideVenue);
+  const updateVenue = useVenueStore((s) => s.updateVenue);
   const isOwner = venue?.managerId === currentUser?.id;
   const getSlotsByVenue = useSlotStore((s) => s.getSlotsByVenue);
   const getSlotById = useSlotStore((s) => s.getSlotById);
@@ -68,6 +69,23 @@ export default function VenueDetailScreen() {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'roster' | 'invoices'>('overview');
   const [showReport, setShowReport] = useState(false);
+  const [showVenueMenu, setShowVenueMenu] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const [savingBudget, setSavingBudget] = useState(false);
+
+  // Save the venue's monthly budget (from the "⋯ → Edit budget" modal): write the column + the store.
+  const saveBudget = async () => {
+    if (!venue) return;
+    const digits = budgetInput.replace(/[^0-9]/g, '');
+    const val = digits === '' ? null : Number(digits);
+    setSavingBudget(true);
+    const { error } = await supabase.from('venues').update({ monthly_budget: val }).eq('id', venue.id);
+    setSavingBudget(false);
+    if (error) { Alert.alert('Error saving budget', error.message); return; }
+    updateVenue(venue.id, { monthlyBudget: val ?? undefined });
+    setShowBudgetModal(false);
+  };
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
   const venueAssignments = useMemo(
@@ -292,8 +310,8 @@ export default function VenueDetailScreen() {
             <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>Venue Profile</Text>
           </View>
           {isOwner ? (
-            <Pressable onPress={() => router.push(('/(manager)/edit-venue?id=' + venue.id) as Href)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]}>
-              <MaterialIcons name="edit" size={22} color={colors.foreground} />
+            <Pressable onPress={() => setShowVenueMenu(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]} hitSlop={8}>
+              <MaterialIcons name="more-horiz" size={24} color={colors.foreground} />
             </Pressable>
           ) : (
             <Pressable onPress={() => setShowReport(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]} hitSlop={8}>
@@ -570,11 +588,66 @@ export default function VenueDetailScreen() {
         reportedId={venue.id}
         reportedName={venue.name}
       />
+
+      {/* "⋯" owner menu — Edit profile + Edit budget (replaces the old pen). */}
+      <Modal visible={showVenueMenu} transparent animationType="fade" onRequestClose={() => setShowVenueMenu(false)}>
+        <Pressable style={styles.menuBackdrop} onPress={() => setShowVenueMenu(false)}>
+          <View style={[styles.menuCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); router.push(('/(manager)/edit-venue?id=' + venue.id) as Href); }}>
+              <MaterialIcons name="edit" size={20} color={colors.foreground} />
+              <Text style={[styles.menuText, { color: colors.foreground }]}>Edit profile</Text>
+            </Pressable>
+            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+            <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); setBudgetInput(venue.monthlyBudget != null ? String(venue.monthlyBudget) : ''); setShowBudgetModal(true); }}>
+              <MaterialIcons name="account-balance-wallet" size={20} color={colors.foreground} />
+              <Text style={[styles.menuText, { color: colors.foreground }]}>Edit budget</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Edit budget — a quick AED input, saved to the venue's monthly_budget. */}
+      <Modal visible={showBudgetModal} transparent animationType="fade" onRequestClose={() => setShowBudgetModal(false)}>
+        <Pressable style={styles.menuBackdrop} onPress={() => setShowBudgetModal(false)}>
+          <Pressable style={[styles.budgetCard, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => {}}>
+            <Text style={[styles.budgetTitle, { color: colors.foreground }]}>Monthly budget</Text>
+            <Text style={[styles.budgetHint, { color: colors.muted }]}>Your monthly spend target for this venue. Shown against actual spend on your calendar — only you see it. Leave empty for no target.</Text>
+            <View style={[styles.budgetInputRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <Text style={[styles.budgetAed, { color: colors.muted }]}>AED</Text>
+              <TextInput style={[styles.budgetInput, { color: colors.foreground }]} value={budgetInput} onChangeText={(v) => setBudgetInput(v.replace(/[^0-9]/g, ''))} placeholder="e.g. 20000" placeholderTextColor={colors.muted} keyboardType="number-pad" autoFocus />
+            </View>
+            <View style={styles.budgetActions}>
+              <Pressable style={({ pressed }) => [styles.budgetBtnSecondary, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]} onPress={() => setShowBudgetModal(false)}>
+                <Text style={[styles.budgetBtnSecondaryText, { color: colors.foreground }]}>Cancel</Text>
+              </Pressable>
+              <Pressable style={({ pressed }) => [styles.budgetBtnPrimary, { backgroundColor: colors.primary, opacity: pressed || savingBudget ? 0.7 : 1 }]} onPress={saveBudget} disabled={savingBudget}>
+                <Text style={styles.budgetBtnPrimaryText}>{savingBudget ? 'Saving…' : 'Save'}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 28 },
+  menuCard: { width: '100%', maxWidth: 300, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, paddingHorizontal: 18 },
+  menuText: { fontSize: 15.5, fontWeight: '600' },
+  menuDivider: { height: StyleSheet.hairlineWidth },
+  budgetCard: { width: '100%', maxWidth: 340, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, padding: 22 },
+  budgetTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  budgetHint: { fontSize: 13, lineHeight: 19, marginBottom: 16 },
+  budgetInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, height: 52 },
+  budgetAed: { fontSize: 15, fontWeight: '600' },
+  budgetInput: { flex: 1, fontSize: 17, fontWeight: '600', paddingVertical: 0 },
+  budgetActions: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  budgetBtnSecondary: { flex: 1, borderWidth: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  budgetBtnSecondaryText: { fontSize: 15, fontWeight: '600' },
+  budgetBtnPrimary: { flex: 1, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  budgetBtnPrimaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   rosterTab: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
   rosterLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
   rosterEmpty: { fontSize: 14, paddingVertical: 8 },

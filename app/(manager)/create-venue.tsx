@@ -94,6 +94,7 @@ export default function CreateVenueScreen() {
     billingCompanyName: '',
     billingCompanyAddress: '',
     billingTrnNumber: '',
+    monthlyBudget: '',
     schedule: [] as VenueSchedule,
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -226,6 +227,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     billing_company_name: form.billingCompanyName || null,
     billing_company_address: form.billingCompanyAddress || null,
     billing_trn_number: form.billingTrnNumber || null,
+    monthly_budget: form.monthlyBudget ? Number(form.monthlyBudget) : null,
     schedule: form.schedule,
     is_hidden: false,
   }).select().single();
@@ -273,6 +275,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       companyAddress: form.billingCompanyAddress.trim(),
       trnNumber: form.billingTrnNumber.trim(),
     } : undefined,
+    monthlyBudget: form.monthlyBudget ? Number(form.monthlyBudget) : undefined,
     color: form.color,
     schedule: form.schedule,
     isHidden: false,
@@ -487,6 +490,11 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>TRN Number</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={form.billingTrnNumber} onChangeText={(v) => update('billingTrnNumber', v)} keyboardType="number-pad" returnKeyType="done" />
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Monthly budget (optional)</Text>
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 20000" placeholderTextColor={colors.muted} value={form.monthlyBudget} onChangeText={(v) => update('monthlyBudget', v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" returnKeyType="done" />
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your monthly spend target (AED) for this venue — shown against actual spend on your calendar. Only you see it.</Text>
               </View>
             </View>
           )}
