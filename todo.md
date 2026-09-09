@@ -119,6 +119,25 @@ those into ONE build.
   attempts** (font-gate paint, `SystemUI.setBackgroundColorAsync`, root Stack `contentStyle`), and
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
+### Requested features — to build (open, added 9 Sep 2026)
+- **Separate sender email for invoices** — send invoices from a dedicated address (e.g.
+  invoices@nexgig…) instead of the general app email, so invoice mail is distinct and trusted.
+  Backend / email config (Supabase send-email function + a verified sender), not an app OTA.
+- **iOS lock-screen / home-screen widget** — a WidgetKit widget (e.g. next gig / tonight's slots /
+  quick glance). **NATIVE** — needs a widget extension in the build; can't ship over the air.
+- **Gate manager signup to pre-approved emails** — a manager can sign up ONLY if I've added their
+  email to an allow-list in our DB first; block signup otherwise (keeps it invite-only on the
+  manager side). Needs an allow-list table + RLS + a check in the manager signup flow (OTA + SQL).
+- **Artist dashboard — mark gigs as invoiced** — let the artist mark invoiced gigs from the
+  dashboard. NOTE: a version was BUILT then REVERTED (2 Sep — see Parked); the impl is in git
+  `794490e` (shared helper `lib/invoices.ts`, gig-list button + Select-all). Revive/adapt it for
+  the dashboard this time (re-requested 9 Sep 2026).
+
+### Business & growth
+- **LAU University pilot — check with Rabih Fakhr El Din** (added 9 Sep 2026). Explore using Nexgig
+  at **LAU** (Lebanese American University) — a pilot / partnership for their events. Business/BD,
+  not app code — action is an outreach conversation with Rabih.
+
 ### Parked — post-launch (not now)
 - **IP protection — TRADEMARK the brand (a patent is probably NOT worth it)** — added 8 Sep 2026
   (business/legal, not app code — really belongs in HQ `09_LEGAL SETUP`). Protect **"Nexgig"** with a
