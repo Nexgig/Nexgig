@@ -103,7 +103,6 @@ export default function BillingDetails() {
         <View style={[styles.fieldGroup, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
           <CycleDayPicker value={cycleDay} onChange={setCycleDay} />
-          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
         </View>
       </ScrollView>
     </ScreenContainer>

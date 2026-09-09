@@ -501,7 +501,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
               <View style={[styles.fieldGroup, { zIndex: 10 }]}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
                 <CycleDayPicker value={form.billingCycleEndDay} onChange={(day) => update('billingCycleEndDay', day)} />
-                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
               </View>
             </View>
           )}
