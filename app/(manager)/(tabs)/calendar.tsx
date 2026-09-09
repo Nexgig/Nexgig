@@ -315,7 +315,8 @@ export default function CalendarScreen() {
   const [showLineupBalance, setShowLineupBalance] = useState(false);   // off by default; managers opt in
   const [lineupStatuses, setLineupStatuses] = useState<LineupStatusFilter[]>(LINEUP_STATUS_DEFAULT);
   // Custom month-cycle start day — loaded from AsyncStorage (set in Settings screen)
-  const [monthStartDay, setMonthStartDay] = useState(1);
+  // Default 31 = the billing cycle ends on the last day of each month = the normal calendar month.
+  const [monthStartDay, setMonthStartDay] = useState(31);
   const [showLineupSettings, setShowLineupSettings] = useState(false);   // inline Roster-Balance settings strip
 
   // On every focus: sync monthStartDay, showLineupBalance, and the saved default view label.
@@ -516,33 +517,27 @@ export default function CalendarScreen() {
     if (from <= standardMonthBounds.end) ensureScheduleSlots(from, standardMonthBounds.end);
   }, [standardMonthBounds.start, standardMonthBounds.end, scheduleSig]);
 
-  // Custom period bounds — respects monthStartDay. Used ONLY for Lineup Balance.
+  // Custom period bounds — the billing cycle ENDS on `monthStartDay`. Used ONLY for Lineup Balance.
   const monthPeriodBounds = useMemo(() => {
-    // If monthStartDay is 1, it's the standard calendar month
-    if (monthStartDay === 1) {
-      const m = String(currentMonth + 1).padStart(2, '0');
-      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-      return {
-        start: `${currentYear}-${m}-01`,
-        end: `${currentYear}-${m}-${String(lastDay).padStart(2, '0')}`,
-        label: `${MONTHS[currentMonth]} ${currentYear}`,
-      };
-    }
-    // Custom cycle: from monthStartDay of PREVIOUS month to (monthStartDay - 1) of CURRENT month
-    // e.g. monthStartDay=21, viewing May → Apr 21 to May 20
-    const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
-    const clampedStartDay = Math.min(monthStartDay, prevMonthLastDay);
-    const startDate = new Date(currentYear, currentMonth - 1, clampedStartDay);
-    // End: (monthStartDay - 1) of current month, clamped to last valid day of current month
+    // `monthStartDay` = the day the billing cycle ENDS on (clamped to the month's length).
+    // End: day D of the CURRENT month. e.g. ends-on=21, viewing May → ends May 21.
     const curMonthLastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const endDay = Math.min(monthStartDay - 1, curMonthLastDay);
+    const endDay = Math.min(monthStartDay, curMonthLastDay);
     const endDate = new Date(currentYear, currentMonth, endDay);
+    // Start: the day AFTER the previous cycle's end (day D of the PREVIOUS month, clamped), so
+    // consecutive cycles are contiguous — no gap, no overlap. e.g. ends-on=21 → Apr 22 to May 21.
+    const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+    const prevEndDay = Math.min(monthStartDay, prevMonthLastDay);
+    const startDate = new Date(currentYear, currentMonth - 1, prevEndDay + 1);
+    // When the cycle spans a full calendar month (e.g. ends-on 31), show a clean "September 2025".
+    const isWholeMonth =
+      startDate.getMonth() === currentMonth && startDate.getDate() === 1 && endDay === curMonthLastDay;
     const startLabel = `${MONTHS[startDate.getMonth()].slice(0, 3)} ${startDate.getDate()}`;
     const endLabel = `${MONTHS[endDate.getMonth()].slice(0, 3)} ${endDate.getDate()}, ${endDate.getFullYear()}`;
     return {
       start: formatDateStr(startDate),
       end: formatDateStr(endDate),
-      label: `${startLabel} – ${endLabel}`,
+      label: isWholeMonth ? `${MONTHS[currentMonth]} ${currentYear}` : `${startLabel} – ${endLabel}`,
     };
   }, [monthStartDay, currentMonth, currentYear]);
 
