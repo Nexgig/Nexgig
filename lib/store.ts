@@ -980,6 +980,7 @@ export function mapVenueRow(data: any): Venue {
     adminPhotoUrl: data.admin_photo_url ?? undefined,
     monthlyBudget: data.monthly_budget != null ? Number(data.monthly_budget) : undefined,
     monthlyBudgets: Array.isArray(data.monthly_budgets) ? data.monthly_budgets : undefined,
+    billingCycleEndDay: data.billing_cycle_end_day != null ? Number(data.billing_cycle_end_day) : undefined,
     preferredEnergy: Array.isArray(data.preferred_energy) ? data.preferred_energy : [],
     genrePreferences: Array.isArray(data.genre_preferences) ? data.genre_preferences : [],
     audienceType: Array.isArray(data.audience_type) ? data.audience_type : [],

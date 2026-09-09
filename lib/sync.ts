@@ -58,6 +58,7 @@ async function fetchVenues(managerId: string): Promise<Venue[] | null> {
     adminPhotoUrl: v.admin_photo_url ?? undefined,
     monthlyBudget: v.monthly_budget != null ? Number(v.monthly_budget) : undefined,
     monthlyBudgets: Array.isArray(v.monthly_budgets) ? v.monthly_budgets : undefined,
+    billingCycleEndDay: v.billing_cycle_end_day != null ? Number(v.billing_cycle_end_day) : undefined,
     googleMapsLocation: { lat: v.lat ?? 0, lng: v.lng ?? 0, address: v.address ?? '', placeId: v.place_id ?? undefined },
     capacity: v.capacity ?? undefined,
     rulesTemplate: v.rules_template ?? undefined,

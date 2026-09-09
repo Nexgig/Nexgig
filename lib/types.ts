@@ -188,6 +188,9 @@ export interface Venue {
   /** Per-month budget targets (AED) → rides the `monthly_budgets` JSON column, same pattern as
    *  `schedule`. An entry matching the viewed month wins over `monthlyBudget`. Manager-only. */
   monthlyBudgets?: VenueMonthlyBudget[];
+  /** The day this venue's billing cycle ENDS on (1-31) → `billing_cycle_end_day` column.
+   *  31 = the last day of each month (the normal calendar month). Default 31. */
+  billingCycleEndDay?: number;
   /** Weekly programme — recurring set templates the calendar auto-fills forever. */
   schedule?: VenueSchedule;
   color: string; // hex color chosen by manager

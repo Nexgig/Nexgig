@@ -8,8 +8,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useVenueStore, useLineupStore, useNotificationStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
-import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe, VenueSchedule } from '@/lib/types';
+import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe, VenueSchedule, VenueMonthlyBudget } from '@/lib/types';
 import { ScheduleEditor } from '@/components/schedule-editor';
+import { BudgetEditor } from '@/components/budget-editor';
+import { normalizeBudgets } from '@/lib/venue-budget';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { todayLocalStr, addDaysStr } from '@/lib/utils';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
@@ -50,7 +52,7 @@ const SUB_VIBES: SubVibe[] = [
   'Melodic', 'Groovy', 'Underground', 'Commercial', 'High Energy',
   'Chill', 'Dark', 'Tribal', 'Percussive', 'Urban', 'Soul',
 ];
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 const ANIM_DURATION = 350;
 const ANIM_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
@@ -94,8 +96,9 @@ export default function CreateVenueScreen() {
     billingCompanyName: '',
     billingCompanyAddress: '',
     billingTrnNumber: '',
-    monthlyBudget: '',
+    billingCycleEndDay: 31,
     schedule: [] as VenueSchedule,
+    monthlyBudgets: [] as VenueMonthlyBudget[],
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -227,7 +230,8 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     billing_company_name: form.billingCompanyName || null,
     billing_company_address: form.billingCompanyAddress || null,
     billing_trn_number: form.billingTrnNumber || null,
-    monthly_budget: form.monthlyBudget ? Number(form.monthlyBudget) : null,
+    billing_cycle_end_day: form.billingCycleEndDay,
+    monthly_budgets: normalizeBudgets(form.monthlyBudgets),
     schedule: form.schedule,
     is_hidden: false,
   }).select().single();
@@ -275,7 +279,8 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       companyAddress: form.billingCompanyAddress.trim(),
       trnNumber: form.billingTrnNumber.trim(),
     } : undefined,
-    monthlyBudget: form.monthlyBudget ? Number(form.monthlyBudget) : undefined,
+    billingCycleEndDay: form.billingCycleEndDay,
+    monthlyBudgets: normalizeBudgets(form.monthlyBudgets),
     color: form.color,
     schedule: form.schedule,
     isHidden: false,
@@ -359,6 +364,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
           {displayStep === 1 && 'Venue Basics'}
           {displayStep === 2 && 'Billing Details'}
           {displayStep === 3 && 'Schedule'}
+          {displayStep === 4 && 'Budget'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
       </View>
@@ -492,9 +498,18 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={form.billingTrnNumber} onChangeText={(v) => update('billingTrnNumber', v)} keyboardType="number-pad" returnKeyType="done" />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Monthly budget (optional)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 20000" placeholderTextColor={colors.muted} value={form.monthlyBudget} onChangeText={(v) => update('monthlyBudget', v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" returnKeyType="done" />
-                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your monthly spend target (AED) for this venue — shown against actual spend on your calendar. Only you see it.</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled contentContainerStyle={styles.dayRow} keyboardShouldPersistTaps="handled">
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                    const active = form.billingCycleEndDay === day;
+                    return (
+                      <Pressable key={day} onPress={() => update('billingCycleEndDay', day)} style={[styles.dayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.surface }]}>
+                        <Text style={[styles.dayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
               </View>
             </View>
           )}
@@ -502,6 +517,12 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
           {displayStep === 3 && (
             <View style={styles.form}>
               <ScheduleEditor value={form.schedule} onChange={(next) => update('schedule', next)} />
+            </View>
+          )}
+
+          {displayStep === 4 && (
+            <View style={styles.form}>
+              <BudgetEditor value={form.monthlyBudgets} onChange={(next) => update('monthlyBudgets', next)} />
             </View>
           )}
         </Animated.View>
@@ -532,6 +553,9 @@ const styles = StyleSheet.create({
   photoBannerEmpty: { alignItems: 'center', gap: 6 },
   photoBannerHint: { fontSize: 13, fontWeight: '500' },
   fieldGroup: { gap: 8 },
+  dayRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  dayBtn: { minWidth: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  dayText: { fontSize: 15, fontWeight: '700' },
   label: { fontSize: 15, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
   textarea: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 90, textAlignVertical: 'top' },
