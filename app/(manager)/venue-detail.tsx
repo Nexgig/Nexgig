@@ -1,6 +1,6 @@
 import { VenueInvoicesList } from '@/components/venue-invoices-list';
-import { useState, useMemo, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator, Modal } from '@/lib/rn';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Alert, Image, Linking, ActivityIndicator, Modal, Dimensions } from '@/lib/rn';
 import { openLink } from '@/lib/open-link';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -69,6 +69,18 @@ export default function VenueDetailScreen() {
   const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'roster' | 'invoices'>('overview');
   const [showReport, setShowReport] = useState(false);
   const [showVenueMenu, setShowVenueMenu] = useState(false);
+  // Anchor the ⋯ dropdown right under the button by measuring its on-screen position.
+  const menuBtnRef = useRef<View>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
+  const openVenueMenu = () => {
+    menuBtnRef.current?.measureInWindow((x, y, w, h) => {
+      const screenW = Dimensions.get('window').width;
+      setMenuAnchor({ top: y + h + 6, right: Math.max(8, screenW - (x + w)) });
+      setShowVenueMenu(true);
+    });
+    // Fallback if measure doesn't fire (open anyway, top-right defaults apply).
+    setShowVenueMenu(true);
+  };
 
   const slots = useMemo(() => venue ? getSlotsByVenue(venue.id) : [], [venue, getSlotsByVenue]);
   const venueAssignments = useMemo(
@@ -293,7 +305,7 @@ export default function VenueDetailScreen() {
             <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>Venue Profile</Text>
           </View>
           {isOwner ? (
-            <Pressable onPress={() => setShowVenueMenu(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]} hitSlop={8}>
+            <Pressable ref={menuBtnRef} onPress={openVenueMenu} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]} hitSlop={8}>
               <MaterialIcons name="more-horiz" size={24} color={colors.foreground} />
             </Pressable>
           ) : (
@@ -572,10 +584,10 @@ export default function VenueDetailScreen() {
         reportedName={venue.name}
       />
 
-      {/* "⋯" owner menu — Edit profile + Edit budget (replaces the old pen). */}
+      {/* "⋯" owner menu — a dropdown anchored under the button (Edit profile + Edit budget). */}
       <Modal visible={showVenueMenu} transparent animationType="fade" onRequestClose={() => setShowVenueMenu(false)}>
         <Pressable style={styles.menuBackdrop} onPress={() => setShowVenueMenu(false)}>
-          <View style={[styles.menuCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.menuCard, { backgroundColor: colors.background, borderColor: colors.border, top: menuAnchor?.top ?? 64, right: menuAnchor?.right ?? 12 }]}>
             <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); router.push(('/(manager)/edit-venue?id=' + venue.id) as Href); }}>
               <MaterialIcons name="edit" size={20} color={colors.foreground} />
               <Text style={[styles.menuText, { color: colors.foreground }]}>Edit profile</Text>
@@ -593,8 +605,11 @@ export default function VenueDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 28 },
-  menuCard: { width: '100%', maxWidth: 300, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  menuBackdrop: { flex: 1, backgroundColor: 'transparent' },
+  menuCard: {
+    position: 'absolute', minWidth: 210, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8,
+  },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, paddingHorizontal: 18 },
   menuText: { fontSize: 15.5, fontWeight: '600' },
   menuDivider: { height: StyleSheet.hairlineWidth },
