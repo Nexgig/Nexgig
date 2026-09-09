@@ -119,7 +119,21 @@ those into ONE build.
   attempts** (font-gate paint, `SystemUI.setBackgroundColorAsync`, root Stack `contentStyle`), and
   don't revert to cross-group nav (native crash `e51e94e`). LOW priority (<0.3s, dual-role only).
 
+### To discuss — open questions (me + Claude, added 9 Sep 2026)
+- **Artists with the same display name** — a manager assigning artists can't tell two same-named
+  artists apart. Decide: show @username + photo (+ location?) in the assign list, and/or enforce
+  unique display names at signup.
+- **How invoice numbers are generated** — confirm whether each invoice number is a unique sequential
+  series PER ARTIST (proper for accounting) or random/shared. Check the current code (`invoiceNumber`)
+  and decide.
+- **Artists using their own invoicing** — let an artist UPLOAD their own invoice (PDF) and mark those
+  gigs as invoiced, so the "gigs to invoice" count clears without our generator. Overlaps with the
+  "Artist dashboard — mark gigs as invoiced" build item below.
+
 ### Requested features — to build (open, added 9 Sep 2026)
+- **Web version of Nexgig** — a browser version so managers/artists aren't iPhone-only. Expo already
+  targets web (same codebase); scope TBD (full app vs a lighter web dashboard, what ships first).
+  Big initiative. (Added 9 Sep 2026.)
 - **Separate sender email for invoices** — send invoices from a dedicated address (e.g.
   invoices@nexgig…) instead of the general app email, so invoice mail is distinct and trusted.
   Backend / email config (Supabase send-email function + a verified sender), not an app OTA.
