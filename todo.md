@@ -131,6 +131,9 @@ those into ONE build.
   "Artist dashboard — mark gigs as invoiced" build item below.
 
 ### Requested features — to build (open, added 9 Sep 2026)
+- **Managers can request an invoice from an artist** — today artists send invoices to managers; let a
+  manager REQUEST one (a request + notification nudging the artist to invoice a gig/gigs) instead of
+  waiting. Ties into the invoicing flow. (Added 9 Sep 2026.)
 - **Web version of Nexgig** — a browser version so managers/artists aren't iPhone-only. Expo already
   targets web (same codebase); scope TBD (full app vs a lighter web dashboard, what ships first).
   Big initiative. (Added 9 Sep 2026.)
