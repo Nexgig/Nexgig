@@ -14,7 +14,7 @@ type Role = 'artist' | 'manager';
  * it when there's genuinely something to tell users.
  */
 export const RELEASE_NOTES = {
-  version: 6,
+  version: 7,
   // Shown to everyone:
   both: [] as string[],
   // Shown only to artists:
