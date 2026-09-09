@@ -11,6 +11,7 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import type { VenueType, VenueEnergy, VenueGenre, Venue, AudienceType, SubVibe, VenueSchedule, VenueMonthlyBudget } from '@/lib/types';
 import { ScheduleEditor } from '@/components/schedule-editor';
 import { BudgetEditor } from '@/components/budget-editor';
+import { CycleDayPicker } from '@/components/cycle-day-picker';
 import { normalizeBudgets } from '@/lib/venue-budget';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { todayLocalStr, addDaysStr } from '@/lib/utils';
@@ -497,18 +498,9 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 <Text style={[styles.label, { color: colors.foreground }]}>TRN Number</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={form.billingTrnNumber} onChangeText={(v) => update('billingTrnNumber', v)} keyboardType="number-pad" returnKeyType="done" />
               </View>
-              <View style={styles.fieldGroup}>
+              <View style={[styles.fieldGroup, { zIndex: 10 }]}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled contentContainerStyle={styles.dayRow} keyboardShouldPersistTaps="handled">
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                    const active = form.billingCycleEndDay === day;
-                    return (
-                      <Pressable key={day} onPress={() => update('billingCycleEndDay', day)} style={[styles.dayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.surface }]}>
-                        <Text style={[styles.dayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
+                <CycleDayPicker value={form.billingCycleEndDay} onChange={(day) => update('billingCycleEndDay', day)} />
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
               </View>
             </View>
@@ -553,9 +545,6 @@ const styles = StyleSheet.create({
   photoBannerEmpty: { alignItems: 'center', gap: 6 },
   photoBannerHint: { fontSize: 13, fontWeight: '500' },
   fieldGroup: { gap: 8 },
-  dayRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
-  dayBtn: { minWidth: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  dayText: { fontSize: 15, fontWeight: '700' },
   label: { fontSize: 15, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
   textarea: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 90, textAlignVertical: 'top' },

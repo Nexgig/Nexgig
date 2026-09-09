@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
+import { CycleDayPicker } from '@/components/cycle-day-picker';
 
 export default function BillingDetails() {
   const router = useRouter();
@@ -99,18 +100,9 @@ export default function BillingDetails() {
           <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={trnNumber} onChangeText={setTrnNumber} keyboardType="number-pad" returnKeyType="done" />
         </View>
 
-        <View style={styles.fieldGroup}>
+        <View style={[styles.fieldGroup, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled contentContainerStyle={styles.dayRow} keyboardShouldPersistTaps="handled">
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-              const active = cycleDay === day;
-              return (
-                <Pressable key={day} onPress={() => setCycleDay(day)} style={[styles.dayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.surface }]}>
-                  <Text style={[styles.dayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <CycleDayPicker value={cycleDay} onChange={setCycleDay} />
           <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
         </View>
       </ScrollView>
@@ -129,7 +121,4 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 8 },
   label: { fontSize: 15, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
-  dayRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
-  dayBtn: { minWidth: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  dayText: { fontSize: 15, fontWeight: '700' },
 });
