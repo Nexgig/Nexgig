@@ -593,6 +593,11 @@ export default function VenueDetailScreen() {
               <Text style={[styles.menuText, { color: colors.foreground }]}>Edit profile</Text>
             </Pressable>
             <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+            <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); router.push(('/(manager)/billing-details?id=' + venue.id) as Href); }}>
+              <MaterialIcons name="receipt-long" size={20} color={colors.foreground} />
+              <Text style={[styles.menuText, { color: colors.foreground }]}>Billing details</Text>
+            </Pressable>
+            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
             <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); router.push(('/(manager)/edit-budget?id=' + venue.id) as Href); }}>
               <MaterialIcons name="account-balance-wallet" size={20} color={colors.foreground} />
               <Text style={[styles.menuText, { color: colors.foreground }]}>Edit budget</Text>

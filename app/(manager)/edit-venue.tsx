@@ -94,10 +94,6 @@ export default function EditVenueScreen() {
     instagramUrl: venue?.instagramUrl ?? '',
     musicLink: venue?.musicLink ?? '',
     color: venue?.color ?? colors.primary,
-    billingCompanyName: venue?.billing?.companyName ?? '',
-    billingCompanyAddress: venue?.billing?.companyAddress ?? '',
-    billingTrnNumber: venue?.billing?.trnNumber ?? '',
-    billingCycleEndDay: venue?.billingCycleEndDay ?? 31,
   });
 
   const [saving, setSaving] = useState(false);
@@ -136,10 +132,6 @@ export default function EditVenueScreen() {
       JSON.stringify(form.genrePreferences) !== JSON.stringify(o.genrePreferences) ||
       JSON.stringify(form.audienceType) !== JSON.stringify(o.audienceType) ||
       JSON.stringify(form.subVibe) !== JSON.stringify(o.subVibe) ||
-      form.billingCompanyName !== o.billingCompanyName ||
-      form.billingCompanyAddress !== o.billingCompanyAddress ||
-      form.billingTrnNumber !== o.billingTrnNumber ||
-      form.billingCycleEndDay !== o.billingCycleEndDay ||
       photoUrl !== originalPhoto.current
     );
   }, [form, savedTick, photoUrl]);
@@ -264,12 +256,6 @@ export default function EditVenueScreen() {
       instagramUrl: form.instagramUrl,
       musicLink: form.musicLink,
       color: form.color,
-      billing: (form.billingCompanyName.trim() || form.billingTrnNumber.trim()) ? {
-        companyName: form.billingCompanyName.trim(),
-        companyAddress: form.billingCompanyAddress.trim(),
-        trnNumber: form.billingTrnNumber.trim(),
-      } : undefined,
-      billingCycleEndDay: form.billingCycleEndDay,
     };
     updateVenue(venue.id, updates);
     await supabase.from('venues').update({
@@ -290,10 +276,6 @@ export default function EditVenueScreen() {
       instagram_url: form.instagramUrl || null,
       music_link: form.musicLink || null,
       color: form.color,
-      billing_company_name: form.billingCompanyName || null,
-      billing_company_address: form.billingCompanyAddress || null,
-      billing_trn_number: form.billingTrnNumber || null,
-      billing_cycle_end_day: form.billingCycleEndDay,
       updated_at: new Date().toISOString(),
     }).eq('id', venue.id);
     originalForm.current = { ...form };
@@ -575,59 +557,6 @@ export default function EditVenueScreen() {
             />
           </View>
 
-          {/* Billing Details */}
-          <View style={[styles.fieldGroup, { marginTop: 8 }]}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground, fontSize: 16, fontWeight: '800', marginBottom: 4 }]}>Billing Details</Text>
-            <Text style={[{ color: colors.muted, fontSize: 12, marginBottom: 8 }]}>These details will appear on invoices sent by artists.</Text>
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Company / Legal Name</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="e.g. Beach Club LLC"
-              placeholderTextColor={colors.muted}
-              value={form.billingCompanyName}
-              onChangeText={(v) => setForm((f) => ({ ...f, billingCompanyName: v }))}
-              returnKeyType="done"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Company Address</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="e.g. Dubai Marina, Dubai"
-              placeholderTextColor={colors.muted}
-              value={form.billingCompanyAddress}
-              onChangeText={(v) => setForm((f) => ({ ...f, billingCompanyAddress: v }))}
-              returnKeyType="done"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>TRN Number</Text>
-            <TextInput
-              style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="e.g. 100XXXXXXXXX003"
-              placeholderTextColor={colors.muted}
-              value={form.billingTrnNumber}
-              onChangeText={(v) => setForm((f) => ({ ...f, billingTrnNumber: v }))}
-              keyboardType="number-pad"
-              returnKeyType="done"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Billing cycle ends on</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled contentContainerStyle={styles.dayRow} keyboardShouldPersistTaps="handled">
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                const active = form.billingCycleEndDay === day;
-                return (
-                  <Pressable key={day} onPress={() => setForm((f) => ({ ...f, billingCycleEndDay: day }))} style={[styles.dayBtn, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.surface }]}>
-                    <Text style={[styles.dayText, { color: active ? '#fff' : colors.foreground }]}>{day}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Text style={[{ color: colors.muted, fontSize: 12, marginTop: 4 }]}>Your billing month for this venue ends on this day. 31 = the last day of each month (the normal calendar month).</Text>
-          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -649,9 +578,6 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 13, fontWeight: '700' },
   fieldInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
-  dayRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
-  dayBtn: { minWidth: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  dayText: { fontSize: 15, fontWeight: '700' },
   fieldInputMulti: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, minHeight: 80 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
