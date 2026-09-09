@@ -1580,7 +1580,7 @@ export default function CalendarScreen() {
 
         {/* Header — "ROSTER BALANCE" label + settings gear. */}
         <View style={styles.lineupHead}>
-          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>MONTHLY BUDGET</Text>
+          <Text style={[styles.lineupHeadLabel, { color: colors.muted }]}>MONTHLY ACTUAL</Text>
           <Pressable hitSlop={8} onPress={() => setShowLineupSettings(true)} style={styles.lineupGear}>
             <MaterialIcons name="tune" size={18} color={colors.primary} />
           </Pressable>
