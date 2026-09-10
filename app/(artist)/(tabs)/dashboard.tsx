@@ -710,7 +710,9 @@ const styles = StyleSheet.create({
   earnCardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   earnCardGigs: { fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
   earnCardDivider: { height: StyleSheet.hairlineWidth, marginTop: 16, marginBottom: 12 },
-  cancelledWrap: { marginTop: 20 },
+  // marginBottom negative for the same reason as replySection: the bookings list below already
+  // stacks its own top margins (16 + the first date header's 20), so cancel the overshoot here.
+  cancelledWrap: { marginTop: 20, marginBottom: -12 },
   earnCardMonth: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
   earnCardTotal: { fontSize: 34, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
   earnCardBar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2, marginTop: 16, marginBottom: 14 },
