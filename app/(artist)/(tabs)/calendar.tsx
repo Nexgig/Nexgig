@@ -311,6 +311,7 @@ export default function DJAvailabilityScreen() {
 
   useEffect(() => {
     if (showSyncModal) loadCalendars();
+    else setShowCalendarPicker(false);
   }, [showSyncModal, loadCalendars]);
 
   // The calendar gigs actually go to: the artist's choice if still writable, else the phone default.
@@ -1183,11 +1184,12 @@ export default function DJAvailabilityScreen() {
               </Pressable>
             </View>
           )}
-        </View>
-      </Modal>
 
-      {/* Calendar picker — which phone calendar / account gigs sync to (default = phone default). */}
-      <Modal visible={showCalendarPicker} transparent animationType="slide" onRequestClose={() => setShowCalendarPicker(false)}>
+          {/* Calendar picker — an in-sheet overlay, NOT a nested Modal. iOS can't reliably present a
+              second Modal over a pageSheet Modal — it fails silently and wedges the sheet so it won't
+              reopen. Keeping it inside this sheet's own view avoids that entirely. */}
+          {showCalendarPicker && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} onPress={() => setShowCalendarPicker(false)}>
           <Pressable style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 8, paddingBottom: 34, maxHeight: '75%' }} onPress={() => {}}>
             <View style={{ width: 32, height: 3, borderRadius: 2, alignSelf: 'center', backgroundColor: colors.border, marginBottom: 14 }} />
@@ -1248,6 +1250,9 @@ export default function DJAvailabilityScreen() {
             </ScrollView>
           </Pressable>
         </Pressable>
+          </View>
+          )}
+        </View>
       </Modal>
 
       {/* Legend popover — opened from the (i) next to the month title. Tap anywhere to dismiss. */}
