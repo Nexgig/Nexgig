@@ -680,7 +680,10 @@ const styles = StyleSheet.create({
   statusChipText: { fontSize: 13 },
 
   // Needs your reply
-  replySection: { marginTop: 20, marginBottom: 18 },
+  // marginBottom is negative on purpose: the bookings list already adds its own top margin (16)
+  // plus the first date header's (20), so an extra positive gap here made the space below double
+  // the space above. -12 cancels the overshoot so the gap under ≈ the 24px gap above.
+  replySection: { marginTop: 20, marginBottom: -12 },
   replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   replyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   replyLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
