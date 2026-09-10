@@ -423,11 +423,7 @@ export default function DJHomeScreen() {
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: (typeof dashboardBookings) }) => (
     <View key={date}>
       <View style={styles.dateHeader}>
-        {(() => {
-          const label = formatDateHeader(date);
-          const isSoon = label === 'TODAY' || label === 'TOMORROW';
-          return <Text style={[styles.dateHeaderLabel, { color: isSoon ? colors.foreground : colors.muted }]}>{label}</Text>;
-        })()}
+        <Text style={[styles.dateHeaderLabel, { color: colors.foreground }]}>{formatDateHeader(date)}</Text>
         <View style={[styles.dateHeaderLine, { backgroundColor: colors.border }]} />
       </View>
       {gigs.map((b) => {
