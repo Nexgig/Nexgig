@@ -187,40 +187,9 @@ export default function DJHomeScreen() {
     }
     return { earned, booked, total: earned + booked, gigs };
   }, [dashboardBookings, curMonthKey]);
-  // "Past bookings" — COMPLETED gigs grouped by month, newest first, INCLUDING the current month
-  // (a gig that finished this month shows here too, the moment it completes). Only isDone gigs count;
-  // upcoming confirmed ones stay in the "this month" card above until they complete.
-  const pastMonths = useMemo(() => {
-    type Venue = { key: string; name: string; earnings: number; gigCount: number };
-    type Month = { key: string; label: string; earnings: number; gigCount: number; venues: Map<string, Venue> };
-    const months = new Map<string, Month>();
-    for (const b of dashboardBookings) {
-      if (!b.isDone) continue;   // completed gigs only
-      const date = b.slot?.date ?? b.slotDate ?? '';
-      if (!date) continue;
-      const mKey = date.slice(0, 7); // YYYY-MM
-      let m = months.get(mKey);
-      if (!m) {
-        m = { key: mKey, label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), earnings: 0, gigCount: 0, venues: new Map() };
-        months.set(mKey, m);
-      }
-      const vKey = b.isArtistCreated ? '__private__' : (b.venueId ?? '__unknown__');
-      const vName = b.isArtistCreated ? 'Private events' : bookingVenueName(b, b.venue?.name);
-      let v = m.venues.get(vKey);
-      if (!v) { v = { key: vKey, name: vName, earnings: 0, gigCount: 0 }; m.venues.set(vKey, v); }
-      const price = b.price ?? 0;
-      v.earnings += price; v.gigCount++;
-      m.earnings += price; m.gigCount++;
-    }
-    return Array.from(months.values())
-      .sort((a, b) => (a.key < b.key ? 1 : -1))   // newest month first
-      .map((m) => ({ ...m, venues: Array.from(m.venues.values()).sort((x, y) => y.earnings - x.earnings) }));
-  }, [dashboardBookings]);
-  const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
-  const toggleMonth = (key: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setOpenMonths((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
-  };
+  // Whether the artist has any completed gigs — gates the "Past bookings" link at the bottom.
+  // The month-grouped earnings history now lives on its own page (app/(artist)/past-bookings.tsx).
+  const hasPastBookings = useMemo(() => dashboardBookings.some((b) => b.isDone), [dashboardBookings]);
   const [earningsOpen, setEarningsOpen] = useState(false);   // whole Earnings section — collapsed by default
   const toggleEarnings = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -628,48 +597,16 @@ export default function DJHomeScreen() {
           <View style={{ marginTop: 16 }}>{bookingsByDate.map(renderDateGroup)}</View>
         )}
 
-        {/* EARLIER — past months (the this-month card moved into the header card above). */}
-        {pastMonths.length > 0 && (
-          <>
-            <View style={[styles.sectionBand, { backgroundColor: colors.surface, marginBottom: 10 }]} />
-            <Text style={[styles.earnEarlierLabel, { color: colors.muted }]}>Past bookings</Text>
-            {pastMonths.map((m) => {
-              const isOpen = openMonths.has(m.key);
-              const hasFee = m.earnings > 0;
-              const shortLabel = m.key.slice(0, 4) === curYear ? m.label.replace(/\s\d{4}$/, '') : m.label;
-              return (
-                <View key={m.key}>
-                  <View style={[styles.earnInsetDivider, { backgroundColor: colors.border }]} />
-                  <Pressable
-                    style={({ pressed }) => [styles.earnMonthRow, { opacity: pressed ? 0.6 : 1 }]}
-                    onPress={() => toggleMonth(m.key)}
-                  >
-                    <Text style={[styles.earnMonthLabel, { color: colors.foreground }]} numberOfLines={1}>{shortLabel}</Text>
-                    <Text style={[styles.earnMonthGigs, { color: colors.muted }]}>{m.gigCount} gig{m.gigCount !== 1 ? 's' : ''}</Text>
-                    <MaterialIcons name={isOpen ? 'expand-more' : 'chevron-right'} size={20} color={colors.muted} />
-                  </Pressable>
-                  {isOpen && (
-                    <>
-                      {m.venues.map((v) => (
-                        <View key={v.key} style={styles.histVenueRow}>
-                          <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                          <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
-                          <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
-                        </View>
-                      ))}
-                      <View style={[styles.histTotalRow, { borderTopColor: colors.border }]}>
-                        <Text style={[styles.histTotalLabel, { color: colors.muted }]}>Total</Text>
-                        <Text style={[styles.histTotalAmount, { color: hasFee ? colors.foreground : colors.muted }]}>
-                          {hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}
-                        </Text>
-                      </View>
-                      <View style={styles.venueBottomPad} />
-                    </>
-                  )}
-                </View>
-              );
-            })}
-          </>
+        {/* Past bookings — a quiet centred link at the bottom; the month-by-month history opens
+            on its own page. No separator above (the dashboard ends on this). */}
+        {hasPastBookings && (
+          <Pressable
+            onPress={() => router.push('/(artist)/past-bookings' as Href)}
+            style={({ pressed }) => [styles.pastLink, { opacity: pressed ? 0.55 : 1 }]}
+          >
+            <Text style={[styles.pastLinkText, { color: colors.muted }]}>Past bookings</Text>
+            <MaterialIcons name="chevron-right" size={18} color={colors.muted} />
+          </Pressable>
         )}
       </ScrollView>
 
@@ -779,6 +716,8 @@ const styles = StyleSheet.create({
   earnLegendDot: { width: 9, height: 9, borderRadius: 5 },
   earnLegendText: { fontSize: 13 },
   earnEarlierLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8, marginTop: 4, marginBottom: 2 },
+  pastLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: 22, marginTop: 12 },
+  pastLinkText: { fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
   earnSquare: { width: 12, height: 12, borderRadius: 3 },
   earnSegBar: { flexDirection: 'row', height: 14, gap: 3, marginTop: 16, marginBottom: 6 },
   earnMonthRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },

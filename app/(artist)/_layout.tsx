@@ -355,6 +355,7 @@ export default function DJLayout() {
       <Stack.Screen name="confirmed-gigs" />
       <Stack.Screen name="all-bookings" />
       <Stack.Screen name="completed-gigs" />
+      <Stack.Screen name="past-bookings" />
       <Stack.Screen name="pending-requests" />
       <Stack.Screen name="my-venues" />
       <Stack.Screen name="venue-detail" />
