@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   statusChipText: { fontSize: 13 },
 
   // Needs your reply
-  replySection: { marginBottom: 18 },
+  replySection: { marginTop: 20, marginBottom: 18 },
   replyHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   replyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   replyLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, marginLeft: 12 },
