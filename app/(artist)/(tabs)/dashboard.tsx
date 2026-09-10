@@ -502,39 +502,6 @@ export default function DJHomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        {/* Needs your reply — its OWN section again (pending requests awaiting confirm/decline),
-            above the earnings card, with its section-header line. */}
-        {needsReply.length > 0 && (
-          <View style={styles.replySection}>
-            <View style={styles.replyHead}>
-              <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>NEEDS YOUR REPLY · {needsReply.length}</Text>
-              <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
-            </View>
-            {needsReply.map((item) => (
-              <View key={item.id} style={styles.replyCard}>
-                <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
-                  <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
-                  <View style={styles.replyInfo}>
-                    <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
-                    <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
-                      {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}` : ''}
-                      {item.price != null ? <Text style={{ color: colors.primary, fontWeight: '700' }}> · AED {item.price.toLocaleString()}</Text> : null}
-                    </Text>
-                  </View>
-                </Pressable>
-                <View style={styles.replyActions}>
-                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.muted + '2E', opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
-                    <MaterialIcons name="close" size={20} color={colors.muted} />
-                  </Pressable>
-                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
-                    <MaterialIcons name="check" size={20} color="#fff" />
-                  </Pressable>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* This-month earnings card. Always shown, so a brand-new artist (no bookings yet) still sees
             a "this month · AED 0" card, not a bare screen. */}
         <View style={[styles.earnCard, { backgroundColor: colors.surface }]}>
@@ -565,6 +532,38 @@ export default function DJHomeScreen() {
             </View>
 
         </View>
+
+        {/* Needs your reply — its own section, UNDER the earnings card (pending requests awaiting confirm/decline). */}
+        {needsReply.length > 0 && (
+          <View style={styles.replySection}>
+            <View style={styles.replyHead}>
+              <Text style={[styles.replyLabel, { color: STATUS_COLORS.pending }]}>NEEDS YOUR REPLY · {needsReply.length}</Text>
+              <View style={[styles.replyLine, { backgroundColor: colors.border }]} />
+            </View>
+            {needsReply.map((item) => (
+              <View key={item.id} style={styles.replyCard}>
+                <Pressable style={({ pressed }) => [styles.replyMain, { opacity: pressed ? 0.7 : 1 }]} onPress={() => router.push(('/(artist)/booking-detail?id=' + item.id) as Href)}>
+                  <Image source={venueImageFor(item.venue, item.resolvedVenueType)} style={styles.replyThumb} resizeMode="cover" />
+                  <View style={styles.replyInfo}>
+                    <Text style={[styles.replyName, { color: colors.foreground }]} numberOfLines={1}>{item.resolvedVenueName}</Text>
+                    <Text style={[styles.replySub, { color: colors.muted }]} numberOfLines={1}>
+                      {item.resolvedDate ? formatDate(item.resolvedDate) : ''}{item.resolvedStart ? ` · ${fmtTime(item.resolvedStart)}` : ''}
+                      {item.price != null ? <Text style={{ color: colors.primary, fontWeight: '700' }}> · AED {item.price.toLocaleString()}</Text> : null}
+                    </Text>
+                  </View>
+                </Pressable>
+                <View style={styles.replyActions}>
+                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: colors.muted + '2E', opacity: pressed ? 0.7 : 1 }]} onPress={() => handleDecline(item)}>
+                    <MaterialIcons name="close" size={20} color={colors.muted} />
+                  </Pressable>
+                  <Pressable style={({ pressed }) => [styles.replyBtn, { backgroundColor: STATUS_COLORS.confirmed, opacity: pressed ? 0.85 : 1 }]} onPress={() => handleConfirm(item)}>
+                    <MaterialIcons name="check" size={20} color="#fff" />
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Cancelled heads-up — a manager cancelled a booked gig; surfaced here + "Got it" to clear. */}
         {cancelledHeadsUp.length > 0 && (
