@@ -265,7 +265,15 @@ export default function DJAvailabilityScreen() {
   // Selected gig IDs for export (pre-selected = all unexported)
   const [selectedGigIds, setSelectedGigIds] = useState<Set<string>>(new Set());
 
-  // Load exported gig IDs from AsyncStorage on mount
+  // Which device calendar to add gigs to. null = the phone's default calendar. Persisted per user.
+  const SYNC_CAL_KEY = `sync_calendar_id_${currentUser?.id ?? 'unknown'}`;
+  const [availableCalendars, setAvailableCalendars] = useState<Calendar.Calendar[]>([]);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
+  const [defaultCalendarId, setDefaultCalendarId] = useState<string | null>(null);
+  const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+  const [calPermGranted, setCalPermGranted] = useState(false);
+
+  // Load exported gig IDs + the saved target calendar from AsyncStorage on mount
   useEffect(() => {
     AsyncStorage.getItem(EXPORTED_GIGS_KEY).then((val) => {
       if (val) {
@@ -273,6 +281,49 @@ export default function DJAvailabilityScreen() {
       }
     });
   }, [EXPORTED_GIGS_KEY]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SYNC_CAL_KEY).then((v) => { if (v) setSelectedCalendarId(v); });
+  }, [SYNC_CAL_KEY]);
+
+  // When the sync sheet opens, request permission and load the phone's writable calendars +
+  // its default, so the artist can pick which account (iCloud / Gmail / work) gigs go to.
+  useEffect(() => {
+    if (!showSyncModal || Platform.OS === 'web') return;
+    let active = true;
+    (async () => {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (!active) return;
+      if (status !== 'granted') { setCalPermGranted(false); return; }
+      setCalPermGranted(true);
+      const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      if (!active) return;
+      const writable = cals.filter((c) => c.allowsModifications);
+      setAvailableCalendars(writable);
+      try {
+        if (Platform.OS === 'ios') {
+          const def = await Calendar.getDefaultCalendarAsync();
+          if (active) setDefaultCalendarId(def?.id ?? writable[0]?.id ?? null);
+        } else {
+          setDefaultCalendarId(writable[0]?.id ?? null);
+        }
+      } catch { if (active) setDefaultCalendarId(writable[0]?.id ?? null); }
+    })();
+    return () => { active = false; };
+  }, [showSyncModal]);
+
+  // The calendar gigs actually go to: the artist's choice if still writable, else the phone default.
+  const effectiveCalendarId = useMemo(() => {
+    if (selectedCalendarId && availableCalendars.some((c) => c.id === selectedCalendarId)) return selectedCalendarId;
+    return defaultCalendarId;
+  }, [selectedCalendarId, availableCalendars, defaultCalendarId]);
+  const selectedCalendar = availableCalendars.find((c) => c.id === effectiveCalendarId) ?? null;
+
+  const chooseCalendar = async (id: string) => {
+    setSelectedCalendarId(id);
+    await AsyncStorage.setItem(SYNC_CAL_KEY, id);
+    setShowCalendarPicker(false);
+  };
 
   const markGigExported = async (id: string) => {
     const updated = new Set(exportedGigIds).add(id);
@@ -305,18 +356,22 @@ export default function DJAvailabilityScreen() {
       Alert.alert('Permission Required', 'Please allow calendar access to export gigs.');
       return null;
     }
-    if (Platform.OS === 'ios') {
-      const defaultCal = await Calendar.getDefaultCalendarAsync();
-      return defaultCal.id;
-    } else {
-      const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      const writable = cals.filter((c) => c.allowsModifications);
-      if (writable.length === 0) {
-        Alert.alert('No Calendar', 'No writable calendar found on this device.');
-        return null;
-      }
-      return writable[0].id;
+    const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+    const writable = cals.filter((c) => c.allowsModifications);
+    // Prefer the calendar the artist chose in the sync sheet, if it's still writable.
+    if (selectedCalendarId) {
+      const chosen = writable.find((c) => c.id === selectedCalendarId);
+      if (chosen) return chosen.id;
     }
+    // Otherwise the phone's default calendar (iOS), then any writable calendar.
+    if (Platform.OS === 'ios') {
+      try { const def = await Calendar.getDefaultCalendarAsync(); if (def?.id) return def.id; } catch {}
+    }
+    if (writable.length === 0) {
+      Alert.alert('No Calendar', 'No writable calendar found on this device.');
+      return null;
+    }
+    return writable[0].id;
   };
 
   // Helper: create a calendar event for a gig
@@ -1022,6 +1077,33 @@ export default function DJAvailabilityScreen() {
             <View style={{ width: 36 }} />
           </View>
 
+          {/* "Adding to" — choose which phone calendar / account gigs go to (default = phone default). */}
+          {Platform.OS !== 'web' && (
+            <Pressable
+              onPress={() => { if (calPermGranted) setShowCalendarPicker(true); else getWritableCalendarId(); }}
+              style={({ pressed }) => [{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                marginHorizontal: 20, marginTop: 16, paddingHorizontal: 14, paddingVertical: 12,
+                borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+                opacity: pressed ? 0.85 : 1,
+              }]}
+            >
+              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialIcons name="event" size={19} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: colors.muted }}>ADDING TO</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.foreground }} numberOfLines={1}>
+                  {selectedCalendar ? selectedCalendar.title : 'Default calendar'}
+                </Text>
+                {selectedCalendar?.source?.name ? (
+                  <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={1}>{selectedCalendar.source.name}</Text>
+                ) : null}
+              </View>
+              <MaterialIcons name="expand-more" size={22} color={colors.muted} />
+            </Pressable>
+          )}
+
           {/* Gig List */}
           <ScrollView contentContainerStyle={{ padding: 20, gap: 12, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
             {unexportedGigs.length === 0 ? (
@@ -1101,6 +1183,44 @@ export default function DJAvailabilityScreen() {
             </View>
           )}
         </View>
+      </Modal>
+
+      {/* Calendar picker — which phone calendar / account gigs sync to (default = phone default). */}
+      <Modal visible={showCalendarPicker} transparent animationType="slide" onRequestClose={() => setShowCalendarPicker(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} onPress={() => setShowCalendarPicker(false)}>
+          <Pressable style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 8, paddingBottom: 34, maxHeight: '75%' }} onPress={() => {}}>
+            <View style={{ width: 32, height: 3, borderRadius: 2, alignSelf: 'center', backgroundColor: colors.border, marginBottom: 14 }} />
+            <Text style={{ fontSize: 17, fontWeight: '800', color: colors.foreground, textAlign: 'center', marginBottom: 4 }}>Sync gigs to</Text>
+            <Text style={{ fontSize: 12, color: colors.muted, textAlign: 'center', marginBottom: 12, paddingHorizontal: 26, lineHeight: 17 }}>
+              Pick a calendar already on your iPhone. To add another account (e.g. Gmail), add it first in iOS Settings → Calendar → Accounts.
+            </Text>
+            <ScrollView style={{ paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
+              {availableCalendars.length === 0 ? (
+                <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center', paddingVertical: 24 }}>No writable calendars found on this phone.</Text>
+              ) : (
+                availableCalendars.map((cal) => {
+                  const sel = cal.id === effectiveCalendarId;
+                  const isDefault = cal.id === defaultCalendarId;
+                  return (
+                    <Pressable key={cal.id} onPress={() => chooseCalendar(cal.id)} style={({ pressed }) => [{
+                      flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 10,
+                      borderRadius: 12, backgroundColor: sel ? colors.primary + '12' : 'transparent', opacity: pressed ? 0.7 : 1,
+                    }]}>
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (cal.color as string) || colors.muted }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground }} numberOfLines={1}>
+                          {cal.title}{isDefault ? '  ·  Default' : ''}
+                        </Text>
+                        {cal.source?.name ? <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={1}>{cal.source.name}</Text> : null}
+                      </View>
+                      {sel && <MaterialIcons name="check" size={20} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Legend popover — opened from the (i) next to the month title. Tap anywhere to dismiss. */}
