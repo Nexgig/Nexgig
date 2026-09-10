@@ -2,7 +2,7 @@ import { useRoleSwitching } from '@/lib/roles';
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
-import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform, RefreshControl, Image } from '@/lib/rn';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, TextInput, Dimensions, PanResponder, Animated, Platform, RefreshControl, Image, Linking } from '@/lib/rn';
 import { venueImageFor } from '@/lib/venue-images';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
@@ -271,7 +271,7 @@ export default function DJAvailabilityScreen() {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
   const [defaultCalendarId, setDefaultCalendarId] = useState<string | null>(null);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
-  const [calPermGranted, setCalPermGranted] = useState(false);
+  const [calStatus, setCalStatus] = useState<'undetermined' | 'granted' | 'denied'>('undetermined');
 
   // Load exported gig IDs + the saved target calendar from AsyncStorage on mount
   useEffect(() => {
@@ -286,31 +286,32 @@ export default function DJAvailabilityScreen() {
     AsyncStorage.getItem(SYNC_CAL_KEY).then((v) => { if (v) setSelectedCalendarId(v); });
   }, [SYNC_CAL_KEY]);
 
-  // When the sync sheet opens, request permission and load the phone's writable calendars +
-  // its default, so the artist can pick which account (iCloud / Gmail / work) gigs go to.
-  useEffect(() => {
-    if (!showSyncModal || Platform.OS === 'web') return;
-    let active = true;
-    (async () => {
-      const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (!active) return;
-      if (status !== 'granted') { setCalPermGranted(false); return; }
-      setCalPermGranted(true);
+  // Request permission and load the phone's writable calendars + its default, so the artist can
+  // pick which account (iCloud / Gmail / work) gigs go to. NOTE: expo-calendar treats iOS
+  // "Add Only" (write-only) access as NOT granted — Full Access is required to LIST calendars,
+  // and iOS won't re-prompt once chosen, so we point the user to Settings from the picker.
+  const loadCalendars = useCallback(async () => {
+    if (Platform.OS === 'web') return;
+    let status = 'denied';
+    try { status = (await Calendar.requestCalendarPermissionsAsync()).status; } catch { status = 'denied'; }
+    setCalStatus(status === 'granted' ? 'granted' : 'denied');
+    if (status !== 'granted') return;
+    try {
       const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      if (!active) return;
       const writable = cals.filter((c) => c.allowsModifications);
       setAvailableCalendars(writable);
-      try {
-        if (Platform.OS === 'ios') {
-          const def = await Calendar.getDefaultCalendarAsync();
-          if (active) setDefaultCalendarId(def?.id ?? writable[0]?.id ?? null);
-        } else {
-          setDefaultCalendarId(writable[0]?.id ?? null);
-        }
-      } catch { if (active) setDefaultCalendarId(writable[0]?.id ?? null); }
-    })();
-    return () => { active = false; };
-  }, [showSyncModal]);
+      if (Platform.OS === 'ios') {
+        try { const def = await Calendar.getDefaultCalendarAsync(); setDefaultCalendarId(def?.id ?? writable[0]?.id ?? null); }
+        catch { setDefaultCalendarId(writable[0]?.id ?? null); }
+      } else {
+        setDefaultCalendarId(writable[0]?.id ?? null);
+      }
+    } catch { /* keep whatever we had */ }
+  }, []);
+
+  useEffect(() => {
+    if (showSyncModal) loadCalendars();
+  }, [showSyncModal, loadCalendars]);
 
   // The calendar gigs actually go to: the artist's choice if still writable, else the phone default.
   const effectiveCalendarId = useMemo(() => {
@@ -1080,7 +1081,7 @@ export default function DJAvailabilityScreen() {
           {/* "Adding to" — choose which phone calendar / account gigs go to (default = phone default). */}
           {Platform.OS !== 'web' && (
             <Pressable
-              onPress={() => { if (calPermGranted) setShowCalendarPicker(true); else getWritableCalendarId(); }}
+              onPress={() => { setShowCalendarPicker(true); loadCalendars(); }}
               style={({ pressed }) => [{
                 flexDirection: 'row', alignItems: 'center', gap: 12,
                 marginHorizontal: 20, marginTop: 16, paddingHorizontal: 14, paddingVertical: 12,
@@ -1192,31 +1193,57 @@ export default function DJAvailabilityScreen() {
             <View style={{ width: 32, height: 3, borderRadius: 2, alignSelf: 'center', backgroundColor: colors.border, marginBottom: 14 }} />
             <Text style={{ fontSize: 17, fontWeight: '800', color: colors.foreground, textAlign: 'center', marginBottom: 4 }}>Sync gigs to</Text>
             <Text style={{ fontSize: 12, color: colors.muted, textAlign: 'center', marginBottom: 12, paddingHorizontal: 26, lineHeight: 17 }}>
-              Pick a calendar already on your iPhone. To add another account (e.g. Gmail), add it first in iOS Settings → Calendar → Accounts.
+              Pick which calendar your gigs go to.
             </Text>
-            <ScrollView style={{ paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
-              {availableCalendars.length === 0 ? (
+            <ScrollView style={{ paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+              {calStatus !== 'granted' ? (
+                <View style={{ paddingHorizontal: 6, paddingVertical: 6, gap: 12 }}>
+                  <Text style={{ fontSize: 14, color: colors.foreground, lineHeight: 20 }}>
+                    Nexgig only has <Text style={{ fontWeight: '700' }}>limited (&ldquo;Add Only&rdquo;)</Text> calendar access — enough to add a gig to one calendar, but not to list your others.
+                  </Text>
+                  <Text style={{ fontSize: 13, color: colors.muted, lineHeight: 19 }}>
+                    To choose a calendar: open Settings → <Text style={{ fontWeight: '700' }}>Nexgig</Text> → <Text style={{ fontWeight: '700' }}>Calendars</Text> → turn on <Text style={{ fontWeight: '700' }}>Full Access</Text>. For a Gmail/work calendar, also add it in Settings → Calendar → Accounts with Calendars on.
+                  </Text>
+                  <Pressable onPress={() => Linking.openSettings()} style={({ pressed }) => [{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13, opacity: pressed ? 0.85 : 1,
+                  }]}>
+                    <MaterialIcons name="settings" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Open iPhone Settings</Text>
+                  </Pressable>
+                </View>
+              ) : availableCalendars.length === 0 ? (
                 <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center', paddingVertical: 24 }}>No writable calendars found on this phone.</Text>
               ) : (
-                availableCalendars.map((cal) => {
-                  const sel = cal.id === effectiveCalendarId;
-                  const isDefault = cal.id === defaultCalendarId;
-                  return (
-                    <Pressable key={cal.id} onPress={() => chooseCalendar(cal.id)} style={({ pressed }) => [{
-                      flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 10,
-                      borderRadius: 12, backgroundColor: sel ? colors.primary + '12' : 'transparent', opacity: pressed ? 0.7 : 1,
-                    }]}>
-                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (cal.color as string) || colors.muted }} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground }} numberOfLines={1}>
-                          {cal.title}{isDefault ? '  ·  Default' : ''}
-                        </Text>
-                        {cal.source?.name ? <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={1}>{cal.source.name}</Text> : null}
-                      </View>
-                      {sel && <MaterialIcons name="check" size={20} color={colors.primary} />}
+                <>
+                  {availableCalendars.map((cal) => {
+                    const sel = cal.id === effectiveCalendarId;
+                    const isDefault = cal.id === defaultCalendarId;
+                    return (
+                      <Pressable key={cal.id} onPress={() => chooseCalendar(cal.id)} style={({ pressed }) => [{
+                        flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 10,
+                        borderRadius: 12, backgroundColor: sel ? colors.primary + '12' : 'transparent', opacity: pressed ? 0.7 : 1,
+                      }]}>
+                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (cal.color as string) || colors.muted }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground }} numberOfLines={1}>
+                            {cal.title}{isDefault ? '  ·  Default' : ''}
+                          </Text>
+                          {cal.source?.name ? <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={1}>{cal.source.name}</Text> : null}
+                        </View>
+                        {sel && <MaterialIcons name="check" size={20} color={colors.primary} />}
+                      </Pressable>
+                    );
+                  })}
+                  <View style={{ marginTop: 10, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: colors.border, gap: 8, paddingHorizontal: 6 }}>
+                    <Text style={{ fontSize: 12, color: colors.muted, lineHeight: 17 }}>
+                      Missing one? Give Nexgig <Text style={{ fontWeight: '700' }}>Full Access</Text> in Settings, and for a Gmail/work calendar make sure it&rsquo;s added in Settings → Calendar → Accounts with Calendars on.
+                    </Text>
+                    <Pressable onPress={() => Linking.openSettings()} style={({ pressed }) => [{ alignSelf: 'flex-start', opacity: pressed ? 0.6 : 1 }]}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>Open iPhone Settings</Text>
                     </Pressable>
-                  );
-                })
+                  </View>
+                </>
               )}
             </ScrollView>
           </Pressable>
