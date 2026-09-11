@@ -1,15 +1,16 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useInvoiceStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
-import { monthLabel } from '@/lib/utils';
+import { monthKey, monthLabel } from '@/lib/utils';
 
-/** All invoices a single artist has sent to this manager, grouped by VENUE (each section is one
- *  venue + its running total), venues ordered by their most recent invoice. Used by the artist
- *  profile's Invoices tab. Each row is one invoice (its period) and opens the full invoice. */
+/** All invoices a single artist has sent to this manager. A horizontal row of venue pills filters
+ *  by venue (like the Bookings tab); within the selection, invoices are grouped by month (of the
+ *  invoice's last gig, with a month total), newest first. Used by the artist profile's Invoices
+ *  tab. Each row is one invoice and opens the full invoice. */
 
 /** Latest gig date (YYYY-MM-DD) on an invoice; falls back to the sent date if it has no gigs. */
 function lastGigDate(inv: { gigs: { date: string }[]; sentAt: string }): string {
@@ -33,69 +34,112 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
     [invoices, currentUser?.id, artistId]
   );
 
-  // Group by VENUE (each section = one venue + its running total). `list` is sorted newest-first,
-  // so each venue's invoices keep that order; venues are ordered by their most recent invoice.
-  // Cancelled invoices don't count toward the venue total (struck through per-row, no real charge).
-  const venueGroups = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; items: typeof list; total: number; latest: string }>();
+  // Venue-filter pills (All + each venue this artist invoiced, most-invoiced first).
+  const venuePills = useMemo(() => {
+    const map = new Map<string, { venueId: string; name: string; count: number }>();
     list.forEach((inv) => {
-      const key = inv.venueId || inv.venueName || 'venue';
+      const venueId = inv.venueId || inv.venueName || 'venue';
+      const name = inv.venueName || 'Venue';
+      const e = map.get(venueId) ?? { venueId, name, count: 0 };
+      e.count += 1;
+      map.set(venueId, e);
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [list]);
+
+  const [venueFilter, setVenueFilter] = useState<string | null>(null); // null = all venues
+  useEffect(() => { setVenueFilter(null); }, [artistId]); // reset when the profile switches artist
+
+  // Filter by the selected venue, then group by the last-gig month (newest first). Cancelled
+  // invoices don't count toward the month total (struck through per-row, no real charge).
+  const months = useMemo(() => {
+    const filtered = venueFilter ? list.filter((inv) => (inv.venueId || inv.venueName || 'venue') === venueFilter) : list;
+    const map = new Map<string, { key: string; label: string; items: typeof list; total: number }>();
+    filtered.forEach((inv) => {
+      const d = lastGigDate(inv);
+      const key = monthKey(d);
       let e = map.get(key);
-      if (!e) { e = { key, label: inv.venueName || 'Venue', items: [], total: 0, latest: '' }; map.set(key, e); }
+      if (!e) { e = { key, label: monthLabel(d), items: [], total: 0 }; map.set(key, e); }
       e.items.push(inv);
       if (inv.status !== 'cancelled') e.total += inv.totalAmount;
-      const d = lastGigDate(inv);
-      if (d > e.latest) e.latest = d;
     });
-    return Array.from(map.values()).sort((a, b) => b.latest.localeCompare(a.latest));
-  }, [list]);
+    return Array.from(map.values());
+  }, [list, venueFilter]);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
       {list.length === 0 ? (
         <EmptyState icon="receipt-long" title="No invoices" subtitle={`${artistName} hasn't sent you any invoices yet.`} />
-      ) : venueGroups.map((grp) => (
-        <View key={grp.key} style={{ marginBottom: 8 }}>
-          <View style={styles.monthHeader}>
-            <Text style={[styles.venueHeader, { color: colors.foreground }]} numberOfLines={1}>{grp.label}</Text>
-            <Text style={[styles.monthTotal, { color: colors.foreground }]}>AED {grp.total.toLocaleString()}</Text>
-          </View>
-          {grp.items.map((inv) => {
-            const sentDate = new Date(inv.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-            const cancelled = inv.status === 'cancelled';
-            const period = monthLabel(lastGigDate(inv)); // the month this invoice covers
-            return (
+      ) : (
+        <>
+          {venuePills.length > 1 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow} keyboardShouldPersistTaps="handled">
               <Pressable
-                key={inv.id}
-                style={({ pressed }) => [styles.card, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: inv.id } })}
+                onPress={() => setVenueFilter(null)}
+                style={[styles.pill, { backgroundColor: venueFilter === null ? colors.primary : colors.surface, borderColor: venueFilter === null ? colors.primary : colors.border }]}
               >
-                <View style={{ flex: 1 }}>
-                  <View style={styles.nameRow}>
-                    <Text style={[styles.venueName, { color: colors.foreground, textDecorationLine: cancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{period}</Text>
-                    {!inv.isReadByManager && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
-                  </View>
-                  <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
-                    {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}{inv.invoiceNumber ? ` · ${inv.invoiceNumber}` : ''}{inv.pdfUrl ? ' · Uploaded' : ''}
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                  <Text style={[styles.amount, { color: cancelled ? colors.muted : colors.primary, textDecorationLine: cancelled ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
-                  {cancelled && <Text style={[styles.cancelled, { color: colors.error }]}>CANCELLED</Text>}
-                </View>
-                <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                <Text style={[styles.pillText, { color: venueFilter === null ? '#FFFFFF' : colors.foreground }]}>All</Text>
               </Pressable>
-            );
-          })}
-        </View>
-      ))}
+              {venuePills.map((v) => {
+                const on = venueFilter === v.venueId;
+                return (
+                  <Pressable
+                    key={v.venueId}
+                    onPress={() => setVenueFilter(v.venueId)}
+                    style={[styles.pill, { backgroundColor: on ? colors.primary : colors.surface, borderColor: on ? colors.primary : colors.border }]}
+                  >
+                    <Text style={[styles.pillText, { color: on ? '#FFFFFF' : colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+          {months.map((m) => (
+            <View key={m.key} style={{ marginBottom: 8 }}>
+              <View style={styles.monthHeader}>
+                <Text style={[styles.monthLabel, { color: colors.muted }]}>{m.label}</Text>
+                <Text style={[styles.monthTotal, { color: colors.foreground }]}>AED {m.total.toLocaleString()}</Text>
+              </View>
+              {m.items.map((inv) => {
+                const sentDate = new Date(inv.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                const cancelled = inv.status === 'cancelled';
+                return (
+                  <Pressable
+                    key={inv.id}
+                    style={({ pressed }) => [styles.card, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
+                    onPress={() => router.push({ pathname: '/(manager)/manager-invoice-detail' as any, params: { invoiceId: inv.id } })}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.nameRow}>
+                        <Text style={[styles.venueName, { color: colors.foreground, textDecorationLine: cancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
+                        {!inv.isReadByManager && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+                      </View>
+                      <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
+                        {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}{inv.invoiceNumber ? ` · ${inv.invoiceNumber}` : ''}{inv.pdfUrl ? ' · Uploaded' : ''}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 3 }}>
+                      <Text style={[styles.amount, { color: cancelled ? colors.muted : colors.primary, textDecorationLine: cancelled ? 'line-through' : 'none' }]}>AED {inv.totalAmount.toLocaleString()}</Text>
+                      {cancelled && <Text style={[styles.cancelled, { color: colors.error }]}>CANCELLED</Text>}
+                    </View>
+                    <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  pillRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 14, paddingRight: 2 },
+  pill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7, maxWidth: 180 },
+  pillText: { fontSize: 13, fontWeight: '700' },
   monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 2, paddingTop: 6, paddingBottom: 8 },
-  venueHeader: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  monthLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
   monthTotal: { fontSize: 13, fontWeight: '700' },
   card: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 10 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
