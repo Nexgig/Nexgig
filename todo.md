@@ -132,6 +132,12 @@ those into ONE build.
   backstop (`supabase/add-invoice-number-unique.sql` — Tuts ran the dup-check clean; index pending).
   Chosen as the "safety net" (not the heavier server-RPC issuance). If we ever want gap-free reuse
   instead of retiring cancelled numbers, that's a partial unique index + count change — small.
+  **Uploaded (own) invoices are NOT numbered:** only OUR generated invoices get an INV number and
+  advance the counter (count is `pdf_url IS NULL` only); an uploaded invoice keeps the artist's OWN
+  file name as its reference (verbatim) since their document already carries their number. The unique
+  index is therefore PARTIAL (`where pdf_url is null`). NOTE: on the current PHOTO build the "name" is
+  the photo's own file name (often a random IMG/UUID); real chosen names arrive with the PDF/Files
+  picker (parked native branch).
 - **Artists using their own invoicing** — ✅ SHIPPED as a PHOTO upload on preview (build 28, OTA
   `01a08fae`, 11 Sep 2026). After picking a cycle + gigs the artist gets two buttons: "Preview
   invoice" (our generator) or "Upload my own" → pick a photo of their invoice → uploads to the
