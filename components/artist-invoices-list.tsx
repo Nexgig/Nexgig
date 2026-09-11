@@ -5,10 +5,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuthStore, useInvoiceStore, useLineupStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
+import { monthLabel } from '@/lib/utils';
 
-/** All invoices a single artist has sent to this manager, grouped by the month of the invoice's
- *  LAST gig (not the sent month). Used by the artist profile's Invoices tab. Each row opens the
- *  full invoice. */
+/** All invoices a single artist has sent to this manager, grouped by VENUE (each section is one
+ *  venue + its running total), venues ordered by their most recent invoice. Used by the artist
+ *  profile's Invoices tab. Each row is one invoice (its period) and opens the full invoice. */
 
 /** Latest gig date (YYYY-MM-DD) on an invoice; falls back to the sent date if it has no gigs. */
 function lastGigDate(inv: { gigs: { date: string }[]; sentAt: string }): string {
@@ -32,38 +33,37 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
     [invoices, currentUser?.id, artistId]
   );
 
-  // Group by the LAST GIG's month (newest month first). Cancelled invoices don't count toward
-  // the month total (they're struck through per-row and represent no real charge).
-  const months = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; items: typeof list; total: number }>();
+  // Group by VENUE (each section = one venue + its running total). `list` is sorted newest-first,
+  // so each venue's invoices keep that order; venues are ordered by their most recent invoice.
+  // Cancelled invoices don't count toward the venue total (struck through per-row, no real charge).
+  const venueGroups = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; items: typeof list; total: number; latest: string }>();
     list.forEach((inv) => {
-      const gigDate = lastGigDate(inv);
-      const key = gigDate.slice(0, 7); // YYYY-MM
+      const key = inv.venueId || inv.venueName || 'venue';
       let e = map.get(key);
-      if (!e) {
-        const label = new Date(gigDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        e = { key, label, items: [], total: 0 };
-        map.set(key, e);
-      }
+      if (!e) { e = { key, label: inv.venueName || 'Venue', items: [], total: 0, latest: '' }; map.set(key, e); }
       e.items.push(inv);
       if (inv.status !== 'cancelled') e.total += inv.totalAmount;
+      const d = lastGigDate(inv);
+      if (d > e.latest) e.latest = d;
     });
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) => b.latest.localeCompare(a.latest));
   }, [list]);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
       {list.length === 0 ? (
         <EmptyState icon="receipt-long" title="No invoices" subtitle={`${artistName} hasn't sent you any invoices yet.`} />
-      ) : months.map((m) => (
-        <View key={m.key} style={{ marginBottom: 8 }}>
+      ) : venueGroups.map((grp) => (
+        <View key={grp.key} style={{ marginBottom: 8 }}>
           <View style={styles.monthHeader}>
-            <Text style={[styles.monthLabel, { color: colors.muted }]}>{m.label}</Text>
-            <Text style={[styles.monthTotal, { color: colors.foreground }]}>AED {m.total.toLocaleString()}</Text>
+            <Text style={[styles.venueHeader, { color: colors.foreground }]} numberOfLines={1}>{grp.label}</Text>
+            <Text style={[styles.monthTotal, { color: colors.foreground }]}>AED {grp.total.toLocaleString()}</Text>
           </View>
-          {m.items.map((inv) => {
+          {grp.items.map((inv) => {
             const sentDate = new Date(inv.sentAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
             const cancelled = inv.status === 'cancelled';
+            const period = monthLabel(lastGigDate(inv)); // the month this invoice covers
             return (
               <Pressable
                 key={inv.id}
@@ -72,7 +72,7 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
               >
                 <View style={{ flex: 1 }}>
                   <View style={styles.nameRow}>
-                    <Text style={[styles.venueName, { color: colors.foreground, textDecorationLine: cancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{inv.venueName}</Text>
+                    <Text style={[styles.venueName, { color: colors.foreground, textDecorationLine: cancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{period}</Text>
                     {!inv.isReadByManager && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
                   </View>
                   <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
@@ -95,7 +95,7 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
 
 const styles = StyleSheet.create({
   monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 2, paddingTop: 6, paddingBottom: 8 },
-  monthLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  venueHeader: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   monthTotal: { fontSize: 13, fontWeight: '700' },
   card: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 10 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

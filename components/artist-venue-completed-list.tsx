@@ -7,6 +7,7 @@ import { DateBadge, STATUS_COLORS } from '@/components/ui/date-badge';
 import { useAuthStore, useBookingStore, useSlotStore, useInvoiceStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { useFormatTime } from '@/lib/conflict-detection';
+import { monthKey, monthLabel } from '@/lib/utils';
 
 /** The gigs THIS artist has completed at one venue, newest first, with an "Invoiced" chip
  *  when the gig is already on a (non-cancelled) invoice. Flows inside the venue-detail ScrollView. */
@@ -42,41 +43,65 @@ export function ArtistVenueCompletedList({ venueId }: { venueId: string }) {
     [allBookings, slots, venueId, currentUser?.id, invoicedIds]
   );
 
+  // Group the (newest-first) gigs into months, so they come out newest-month-first too.
+  const months = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; items: typeof gigs }>();
+    gigs.forEach((g) => {
+      if (!g.date) return;
+      const key = monthKey(g.date);
+      let e = map.get(key);
+      if (!e) { e = { key, label: monthLabel(g.date), items: [] }; map.set(key, e); }
+      e.items.push(g);
+    });
+    return Array.from(map.values());
+  }, [gigs]);
+
   if (gigs.length === 0) {
     return <EmptyState icon="event-available" title="No completed gigs" subtitle="Gigs you've played at this venue show up here." />;
   }
 
   return (
     <View style={styles.wrap}>
-      {gigs.map((g) => {
-        const longDate = g.date ? new Date(g.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : '';
-        return (
-          <Pressable
-            key={g.id}
-            style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as Href)}
-          >
-            <DateBadge dateStr={g.date} color={STATUS_COLORS.completed} />
-            <View style={styles.info}>
-              <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{longDate}</Text>
-              <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
-                {g.startTime ? `${fmtTime(g.startTime)}–${fmtTime(g.endTime)}` : ''}
-              </Text>
-            </View>
-            {g.isInvoiced && (
-              <View style={[styles.chip, { backgroundColor: colors.primary + '1A' }]}>
-                <Text style={[styles.chipText, { color: colors.primary }]}>Invoiced</Text>
-              </View>
-            )}
-          </Pressable>
-        );
-      })}
+      {months.map((m) => (
+        <View key={m.key}>
+          <View style={styles.monthHeader}>
+            <Text style={[styles.monthLabel, { color: colors.muted }]}>{m.label}</Text>
+            <Text style={[styles.monthCount, { color: colors.muted }]}>{m.items.length} gig{m.items.length !== 1 ? 's' : ''}</Text>
+          </View>
+          {m.items.map((g) => {
+            const longDate = g.date ? new Date(g.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : '';
+            return (
+              <Pressable
+                key={g.id}
+                style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as Href)}
+              >
+                <DateBadge dateStr={g.date} color={STATUS_COLORS.completed} />
+                <View style={styles.info}>
+                  <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>{longDate}</Text>
+                  <Text style={[styles.time, { color: colors.muted }]} numberOfLines={1}>
+                    {g.startTime ? `${fmtTime(g.startTime)}–${fmtTime(g.endTime)}` : ''}
+                  </Text>
+                </View>
+                {g.isInvoiced && (
+                  <View style={[styles.chip, { backgroundColor: colors.primary + '1A' }]}>
+                    <Text style={[styles.chipText, { color: colors.primary }]}>Invoiced</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
+  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingTop: 10, paddingBottom: 4 },
+  monthLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  monthCount: { fontSize: 12, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   info: { flex: 1 },
   title: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
