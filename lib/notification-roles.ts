@@ -31,6 +31,7 @@ export const NOTIFICATION_ROLE: Record<string, Role> = {
   venue_assigned: 'artist',
   venue_removed: 'artist',
   booking_completed: 'artist',
+  invoice_request: 'artist', // manager asks the artist to invoice a venue
 
   // ── The manager receives ──
   booking_confirmed: 'manager',

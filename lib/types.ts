@@ -384,6 +384,7 @@ export type NotificationType =
   | 'review_submitted'
   | 'invoice_received'
   | 'invoice_cancelled'
+  | 'invoice_request'    // manager asks the artist to invoice a venue -> artist
   | 'manager_invite';
 
 // ─── Availability Block ─────────────────────────────────────────────────────

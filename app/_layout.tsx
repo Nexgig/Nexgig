@@ -178,6 +178,10 @@ function RootLayout() {
       router.push(`${base}/my-venues` as any);
       return;
     }
+    if (accountType === 'artist' && type === 'invoice_request' && relatedId) {
+      router.push(`${base}/invoice-gigs?venueId=${relatedId}` as any);
+      return;
+    }
     if (accountType === 'manager' && (type === 'invoice_received' || type === 'invoice_cancelled')) {
       router.push((relatedId ? `${base}/manager-invoice-detail?invoiceId=${relatedId}` : `${base}/(tabs)/profile`) as any);
       return;

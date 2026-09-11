@@ -28,6 +28,7 @@ const NOTIF_ICONS: Record<string, string> = {
   venue_assigned: 'place',
   venue_removed: 'location-off',
   manager_invite: 'person-add',
+  invoice_request: 'receipt-long',
 };
 
 const NOTIF_COLORS: Record<string, string> = {
@@ -47,6 +48,7 @@ const NOTIF_COLORS: Record<string, string> = {
   venue_assigned: '#8B5CF6',
   venue_removed: '#EF4444',
   manager_invite: '#D4A017',
+  invoice_request: '#E2674A',
 };
 
 function timeAgo(dateStr: string): string {
@@ -152,6 +154,9 @@ export default function ArtistNotificationsScreen() {
     } else if (notif.type === 'venue_assigned') {
       const venueParam = notif.relatedId ? `?highlightVenueId=${notif.relatedId}` : '';
       router.push(('/(artist)/my-venues' + venueParam) as Href);
+    } else if (notif.type === 'invoice_request' && notif.relatedId) {
+      // relatedId is the venueId — drop them straight on that venue's invoice screen.
+      router.push(('/(artist)/invoice-gigs?venueId=' + notif.relatedId + '&from=notifications') as Href);
     }
   };
 

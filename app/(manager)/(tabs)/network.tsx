@@ -1,5 +1,5 @@
 import { useRoleSwitching } from '@/lib/roles';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl, ScrollView } from '@/lib/rn';
 import { Modal } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -100,14 +100,6 @@ export default function NetworkScreen() {
     monthInvoices(artistId).reduce((sum, inv) => sum + (inv.totalAmount ?? 0), 0),
     [monthInvoices]);
 
-  // How many of an artist's completed gigs (with this manager) no non-cancelled invoice covers yet
-  // (all-time — drives the "N not invoiced" subtitle).
-  const uninvoicedCount = useCallback((artistId: string) =>
-    bookings.filter((b) =>
-      b.artistId === artistId && b.managerId === currentUser?.id &&
-      (b.isCompleted || b.status === 'completed') && !invoicedBookingIds.has(b.id)
-    ).length, [bookings, currentUser?.id, invoicedBookingIds]);
-
   // Invoices RECEIVED from this artist but not yet opened — drives the "N new invoice received" line
   // + the Roster tab badge; cleared when the manager views the artist's Invoices tab.
   const newInvoiceCount = useCallback((artistId: string) =>
@@ -115,6 +107,53 @@ export default function NetworkScreen() {
       inv.managerId === currentUser?.id && inv.artistId === artistId &&
       !inv.isReadByManager && inv.status !== 'cancelled' && !inv.isDeletedByManager
     ).length, [allInvoices, currentUser?.id]);
+
+  // ── "Request invoice" — nudge an artist to invoice the venue(s) whose completed gigs they haven't
+  //    billed yet. An artist invoices per venue, so we send ONE notification per owed venue (usually
+  //    just one), each deep-linking them to that venue's invoice screen. `requestedIds` gives the
+  //    manager instant "Requested" feedback for this session (real state is the uninvoiced count,
+  //    which drops once the artist actually invoices). ──
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
+  const requestedRef = useRef<Set<string>>(new Set()); // synchronous guard against a double-tap double-send
+  const unbilledVenuesForArtist = useCallback((artistId: string) => {
+    const map = new Map<string, { venueId: string; venueName: string; count: number }>();
+    bookings.forEach((b) => {
+      if (b.artistId !== artistId || b.managerId !== currentUser?.id) return;
+      if (!(b.isCompleted || b.status === 'completed') || invoicedBookingIds.has(b.id) || !b.venueId) return;
+      const venueName = allVenues.find((v) => v.id === b.venueId)?.name ?? b.venueName ?? 'your venue';
+      const e = map.get(b.venueId) ?? { venueId: b.venueId, venueName, count: 0 };
+      e.count += 1;
+      map.set(b.venueId, e);
+    });
+    return Array.from(map.values());
+  }, [bookings, currentUser?.id, invoicedBookingIds, allVenues]);
+
+  const handleRequestInvoice = useCallback((user: User, venues: { venueId: string; venueName: string; count: number }[]) => {
+    // Nothing owed, or already requested this session (also blocks a same-frame double-tap).
+    if (venues.length === 0 || requestedRef.current.has(user.id)) return;
+    requestedRef.current.add(user.id);
+    venues.forEach((v) => {
+      addNotification({
+        id: `notif-invreq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        userId: user.id,
+        type: 'invoice_request',
+        title: 'Invoice requested',
+        body: `${v.venueName} is ready for your invoice`,
+        relatedId: v.venueId,
+        relatedType: 'venue',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+    });
+    setRequestedIds((prev) => new Set(prev).add(user.id));
+    const who = firstName(user.fullName, 'The artist');
+    Alert.alert(
+      'Invoice requested',
+      venues.length === 1
+        ? `${who} has been asked to invoice ${venues[0].venueName}.`
+        : `${who} has been asked to invoice ${venues.length} venues.`
+    );
+  }, [addNotification]);
 
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -550,7 +589,10 @@ export default function NetworkScreen() {
             const profile = getProfile(user.id);
             const count = gigCount(user.id);
             const cost = gigCost(user.id);
-            const uninv = uninvoicedCount(user.id);
+            // Pill visibility AND the request payload come from the SAME source, so the button can
+            // never show yet do nothing. uninv (for the subtitle) is just the total across venues.
+            const owedVenues = unbilledVenuesForArtist(user.id);
+            const uninv = owedVenues.reduce((s, v) => s + v.count, 0);
             const newInv = newInvoiceCount(user.id);
             return (
               <Pressable
@@ -572,9 +614,27 @@ export default function NetworkScreen() {
                   </View>
                 </View>
                 <View style={styles.gigWrap}>
-                  <Text style={[styles.gigAmount, { color: colors.muted }]}>
-                    {count > 0 ? `AED ${cost.toLocaleString()}` : '—'}
-                  </Text>
+                  {uninv > 0 ? (
+                    requestedIds.has(user.id) ? (
+                      <View style={styles.requestedPill}>
+                        <MaterialIcons name="check" size={14} color={colors.muted} />
+                        <Text style={[styles.requestedText, { color: colors.muted }]}>Requested</Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => handleRequestInvoice(user, owedVenues)}
+                        hitSlop={6}
+                        style={({ pressed }) => [styles.requestPill, { borderColor: colors.primary, backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
+                      >
+                        <MaterialIcons name="receipt-long" size={15} color={colors.primary} />
+                        <Text style={[styles.requestText, { color: colors.primary }]}>Request</Text>
+                      </Pressable>
+                    )
+                  ) : (
+                    <Text style={[styles.gigAmount, { color: colors.muted }]}>
+                      {count > 0 ? `AED ${cost.toLocaleString()}` : '—'}
+                    </Text>
+                  )}
                 </View>
               </Pressable>
             );
@@ -612,6 +672,10 @@ const styles = StyleSheet.create({
   monthBtnText: { fontSize: 15, fontWeight: '600' },
   rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
   gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
+  requestPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  requestText: { fontSize: 13, fontWeight: '700' },
+  requestedPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, paddingVertical: 7 },
+  requestedText: { fontSize: 13, fontWeight: '600' },
   gigNum: { fontSize: 18, fontWeight: '800' },
   gigLabel: { fontSize: 12, marginTop: -1 },
   gigAmount: { fontSize: 16, fontWeight: '800' },
