@@ -201,6 +201,7 @@ export default function DJLayout() {
           invoiceNumber: inv.invoice_number ?? '',
           sentAt: inv.sent_at,
           status: inv.status,
+          pdfUrl: inv.pdf_url ?? undefined,
         });
       });
     };

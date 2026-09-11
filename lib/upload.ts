@@ -12,7 +12,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from './supabase';
 
-export type UploadBucket = 'profile-photos' | 'venue-photos';
+export type UploadBucket = 'profile-photos' | 'venue-photos' | 'invoices';
 
 /**
  * Pick an image from the library with an in-picker crop, then return the local
@@ -22,13 +22,16 @@ export type UploadBucket = 'profile-photos' | 'venue-photos';
 export async function pickImage(opts?: {
   aspect?: [number, number];
   quality?: number;
+  allowsEditing?: boolean;
 }): Promise<string | null> {
-  const aspect = opts?.aspect ?? [1, 1];
+  const allowsEditing = opts?.allowsEditing ?? true;
   const quality = opts?.quality ?? 0.5;
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect,
+    allowsEditing,
+    // A crop frame only makes sense when editing is on (square avatars, 16:9 venue shots).
+    // For a whole-document photo (an uploaded invoice) editing is off and there's no aspect.
+    ...(allowsEditing ? { aspect: opts?.aspect ?? [1, 1] } : {}),
     quality,
   });
   return !result.canceled && result.assets[0] ? result.assets[0].uri : null;

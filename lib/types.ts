@@ -484,6 +484,10 @@ export interface Invoice {
   status: InvoiceStatus;
   isReadByManager?: boolean; // true when manager has opened the invoice detail
   isDeletedByManager?: boolean; // true when manager hides it from their view (artist still sees it)
+  /** Public Storage URL of an artist-UPLOADED invoice PDF → `pdf_url` column. When set, this
+   *  invoice carries that file instead of the app-generated one (a "custom" invoice); it still
+   *  records the same gigs + total. Requires the invoice-PDF picker (native build). */
+  pdfUrl?: string;
 }
 
 export interface ArtistWithConflict {

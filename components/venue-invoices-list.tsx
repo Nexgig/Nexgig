@@ -78,7 +78,7 @@ export function VenueInvoicesList({ venueId }: { venueId: string }) {
                     {!inv.isReadByManager && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
                   </View>
                   <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
-                    {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}{inv.invoiceNumber ? ` · ${inv.invoiceNumber}` : ''}
+                    {inv.gigs.length} gig{inv.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}{inv.invoiceNumber ? ` · ${inv.invoiceNumber}` : ''}{inv.pdfUrl ? ' · Uploaded' : ''}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 3 }}>

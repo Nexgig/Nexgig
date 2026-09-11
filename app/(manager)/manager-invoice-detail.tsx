@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { useInvoiceStore, useAuthStore, useNotificationStore } from '@/lib/store';
 import * as Haptics from 'expo-haptics';
+import { openBrowserAsync } from 'expo-web-browser';
 import type { InvoiceGig } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 
@@ -237,14 +238,37 @@ export default function ManagerInvoiceDetailScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>Invoice</Text>
         <Pressable
           style={({ pressed }) => [styles.pdfBtn, { opacity: pressed ? 0.7 : 1 }]}
-          onPress={handleDownloadPDF}
+          onPress={invoice.pdfUrl ? () => openBrowserAsync(invoice.pdfUrl!) : handleDownloadPDF}
           hitSlop={8}
         >
-          <MaterialIcons name="picture-as-pdf" size={22} color={colors.primary} />
+          <MaterialIcons name={invoice.pdfUrl ? 'image' : 'picture-as-pdf'} size={22} color={colors.primary} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {invoice.pdfUrl ? (
+          <View style={[styles.invoiceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.invoiceHeader}>
+              <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>INVOICE</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.invoiceNum, { color: colors.primary }]}>{invoice.invoiceNumber}</Text>
+                <Text style={[styles.invoiceDate, { color: colors.muted }]}>{sentDate}</Text>
+              </View>
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19 }}>{invoice.artistLegalName || 'The artist'} sent their own invoice for {invoice.venueName}.</Text>
+            {/* The uploaded invoice photo, shown inline. Tap "View full size" to open it big. */}
+            <Image source={{ uri: invoice.pdfUrl! }} style={[styles.photoPreview, { borderColor: colors.border, backgroundColor: colors.background }]} resizeMode="contain" />
+            <View style={[styles.totalRow, { borderColor: colors.primary, marginTop: 4 }]}>
+              <Text style={[styles.totalLabel, { color: colors.foreground }]}>TOTAL</Text>
+              <Text style={[styles.totalValue, { color: colors.primary }]}>AED {Math.round(invoice.totalAmount).toLocaleString()}</Text>
+            </View>
+            <Pressable onPress={() => openBrowserAsync(invoice.pdfUrl!)} style={({ pressed }) => [styles.openPdfBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
+              <MaterialIcons name="image" size={18} color="#fff" />
+              <Text style={styles.openPdfText}>View full size</Text>
+            </Pressable>
+          </View>
+        ) : (
         <View style={[styles.invoiceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Invoice Header */}
           <View style={styles.invoiceHeader}>
@@ -305,6 +329,7 @@ export default function ManagerInvoiceDetailScreen() {
             <Text style={[styles.totalValue, { color: colors.primary }]}>AED {Math.round(invoice.totalAmount).toLocaleString()}</Text>
           </View>
         </View>
+        )}
 
         {/* See all invoices — jumps to this artist's Invoices tab (which marks them read). */}
         <Pressable
@@ -334,6 +359,9 @@ const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 32 },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, marginTop: 20 },
   seeAllText: { fontSize: 15, fontWeight: '700' },
+  openPdfBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, marginTop: 4 },
+  openPdfText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  photoPreview: { width: '100%', height: 340, borderRadius: 12, borderWidth: 1 },
   invoiceCard: {
     borderRadius: 16,
     borderWidth: 1,
