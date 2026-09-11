@@ -109,16 +109,21 @@ export default function NetworkScreen() {
     ).length, [allInvoices, currentUser?.id]);
 
   // ── "Request invoice" — nudge an artist to invoice the venue(s) whose completed gigs they haven't
-  //    billed yet. An artist invoices per venue, so we send ONE notification per owed venue (usually
-  //    just one), each deep-linking them to that venue's invoice screen. "Requested" is PERSISTED
-  //    (survives an app restart) and stays until the artist actually invoices — the auto-clear effect
-  //    below drops the flag once they owe nothing. ──
+  //    billed yet FOR THE SELECTED MONTH. An artist invoices per venue, so we send ONE notification
+  //    per owed venue (usually just one), each deep-linking to that venue's invoice screen.
+  //    "Requested" is scoped per (artist, month) — requesting August doesn't touch September — and is
+  //    PERSISTED (survives an app restart), staying until that month is invoiced (auto-clear below). ──
   const requested = useInvoiceRequestStore((s) => s.requested);
-  const unbilledVenuesForArtist = useCallback((artistId: string) => {
+  const requestKey = (artistId: string, mPrefix: string) => `${artistId}:${mPrefix}`;
+  const monthNameOf = (mPrefix: string) => MONTHS[Number(mPrefix.slice(5, 7)) - 1] ?? mPrefix;
+
+  // Venues where this artist has completed, not-yet-invoiced gigs whose date falls in `mPrefix`.
+  const owedVenuesInMonth = useCallback((artistId: string, mPrefix: string) => {
     const map = new Map<string, { venueId: string; venueName: string; count: number }>();
     bookings.forEach((b) => {
       if (b.artistId !== artistId || b.managerId !== currentUser?.id) return;
       if (!(b.isCompleted || b.status === 'completed') || invoicedBookingIds.has(b.id) || !b.venueId) return;
+      if ((b.slotDate ?? '').slice(0, 7) !== mPrefix) return; // only gigs dated in the selected month
       const venueName = allVenues.find((v) => v.id === b.venueId)?.name ?? b.venueName ?? 'your venue';
       const e = map.get(b.venueId) ?? { venueId: b.venueId, venueName, count: 0 };
       e.count += 1;
@@ -127,17 +132,19 @@ export default function NetworkScreen() {
     return Array.from(map.values());
   }, [bookings, currentUser?.id, invoicedBookingIds, allVenues]);
 
-  const handleRequestInvoice = useCallback((user: User, venues: { venueId: string; venueName: string; count: number }[]) => {
-    // Nothing owed, or already requested (the synchronous store read also blocks a same-frame double-tap).
-    if (venues.length === 0 || useInvoiceRequestStore.getState().isRequested(user.id)) return;
-    useInvoiceRequestStore.getState().markRequested(user.id);
+  const handleRequestInvoice = useCallback((user: User, venues: { venueId: string; venueName: string; count: number }[], mPrefix: string) => {
+    const key = requestKey(user.id, mPrefix);
+    // Nothing owed this month, or already requested (the synchronous store read also blocks a double-tap).
+    if (venues.length === 0 || useInvoiceRequestStore.getState().isRequested(key)) return;
+    useInvoiceRequestStore.getState().markRequested(key);
+    const monthName = monthNameOf(mPrefix);
     venues.forEach((v) => {
       addNotification({
         id: `notif-invreq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         userId: user.id,
         type: 'invoice_request',
         title: 'Invoice requested',
-        body: `${v.venueName} is ready for your invoice`,
+        body: `Time to send ${monthName} invoice to ${v.venueName}`,
         relatedId: v.venueId,
         relatedType: 'venue',
         isRead: false,
@@ -148,19 +155,23 @@ export default function NetworkScreen() {
     Alert.alert(
       'Invoice requested',
       venues.length === 1
-        ? `${who} has been asked to invoice ${venues[0].venueName}.`
-        : `${who} has been asked to invoice ${venues.length} venues.`
+        ? `${who} has been asked to send the ${monthName} invoice to ${venues[0].venueName}.`
+        : `${who} has been asked to send ${monthName} invoices to ${venues.length} venues.`
     );
   }, [addNotification]);
 
-  // Clear "Requested" once an artist has nothing left to invoice (they sent everything), so the
-  // pill isn't stuck and, if they later owe again, it shows "Request" afresh.
+  // Clear a month's "Requested" flag once the artist has invoiced everything for that month (or if
+  // it's a stale/legacy key), so the pill isn't stuck and a newly-owed month shows "Request" afresh.
   useEffect(() => {
     const req = useInvoiceRequestStore.getState().requested;
-    Object.keys(req).forEach((artistId) => {
-      if (unbilledVenuesForArtist(artistId).length === 0) useInvoiceRequestStore.getState().clearRequested(artistId);
+    Object.keys(req).forEach((key) => {
+      const idx = key.lastIndexOf(':');
+      if (idx < 0) { useInvoiceRequestStore.getState().clearRequested(key); return; } // legacy per-artist key
+      const artistId = key.slice(0, idx);
+      const mPrefix = key.slice(idx + 1);
+      if (owedVenuesInMonth(artistId, mPrefix).length === 0) useInvoiceRequestStore.getState().clearRequested(key);
     });
-  }, [bookings, allInvoices, unbilledVenuesForArtist]);
+  }, [bookings, allInvoices, owedVenuesInMonth]);
 
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -580,6 +591,7 @@ export default function NetworkScreen() {
         <FlatList
           data={filteredArtists}
           keyExtractor={(item) => item.id}
+          extraData={{ monthPrefix, requested }}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           refreshControl={roleSwitching ? undefined : <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
@@ -596,10 +608,12 @@ export default function NetworkScreen() {
             const profile = getProfile(user.id);
             const count = gigCount(user.id);
             const cost = gigCost(user.id);
-            // Pill visibility AND the request payload come from the SAME source, so the button can
-            // never show yet do nothing. uninv (for the subtitle) is just the total across venues.
-            const owedVenues = unbilledVenuesForArtist(user.id);
+            // Everything here is scoped to the SELECTED MONTH. Pill visibility AND the request payload
+            // come from the SAME source, so the button can never show yet do nothing. uninv (for the
+            // subtitle) is just the total across this month's owed venues.
+            const owedVenues = owedVenuesInMonth(user.id, monthPrefix);
             const uninv = owedVenues.reduce((s, v) => s + v.count, 0);
+            const isRequested = requested[requestKey(user.id, monthPrefix)];
             const newInv = newInvoiceCount(user.id);
             return (
               <Pressable
@@ -622,14 +636,14 @@ export default function NetworkScreen() {
                 </View>
                 <View style={styles.gigWrap}>
                   {uninv > 0 ? (
-                    requested[user.id] ? (
+                    isRequested ? (
                       <View style={styles.requestedPill}>
                         <MaterialIcons name="check" size={14} color={colors.muted} />
                         <Text style={[styles.requestedText, { color: colors.muted }]}>Requested</Text>
                       </View>
                     ) : (
                       <Pressable
-                        onPress={() => handleRequestInvoice(user, owedVenues)}
+                        onPress={() => handleRequestInvoice(user, owedVenues, monthPrefix)}
                         hitSlop={6}
                         style={({ pressed }) => [styles.requestPill, { borderColor: colors.primary, backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
                       >
