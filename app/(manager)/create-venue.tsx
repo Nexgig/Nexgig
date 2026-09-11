@@ -98,6 +98,7 @@ export default function CreateVenueScreen() {
     billingCompanyAddress: '',
     billingTrnNumber: '',
     billingCycleEndDay: 31,
+    billingEmails: [] as string[],
     schedule: [] as VenueSchedule,
     monthlyBudgets: [] as VenueMonthlyBudget[],
   });
@@ -181,6 +182,12 @@ export default function CreateVenueScreen() {
     }));
   };
 
+  const addBillingEmail = () => setForm((f) => ({ ...f, billingEmails: [...f.billingEmails, ''] }));
+  const updateBillingEmail = (index: number, value: string) =>
+    setForm((f) => ({ ...f, billingEmails: f.billingEmails.map((e, i) => (i === index ? value : e)) }));
+  const removeBillingEmail = (index: number) =>
+    setForm((f) => ({ ...f, billingEmails: f.billingEmails.filter((_, i) => i !== index) }));
+
   const handleNext = async () => {
   if (isAnimating) return;
 
@@ -209,6 +216,9 @@ export default function CreateVenueScreen() {
     return;
   }
 
+  // Trim, lower-case, drop blanks, de-dupe the invoice-recipient emails before persisting.
+  const cleanBillingEmails = Array.from(new Set(form.billingEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
+
   // ✅ Insert venue into Supabase
   const { data: venueData, error: insertError } = await supabase.from('venues').insert({
     manager_id: user.id,
@@ -232,6 +242,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     billing_company_address: form.billingCompanyAddress || null,
     billing_trn_number: form.billingTrnNumber || null,
     billing_cycle_end_day: form.billingCycleEndDay,
+    billing_emails: cleanBillingEmails,
     monthly_budgets: normalizeBudgets(form.monthlyBudgets),
     schedule: form.schedule,
     is_hidden: false,
@@ -281,6 +292,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       trnNumber: form.billingTrnNumber.trim(),
     } : undefined,
     billingCycleEndDay: form.billingCycleEndDay,
+    billingEmails: cleanBillingEmails,
     monthlyBudgets: normalizeBudgets(form.monthlyBudgets),
     color: form.color,
     schedule: form.schedule,
@@ -497,6 +509,32 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>TRN Number</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={form.billingTrnNumber} onChangeText={(v) => update('billingTrnNumber', v)} keyboardType="number-pad" returnKeyType="done" />
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Billing emails</Text>
+                <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 4 }}>Where invoices for this venue are sent. Add one or more. If left empty, invoices go to your login email.</Text>
+                {form.billingEmails.map((email, i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                      placeholder="e.g. accounts@venue.com"
+                      placeholderTextColor={colors.muted}
+                      value={email}
+                      onChangeText={(v) => updateBillingEmail(i, v)}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      returnKeyType="done"
+                    />
+                    <Pressable onPress={() => removeBillingEmail(i)} hitSlop={8} style={{ padding: 4 }}>
+                      <MaterialIcons name="close" size={20} color={colors.muted} />
+                    </Pressable>
+                  </View>
+                ))}
+                <Pressable onPress={addBillingEmail} hitSlop={8} style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, opacity: pressed ? 0.6 : 1 }]}>
+                  <MaterialIcons name="add" size={18} color={colors.primary} />
+                  <Text style={[styles.label, { color: colors.primary }]}>{form.billingEmails.length > 0 ? 'Add another email' : 'Add an email'}</Text>
+                </Pressable>
               </View>
               <View style={[styles.fieldGroup, { zIndex: 10 }]}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>

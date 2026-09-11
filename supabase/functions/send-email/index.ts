@@ -465,6 +465,30 @@ serve(async (req) => {
 
     if (!toEmail) return json({ error: 'Recipient has no email on file' }, 404);
 
+    // 3b. INVOICE routing — deliver to the venue's billing emails when the manager has set them.
+    //     billing_emails is manager-controlled (set in the app's billing section); we still verify
+    //     the venue belongs to the recipient manager (to_user_id) before trusting it — so an artist
+    //     can never redirect an invoice to an arbitrary address. Falls back to the manager's login
+    //     email (toEmail) when no billing emails are on file for the venue.
+    let recipients: string[] = [toEmail];
+    if (template === 'invoice_received') {
+      const d = data as Record<string, unknown>;
+      const venueId = typeof d.venueId === 'string' ? d.venueId : null;
+      if (venueId && isUuid(venueId)) {
+        const { data: venueRow } = await admin
+          .from('venues')
+          .select('billing_emails, manager_id')
+          .eq('id', venueId)
+          .maybeSingle();
+        if (venueRow?.manager_id === to_user_id && Array.isArray(venueRow.billing_emails)) {
+          const billed = (venueRow.billing_emails as unknown[])
+            .map((e) => (typeof e === 'string' ? e.trim() : ''))
+            .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+          if (billed.length > 0) recipients = billed;
+        }
+      }
+    }
+
     // 4. For lineup_added, build the venues + rules section server-side.
     let venuesHtml = '';
     if (template === 'lineup_added') {
@@ -494,7 +518,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: FROM,
-        to: [toEmail],
+        to: recipients,
         subject: rendered.subject,
         html: rendered.html,
         ...(attachments ? { attachments } : {}),

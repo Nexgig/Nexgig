@@ -191,6 +191,11 @@ export interface Venue {
   /** The day this venue's billing cycle ENDS on (1-31) → `billing_cycle_end_day` column.
    *  31 = the last day of each month (the normal calendar month). Default 31. */
   billingCycleEndDay?: number;
+  /** Invoice recipient emails for this venue → `billing_emails` jsonb array column. One or more
+   *  addresses that artist invoices for this venue are emailed to; edited in the billing section
+   *  (create-venue + billing-details). When empty, invoices fall back to the manager's login email.
+   *  Same round-trip pattern as `monthlyBudgets` (own column, mapped in store + sync). Manager-only. */
+  billingEmails?: string[];
   /** Weekly programme — recurring set templates the calendar auto-fills forever. */
   schedule?: VenueSchedule;
   color: string; // hex color chosen by manager

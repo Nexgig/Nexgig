@@ -204,6 +204,7 @@ export default function InvoicePreviewScreen() {
               await sendEmail(managerId, 'invoice_received', {
                 artistName,
                 venueName,
+                venueId,
                 amount: Math.round(totalAmount).toLocaleString(),
                 invoiceNumber,
                 pdfBase64,

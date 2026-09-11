@@ -19,14 +19,16 @@ export default function BillingDetails() {
   const [companyAddress, setCompanyAddress] = useState(venue?.billing?.companyAddress ?? '');
   const [trnNumber, setTrnNumber] = useState(venue?.billing?.trnNumber ?? '');
   const [cycleDay, setCycleDay] = useState<number>(venue?.billingCycleEndDay ?? 31);
+  const [billingEmails, setBillingEmails] = useState<string[]>(venue?.billingEmails ?? []);
   const [saving, setSaving] = useState(false);
 
   const dirty = useMemo(() => (
     companyName !== (venue?.billing?.companyName ?? '') ||
     companyAddress !== (venue?.billing?.companyAddress ?? '') ||
     trnNumber !== (venue?.billing?.trnNumber ?? '') ||
-    cycleDay !== (venue?.billingCycleEndDay ?? 31)
-  ), [companyName, companyAddress, trnNumber, cycleDay, venue]);
+    cycleDay !== (venue?.billingCycleEndDay ?? 31) ||
+    JSON.stringify(billingEmails) !== JSON.stringify(venue?.billingEmails ?? [])
+  ), [companyName, companyAddress, trnNumber, cycleDay, billingEmails, venue]);
 
   if (!venue) {
     return (
@@ -51,12 +53,15 @@ export default function BillingDetails() {
     const billing = (companyName.trim() || trnNumber.trim())
       ? { companyName: companyName.trim(), companyAddress: companyAddress.trim(), trnNumber: trnNumber.trim() }
       : undefined;
-    updateVenue(venue.id, { billing, billingCycleEndDay: cycleDay });
+    // Trim, lower-case, drop blanks, de-dupe — the array persisted to billing_emails.
+    const cleanEmails = Array.from(new Set(billingEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
+    updateVenue(venue.id, { billing, billingCycleEndDay: cycleDay, billingEmails: cleanEmails });
     const { error } = await supabase.from('venues').update({
       billing_company_name: companyName.trim() || null,
       billing_company_address: companyAddress.trim() || null,
       billing_trn_number: trnNumber.trim() || null,
       billing_cycle_end_day: cycleDay,
+      billing_emails: cleanEmails,
       updated_at: new Date().toISOString(),
     }).eq('id', venue.id);
     if (error) {
@@ -100,6 +105,33 @@ export default function BillingDetails() {
           <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 100XXXXXXXXX003" placeholderTextColor={colors.muted} value={trnNumber} onChangeText={setTrnNumber} keyboardType="number-pad" returnKeyType="done" />
         </View>
 
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.label, { color: colors.foreground }]}>Billing emails</Text>
+          <Text style={[styles.hint, { color: colors.muted }]}>Where invoices for this venue are sent. Add one or more. If left empty, invoices go to your login email.</Text>
+          {billingEmails.map((email, i) => (
+            <View key={i} style={styles.emailRow}>
+              <TextInput
+                style={[styles.input, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                placeholder="e.g. accounts@venue.com"
+                placeholderTextColor={colors.muted}
+                value={email}
+                onChangeText={(t) => setBillingEmails((prev) => prev.map((e, j) => (j === i ? t : e)))}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+              />
+              <Pressable onPress={() => setBillingEmails((prev) => prev.filter((_, j) => j !== i))} hitSlop={8} style={styles.emailTrash}>
+                <MaterialIcons name="close" size={20} color={colors.muted} />
+              </Pressable>
+            </View>
+          ))}
+          <Pressable onPress={() => setBillingEmails((prev) => [...prev, ''])} hitSlop={8} style={({ pressed }) => [styles.addRow, { opacity: pressed ? 0.6 : 1 }]}>
+            <MaterialIcons name="add" size={18} color={colors.primary} />
+            <Text style={[styles.addText, { color: colors.primary }]}>{billingEmails.length > 0 ? 'Add another email' : 'Add an email'}</Text>
+          </Pressable>
+        </View>
+
         <View style={[styles.fieldGroup, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
           <CycleDayPicker value={cycleDay} onChange={setCycleDay} />
@@ -119,5 +151,10 @@ const styles = StyleSheet.create({
   intro: { fontSize: 13, lineHeight: 19 },
   fieldGroup: { gap: 8 },
   label: { fontSize: 15, fontWeight: '600' },
+  hint: { fontSize: 13, lineHeight: 18 },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
+  emailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  emailTrash: { padding: 4 },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  addText: { fontSize: 15, fontWeight: '700' },
 });
