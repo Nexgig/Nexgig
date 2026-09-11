@@ -20,7 +20,7 @@ import { firstName } from '@/lib/utils';
 import { reportError } from '@/lib/observability';
 import { ReportModal } from '@/components/report-modal';
 import { ArtistVenueInvoicesList } from '@/components/artist-venue-invoices-list';
-import { ArtistVenueCompletedList } from '@/components/artist-venue-completed-list';
+import { ArtistVenueBookingsList } from '@/components/artist-venue-bookings-list';
 
 function MapsBadge({ onPress }: { onPress: () => void }) {
   const colors = useColors();
@@ -57,8 +57,8 @@ export default function ArtistVenueDetailScreen() {
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
   const getArtistProfile = useLineupStore((s) => s.getArtistProfile);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'completed' | 'invoices'>(
-    tab === 'invoices' ? 'invoices' : tab === 'completed' ? 'completed' : 'overview'
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'invoices'>(
+    tab === 'invoices' ? 'invoices' : (tab === 'bookings' || tab === 'completed') ? 'bookings' : 'overview'
   );
   const [showReport, setShowReport] = useState(false);
 
@@ -211,10 +211,10 @@ export default function ArtistVenueDetailScreen() {
 
         {/* Tab Bar — Overview / Completed / Invoices sent */}
         <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-          {(['overview', 'completed', 'invoices'] as const).map((t) => (
+          {(['overview', 'bookings', 'invoices'] as const).map((t) => (
             <Pressable key={t} onPress={() => setActiveTab(t)} style={[styles.tab, activeTab === t && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
               <Text style={[styles.tabText, { color: activeTab === t ? colors.primary : colors.muted }]}>
-                {t === 'overview' ? 'Overview' : t === 'completed' ? 'Completed' : 'Invoices'}
+                {t === 'overview' ? 'Overview' : t === 'bookings' ? 'Bookings' : 'Invoices'}
               </Text>
             </Pressable>
           ))}
@@ -340,7 +340,7 @@ export default function ArtistVenueDetailScreen() {
           </View>
         )}
 
-        {activeTab === 'completed' && <ArtistVenueCompletedList venueId={venue.id} />}
+        {activeTab === 'bookings' && <ArtistVenueBookingsList venueId={venue.id} />}
 
         {activeTab === 'invoices' && <ArtistVenueInvoicesList venueId={venue.id} />}
 
