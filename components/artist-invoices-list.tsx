@@ -3,9 +3,10 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuthStore, useInvoiceStore, useLineupStore } from '@/lib/store';
+import { useAuthStore, useInvoiceStore, useLineupStore, useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { monthKey, monthLabel } from '@/lib/utils';
+import { groupByCycle } from '@/lib/billing-cycle';
 
 /** All invoices a single artist has sent to this manager. A horizontal row of venue pills filters
  *  by venue (like the Bookings tab); within the selection, invoices are grouped by month (of the
@@ -25,6 +26,7 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
   const currentUser = useAuthStore((s) => s.currentUser);
   const invoices = useInvoiceStore((s) => s.invoices);
   const getArtistUser = useLineupStore((s) => s.getArtistUser);
+  const getVenueById = useVenueStore((s) => s.getVenueById);
   const artistName = getArtistUser(artistId)?.fullName ?? 'This artist';
 
   const list = useMemo(
@@ -50,10 +52,18 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
   const [venueFilter, setVenueFilter] = useState<string | null>(null); // null = all venues
   useEffect(() => { setVenueFilter(null); }, [artistId]); // reset when the profile switches artist
 
-  // Filter by the selected venue, then group by the last-gig month (newest first). Cancelled
-  // invoices don't count toward the month total (struck through per-row, no real charge).
+  // Filter by the selected venue, then group. A single selected venue → group by THAT venue's
+  // BILLING CYCLE (label e.g. "16 Jul – 15 Aug 2025"); "All" spans venues with different cycles,
+  // so fall back to calendar months. Cancelled invoices don't count toward the total.
+  const total = (items: typeof list) => items.reduce((s, inv) => s + (inv.status !== 'cancelled' ? inv.totalAmount : 0), 0);
   const months = useMemo(() => {
     const filtered = venueFilter ? list.filter((inv) => (inv.venueId || inv.venueName || 'venue') === venueFilter) : list;
+    if (venueFilter) {
+      const cycleDay = getVenueById(venueFilter)?.billingCycleEndDay ?? 31;
+      return groupByCycle(filtered, (inv) => lastGigDate(inv), cycleDay).map((g) => ({
+        key: g.cycle.key, label: g.cycle.label, items: g.items, total: total(g.items),
+      }));
+    }
     const map = new Map<string, { key: string; label: string; items: typeof list; total: number }>();
     filtered.forEach((inv) => {
       const d = lastGigDate(inv);
@@ -64,7 +74,8 @@ export function ArtistInvoicesList({ artistId }: { artistId: string }) {
       if (inv.status !== 'cancelled') e.total += inv.totalAmount;
     });
     return Array.from(map.values());
-  }, [list, venueFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, venueFilter, getVenueById]);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
