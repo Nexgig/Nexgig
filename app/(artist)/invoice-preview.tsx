@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime, useFormatTime } from '@/lib/conflict-detection';
-import { todayLocalStr, firstName } from '@/lib/utils';
+import { firstName } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { pickImage, uploadImageAsync } from '@/lib/upload';
 import { openBrowserAsync } from 'expo-web-browser';
@@ -115,13 +115,32 @@ export default function InvoicePreviewScreen() {
     return effVenue?.managerId ?? paramManagerId ?? '';
   }, [effVenue, existingInvoice, paramManagerId]);
 
-  const invoiceNumber = useMemo(() => {
-    if (existingInvoice) return existingInvoice.invoiceNumber;
-    const count = invoices.filter((inv) => inv.artistId === currentUser?.id).length + 1;
-    // Local date (not UTC) so the invoice number matches the day the artist sends it.
-    const dateStr = todayLocalStr().replace(/-/g, '');
-    return `INV-${dateStr}-${String(count).padStart(3, '0')}`;
-  }, [existingInvoice, invoices, currentUser]);
+  // Stable, per-artist prefix: INV-<first 3 letters of the LOCKED email>-<4-char account tag>.
+  // The email can't be changed in-app (only by contacting us) and the account id never changes, so
+  // the prefix is fixed for an artist: the letters read as "who", the tag makes it unique across
+  // artists (two people whose emails start the same still differ by their account tag).
+  const invoicePrefix = useMemo(() => {
+    const letters = (currentUser?.email ?? '').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'XXX';
+    const tag = (currentUser?.id ?? '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || '0000';
+    return `INV-${letters}-${tag}`;
+  }, [currentUser?.email, currentUser?.id]);
+
+  // Running number counted from the LIVE database (not the cached store, which can be stale after a
+  // fresh login/offline and restart the count low — the old duplicate bug). Monotonic: every invoice
+  // row (cancelled included) counts, so a number is never reused, and the DB unique rule on
+  // (artist_id, invoice_number) is the final backstop. Reopening a sent invoice keeps its number.
+  const [invoiceNumber, setInvoiceNumber] = useState<string>(existingInvoice?.invoiceNumber ?? '');
+  useEffect(() => {
+    if (existingInvoice) { setInvoiceNumber(existingInvoice.invoiceNumber); return; }
+    if (!currentUser) return;
+    let alive = true;
+    (async () => {
+      const seq = await nextInvoiceSeq(currentUser.id, invoices.filter((i) => i.artistId === currentUser.id).length);
+      if (alive) setInvoiceNumber(`${invoicePrefix}-${String(seq).padStart(3, '0')}`);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingInvoice, currentUser, invoicePrefix]);
 
   const artistName = existingInvoice?.artistLegalName ?? currentUser?.fullLegalName ?? currentUser?.fullName ?? '';
   const artistEmail = existingInvoice?.artistEmail ?? currentUser?.email ?? '';
@@ -179,31 +198,49 @@ export default function InvoicePreviewScreen() {
             };
             // Save to Supabase FIRST — only mark sent locally + notify the manager if it
             // actually persisted, so a blocked insert can't masquerade as a sent invoice.
-            const { error: invError } = await supabase.from('invoices').insert({
-              id: newInvoice.id,
-              artist_id: currentUser.id,
-              manager_id: managerId,
-              venue_id: venueId,
-              venue_name: venueName,
-              artist_legal_name: artistName,
-              artist_email: artistEmail,
-              artist_location: artistLocation,
-              venue_legal_name: venueLegalName,
-              venue_trn_number: venueTrnNumber || null,
-              venue_address: venueAddress || null,
-              gigs: gigs,
-              total_amount: totalAmount,
-              invoice_number: invoiceNumber,
-              status: 'sent',
-              sent_at: newInvoice.sentAt,
-              pdf_url: isCustomMode ? (customPdfUrl ?? null) : null,
-            });
-            if (invError) {
-              console.warn('Invoice insert error:', invError.message);
+            // Mint the running number and RETRY if the DB's unique rule on (artist_id,
+            // invoice_number) rejects it — that only happens in a rare race (two sends at once);
+            // the retry just re-counts and takes the next free number.
+            let finalNumber = invoiceNumber;
+            let saved = false;
+            let lastErr: any = null;
+            for (let attempt = 0; attempt < 3 && !saved; attempt++) {
+              if (!finalNumber) {
+                const seq = await nextInvoiceSeq(currentUser.id, invoices.filter((i) => i.artistId === currentUser.id).length);
+                finalNumber = `${invoicePrefix}-${String(seq).padStart(3, '0')}`;
+              }
+              const { error } = await supabase.from('invoices').insert({
+                id: newInvoice.id,
+                artist_id: currentUser.id,
+                manager_id: managerId,
+                venue_id: venueId,
+                venue_name: venueName,
+                artist_legal_name: artistName,
+                artist_email: artistEmail,
+                artist_location: artistLocation,
+                venue_legal_name: venueLegalName,
+                venue_trn_number: venueTrnNumber || null,
+                venue_address: venueAddress || null,
+                gigs: gigs,
+                total_amount: totalAmount,
+                invoice_number: finalNumber,
+                status: 'sent',
+                sent_at: newInvoice.sentAt,
+                pdf_url: isCustomMode ? (customPdfUrl ?? null) : null,
+              });
+              if (!error) { saved = true; break; }
+              lastErr = error;
+              // 23505 = unique_violation: that number was just taken — remint and try again.
+              if ((error as any).code === '23505') { finalNumber = ''; continue; }
+              break; // any other error: stop and report
+            }
+            if (!saved) {
+              console.warn('Invoice insert error:', lastErr?.message);
               setIsSending(false);
-              Alert.alert('Invoice not sent', `Could not save the invoice: ${invError.message}`);
+              Alert.alert('Invoice not sent', `Could not save the invoice: ${lastErr?.message ?? 'please try again.'}`);
               return;
             }
+            newInvoice.invoiceNumber = finalNumber;
             addInvoice(newInvoice);
 
             // Re-arm local invoice reminders so this now-invoiced venue stops
@@ -236,8 +273,10 @@ export default function InvoicePreviewScreen() {
                   pdfBase64 = await FS.readAsStringAsync(customPdfUri, { encoding: 'base64' });
                 } else if (!isCustomMode && Platform.OS !== 'web') {
                   const Print = await import('expo-print');
-                  const html = cachedHtmlRef.current ?? generateInvoiceHTML({
-                    invoiceNumber, sentDate, artistName, artistEmail, artistLocation,
+                  // Reuse the pre-generated HTML only if the number matches; otherwise regenerate
+                  // with the authoritative finalNumber (differs only in a rare retry).
+                  const html = (finalNumber === invoiceNumber && cachedHtmlRef.current) ? cachedHtmlRef.current : generateInvoiceHTML({
+                    invoiceNumber: finalNumber, sentDate, artistName, artistEmail, artistLocation,
                     venueLegalName, venueTrnNumber, venueAddress, venueName, gigs, totalAmount,
                   });
                   const res = await Print.printToFileAsync({ html, base64: true });
@@ -249,13 +288,13 @@ export default function InvoicePreviewScreen() {
               // A custom invoice is a photo — name the attachment with its real extension so the
               // manager's mail client shows it as an image, not a broken ".pdf".
               const customExt = (customPdfUri || customPdfUrl || '').match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/)?.[1]?.toLowerCase() || 'jpg';
-              const safeNum = invoiceNumber.replace(/[^a-zA-Z0-9]/g, '') || 'invoice';
+              const safeNum = finalNumber.replace(/[^a-zA-Z0-9]/g, '') || 'invoice';
               await sendEmail(managerId, 'invoice_received', {
                 artistName,
                 venueName,
                 venueId,
                 amount: Math.round(totalAmount).toLocaleString(),
-                invoiceNumber,
+                invoiceNumber: finalNumber,
                 pdfBase64,
                 pdfFileName: isCustomMode ? `${safeNum}.${customExt}` : `${safeNum}.pdf`,
               });
@@ -517,6 +556,21 @@ export default function InvoicePreviewScreen() {
 function formatFullDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// Next per-artist invoice sequence number, counted from the LIVE database (every row, cancelled
+// included, so a number is never reused). Falls back to the local count if the query fails.
+async function nextInvoiceSeq(artistId: string, fallbackCount: number): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('artist_id', artistId);
+    if (error || count == null) return fallbackCount + 1;
+    return count + 1;
+  } catch {
+    return fallbackCount + 1;
+  }
 }
 
 function generateInvoiceHTML(data: {
