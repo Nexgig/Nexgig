@@ -126,9 +126,16 @@ those into ONE build.
 - **How invoice numbers are generated** — confirm whether each invoice number is a unique sequential
   series PER ARTIST (proper for accounting) or random/shared. Check the current code (`invoiceNumber`)
   and decide.
-- **Artists using their own invoicing** — let an artist UPLOAD their own invoice (PDF) and mark those
-  gigs as invoiced, so the "gigs to invoice" count clears without our generator. Overlaps with the
-  "Artist dashboard — mark gigs as invoiced" build item below.
+- **Artists using their own invoicing** — ✅ SHIPPED as a PHOTO upload on preview (build 28, OTA
+  `01a08fae`, 11 Sep 2026). After picking a cycle + gigs the artist gets two buttons: "Preview
+  invoice" (our generator) or "Upload my own" → pick a photo of their invoice → uploads to the
+  public `invoices` bucket, shows inline + opens full-size, then Send. Records the SAME gigs + total
+  (so they clear the "to invoice" count) and stores the file URL on `invoices.pdf_url`; the manager
+  email attaches the photo and manager detail shows it inline. **Two SQL blocks must be run in
+  Supabase for it to save** (`supabase/add-invoice-pdf-column.sql` + `supabase/create-invoices-bucket.sql`).
+  ⏳ **PDF variant parked on `feature/custom-invoice-upload`** (adds expo-document-picker, runtime
+  1.3 — NATIVE, needs `eas build`+`submit`); same screens, we swap the picker to a real PDF/Files
+  chooser at the next native build.
 
 ### Requested features — to build (open, added 9 Sep 2026)
 - **Managers can request an invoice from an artist** — today artists send invoices to managers; let a
