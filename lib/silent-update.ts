@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import * as Updates from 'expo-updates';
 import { useUpdates } from 'expo-updates';
+import { usePathname } from 'expo-router';
 import { reportError } from './observability';
 
 /**
@@ -18,20 +19,19 @@ import { reportError } from './observability';
  */
 
 /**
- * How long the app must have been backgrounded before a restart is allowed.
+ * How long the app must have been backgrounded before a foreground update+restart is allowed.
  *
- * The restart is instant but DOES discard anything typed and not yet saved, since form text
- * lives in component state rather than in a persisted store. The gap is the proxy for "they
- * aren't mid-task".
+ * Short (10s) so a genuine "closed it and came back" adopts the latest bundle almost
+ * immediately, while iOS's momentary *inactive* blips — the app switcher, Control Center, a
+ * permission / Face ID sheet, the notification shade — are ignored, so a reload never fires
+ * out from under a two-second glance.
  *
- * There is deliberately NO screen check on top of this: updates go out late at night when
- * nobody is mid-form, so the gap alone is enough for now. If usage grows into the evening,
- * the thing to add back is a guard skipping the reload on the form screens (create-venue,
- * edit-venue, edit-profile, add-slot, add-block, assign-artist, send-feedback, and
- * booking-detail with its review form) — a manager who steps out to Google Maps for an
- * address and returns six minutes later is the case that gap alone does not cover.
+ * The restart still discards anything typed and not yet saved (form text lives in component
+ * state), so `onFormScreen()` ALSO skips the reload while the user is on a data-entry screen —
+ * the update just waits for a later foreground when they're off it. (Changed from 5 min +
+ * no screen check on 11 Sep 2026, so updates reach testers/users without the long wait.)
  */
-const MIN_BACKGROUND_MS = 5 * 60 * 1000;
+const MIN_BACKGROUND_MS = 10 * 1000;
 
 /**
  * How long "Updating…" stays up before the reload.
@@ -43,6 +43,21 @@ const MIN_BACKGROUND_MS = 5 * 60 * 1000;
 const MIN_OVERLAY_MS = 700;
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Data-entry screens whose unsaved input a restart would discard — skip the foreground
+ * update+restart while the user is on one; it applies on a later foreground instead.
+ * Matched on the route's last path segment. Add any NEW form screen here.
+ */
+const FORM_SCREENS = [
+  'create-venue', 'edit-venue', 'edit-profile', 'billing-details', 'edit-budget',
+  'add-slot', 'add-block', 'assign-artist', 'send-feedback', 'invoice-gigs', 'booking-detail',
+];
+function onFormScreen(path: string | null): boolean {
+  if (!path) return false;
+  const seg = path.split('?')[0].split('/').filter(Boolean).pop() || '';
+  return FORM_SCREENS.indexOf(seg) !== -1;
+}
 
 /**
  * Mount once, at the root. Returns whether an update is being applied — render
@@ -63,6 +78,12 @@ export function useSilentUpdates(): boolean {
   // Read the live value inside the listener without re-subscribing when it flips.
   const pendingRef = useRef(isUpdatePending);
   pendingRef.current = isUpdatePending;
+
+  // Current route, read inside the listener via a ref (no re-subscribe) so we can skip the
+  // restart while the user is on a form screen.
+  const pathname = usePathname();
+  const pathRef = useRef(pathname);
+  pathRef.current = pathname;
 
   const backgroundedAt = useRef<number | null>(null);
   // Guards against overlapping checks if the app is foregrounded twice in quick succession.
@@ -86,6 +107,8 @@ export function useSilentUpdates(): boolean {
       const away = backgroundedAt.current === null ? 0 : Date.now() - backgroundedAt.current;
       backgroundedAt.current = null;
       if (away < MIN_BACKGROUND_MS || checking.current) return;
+      // Never reload out from under someone typing into a form — wait for a later foreground.
+      if (onFormScreen(pathRef.current)) return;
 
       checking.current = true;
       try {
