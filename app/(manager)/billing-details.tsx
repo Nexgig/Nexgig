@@ -132,9 +132,9 @@ export default function BillingDetails() {
           </Pressable>
         </View>
 
-        <View style={[styles.fieldGroup, { zIndex: 10 }]}>
+        <View style={[styles.cycleRow, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-          <CycleDayPicker value={cycleDay} onChange={setCycleDay} />
+          <CycleDayPicker value={cycleDay} onChange={setCycleDay} width={76} dropUp />
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 48, gap: 20 },
   intro: { fontSize: 13, lineHeight: 19 },
   fieldGroup: { gap: 8 },
+  cycleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   label: { fontSize: 15, fontWeight: '600' },
   hint: { fontSize: 13, lineHeight: 18 },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },

@@ -536,9 +536,9 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                   <Text style={[styles.label, { color: colors.primary }]}>{form.billingEmails.length > 0 ? 'Add another email' : 'Add an email'}</Text>
                 </Pressable>
               </View>
-              <View style={[styles.fieldGroup, { zIndex: 10 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, zIndex: 10 }}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-                <CycleDayPicker value={form.billingCycleEndDay} onChange={(day) => update('billingCycleEndDay', day)} />
+                <CycleDayPicker value={form.billingCycleEndDay} onChange={(day) => update('billingCycleEndDay', day)} width={76} dropUp />
               </View>
             </View>
           )}

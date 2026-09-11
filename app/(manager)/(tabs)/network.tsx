@@ -136,27 +136,42 @@ export default function NetworkScreen() {
     const key = requestKey(user.id, mPrefix);
     // Nothing owed this month, or already requested (the synchronous store read also blocks a double-tap).
     if (venues.length === 0 || useInvoiceRequestStore.getState().isRequested(key)) return;
-    useInvoiceRequestStore.getState().markRequested(key);
     const monthName = monthNameOf(mPrefix);
-    venues.forEach((v) => {
-      addNotification({
-        id: `notif-invreq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        userId: user.id,
-        type: 'invoice_request',
-        title: 'Invoice requested',
-        body: `Time to send ${monthName} invoice to ${v.venueName}`,
-        relatedId: v.venueId,
-        relatedType: 'venue',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-      });
-    });
-    const who = firstName(user.fullName, 'The artist');
+    const who = firstName(user.fullName, 'the artist');
+    const target = venues.length === 1 ? venues[0].venueName : `${venues.length} venues`;
+    // Confirm first — this pings the artist, so don't fire on a stray tap.
     Alert.alert(
-      'Invoice requested',
-      venues.length === 1
-        ? `${who} has been asked to send the ${monthName} invoice to ${venues[0].venueName}.`
-        : `${who} has been asked to send ${monthName} invoices to ${venues.length} venues.`
+      'Request invoice',
+      `Ask ${who} to send the ${monthName} invoice for ${target}? They'll get a notification.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Request',
+          onPress: () => {
+            if (useInvoiceRequestStore.getState().isRequested(key)) return; // re-check in case of a race
+            useInvoiceRequestStore.getState().markRequested(key);
+            venues.forEach((v) => {
+              addNotification({
+                id: `notif-invreq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                userId: user.id,
+                type: 'invoice_request',
+                title: 'Invoice requested',
+                body: `Time to send ${monthName} invoice to ${v.venueName}`,
+                relatedId: v.venueId,
+                relatedType: 'venue',
+                isRead: false,
+                createdAt: new Date().toISOString(),
+              });
+            });
+            Alert.alert(
+              'Invoice requested',
+              venues.length === 1
+                ? `${who} has been asked to send the ${monthName} invoice to ${venues[0].venueName}.`
+                : `${who} has been asked to send ${monthName} invoices to ${venues.length} venues.`
+            );
+          },
+        },
+      ]
     );
   }, [addNotification]);
 
