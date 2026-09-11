@@ -150,9 +150,13 @@ those into ONE build.
   chooser at the next native build.
 
 ### Requested features — to build (open, added 9 Sep 2026)
-- **Managers can request an invoice from an artist** — today artists send invoices to managers; let a
-  manager REQUEST one (a request + notification nudging the artist to invoice a gig/gigs) instead of
-  waiting. Ties into the invoicing flow. (Added 9 Sep 2026.)
+- **Managers can request an invoice from an artist** — ✅ SHIPPED (preview, OTA `01a09052`, 11 Sep 2026).
+  On the manager Invoices tab, each artist row that still owes an invoice shows a white "Request" pill
+  (coral text + receipt icon) in place of the amount; once fully invoiced the amount shows instead. One
+  tap sends the artist a notification + push per owed venue, each deep-linking to that venue's invoice
+  screen. New `invoice_request` notification type (artist-side). Guests/private events excluded. OTA,
+  no DB/edge change (notifications.type is text). Follow-ups (not built): persistent cross-session
+  "Requested" state + cooldown; a per-venue picker instead of nudging all owed venues at once.
 - **Web version of Nexgig** — a browser version so managers/artists aren't iPhone-only. Expo already
   targets web (same codebase); scope TBD (full app vs a lighter web dashboard, what ships first).
   Big initiative. (Added 9 Sep 2026.)
