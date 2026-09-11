@@ -1594,9 +1594,9 @@ export default function CalendarScreen() {
         {budget > 0 && (
           <>
             <View style={[styles.budgetTrack, { backgroundColor: colors.muted + '2E' }]}>
-              <View style={{ width: `${Math.min(100, (totalCost / budget) * 100)}%`, height: '100%', borderRadius: 4, backgroundColor: overBudget ? colors.error : totalCost >= budget * 0.85 ? colors.warning : colors.primary }} />
+              <View style={{ width: `${Math.min(100, (totalCost / budget) * 100)}%`, height: '100%', borderRadius: 4, backgroundColor: overBudget ? colors.warning : colors.primary }} />
             </View>
-            <Text style={[styles.budgetLine, { color: overBudget ? colors.error : colors.muted }]}>
+            <Text style={[styles.budgetLine, { color: overBudget ? colors.warning : colors.muted }]}>
               {overBudget
                 ? `AED ${(totalCost - budget).toLocaleString()} over your AED ${budget.toLocaleString()} budget`
                 : `AED ${(budget - totalCost).toLocaleString()} left of AED ${budget.toLocaleString()}`}
