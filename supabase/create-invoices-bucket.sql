@@ -15,16 +15,19 @@ values ('invoices', 'invoices', true)
 on conflict (id) do update set public = true;
 
 -- 2) Anyone can READ (matches getPublicUrl serving, same as the photo buckets).
+drop policy if exists "invoices public read" on storage.objects;
 create policy "invoices public read"
   on storage.objects for select
   using ( bucket_id = 'invoices' );
 
 -- 3) Any signed-in user can UPLOAD.
+drop policy if exists "invoices authenticated insert" on storage.objects;
 create policy "invoices authenticated insert"
   on storage.objects for insert to authenticated
   with check ( bucket_id = 'invoices' );
 
 -- 4) Needed because the upload uses upsert (a re-upload is an update).
+drop policy if exists "invoices authenticated update" on storage.objects;
 create policy "invoices authenticated update"
   on storage.objects for update to authenticated
   using ( bucket_id = 'invoices' )
