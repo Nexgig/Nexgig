@@ -134,7 +134,7 @@ export default function BillingDetails() {
 
         <View style={[styles.cycleRow, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-          <CycleDayPicker value={cycleDay} onChange={setCycleDay} width={76} dropUp />
+          <CycleDayPicker value={cycleDay} onChange={setCycleDay} width={76} />
         </View>
       </ScrollView>
     </ScreenContainer>

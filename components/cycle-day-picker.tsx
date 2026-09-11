@@ -54,7 +54,7 @@ export function CycleDayPicker({ value, onChange, width = 60, dropUp = false }: 
 }
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, minHeight: 46 },
+  pill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, minHeight: 38 },
   pillText: { fontSize: 15, fontWeight: '700' },
   dropdown: {
     position: 'absolute', left: 0, right: 0, zIndex: 1000,
