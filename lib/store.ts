@@ -1123,6 +1123,39 @@ export const useInvoiceReadStore = create<InvoiceReadState>()(
   )
 );
 
+// ── "Invoice requested" flags (manager side) ──────────────────────────────────
+// Remembers, per artist, that the manager has asked them to invoice — so the
+// "Requested" state survives an app restart (not just the session) and stays until
+// the artist actually invoices. It's cleared automatically once that artist has
+// nothing left to invoice (see the auto-clear effect on the Invoices tab). Keyed by
+// artistId; a per-device convenience — the real state is the uninvoiced-gig set.
+interface InvoiceRequestState {
+  requested: Record<string, boolean>;
+  markRequested: (artistId: string) => void;
+  clearRequested: (artistId: string) => void;
+  isRequested: (artistId: string) => boolean;
+}
+
+export const useInvoiceRequestStore = create<InvoiceRequestState>()(
+  persist(
+    (set, get) => ({
+      requested: {},
+      markRequested: (artistId) => set((s) => ({ requested: { ...s.requested, [artistId]: true } })),
+      clearRequested: (artistId) => set((s) => {
+        if (!s.requested[artistId]) return s;
+        const next = { ...s.requested };
+        delete next[artistId];
+        return { requested: next };
+      }),
+      isRequested: (artistId) => !!get().requested[artistId],
+    }),
+    {
+      name: 'nexgig:invoice-request',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
 interface InvoiceState {
   invoices: Invoice[];
   addInvoice: (invoice: Invoice) => void;

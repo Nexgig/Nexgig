@@ -1,5 +1,5 @@
 import { useRoleSwitching } from '@/lib/roles';
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Image, RefreshControl, ScrollView } from '@/lib/rn';
 import { Modal } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -7,7 +7,7 @@ import type { Href } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VenueFilterHeader } from '@/components/venue-filter-header';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, useInvoiceStore, mapVenueRow } from '@/lib/store';
+import { useAuthStore, useLineupStore, useNotificationStore, useVenueStore, useVenueFilterStore, usePendingAppsStore, useArtistDirectoryStore, useVenueDirectoryStore, useBookingStore, useInvoiceStore, useInvoiceRequestStore, mapVenueRow } from '@/lib/store';
 import { PendingInvites } from '@/components/pending-invites';
 import { ALLOW_ARTIST_VENUE_APPLICATIONS, SHOW_ARTIST_VERIFIED_BADGE } from '@/lib/features';
 import { fonts } from '@/lib/fonts';
@@ -110,11 +110,10 @@ export default function NetworkScreen() {
 
   // ── "Request invoice" — nudge an artist to invoice the venue(s) whose completed gigs they haven't
   //    billed yet. An artist invoices per venue, so we send ONE notification per owed venue (usually
-  //    just one), each deep-linking them to that venue's invoice screen. `requestedIds` gives the
-  //    manager instant "Requested" feedback for this session (real state is the uninvoiced count,
-  //    which drops once the artist actually invoices). ──
-  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
-  const requestedRef = useRef<Set<string>>(new Set()); // synchronous guard against a double-tap double-send
+  //    just one), each deep-linking them to that venue's invoice screen. "Requested" is PERSISTED
+  //    (survives an app restart) and stays until the artist actually invoices — the auto-clear effect
+  //    below drops the flag once they owe nothing. ──
+  const requested = useInvoiceRequestStore((s) => s.requested);
   const unbilledVenuesForArtist = useCallback((artistId: string) => {
     const map = new Map<string, { venueId: string; venueName: string; count: number }>();
     bookings.forEach((b) => {
@@ -129,9 +128,9 @@ export default function NetworkScreen() {
   }, [bookings, currentUser?.id, invoicedBookingIds, allVenues]);
 
   const handleRequestInvoice = useCallback((user: User, venues: { venueId: string; venueName: string; count: number }[]) => {
-    // Nothing owed, or already requested this session (also blocks a same-frame double-tap).
-    if (venues.length === 0 || requestedRef.current.has(user.id)) return;
-    requestedRef.current.add(user.id);
+    // Nothing owed, or already requested (the synchronous store read also blocks a same-frame double-tap).
+    if (venues.length === 0 || useInvoiceRequestStore.getState().isRequested(user.id)) return;
+    useInvoiceRequestStore.getState().markRequested(user.id);
     venues.forEach((v) => {
       addNotification({
         id: `notif-invreq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -145,7 +144,6 @@ export default function NetworkScreen() {
         createdAt: new Date().toISOString(),
       });
     });
-    setRequestedIds((prev) => new Set(prev).add(user.id));
     const who = firstName(user.fullName, 'The artist');
     Alert.alert(
       'Invoice requested',
@@ -154,6 +152,15 @@ export default function NetworkScreen() {
         : `${who} has been asked to invoice ${venues.length} venues.`
     );
   }, [addNotification]);
+
+  // Clear "Requested" once an artist has nothing left to invoice (they sent everything), so the
+  // pill isn't stuck and, if they later owe again, it shows "Request" afresh.
+  useEffect(() => {
+    const req = useInvoiceRequestStore.getState().requested;
+    Object.keys(req).forEach((artistId) => {
+      if (unbilledVenuesForArtist(artistId).length === 0) useInvoiceRequestStore.getState().clearRequested(artistId);
+    });
+  }, [bookings, allInvoices, unbilledVenuesForArtist]);
 
   // ── Applications state ────────────────────────────────────────────────────
   const [applications, setApplications] = useState<Application[]>([]);
@@ -615,7 +622,7 @@ export default function NetworkScreen() {
                 </View>
                 <View style={styles.gigWrap}>
                   {uninv > 0 ? (
-                    requestedIds.has(user.id) ? (
+                    requested[user.id] ? (
                       <View style={styles.requestedPill}>
                         <MaterialIcons name="check" size={14} color={colors.muted} />
                         <Text style={[styles.requestedText, { color: colors.muted }]}>Requested</Text>
