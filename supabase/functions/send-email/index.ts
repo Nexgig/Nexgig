@@ -308,7 +308,9 @@ function renderTemplate(
       return {
         subject: `New invoice from ${artistName}${invoiceNumber ? ` (${invoiceNumber})` : ''}`,
         html: shell(
-          greet(escapeHtml(name || 'there')) +
+          // Neutral greeting on purpose: invoices can be routed to a shared billing inbox
+          // (e.g. accounts@venue.com), where the manager's personal name would read oddly.
+          greet('there') +
           cardTitle(`${artistName} sent you an invoice`) +
           bigStat('Amount due', `AED ${amount}`) +
           hr() +
@@ -463,14 +465,14 @@ serve(async (req) => {
       }
     }
 
-    if (!toEmail) return json({ error: 'Recipient has no email on file' }, 404);
-
     // 3b. INVOICE routing — deliver to the venue's billing emails when the manager has set them.
     //     billing_emails is manager-controlled (set in the app's billing section); we still verify
     //     the venue belongs to the recipient manager (to_user_id) before trusting it — so an artist
     //     can never redirect an invoice to an arbitrary address. Falls back to the manager's login
     //     email (toEmail) when no billing emails are on file for the venue.
-    let recipients: string[] = [toEmail];
+    //     Recipients are resolved BEFORE the missing-email guard so an invoice with billing emails
+    //     still sends even if the manager has no login email on file; other templates require it.
+    let recipients: string[] = toEmail ? [toEmail] : [];
     if (template === 'invoice_received') {
       const d = data as Record<string, unknown>;
       const venueId = typeof d.venueId === 'string' ? d.venueId : null;
@@ -488,6 +490,8 @@ serve(async (req) => {
         }
       }
     }
+
+    if (recipients.length === 0) return json({ error: 'Recipient has no email on file' }, 404);
 
     // 4. For lineup_added, build the venues + rules section server-side.
     let venuesHtml = '';
