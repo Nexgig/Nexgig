@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/use-colors';
 import { fonts } from '@/lib/fonts';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
+import { supabase } from '@/lib/supabase';
+import { groupByCycle } from '@/lib/billing-cycle';
 import type { Booking, Slot } from '@/lib/types';
 
 interface GigRow {
@@ -60,6 +62,26 @@ export default function InvoiceGigsScreen() {
   const [reminderDay, setReminderDay] = useState(() =>
     currentUser && venueId ? getReminder(venueId, currentUser.id) : 1
   );
+
+  // The venue's billing cycle end-day drives the per-cycle grouping. The artist-side venue store
+  // doesn't map it, so read it authoritatively from Supabase (null = still loading; default 31).
+  const [cycleEndDay, setCycleEndDay] = useState<number | null>(venue?.billingCycleEndDay ?? null);
+  useEffect(() => {
+    if (!venueId) return;
+    if (venue?.billingCycleEndDay != null) { setCycleEndDay(venue.billingCycleEndDay); return; }
+    let alive = true;
+    supabase
+      .from('venues')
+      .select('billing_cycle_end_day')
+      .eq('id', venueId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!alive) return;
+        setCycleEndDay(error || data?.billing_cycle_end_day == null ? 31 : Number(data.billing_cycle_end_day));
+      });
+    return () => { alive = false; };
+  }, [venueId, venue?.billingCycleEndDay]);
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   // Build set of already-invoiced booking IDs for this venue/artist. Cancelled
   // invoices are excluded so their gigs become available to invoice again.
@@ -130,23 +152,44 @@ export default function InvoiceGigsScreen() {
     );
   }, []);
 
-  const allGigRows = completedGigRows;
-  const selectedGigs = allGigRows.filter((g) => g.selected);
+  // Group the uninvoiced gigs into billing cycles (newest first). The artist invoices ONE cycle
+  // at a time; the current cycle and any older un-invoiced cycles all stay reachable.
+  const effectiveCycleDay = cycleEndDay ?? 31;
+  const cycleGroups = useMemo(
+    () => groupByCycle(completedGigRows, (r) => r.booking.slotDate || r.slot?.date || todayStr, effectiveCycleDay),
+    [completedGigRows, effectiveCycleDay, todayStr]
+  );
+
+  const [selectedCycleKey, setSelectedCycleKey] = useState<string | null>(null);
+  // Default to the newest cycle; repair if the selected cycle disappears (e.g. just invoiced).
+  useEffect(() => {
+    if (cycleGroups.length === 0) { if (selectedCycleKey !== null) setSelectedCycleKey(null); return; }
+    if (!selectedCycleKey || !cycleGroups.some((g) => g.cycle.key === selectedCycleKey)) {
+      setSelectedCycleKey(cycleGroups[0].cycle.key);
+    }
+  }, [cycleGroups, selectedCycleKey]);
+
+  const activeGroup = cycleGroups.find((g) => g.cycle.key === selectedCycleKey) ?? cycleGroups[0] ?? null;
+  const activeRows = activeGroup?.items ?? [];
+
+  const selectedGigs = activeRows.filter((g) => g.selected);
   const total = selectedGigs.reduce((sum, g) => sum + (parseFloat(g.price) || 0), 0);
   const allPriced = selectedGigs.every((g) => parseFloat(g.price) > 0);
-  const allSelected = allGigRows.length > 0 && allGigRows.every((g) => g.selected);
+  const allSelected = activeRows.length > 0 && activeRows.every((g) => g.selected);
 
+  // Select-all toggles only the gigs in the cycle currently shown.
   const toggleSelectAll = useCallback(() => {
+    const ids = new Set(activeRows.map((r) => r.booking.id));
     setCompletedGigRows((prev) => {
-      const next = !prev.every((g) => g.selected);
-      return prev.map((g) => ({ ...g, selected: next }));
+      const next = !activeRows.every((g) => g.selected);
+      return prev.map((g) => (ids.has(g.booking.id) ? { ...g, selected: next } : g));
     });
-  }, []);
+  }, [activeRows]);
 
-  // Only completed gigs are invoiceable, so there is a single unlabelled section.
+  // One cycle shown at a time — a single unlabelled section for that cycle's gigs.
   const listData = useMemo(
-    (): ListItem[] => completedGigRows.map((g) => ({ type: 'gig', data: g })),
-    [completedGigRows]
+    (): ListItem[] => activeRows.map((g) => ({ type: 'gig', data: g })),
+    [activeRows]
   );
 
   const handleContinue = () => {
@@ -267,6 +310,37 @@ export default function InvoiceGigsScreen() {
         </Pressable>
       </View>
 
+      {/* Billing-cycle selector — one invoice covers exactly one cycle. Pills when there's a
+          choice of cycles; a plain label when there's only one. */}
+      {cycleGroups.length > 1 ? (
+        <View style={[styles.cycleBar, { borderBottomColor: colors.border }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cycleBarContent} keyboardShouldPersistTaps="handled">
+            {cycleGroups.map((g) => {
+              const active = g.cycle.key === (activeGroup?.cycle.key ?? null);
+              return (
+                <Pressable
+                  key={g.cycle.key}
+                  onPress={() => setSelectedCycleKey(g.cycle.key)}
+                  style={[styles.cyclePill, { backgroundColor: active ? colors.primary : colors.surface, borderColor: active ? colors.primary : colors.border }]}
+                >
+                  <Text style={[styles.cyclePillText, { color: active ? '#fff' : colors.foreground }]} numberOfLines={1}>{g.cycle.label}</Text>
+                  <View style={[styles.cyclePillCount, { backgroundColor: active ? 'rgba(255,255,255,0.28)' : colors.border }]}>
+                    <Text style={[styles.cyclePillCountText, { color: active ? '#fff' : colors.muted }]}>{g.items.length}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : cycleGroups.length === 1 ? (
+        <View style={[styles.cycleBarSingle, { borderBottomColor: colors.border }]}>
+          <MaterialIcons name="event-repeat" size={15} color={colors.muted} />
+          <Text style={[styles.cycleSingleText, { color: colors.muted }]}>
+            Billing cycle · <Text style={{ color: colors.foreground, fontWeight: '700' }}>{cycleGroups[0].cycle.label}</Text>
+          </Text>
+        </View>
+      ) : null}
+
       <FlatList
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
@@ -277,10 +351,10 @@ export default function InvoiceGigsScreen() {
         }
         renderItem={renderItem}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={allGigRows.length > 1 ? (
+        ListHeaderComponent={activeRows.length > 1 ? (
           <View>
             <View style={styles.selectAllRow}>
-              <Text style={[styles.selectAllInfo, { color: colors.muted }]}>{selectedGigs.length} of {allGigRows.length} selected</Text>
+              <Text style={[styles.selectAllInfo, { color: colors.muted }]}>{selectedGigs.length} of {activeRows.length} selected</Text>
               <Pressable onPress={toggleSelectAll} hitSlop={8}>
                 <Text style={[styles.selectAllBtn, { color: colors.primary }]}>{allSelected ? 'Deselect all' : 'Select all'}</Text>
               </Pressable>
@@ -297,16 +371,16 @@ export default function InvoiceGigsScreen() {
       />
 
       {/* Bottom bar */}
-      {allGigRows.length > 0 && (
+      {activeRows.length > 0 && (
         <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
           <View>
             <Text style={[styles.totalLabel, { color: colors.muted }]}>Total ({selectedGigs.length} gig{selectedGigs.length !== 1 ? 's' : ''})</Text>
             <Text style={[styles.totalValue, { color: colors.foreground }]}>AED {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
           <Pressable
-            style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced ? '#E2674A' : colors.border }]}
+            style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced && cycleEndDay !== null ? '#E2674A' : colors.border }]}
             onPress={handleContinue}
-            disabled={selectedGigs.length === 0 || !allPriced}
+            disabled={selectedGigs.length === 0 || !allPriced || cycleEndDay === null}
           >
             <Text style={styles.continueBtnText}>Preview Invoice</Text>
             <MaterialIcons name="arrow-forward" size={18} color="#fff" />
@@ -357,6 +431,14 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '800' },
   subtitle: { fontSize: 12 },
   bellBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  cycleBar: { borderBottomWidth: 0.5 },
+  cycleBarContent: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  cyclePill: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 20, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },
+  cyclePillText: { fontSize: 13, fontWeight: '700' },
+  cyclePillCount: { minWidth: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  cyclePillCountText: { fontSize: 11, fontWeight: '800' },
+  cycleBarSingle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 0.5 },
+  cycleSingleText: { fontSize: 13 },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120 },
   selectAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 2 },
   selectAllInfo: { fontSize: 12 },
