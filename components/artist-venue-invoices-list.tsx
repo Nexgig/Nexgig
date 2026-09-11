@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from '@/lib/rn';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuthStore, useInvoiceStore } from '@/lib/store';
+import { useAuthStore, useInvoiceStore, useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
-import { monthKey, monthLabel } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+import { groupByCycle } from '@/lib/billing-cycle';
 
 /** Latest gig date (YYYY-MM-DD) on an invoice; falls back to the sent date if it has no gigs. */
 function lastGigDate(inv: { gigs: { date: string }[]; sentAt: string }): string {
@@ -15,13 +16,27 @@ function lastGigDate(inv: { gigs: { date: string }[]; sentAt: string }): string 
   return dates.reduce((a, b) => (a > b ? a : b));
 }
 
-/** The invoices THIS artist has sent for one venue, grouped by month (of the invoice's last gig),
- *  newest first. Tapping opens the read-only invoice. Flows inside the venue-detail ScrollView. */
+/** The invoices THIS artist has sent for one venue, grouped by the venue's BILLING CYCLE (the
+ *  cycle the invoice's last gig falls in), newest first. Tapping opens the read-only invoice.
+ *  Flows inside the venue-detail ScrollView. */
 export function ArtistVenueInvoicesList({ venueId }: { venueId: string }) {
   const router = useRouter();
   const colors = useColors();
   const currentUser = useAuthStore((s) => s.currentUser);
   const invoices = useInvoiceStore((s) => s.invoices);
+  const venue = useVenueStore((s) => s.getVenueById(venueId));
+
+  // The venue's billing cycle drives the section titles (default 31 = a normal calendar month).
+  // The artist-side venue store may not carry it, so fall back to reading it from Supabase.
+  const [cycleEndDay, setCycleEndDay] = useState<number | null>(venue?.billingCycleEndDay ?? null);
+  useEffect(() => {
+    if (venue?.billingCycleEndDay != null) { setCycleEndDay(venue.billingCycleEndDay); return; }
+    let alive = true;
+    supabase.from('venues').select('billing_cycle_end_day').eq('id', venueId).maybeSingle()
+      .then(({ data, error }) => { if (alive) setCycleEndDay(error || data?.billing_cycle_end_day == null ? 31 : Number(data.billing_cycle_end_day)); });
+    return () => { alive = false; };
+  }, [venueId, venue?.billingCycleEndDay]);
+  const effectiveCycleDay = cycleEndDay ?? 31;
 
   const list = useMemo(
     () => invoices
@@ -30,19 +45,17 @@ export function ArtistVenueInvoicesList({ venueId }: { venueId: string }) {
     [invoices, currentUser?.id, venueId]
   );
 
-  // Group by the month of the last gig (newest month first — `list` is already sorted that way).
-  const months = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; items: typeof list; total: number }>();
-    list.forEach((inv) => {
-      const d = lastGigDate(inv);
-      const key = monthKey(d);
-      let e = map.get(key);
-      if (!e) { e = { key, label: monthLabel(d), items: [], total: 0 }; map.set(key, e); }
-      e.items.push(inv);
-      if (inv.status !== 'cancelled') e.total += inv.totalAmount;
-    });
-    return Array.from(map.values());
-  }, [list]);
+  // Group by the venue's BILLING CYCLE the last gig falls in (newest cycle first). cycleForDate
+  // labels a whole calendar month as "August 2025" and a shifted cycle as "16 Jul – 15 Aug 2025".
+  const cycles = useMemo(
+    () => groupByCycle(list, (inv) => lastGigDate(inv), effectiveCycleDay).map((g) => ({
+      key: g.cycle.key,
+      label: g.cycle.label,
+      items: g.items,
+      total: g.items.reduce((sum, inv) => sum + (inv.status !== 'cancelled' ? inv.totalAmount : 0), 0),
+    })),
+    [list, effectiveCycleDay]
+  );
 
   if (list.length === 0) {
     return <EmptyState icon="receipt-long" title="No invoices sent" subtitle="Invoices you send for this venue show up here." />;
@@ -50,7 +63,7 @@ export function ArtistVenueInvoicesList({ venueId }: { venueId: string }) {
 
   return (
     <View style={styles.wrap}>
-      {months.map((m) => (
+      {cycles.map((m) => (
         <View key={m.key}>
           <View style={styles.monthHeader}>
             <Text style={[styles.monthLabel, { color: colors.muted }]}>{m.label}</Text>
