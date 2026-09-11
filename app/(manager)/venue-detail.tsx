@@ -10,7 +10,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useAuthStore, useNotificationStore, useVenueDirectoryStore, mapVenueRow } from '@/lib/store';
 import { venueImageFor } from '@/lib/venue-images';
-import { setsForDay, DAY_SHORT } from '@/lib/venue-schedule';
+import { VenueBookingsList } from '@/components/venue-bookings-list';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { syncBookingStatus } from '@/lib/booking-sync';
@@ -66,7 +66,7 @@ export default function VenueDetailScreen() {
   const assignToVenue = useLineupStore((s) => s.assignToVenue);
   const removeFromVenue = useLineupStore((s) => s.removeFromVenue);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'roster' | 'invoices'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'roster' | 'invoices'>('overview');
   const [showReport, setShowReport] = useState(false);
   const [showVenueMenu, setShowVenueMenu] = useState(false);
   // Anchor the ⋯ dropdown right under the button by measuring its on-screen position.
@@ -364,10 +364,10 @@ export default function VenueDetailScreen() {
             an artist's venues. */}
         {isOwner && (
           <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {(['overview', 'schedule', 'roster', 'invoices'] as const).map((tab) => (
+            {(['overview', 'bookings', 'roster', 'invoices'] as const).map((tab) => (
               <Pressable key={tab} onPress={() => setActiveTab(tab)} style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.muted }]}>
-                  {tab === 'overview' ? 'Overview' : tab === 'schedule' ? 'Schedule' : tab === 'roster' ? 'Roster' : 'Invoices'}
+                  {tab === 'overview' ? 'Overview' : tab === 'bookings' ? 'Bookings' : tab === 'roster' ? 'Roster' : 'Invoices'}
                 </Text>
               </Pressable>
             ))}
@@ -493,38 +493,10 @@ export default function VenueDetailScreen() {
           </View>
         )}
 
-        {/* Schedule Tab — owner only. The weekly programme that auto-fills the calendar.
-            Read summary here; tap Edit to open the full editor. */}
-        {isOwner && activeTab === 'schedule' && (
-          <View style={styles.scheduleTab}>
-            {(venue.schedule ?? []).length === 0 ? (
-              <Text style={[styles.scheduleEmptyText, { color: colors.muted }]}>No Schedule yet</Text>
-            ) : (
-              <View style={{ gap: 10 }}>
-                {[0, 1, 2, 3, 4, 5, 6].map((d) => {
-                  const sets = setsForDay(venue.schedule, d);
-                  if (sets.length === 0) return null;
-                  return (
-                    <View key={d} style={[styles.scheduleRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <Text style={[styles.scheduleDayLabel, { color: colors.foreground }]}>{DAY_SHORT[d]}</Text>
-                      <Text style={[styles.scheduleTimes, { color: colors.muted }]} numberOfLines={2}>
-                        {sets.map((s) => `${s.startTime}–${s.endTime}`).join('   ·   ')}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-            <Pressable
-              onPress={() => router.push(('/(manager)/edit-schedule?id=' + venue.id) as any)}
-              style={({ pressed }) => [styles.scheduleEditBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
-            >
-              <MaterialIcons name="edit-calendar" size={18} color="#fff" />
-              <Text style={styles.scheduleEditText}>
-                {(venue.schedule ?? []).length > 0 ? 'Edit programme' : 'Set up programme'}
-              </Text>
-            </Pressable>
-          </View>
+        {/* Bookings Tab — owner only. This venue's booked + completed gigs, grouped by month.
+            (The weekly programme editor moved to the "⋯ → Edit schedule" menu.) */}
+        {isOwner && activeTab === 'bookings' && (
+          <VenueBookingsList venueId={venue.id} />
         )}
 
         {/* Roster Tab — owner only. Artists playing THIS venue; add/remove per-venue without
@@ -601,6 +573,11 @@ export default function VenueDetailScreen() {
             <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); router.push(('/(manager)/edit-budget?id=' + venue.id) as Href); }}>
               <MaterialIcons name="account-balance-wallet" size={20} color={colors.foreground} />
               <Text style={[styles.menuText, { color: colors.foreground }]}>Edit budget</Text>
+            </Pressable>
+            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+            <Pressable style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => { setShowVenueMenu(false); router.push(('/(manager)/edit-schedule?id=' + venue.id) as Href); }}>
+              <MaterialIcons name="edit-calendar" size={20} color={colors.foreground} />
+              <Text style={[styles.menuText, { color: colors.foreground }]}>Edit schedule</Text>
             </Pressable>
           </View>
         </Pressable>
