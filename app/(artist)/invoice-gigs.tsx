@@ -192,7 +192,9 @@ export default function InvoiceGigsScreen() {
     [activeRows]
   );
 
-  const handleContinue = () => {
+  // mode 'preview' = app-generated invoice; 'custom' = artist uploads their own PDF. Both carry
+  // the SAME selected gigs + total (so the gigs get marked invoiced either way).
+  const goToPreview = (mode: 'preview' | 'custom') => {
     if (selectedGigs.length === 0) {
       Alert.alert('No Gigs Selected', 'Please select at least one gig to invoice.');
       return;
@@ -219,9 +221,12 @@ export default function InvoiceGigsScreen() {
         // complete even when the venue is no longer in the artist's store.
         managerId: refBooking?.managerId ?? '',
         venueName,
+        ...(mode === 'custom' ? { mode: 'custom' } : {}),
       },
     });
   };
+  const handleContinue = () => goToPreview('preview');
+  const handleUploadOwn = () => goToPreview('custom');
 
   const renderGigRow = (item: GigRow) => {
     // Use booking.slotDate first (set on completed gigs), fall back to slot.date (for confirmed gigs)
@@ -370,23 +375,36 @@ export default function InvoiceGigsScreen() {
         }
       />
 
-      {/* Bottom bar */}
-      {activeRows.length > 0 && (
-        <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
-          <View>
-            <Text style={[styles.totalLabel, { color: colors.muted }]}>Total ({selectedGigs.length} gig{selectedGigs.length !== 1 ? 's' : ''})</Text>
-            <Text style={[styles.totalValue, { color: colors.foreground }]}>AED {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+      {/* Bottom bar — Total on top, then two ways to invoice: our layout, or the artist's own PDF. */}
+      {activeRows.length > 0 && (() => {
+        const ready = selectedGigs.length > 0 && allPriced && cycleEndDay !== null;
+        return (
+          <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 14) }]}>
+            <View style={styles.bottomTotalRow}>
+              <Text style={[styles.totalLabel, { color: colors.muted }]}>Total ({selectedGigs.length} gig{selectedGigs.length !== 1 ? 's' : ''})</Text>
+              <Text style={[styles.totalValue, { color: colors.foreground }]}>AED {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            </View>
+            <View style={styles.bottomBtnRow}>
+              <Pressable
+                style={({ pressed }) => [styles.uploadBtn, { opacity: pressed ? 0.7 : 1, borderColor: ready ? colors.primary : colors.border }]}
+                onPress={handleUploadOwn}
+                disabled={!ready}
+              >
+                <MaterialIcons name="upload-file" size={17} color={ready ? colors.primary : colors.muted} />
+                <Text style={[styles.uploadBtnText, { color: ready ? colors.primary : colors.muted }]}>Upload my own</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: ready ? '#E2674A' : colors.border }]}
+                onPress={handleContinue}
+                disabled={!ready}
+              >
+                <Text style={styles.continueBtnText}>Preview invoice</Text>
+                <MaterialIcons name="arrow-forward" size={18} color="#fff" />
+              </Pressable>
+            </View>
           </View>
-          <Pressable
-            style={({ pressed }) => [styles.continueBtn, { opacity: pressed ? 0.85 : 1, backgroundColor: selectedGigs.length > 0 && allPriced && cycleEndDay !== null ? '#E2674A' : colors.border }]}
-            onPress={handleContinue}
-            disabled={selectedGigs.length === 0 || !allPriced || cycleEndDay === null}
-          >
-            <Text style={styles.continueBtnText}>Preview Invoice</Text>
-            <MaterialIcons name="arrow-forward" size={18} color="#fff" />
-          </Pressable>
-        </View>
-      )}
+        );
+      })()}
 
       {/* Reminder Day Picker Modal */}
       <Modal visible={showReminderModal} transparent animationType="fade" onRequestClose={() => setShowReminderModal(false)}>
@@ -456,10 +474,14 @@ const styles = StyleSheet.create({
   priceSetBy: { fontSize: 9, marginTop: 3, textAlign: 'center' },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyText: { fontSize: 14, textAlign: 'center' },
-  bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5 },
+  bottomBar: { paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 0.5, gap: 12 },
+  bottomTotalRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  bottomBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  uploadBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 14, borderWidth: 1.5, paddingVertical: 13 },
+  uploadBtnText: { fontSize: 14, fontWeight: '700' },
   totalLabel: { fontSize: 12 },
   totalValue: { fontSize: 20, fontWeight: '800', fontFamily: fonts.bodyBold },
-  continueBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 14 },
+  continueBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 14, paddingVertical: 13 },
   continueBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   reminderSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },

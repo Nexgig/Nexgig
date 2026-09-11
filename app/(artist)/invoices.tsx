@@ -171,7 +171,7 @@ export default function InvoicesScreen() {
             <Text style={[styles.sentInvoiceNumber, { color: isCancelled ? colors.muted : colors.foreground }]}>{item.invoiceNumber}</Text>
             <Text style={[styles.sentVenue, { color: colors.foreground, textDecorationLine: isCancelled ? 'line-through' : 'none' }]} numberOfLines={1}>{item.venueName}</Text>
             <Text style={[styles.sentDate, { color: colors.muted }]}>
-              {item.gigs.length} gig{item.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}
+              {item.gigs.length} gig{item.gigs.length !== 1 ? 's' : ''} · Sent {sentDate}{item.pdfUrl ? ' · PDF' : ''}
             </Text>
           </View>
           <View style={styles.sentCardRight}>

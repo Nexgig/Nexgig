@@ -258,6 +258,7 @@ if (!lineupError && lineupData) {
           status: inv.status,
           isReadByManager: inv.is_read_by_manager ?? false,
           isDeletedByManager: inv.is_deleted_by_manager ?? false,
+          pdfUrl: inv.pdf_url ?? undefined,
         });
       });
     };
@@ -382,6 +383,7 @@ if (!lineupError && lineupData) {
               gigs: inv.gigs ?? [], totalAmount: parseFloat(inv.total_amount),
               invoiceNumber: inv.invoice_number ?? '', sentAt: inv.sent_at, status: inv.status,
               isReadByManager: false, isDeletedByManager: false,
+              pdfUrl: inv.pdf_url ?? undefined,
             });
           }
         )

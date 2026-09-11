@@ -12,6 +12,8 @@ import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime, useFormatTime } from '@/lib/conflict-detection';
 import { todayLocalStr, firstName } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { pickDocument, uploadDocumentAsync } from '@/lib/upload';
+import { openBrowserAsync } from 'expo-web-browser';
 import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 
@@ -20,7 +22,7 @@ export default function InvoicePreviewScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { formatTime: fmtTime } = useFormatTime();
-  const { venueId, gigsJson, total, invoiceId, readOnly, managerId: paramManagerId, venueName: paramVenueName } = useLocalSearchParams<{
+  const { venueId, gigsJson, total, invoiceId, readOnly, managerId: paramManagerId, venueName: paramVenueName, mode } = useLocalSearchParams<{
     venueId?: string;
     gigsJson?: string;
     total?: string;
@@ -28,6 +30,7 @@ export default function InvoicePreviewScreen() {
     readOnly?: string;
     managerId?: string;
     venueName?: string;
+    mode?: string;
   }>();
   const currentUser = useAuthStore((s) => s.currentUser);
   const venue = useVenueStore((s) => s.getVenueById(venueId ?? ''));
@@ -41,6 +44,33 @@ export default function InvoicePreviewScreen() {
 
   const isReadOnly = readOnly === '1';
   const existingInvoice = invoiceId ? invoices.find((inv) => inv.id === invoiceId) : null;
+
+  // Custom invoice = the artist uploads their OWN PDF instead of the generated one. Active when
+  // creating via the "Upload my own" button (mode==='custom') or viewing a sent custom invoice.
+  const isCustomMode = mode === 'custom' || !!existingInvoice?.pdfUrl;
+  const [customPdfName, setCustomPdfName] = useState<string | null>(null); // display name of the picked file
+  const [customPdfUri, setCustomPdfUri] = useState<string | null>(null);   // local file:// (this session, for the email attachment)
+  const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(existingInvoice?.pdfUrl ?? null); // uploaded public URL
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+
+  const pickCustomPdf = async () => {
+    if (uploadingPdf) return;
+    try {
+      const uri = await pickDocument();
+      if (!uri) return;
+      setCustomPdfUri(uri);
+      setCustomPdfName(uri.split('/').pop()?.replace(/%20/g, ' ') ?? 'invoice.pdf');
+      setUploadingPdf(true);
+      const url = await uploadDocumentAsync(uri, `invoice-${currentUser?.id ?? 'artist'}`);
+      setCustomPdfUrl(url);
+    } catch (e) {
+      Alert.alert('Upload failed', 'Could not read that file — please try another PDF.');
+      setCustomPdfUri(null); setCustomPdfName(null); setCustomPdfUrl(null);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+  const openCustomPdf = () => { const u = customPdfUrl ?? existingInvoice?.pdfUrl; if (u) openBrowserAsync(u); };
 
   // When creating a new invoice for a venue that's no longer in the local store
   // (manager hid/deleted it, or the artist left it), fetch the still-existing venue
@@ -104,6 +134,10 @@ export default function InvoicePreviewScreen() {
       Alert.alert('One moment', 'Still loading the venue details — please try again in a second.');
       return;
     }
+    if (isCustomMode && !customPdfUrl) {
+      Alert.alert('No file chosen', uploadingPdf ? 'Still uploading your PDF — give it a second.' : 'Upload your invoice PDF first, then send.');
+      return;
+    }
     Alert.alert(
       'Send Invoice',
       `Send this invoice for AED ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} to ${venueName}?`,
@@ -137,6 +171,7 @@ export default function InvoicePreviewScreen() {
               invoiceNumber,
               sentAt: new Date().toISOString(),
               status: 'sent',
+              pdfUrl: isCustomMode ? (customPdfUrl ?? undefined) : undefined,
             };
             // Save to Supabase FIRST — only mark sent locally + notify the manager if it
             // actually persisted, so a blocked insert can't masquerade as a sent invoice.
@@ -157,6 +192,7 @@ export default function InvoicePreviewScreen() {
               invoice_number: invoiceNumber,
               status: 'sent',
               sent_at: newInvoice.sentAt,
+              pdf_url: isCustomMode ? (customPdfUrl ?? null) : null,
             });
             if (invError) {
               console.warn('Invoice insert error:', invError.message);
@@ -189,7 +225,12 @@ export default function InvoicePreviewScreen() {
             void (async () => {
               let pdfBase64: string | undefined;
               try {
-                if (Platform.OS !== 'web') {
+                if (isCustomMode && customPdfUri) {
+                  // Custom invoice: attach the artist's UPLOADED PDF (read the local copy as base64)
+                  // rather than generating one.
+                  const FS = await import('expo-file-system/legacy');
+                  pdfBase64 = await FS.readAsStringAsync(customPdfUri, { encoding: 'base64' });
+                } else if (!isCustomMode && Platform.OS !== 'web') {
                   const Print = await import('expo-print');
                   const html = cachedHtmlRef.current ?? generateInvoiceHTML({
                     invoiceNumber, sentDate, artistName, artistEmail, artistLocation,
@@ -199,7 +240,7 @@ export default function InvoicePreviewScreen() {
                   pdfBase64 = res.base64 ?? undefined;
                 }
               } catch (e) {
-                console.log('[invoice email] PDF generation failed; sending without attachment:', e);
+                console.log('[invoice email] PDF attach/generate failed; sending without attachment:', e);
               }
               await sendEmail(managerId, 'invoice_received', {
                 artistName,
@@ -329,9 +370,9 @@ export default function InvoicePreviewScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <MaterialIcons name="arrow-back" size={24} color={colors.foreground} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.foreground }]}>Invoice Preview</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>{isCustomMode ? 'Your Invoice' : 'Invoice Preview'}</Text>
         {isReadOnly ? (
-          <Pressable onPress={handleDownloadPDF} style={({ pressed }) => [styles.pdfBtn, { opacity: pressed ? 0.7 : 1 }]}>
+          <Pressable onPress={isCustomMode ? openCustomPdf : handleDownloadPDF} style={({ pressed }) => [styles.pdfBtn, { opacity: pressed ? 0.7 : 1 }]}>
             <MaterialIcons name="picture-as-pdf" size={22} color={colors.primary} />
           </Pressable>
         ) : (
@@ -340,7 +381,41 @@ export default function InvoicePreviewScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Invoice Card */}
+        {/* Invoice card — the artist's uploaded PDF (custom) OR our generated layout. */}
+        {isCustomMode ? (
+          <View style={[styles.invoiceCard, { backgroundColor: colors.surface, borderColor: colors.border, gap: 0 }]}>
+            <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>YOUR INVOICE</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 6, marginBottom: 16 }}>
+              Send your own invoice PDF for {venueName} — it covers the {gigs.length} gig{gigs.length !== 1 ? 's' : ''} you picked (AED {Math.round(totalAmount).toLocaleString()}) and goes to the venue in place of our layout.
+            </Text>
+            {(customPdfUrl || customPdfUri) ? (
+              <View style={{ gap: 12 }}>
+                <View style={[styles.pdfChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <MaterialIcons name="picture-as-pdf" size={22} color={colors.primary} />
+                  <Text style={[styles.pdfChipName, { color: colors.foreground }]} numberOfLines={1}>{customPdfName ?? 'invoice.pdf'}</Text>
+                  {uploadingPdf ? <Text style={{ color: colors.muted, fontSize: 12 }}>Uploading…</Text> : <MaterialIcons name="check-circle" size={18} color={colors.success} />}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <Pressable onPress={openCustomPdf} disabled={!customPdfUrl} style={({ pressed }) => [styles.pdfActionBtn, { borderColor: colors.border, opacity: pressed || !customPdfUrl ? 0.5 : 1 }]}>
+                    <MaterialIcons name="visibility" size={17} color={colors.foreground} />
+                    <Text style={[styles.pdfActionText, { color: colors.foreground }]}>Preview PDF</Text>
+                  </Pressable>
+                  {!isReadOnly && (
+                    <Pressable onPress={pickCustomPdf} style={({ pressed }) => [styles.pdfActionBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
+                      <MaterialIcons name="autorenew" size={17} color={colors.foreground} />
+                      <Text style={[styles.pdfActionText, { color: colors.foreground }]}>Replace</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            ) : (
+              <Pressable onPress={pickCustomPdf} style={({ pressed }) => [styles.pickPdfBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}>
+                <MaterialIcons name="upload-file" size={20} color={colors.primary} />
+                <Text style={[styles.pickPdfText, { color: colors.primary }]}>Choose a PDF</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : (
         <View style={[styles.invoiceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Invoice Header */}
           <View style={styles.invoiceHeader}>
@@ -394,6 +469,7 @@ export default function InvoicePreviewScreen() {
             <Text style={[styles.totalValue, { color: colors.primary }]}>AED {Math.round(totalAmount).toLocaleString()}</Text>
           </View>
         </View>
+        )}
       </ScrollView>
 
       {/* Bottom Action */}
@@ -567,4 +643,10 @@ const styles = StyleSheet.create({
   sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   cancelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingVertical: 15 },
   cancelBtnText: { fontSize: 16, fontWeight: '700' },
+  pickPdfBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 12, paddingVertical: 20 },
+  pickPdfText: { fontSize: 15, fontWeight: '700' },
+  pdfChip: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13 },
+  pdfChipName: { flex: 1, fontSize: 14, fontWeight: '600' },
+  pdfActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingVertical: 10 },
+  pdfActionText: { fontSize: 13.5, fontWeight: '700' },
 });

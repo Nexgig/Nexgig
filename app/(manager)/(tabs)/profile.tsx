@@ -57,6 +57,7 @@ export default function ManagerProfileScreen() {
           venueTrnNumber: inv.venue_trn_number ?? '', venueAddress: inv.venue_address ?? '',
           gigs: inv.gigs ?? [], totalAmount: parseFloat(inv.total_amount),
           invoiceNumber: inv.invoice_number ?? '', sentAt: inv.sent_at, status: inv.status,
+          pdfUrl: inv.pdf_url ?? undefined,
         });
       });
     }
@@ -96,6 +97,7 @@ export default function ManagerProfileScreen() {
             invoiceNumber: inv.invoice_number ?? '', sentAt: inv.sent_at, status: inv.status,
             isReadByManager: inv.is_read_by_manager ?? false,
             isDeletedByManager: inv.is_deleted_by_manager ?? false,
+            pdfUrl: inv.pdf_url ?? undefined,
           });
         });
       })();
