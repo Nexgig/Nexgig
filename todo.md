@@ -123,9 +123,15 @@ those into ONE build.
 - **Artists with the same display name** — a manager assigning artists can't tell two same-named
   artists apart. Decide: show @username + photo (+ location?) in the assign list, and/or enforce
   unique display names at signup.
-- **How invoice numbers are generated** — confirm whether each invoice number is a unique sequential
-  series PER ARTIST (proper for accounting) or random/shared. Check the current code (`invoiceNumber`)
-  and decide.
+- **How invoice numbers are generated** — ✅ DECIDED + SHIPPED (preview, OTA `01a08ffa`, 11 Sep 2026).
+  Was `INV-<date>-<NNN>` with NNN = count of this artist's invoices in the LOCAL store +1 → could
+  mint DUPLICATES when the store was stale. Now `INV-<first 3 letters of the locked email>-<4-char
+  account-id tag>-<NNN>`, e.g. `INV-ELI-9F3A-001`: per-artist, unique across artists (tag), counted
+  from the LIVE DB (not the cache), monotonic (cancelled numbers retire → a gap, never reused),
+  send retries on a unique-violation, and a DB unique index on `(artist_id, invoice_number)` is the
+  backstop (`supabase/add-invoice-number-unique.sql` — Tuts ran the dup-check clean; index pending).
+  Chosen as the "safety net" (not the heavier server-RPC issuance). If we ever want gap-free reuse
+  instead of retiring cancelled numbers, that's a partial unique index + count change — small.
 - **Artists using their own invoicing** — ✅ SHIPPED as a PHOTO upload on preview (build 28, OTA
   `01a08fae`, 11 Sep 2026). After picking a cycle + gigs the artist gets two buttons: "Preview
   invoice" (our generator) or "Upload my own" → pick a photo of their invoice → uploads to the
