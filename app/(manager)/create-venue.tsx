@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Platform, useWindowDimensions } from '@/lib/rn';
+import { Keyboard } from 'react-native';
 import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSuggestion } from '@/lib/places';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -70,6 +71,14 @@ export default function CreateVenueScreen() {
   const sessionTokenRef = useRef<string>(newPlacesSessionToken());
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
+
+  const [cyclePickerOpen, setCyclePickerOpen] = useState(false);
+  // When the day picker opens, drop the keyboard and reserve space so its (downward) list scrolls
+  // fully into view even when the emails list has pushed it low.
+  const onCyclePickerToggle = (open: boolean) => {
+    setCyclePickerOpen(open);
+    if (open) { Keyboard.dismiss(); setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80); }
+  };
 
   const [step, setStep] = useState(1);
   const [displayStep, setDisplayStep] = useState(1);
@@ -381,7 +390,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>Step {displayStep} of {TOTAL_STEPS}</Text>
       </View>
-      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 24 + keyboardHeight }]} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingBottom: 24 + keyboardHeight + (cyclePickerOpen ? 240 : 0) }]} keyboardShouldPersistTaps="handled">
         <Animated.View style={animatedStyle}>
         {/* spacer removed — header is now outside scroll */}
 
@@ -536,9 +545,9 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                   <Text style={[styles.label, { color: colors.primary }]}>{form.billingEmails.length > 0 ? 'Add another email' : 'Add an email'}</Text>
                 </Pressable>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, zIndex: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, zIndex: 10 }}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-                <CycleDayPicker value={form.billingCycleEndDay} onChange={(day) => update('billingCycleEndDay', day)} width={76} />
+                <CycleDayPicker value={form.billingCycleEndDay} onChange={(day) => update('billingCycleEndDay', day)} width={76} onOpenChange={onCyclePickerToggle} />
               </View>
             </View>
           )}

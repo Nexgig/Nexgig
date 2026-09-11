@@ -11,6 +11,8 @@ interface CycleDayPickerProps {
   /** Open the menu UPWARD instead of downward — use when the control sits low on the screen so
    *  the list's end isn't clipped off the bottom. */
   dropUp?: boolean;
+  /** Fires when the menu opens/closes, so the parent can make room + scroll it into view. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -18,14 +20,15 @@ interface CycleDayPickerProps {
  * content instead of pushing it — matches the budget editor's month/year pickers.
  * The parent renders its own label; this is just the control.
  */
-export function CycleDayPicker({ value, onChange, width = 60, dropUp = false }: CycleDayPickerProps) {
+export function CycleDayPicker({ value, onChange, width = 60, dropUp = false, onOpenChange }: CycleDayPickerProps) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
+  const setOpenState = (next: boolean) => { setOpen(next); onOpenChange?.(next); };
   return (
     <View style={{ position: 'relative', zIndex: open ? 1000 : 1, alignSelf: 'flex-start', width }}>
       <Pressable
         style={[styles.pill, { borderColor: open ? colors.primary : colors.border, backgroundColor: colors.background }]}
-        onPress={() => setOpen((o) => !o)}
+        onPress={() => setOpenState(!open)}
       >
         <Text style={[styles.pillText, { color: colors.foreground }]}>{value}</Text>
         <MaterialIcons name={open ? 'keyboard-arrow-up' : 'keyboard-arrow-down'} size={18} color={colors.muted} />
@@ -39,7 +42,7 @@ export function CycleDayPicker({ value, onChange, width = 60, dropUp = false }: 
                 <Pressable
                   key={day}
                   style={[styles.option, sel && { backgroundColor: colors.primary + '15' }]}
-                  onPress={() => { onChange(day); setOpen(false); }}
+                  onPress={() => { onChange(day); setOpenState(false); }}
                 >
                   <Text style={[styles.optionText, { color: sel ? colors.primary : colors.foreground, fontWeight: sel ? '700' : '400' }]}>{day}</Text>
                   {sel && <MaterialIcons name="check" size={16} color={colors.primary} />}

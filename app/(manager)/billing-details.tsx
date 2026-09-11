@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert } from '@/lib/rn';
+import { Keyboard } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -21,6 +22,14 @@ export default function BillingDetails() {
   const [cycleDay, setCycleDay] = useState<number>(venue?.billingCycleEndDay ?? 31);
   const [billingEmails, setBillingEmails] = useState<string[]>(venue?.billingEmails ?? []);
   const [saving, setSaving] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [cyclePickerOpen, setCyclePickerOpen] = useState(false);
+  // When the day picker opens, drop the keyboard and reserve space so its (downward) list scrolls
+  // fully into view even when the emails list has pushed it low.
+  const onCyclePickerToggle = (open: boolean) => {
+    setCyclePickerOpen(open);
+    if (open) { Keyboard.dismiss(); setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80); }
+  };
 
   const dirty = useMemo(() => (
     companyName !== (venue?.billing?.companyName ?? '') ||
@@ -87,7 +96,7 @@ export default function BillingDetails() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, cyclePickerOpen && styles.contentPickerOpen]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={[styles.intro, { color: colors.muted }]}>These details will appear on invoices sent by artists for this venue.</Text>
 
         <View style={styles.fieldGroup}>
@@ -134,7 +143,7 @@ export default function BillingDetails() {
 
         <View style={[styles.cycleRow, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: colors.foreground }]}>Billing cycle ends on</Text>
-          <CycleDayPicker value={cycleDay} onChange={setCycleDay} width={76} />
+          <CycleDayPicker value={cycleDay} onChange={setCycleDay} width={76} onOpenChange={onCyclePickerToggle} />
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -148,9 +157,10 @@ const styles = StyleSheet.create({
   saveBtn: { paddingHorizontal: 12, paddingVertical: 8 },
   saveText: { fontSize: 17, fontWeight: '700' },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 48, gap: 20 },
+  contentPickerOpen: { paddingBottom: 260 }, // room for the open day list to scroll fully into view
   intro: { fontSize: 13, lineHeight: 19 },
   fieldGroup: { gap: 8 },
-  cycleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  cycleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   label: { fontSize: 15, fontWeight: '600' },
   hint: { fontSize: 13, lineHeight: 18 },
   input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
