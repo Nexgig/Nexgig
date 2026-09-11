@@ -130,13 +130,18 @@ is the source of truth: roll on `end < start`, **strictly** (a zero-length slot 
 on a **cold start**, and applies what it downloads on the **next** one — so stock behaviour is
 *two full quits* before a user sees a change. Backgrounding is not quitting; iOS suspends the
 app and no check happens, so someone who never swipes it away can sit on an old bundle
-indefinitely. `lib/silent-update.ts` closes that: on foreground after 5 min away it checks,
-downloads and reloads, behind an `UpdatingOverlay` (a bare reload resets to the dashboard
-mid-navigation and reads as a crash). It reloads on `isUpdatePending` FIRST — a cold start may
-have already downloaded the update, in which case asking the server "anything newer?" answers
-no. **A change to this file can't speed up its own delivery** — it ships in the new bundle, so
-the old two-cold-start path delivers it once more. The settings footers (both sides) show the
-running update id; that's how you tell what a tester is actually on.
+indefinitely. `lib/silent-update.ts` closes that: on foreground after **10s** away (was 5 min,
+lowered 11 Sep 2026) it checks, downloads and reloads, behind an `UpdatingOverlay` (a bare
+reload resets to the dashboard mid-navigation and reads as a crash). The 10s gate ignores iOS's
+momentary *inactive* blips (app switcher, Control Center, permission sheets); `onFormScreen()`
+additionally SKIPS the reload while on a data-entry screen (create/edit venue, edit profile,
+billing details, edit budget, add slot/block, assign artist, send feedback, invoice gigs,
+booking detail) so unsaved input isn't discarded — **add any new form screen to that list**. It
+reloads on `isUpdatePending` FIRST — a cold start may have already downloaded the update, in
+which case asking the server "anything newer?" answers no. **A change to this file can't speed
+up its own delivery** — it ships in the new bundle, so the OLD path delivers it once more (the
+10s behaviour only starts once a tester is ON the bundle that carries it). The settings footers
+(both sides) show the running update id; that's how you tell what a tester is actually on.
 
 **A manager's PAST BOOKING REQUEST is stored as `status: 'requested'`, not
 `'past_confirmation'`.** Both creation paths (`assign-artist.tsx`, `add-slot.tsx`) insert
