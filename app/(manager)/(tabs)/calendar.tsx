@@ -1594,7 +1594,7 @@ export default function CalendarScreen() {
         {budget > 0 && (
           <>
             <View style={[styles.budgetTrack, { backgroundColor: colors.muted + '2E' }]}>
-              <View style={{ width: `${Math.min(100, (totalCost / budget) * 100)}%`, height: '100%', borderRadius: 4, backgroundColor: overBudget ? colors.error : totalCost >= budget * 0.85 ? colors.warning : colors.success }} />
+              <View style={{ width: `${Math.min(100, (totalCost / budget) * 100)}%`, height: '100%', borderRadius: 4, backgroundColor: overBudget ? colors.error : totalCost >= budget * 0.85 ? colors.warning : colors.primary }} />
             </View>
             <Text style={[styles.budgetLine, { color: overBudget ? colors.error : colors.muted }]}>
               {overBudget
@@ -1604,16 +1604,7 @@ export default function CalendarScreen() {
           </>
         )}
 
-        {/* Stacked coral bar — one segment per artist, width ∝ their fee, shaded by rank. */}
-        {totalCost > 0 && (
-          <View style={styles.lineupSegBar}>
-            {sortedRows.map((row, i) => (
-              <View key={row.artistId} style={{ flex: row.cost, backgroundColor: shadeAt(i), borderRadius: 4 }} />
-            ))}
-          </View>
-        )}
-
-        {/* Rows — coral square (matching the bar shade) + name + gigs + amount. */}
+        {/* Rows — coral square (shaded by rank) + name + gigs + amount. */}
         {sortedRows.length === 0 ? (
           <Text style={[styles.lineupEmptyText, { color: colors.muted }]}>No bookings for this period yet.</Text>
         ) : (
