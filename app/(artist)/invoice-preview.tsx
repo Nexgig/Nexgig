@@ -132,15 +132,16 @@ export default function InvoicePreviewScreen() {
   const [invoiceNumber, setInvoiceNumber] = useState<string>(existingInvoice?.invoiceNumber ?? '');
   useEffect(() => {
     if (existingInvoice) { setInvoiceNumber(existingInvoice.invoiceNumber); return; }
+    if (isCustomMode) { setInvoiceNumber(''); return; } // uploaded invoice keeps its OWN file name; no Nexgig number
     if (!currentUser) return;
     let alive = true;
     (async () => {
-      const seq = await nextInvoiceSeq(currentUser.id, invoices.filter((i) => i.artistId === currentUser.id).length);
+      const seq = await nextInvoiceSeq(currentUser.id, invoices.filter((i) => i.artistId === currentUser.id && !i.pdfUrl).length);
       if (alive) setInvoiceNumber(`${invoicePrefix}-${String(seq).padStart(3, '0')}`);
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingInvoice, currentUser, invoicePrefix]);
+  }, [existingInvoice, currentUser, invoicePrefix, isCustomMode]);
 
   const artistName = existingInvoice?.artistLegalName ?? currentUser?.fullLegalName ?? currentUser?.fullName ?? '';
   const artistEmail = existingInvoice?.artistEmail ?? currentUser?.email ?? '';
@@ -201,12 +202,15 @@ export default function InvoicePreviewScreen() {
             // Mint the running number and RETRY if the DB's unique rule on (artist_id,
             // invoice_number) rejects it — that only happens in a rare race (two sends at once);
             // the retry just re-counts and takes the next free number.
-            let finalNumber = invoiceNumber;
+            // Generated invoice → mint the next Nexgig number. UPLOADED invoice → keep the artist's
+            // OWN file name as its reference (their document already carries their number); no Nexgig
+            // number, and it does NOT advance the counter (the partial unique index exempts uploads).
+            let finalNumber = isCustomMode ? ((customPdfName ?? '').trim() || 'Uploaded invoice') : invoiceNumber;
             let saved = false;
             let lastErr: any = null;
             for (let attempt = 0; attempt < 3 && !saved; attempt++) {
-              if (!finalNumber) {
-                const seq = await nextInvoiceSeq(currentUser.id, invoices.filter((i) => i.artistId === currentUser.id).length);
+              if (!isCustomMode && !finalNumber) {
+                const seq = await nextInvoiceSeq(currentUser.id, invoices.filter((i) => i.artistId === currentUser.id && !i.pdfUrl).length);
                 finalNumber = `${invoicePrefix}-${String(seq).padStart(3, '0')}`;
               }
               const { error } = await supabase.from('invoices').insert({
@@ -230,8 +234,9 @@ export default function InvoicePreviewScreen() {
               });
               if (!error) { saved = true; break; }
               lastErr = error;
-              // 23505 = unique_violation: that number was just taken — remint and try again.
-              if ((error as any).code === '23505') { finalNumber = ''; continue; }
+              // 23505 = unique_violation: a GENERATED number was just taken — remint and try again.
+              // Uploads aren't unique-constrained, so this never applies to them.
+              if (!isCustomMode && (error as any).code === '23505') { finalNumber = ''; continue; }
               break; // any other error: stop and report
             }
             if (!saved) {
@@ -558,14 +563,17 @@ function formatFullDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-// Next per-artist invoice sequence number, counted from the LIVE database (every row, cancelled
-// included, so a number is never reused). Falls back to the local count if the query fails.
+// Next per-artist invoice sequence number, counted from the LIVE database — only OUR GENERATED
+// invoices (pdf_url IS NULL); uploaded ones keep their own file name and never advance the counter.
+// Cancelled generated invoices still count (a number is never reused). Falls back to the local
+// count if the query fails.
 async function nextInvoiceSeq(artistId: string, fallbackCount: number): Promise<number> {
   try {
     const { count, error } = await supabase
       .from('invoices')
       .select('id', { count: 'exact', head: true })
-      .eq('artist_id', artistId);
+      .eq('artist_id', artistId)
+      .is('pdf_url', null);
     if (error || count == null) return fallbackCount + 1;
     return count + 1;
   } catch {
