@@ -1,7 +1,7 @@
 import { sweepExpiredRequests } from '@/lib/expire-requests';
 import { useRoleSwitching } from '@/lib/roles';
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert, Linking } from '@/lib/rn';
+import { ScrollView, View, Text, Pressable, StyleSheet, RefreshControl, Modal, Image, Alert } from '@/lib/rn';
 import { LayoutAnimation } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { fetchPrivateEventBookings } from '@/lib/private-events';
 import { venueImageFor } from '@/lib/venue-images';
+import { openMapsChooser } from '@/lib/maps';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { isPastEnd, isExpiredRequest, displayStatus, firstName, nowLocalDateTimeStr, bookingVenueName, todayLocalStr, addDaysStr } from '@/lib/utils';
@@ -396,28 +397,15 @@ export default function DJHomeScreen() {
 
   // Open the venue in Google Maps (directions). Prefers saved coordinates, else the address
   // or venue name. Mirrors app/(artist)/booking-detail.tsx.
-  // Confirm before leaving the app for Google Maps.
-  const confirmOpenMaps = (url: string) => {
-    Alert.alert('Open in Google Maps?', 'This opens the location in Google Maps.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Open', onPress: () => Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link.")) },
-    ]);
-  };
-
   const openVenueMaps = (b: (typeof dashboardBookings)[number]) => {
     const venue = allVenues.find((v) => v.id === b.venueId);
     const loc = venue?.googleMapsLocation;
-    const url = (loc?.lat && loc?.lng)
-      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue?.name || b.venueName || '')}`;
-    confirmOpenMaps(url);
+    openMapsChooser({ lat: loc?.lat, lng: loc?.lng, query: loc?.address || venue?.name || b.venueName, title: venue?.name ?? b.venueName });
   };
 
-  // Private events have a free-text location the artist typed (e.g. "Dubai Marina"), not a
-  // geocoded venue — open Maps as a search on that text.
+  // Private events have a free-text location the artist typed (e.g. "Dubai Marina").
   const openPrivateEventMaps = (loc: string) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`;
-    confirmOpenMaps(url);
+    openMapsChooser({ query: loc, title: loc });
   };
 
   const renderDateGroup = ({ date, gigs }: { date: string; gigs: (typeof dashboardBookings) }) => (

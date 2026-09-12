@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, Linking, Image } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, Image } from '@/lib/rn';
 import { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -14,6 +14,7 @@ import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
+import { openMapsChooser } from '@/lib/maps';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { submitReview, fetchReviews } from '@/lib/reviews';
 import { isPastEnd, displayStatus, isExpiredRequest, firstName, bookingVenueName } from '@/lib/utils';
@@ -430,10 +431,7 @@ export default function DJBookingDetailScreen() {
                   <MapsBadge
                     onPress={() => {
                       const loc = venue.googleMapsLocation;
-                      const url = (loc?.lat && loc?.lng)
-                        ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
-                      Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+                      openMapsChooser({ lat: loc?.lat, lng: loc?.lng, query: loc?.address || venue.name, title: venue.name });
                     }}
                   />
                 ) : undefined

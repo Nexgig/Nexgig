@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Image, Linking, ActivityIndicator, Alert } from '@/lib/rn';
 import { openLink } from '@/lib/open-link';
+import { openMapsChooser } from '@/lib/maps';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import type { Venue } from '@/lib/types';
@@ -320,10 +321,7 @@ export default function ArtistVenueDetailScreen() {
                     <MapsBadge
                       onPress={() => {
                         const loc = venue.googleMapsLocation;
-                        const url = (loc?.lat && loc?.lng)
-                          ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                          : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
-                        openLink(url);
+                        openMapsChooser({ lat: loc?.lat, lng: loc?.lng, query: loc?.address || venue.name, title: venue.name });
                       }}
                     />
                   </View>

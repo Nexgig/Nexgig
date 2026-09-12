@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Linking, Image } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Image } from '@/lib/rn';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { venueImageFor } from '@/lib/venue-images';
 import { useColors } from '@/hooks/use-colors';
 import { formatDate, useFormatTime } from '@/lib/conflict-detection';
 import { cityFromAddress } from '@/lib/places';
+import { openMapsChooser } from '@/lib/maps';
 import { displayStatus, bookingVenueName, firstName } from '@/lib/utils';
 import { syncBookingStatus } from '@/lib/booking-sync';
 import { supabase } from '@/lib/supabase';
@@ -298,10 +299,7 @@ export default function DJBookingDetailScreen() {
                 last
                 trailing={loc?.address ? (
                   <MapsBadge onPress={() => {
-                    const url = (loc?.lat && loc?.lng)
-                      ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || emptyVenue?.name || '')}`;
-                    Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+                    openMapsChooser({ lat: loc?.lat, lng: loc?.lng, query: loc?.address || emptyVenue?.name, title: emptyVenue?.name });
                   }} />
                 ) : undefined}
               />
@@ -585,10 +583,7 @@ export default function DJBookingDetailScreen() {
                   <MapsBadge
                     onPress={() => {
                       const loc = venue.googleMapsLocation;
-                      const url = (loc?.lat && loc?.lng)
-                        ? `https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`
-                        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc?.address || venue.name || '')}`;
-                      Linking.openURL(url).catch(() => Alert.alert('Unable to open', "This device can't open that link."));
+                      openMapsChooser({ lat: loc?.lat, lng: loc?.lng, query: loc?.address || venue.name, title: venue.name });
                     }}
                   />
                 ) : undefined
