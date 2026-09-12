@@ -43,6 +43,14 @@ export function RoleSwitcher({ role }: { role: Role }) {
     return <Text style={[styles.title, { color: colors.foreground }]}>{label}</Text>;
   }
 
+  // Managers are invite-only, so an ARTIST cannot create a manager profile. Only SWITCHING to an
+  // EXISTING manager profile stays (current dual-role accounts keep it). With no manager profile
+  // yet, fall back to the plain heading — no "add" affordance. The manager→artist path is
+  // unaffected (managers can still create an artist profile).
+  if (otherRole === 'manager' && other === 'none') {
+    return <Text style={[styles.title, { color: colors.foreground }]}>{label}</Text>;
+  }
+
   const go = async () => {
     if (busy) return;
     if (other === 'none') {

@@ -214,6 +214,20 @@ function renderAdminTemplate(
         ),
       };
     }
+    case 'manager_access_request': {
+      const email = str(data.email);
+      return {
+        subject: `[Manager access request] ${email}`,
+        html: shell(
+          h1('New manager access request') +
+          adminRow('Name', str(data.name)) +
+          adminRow('Email', email) +
+          adminRow('Phone', str(data.phone)) +
+          adminRow('Venues / events they manage', str(data.venues)) +
+          `<div style="margin-top:14px; color:${BRAND.muted}; font-size:13px; line-height:1.5;">To approve: add <b>${escapeHtml(email)}</b> (lowercase) to the <b>manager_allowlist</b> table in Supabase. They can then finish signing up.</div>`,
+        ),
+      };
+    }
     default:
       return null;
   }
@@ -344,23 +358,56 @@ serve(async (req) => {
 
     if (!resendApiKey) return json({ error: 'Email is not configured' }, 500);
 
-    // 1. Caller must be a logged-in user (verify their token).
+    // 1. Auth header must be present (a user JWT, or the app's anon key for the
+    //    session-less manager-access request below).
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json({ error: 'Missing authorization header' }, 401);
 
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) return json({ error: 'Invalid or expired session' }, 401);
-
-    // 2. Parse + validate the payload.
+    // Parse the payload up front so the session-less template can be routed before
+    // the logged-in-user gate.
     const payload = await req.json();
     const { to_user_id, template, data = {} } = payload ?? {};
 
     if (typeof template !== 'string' || template.length === 0) {
       return json({ error: 'Invalid template' }, 400);
     }
+
+    // 1a. MANAGER ACCESS REQUEST — the requester has NO account yet (no session), so
+    //     this skips the logged-in-user gate. Records the request (service role) and
+    //     emails the admin inbox. Anyone with the anon key can call it; volume is low
+    //     and each request is stored for review.
+    if (template === 'manager_access_request') {
+      const d = data as Record<string, unknown>;
+      const reqEmail = (typeof d.email === 'string' ? d.email : '').trim().toLowerCase();
+      const svc = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      try {
+        await svc.from('manager_requests').insert({
+          email: reqEmail || null,
+          full_name: (typeof d.name === 'string' ? d.name.trim() : '') || null,
+          phone: (typeof d.phone === 'string' ? d.phone.trim() : '') || null,
+          venues: (typeof d.venues === 'string' ? d.venues.trim() : '') || null,
+        });
+      } catch (_) { /* never block the email on a record failure */ }
+      const renderedReq = renderAdminTemplate('manager_access_request', d);
+      if (!renderedReq) return json({ error: 'Unknown template: manager_access_request' }, 400);
+      const reqResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendApiKey}` },
+        body: JSON.stringify({ from: FROM, to: [ADMIN_EMAIL], subject: renderedReq.subject, html: renderedReq.html }),
+      });
+      const reqResult = await reqResponse.json();
+      if (!reqResponse.ok) return json({ error: 'Resend rejected the email', details: reqResult }, 502);
+      return json({ success: true, id: reqResult?.id ?? null }, 200);
+    }
+
+    // 2. Every other template requires a logged-in user (verify their token).
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) return json({ error: 'Invalid or expired session' }, 401);
 
     // 2a. ADMIN-notification templates (report / feedback): no recipient user —
     //     render from `data` and deliver to the admin inbox. Any logged-in user

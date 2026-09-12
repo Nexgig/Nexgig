@@ -21,6 +21,7 @@ import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { defaultAvatarId } from '@/lib/avatars';
 import { validateEmail } from '@/lib/validate-email';
 import { EmailOtpModal } from '@/components/email-otp-modal';
+import { isManagerAllowed } from '@/lib/manager-access';
 
 const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
@@ -103,6 +104,15 @@ export default function ManagerRegisterScreen() {
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
+  // Manager signup is invite-only: when the email isn't on the approved list, send the person to
+  // the request-access screen (with name + email carried over) instead of creating an account.
+  const goToManagerRequest = () => {
+    const params = new URLSearchParams();
+    if (form.fullName.trim()) params.set('name', form.fullName.trim());
+    if (form.email.trim()) params.set('email', form.email.trim());
+    router.replace(`/(auth)/manager-request?${params.toString()}` as Href);
+  };
+
   const handleNext = async () => {
     if (isAnimating) return;
 
@@ -116,6 +126,12 @@ export default function ManagerRegisterScreen() {
           Alert.alert('Required', 'Please enter your full name.');
           return;
         }
+        // Manager signup is invite-only. If this email isn't approved, divert to the
+        // request-access flow instead of creating a manager profile.
+        setIsLoading(true);
+        const allowed = await isManagerAllowed(form.email);
+        setIsLoading(false);
+        if (!allowed) { goToManagerRequest(); return; }
         animateToStep(2, 'forward');
         return;
       }
@@ -136,6 +152,11 @@ export default function ManagerRegisterScreen() {
       }
 
       setIsLoading(true);
+
+      // Manager signup is invite-only — gate BEFORE creating the auth account, so an
+      // unapproved email never becomes an account. Not approved → request-access flow.
+      const allowed = await isManagerAllowed(form.email);
+      if (!allowed) { setIsLoading(false); goToManagerRequest(); return; }
 
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
