@@ -615,7 +615,7 @@ export default function NetworkScreen() {
           <Text style={[styles.summaryLabel, { color: colors.muted }]}>INVOICED IN</Text>
           <Pressable style={styles.summaryMonthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
             <Text style={[styles.summaryMonthText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
-            <MaterialIcons name="expand-more" size={20} color={colors.muted} />
+            <MaterialIcons name="expand-more" size={17} color={colors.muted} />
           </Pressable>
         </View>
         <Text style={[styles.summaryAmount, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -667,7 +667,7 @@ export default function NetworkScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>
                       {SHOW_ARTIST_VERIFIED_BADGE && profile?.hasCompletedBooking && (
-                        <MaterialIcons name="verified" size={15} color={colors.primary} />
+                        <MaterialIcons name="verified" size={13} color={colors.primary} />
                       )}
                     </View>
                     <Text style={[styles.cardSub, { color: newInv > 0 ? colors.primary : uninv > 0 ? colors.warning : colors.muted }]} numberOfLines={1}>
@@ -679,7 +679,7 @@ export default function NetworkScreen() {
                   {uninv > 0 ? (
                     isRequested ? (
                       <View style={styles.requestedPill}>
-                        <MaterialIcons name="check" size={14} color={colors.muted} />
+                        <MaterialIcons name="check" size={12} color={colors.muted} />
                         <Text style={[styles.requestedText, { color: colors.muted }]}>Requested</Text>
                       </View>
                     ) : (
@@ -727,23 +727,23 @@ export default function NetworkScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
-  // Invoiced-total hero card.
-  summaryCard: { marginHorizontal: 20, marginTop: 2, marginBottom: 16, borderRadius: 22, paddingHorizontal: 22, paddingTop: 18, paddingBottom: 20 },
-  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  summaryLabel: { fontSize: 12.5, fontWeight: '700', letterSpacing: 0.8 },
+  // Invoiced-total hero card (everything but the 44px avatar is 15% smaller).
+  summaryCard: { marginHorizontal: 20, marginTop: 2, marginBottom: 14, borderRadius: 19, paddingHorizontal: 19, paddingTop: 15, paddingBottom: 17 },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
+  summaryLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.7 },
   summaryMonthBtn: { flexDirection: 'row', alignItems: 'center', gap: 1 },
-  summaryMonthText: { fontSize: 17, fontWeight: '700' },
-  summaryAmount: { fontSize: 42, fontWeight: '800', letterSpacing: -1.2, marginBottom: 6 },
-  summarySub: { fontSize: 14 },
-  rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 56 },
+  summaryMonthText: { fontSize: 14.5, fontWeight: '700' },
+  summaryAmount: { fontSize: 36, fontWeight: '800', letterSpacing: -1, marginBottom: 5 },
+  summarySub: { fontSize: 12 },
+  rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 54 },
   gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
-  requestPill: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, paddingHorizontal: 20, paddingVertical: 10 },
-  requestText: { fontSize: 14, fontWeight: '700' },
-  requestedPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, paddingVertical: 7 },
-  requestedText: { fontSize: 13, fontWeight: '600' },
+  requestPill: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, paddingHorizontal: 17, paddingVertical: 8 },
+  requestText: { fontSize: 12, fontWeight: '700' },
+  requestedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 4, paddingVertical: 6 },
+  requestedText: { fontSize: 11, fontWeight: '600' },
   gigNum: { fontSize: 18, fontWeight: '800' },
   gigLabel: { fontSize: 12, marginTop: -1 },
-  gigAmount: { fontSize: 16, fontWeight: '800' },
+  gigAmount: { fontSize: 13.5, fontWeight: '800' },
   gigCompleted: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   inviteFooter: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 8, paddingTop: 4 },
   inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
@@ -761,17 +761,17 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, paddingVertical: 4, flexGrow: 1 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  cardTitle: { fontSize: 13.5, fontWeight: '700', marginBottom: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
   verifiedPillText: { fontSize: 10, fontWeight: '700' },
   // Copied from the old my-venues so the pending/rejected pill looks the same as it did.
   verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
   verifyPillText: { fontSize: 10, fontWeight: '700' },
-  cardSub: { fontSize: 14, marginBottom: 0 },
+  cardSub: { fontSize: 12, marginBottom: 0 },
   cardMeta: { fontSize: 12 },
   cardVenue: { fontSize: 13, fontWeight: '600' },
   thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
