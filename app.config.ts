@@ -58,12 +58,13 @@ try {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.1.1",
-  // OTA "lane" is PINNED to "1.1" on purpose — decoupled from the marketing version above.
-  // 1.1 is released on the App Store, so new store/TestFlight builds must bump the version
-  // (Apple closes a released version), but OTAs stay keyed to "1.1" so a version bump doesn't
-  // strand the live 1.1 users on an OTA lane they can't reach. Bump this string BY HAND only
-  // for a NATIVE change (new native module / permission / icon) — JS/OTA changes keep it "1.1".
+  version: "1.2",
+  // runtimeVersion is the OTA "lane" — INDEPENDENT of the marketing version above. Bump it BY
+  // HAND only for a NATIVE change (new native module / permission / icon); JS/OTA changes leave
+  // it alone. It went 1.1 → 1.2 when photo upload (expo-image-picker) landed in build 28, so
+  // every runtime-1.2 binary (builds 28/29/30…) shares one OTA lane. Marketing version and
+  // runtime both read "1.2" now, but they move independently — a version bump alone must NOT
+  // touch this, or it strands users on a lane they can't reach.
   runtimeVersion: "1.2",
   updates: {
     url: "https://u.expo.dev/eae9c0e4-5f95-4c8b-ba5f-09303b81ecbe",
