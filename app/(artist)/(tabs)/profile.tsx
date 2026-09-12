@@ -292,7 +292,7 @@ export default function ArtistProfileScreen() {
             // separator (the Section's own <Divider/> already closes the block).
             const links = [
               mediaLinks.instagram && { key: 'instagram', label: 'Instagram', url: mediaLinks.instagram, icon: 'camera-alt' as const, tint: '#E1306C' },
-              mediaLinks.soundcloud && { key: 'soundcloud', label: 'SoundCloud', url: mediaLinks.soundcloud, icon: 'music-note' as const, tint: '#FF5500' },
+              mediaLinks.soundcloud && { key: 'soundcloud', label: 'Music that best describes me', url: mediaLinks.soundcloud, icon: 'music-note' as const, tint: '#FF5500' },
               mediaLinks.mixcloud && { key: 'mixcloud', label: 'Mixcloud', url: mediaLinks.mixcloud, icon: 'cloud' as const, tint: '#5000FF' },
               mediaLinks.spotify && { key: 'spotify', label: 'Spotify', url: mediaLinks.spotify, icon: 'headset' as const, tint: '#1DB954' },
             ].filter(Boolean) as { key: string; label: string; url: string; icon: 'camera-alt' | 'music-note' | 'cloud' | 'headset'; tint: string }[];

@@ -535,7 +535,7 @@ export default function ArtistProfileViewScreen() {
           {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (() => {
             const links = [
               mediaLinks.instagram && { key: 'instagram', label: 'Instagram', url: mediaLinks.instagram },
-              mediaLinks.soundcloud && { key: 'soundcloud', label: 'SoundCloud', url: mediaLinks.soundcloud },
+              mediaLinks.soundcloud && { key: 'soundcloud', label: 'Music that best describes me', url: mediaLinks.soundcloud },
               mediaLinks.spotify && { key: 'spotify', label: 'Spotify', url: mediaLinks.spotify },
             ].filter(Boolean) as { key: string; label: string; url: string }[];
 

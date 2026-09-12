@@ -581,9 +581,9 @@ export default function DJSetupScreen() {
                 </View>
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Share a soundtrack link that best describes you (Soundcloud mix, Spotify playlist, etc)</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Share a music link that best describes you</Text>
                 <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="Paste your link" placeholderTextColor={colors.muted}
+                  placeholder="Soundcloud mix, Spotify playlist, etc" placeholderTextColor={colors.muted}
                   value={form.soundcloud} onChangeText={(v) => update('soundcloud', v)}
                   autoCapitalize="none" keyboardType="url" returnKeyType="done" />
               </View>

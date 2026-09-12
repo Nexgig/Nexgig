@@ -482,7 +482,7 @@ export default function DJEditProfileScreen() {
 
           {[
             { key: 'instagramUrl', label: 'Instagram', placeholder: 'instagram.com/yourname' },
-            { key: 'soundcloudUrl', label: 'Share a soundtrack link that best describes you (Soundcloud mix, Spotify playlist, etc)', placeholder: 'Paste your link' },
+            { key: 'soundcloudUrl', label: 'Share a music link that best describes you', placeholder: 'Soundcloud mix, Spotify playlist, etc' },
           ].map(({ key, label, placeholder }) => (
             <View key={key} style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>{label}</Text>
