@@ -8,7 +8,6 @@ import { useColors } from '@/hooks/use-colors';
 import { computePastMonths } from '@/lib/artist-past-months';
 import { formatDate, formatTime } from '@/lib/conflict-detection';
 import { venueImageFor } from '@/lib/venue-images';
-import { fonts } from '@/lib/fonts';
 
 export default function PastBookings() {
   const router = useRouter();
@@ -78,8 +77,8 @@ export default function PastBookings() {
                       {vi > 0 && <View style={[styles.venueDivider, { backgroundColor: colors.border }]} />}
                       <Pressable style={({ pressed }) => [styles.venueRow, { opacity: pressed ? 0.7 : 1 }]} onPress={() => toggleVenue(vKey)}>
                         {isPrivate ? (
-                          <View style={[styles.thumb, styles.privateThumb, { backgroundColor: colors.primary + '18' }]}>
-                            <MaterialIcons name="event" size={22} color={colors.primary} />
+                          <View style={[styles.thumb, styles.privateThumb, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                            <Text style={[styles.pbText, { color: colors.primary }]}>PB</Text>
                           </View>
                         ) : (
                           <Image source={venueImageFor(venueObj)} style={styles.thumb} />
@@ -98,7 +97,7 @@ export default function PastBookings() {
                           onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as any)}
                         >
                           <Text style={[styles.gigDate, { color: colors.foreground }]} numberOfLines={1}>
-                            {g.date ? formatDate(g.date) : 'Date unknown'}{g.startTime ? ` · ${formatTime(g.startTime)}–${formatTime(g.endTime)}` : ''}
+                            {g.date ? formatDate(g.date) : 'Date unknown'}{g.name ? ` · ${g.name}` : g.startTime ? ` · ${formatTime(g.startTime)}–${formatTime(g.endTime)}` : ''}
                           </Text>
                           <Text style={[styles.gigAmount, { color: colors.muted }]}>{g.earnings > 0 ? `AED ${g.earnings.toLocaleString()}` : '—'}</Text>
                         </Pressable>
@@ -127,14 +126,15 @@ const styles = StyleSheet.create({
   monthSep: { height: 10, marginHorizontal: -20, marginVertical: 10 },
 
   monthHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingTop: 8, paddingBottom: 8 },
-  monthName: { fontSize: 26, fontFamily: fonts.displayBold, letterSpacing: -0.5, marginBottom: 3 },
+  monthName: { fontSize: 21, fontWeight: '800', letterSpacing: -0.4, marginBottom: 3 },
   monthSub: { fontSize: 14 },
-  monthTotal: { fontSize: 22, fontWeight: '800', fontFamily: fonts.bodyBold },
+  monthTotal: { fontSize: 18, fontWeight: '800' },
 
   venueDivider: { height: StyleSheet.hairlineWidth, marginLeft: 60 },
   venueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   thumb: { width: 48, height: 48, borderRadius: 12 },
-  privateThumb: { alignItems: 'center', justifyContent: 'center' },
+  privateThumb: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  pbText: { fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
   venueName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   venueGigs: { fontSize: 14 },
   venueAmount: { fontSize: 16, fontWeight: '700' },

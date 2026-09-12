@@ -1,7 +1,7 @@
 import type { Booking, Slot, Venue } from '@/lib/types';
 import { bookingVenueName } from '@/lib/utils';
 
-export type PastGig = { id: string; date: string; startTime: string; endTime: string; earnings: number };
+export type PastGig = { id: string; date: string; startTime: string; endTime: string; earnings: number; name?: string };
 export type PastVenue = { key: string; name: string; earnings: number; gigCount: number; gigs: PastGig[] };
 export type PastMonth = { key: string; label: string; earnings: number; gigCount: number; venues: PastVenue[] };
 
@@ -39,7 +39,7 @@ export function computePastMonths(bookings: Booking[], slots: Slot[], venues: Ve
     let v = m.venues.get(vKey);
     if (!v) { v = { key: vKey, name: vName, earnings: 0, gigCount: 0, gigs: [] }; m.venues.set(vKey, v); }
     const price = b.price ?? 0;
-    v.gigs.push({ id: b.id, date, startTime, endTime, earnings: price });
+    v.gigs.push({ id: b.id, date, startTime, endTime, earnings: price, name: b.isArtistCreated ? (b.slotName ?? 'Private Booking') : undefined });
     v.earnings += price; v.gigCount++;
     m.earnings += price; m.gigCount++;
   }
