@@ -39,11 +39,20 @@ export function BudgetEditor({ value, onChange }: BudgetEditorProps) {
     onChange(value.map((b, i) => (i === idx ? { ...b, ...p } : b)));
   const remove = (idx: number) => onChange(value.filter((_, i) => i !== idx));
   const add = () => {
-    // Default to the first month this year that isn't used yet; else the current month.
-    const usedThisYear = new Set(value.filter((b) => b.year === curYear).map((b) => b.month));
+    // Default to the month AFTER the latest budget already set (rolling the year at December);
+    // if there are none yet, to the current month. Then skip any month already used. So it never
+    // defaults to January just because the year is empty — it opens the next sensible month.
+    let year = curYear;
     let month = curMonth;
-    for (let m = 1; m <= 12; m++) if (!usedThisYear.has(m)) { month = m; break; }
-    onChange([...value, { year: curYear, month, amount: 0 }]);
+    if (value.length > 0) {
+      const latest = value.reduce((a, b) => (b.year * 12 + b.month > a.year * 12 + a.month ? b : a));
+      year = latest.year;
+      month = latest.month + 1;
+      if (month > 12) { month = 1; year += 1; }
+    }
+    const used = new Set(value.map((b) => b.year * 12 + b.month));
+    while (used.has(year * 12 + month)) { month += 1; if (month > 12) { month = 1; year += 1; } }
+    onChange([...value, { year, month, amount: 0 }]);
     setOpen(null);
   };
 
