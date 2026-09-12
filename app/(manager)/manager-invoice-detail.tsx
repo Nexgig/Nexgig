@@ -201,7 +201,7 @@ export default function ManagerInvoiceDetailScreen() {
       const yyyy = now.getFullYear();
       const safeName = (invoice.artistLegalName || 'Artist').replace(/[^a-zA-Z0-9]/g, '');
       const safeVenue = (invoice.venueName || 'Venue').replace(/[^a-zA-Z0-9]/g, '');
-      const pdfFileName = `${invoice.invoiceNumber.replace(/[^a-zA-Z0-9]/g, '')}.pdf`;
+      const pdfFileName = `${invoice.invoiceNumber.replace(/[\/\\?%*:|"<>\x00-\x1F]/g, '').replace(/\s+/g, ' ').trim() || 'invoice'}.pdf`;
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       const FileSystem = await import('expo-file-system/legacy');
       const namedUri = `${FileSystem.cacheDirectory}${pdfFileName}`;

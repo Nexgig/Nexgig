@@ -326,10 +326,15 @@ export default function InvoicePreviewScreen() {
               } catch (e) {
                 console.log('[invoice email] PDF attach/generate failed; sending without attachment:', e);
               }
-              // A custom invoice is a photo OR a PDF — name the attachment with its real extension
-              // (.jpg / .pdf) so the manager's mail client opens it correctly.
+              // Name the attachment after the invoice reference, keeping it readable (dashes, dots,
+              // etc. stay — only characters a filename can't hold are stripped). A generated invoice
+              // gets its number + .pdf; an UPLOADED one keeps its own file name (which already carries
+              // its extension), so we don't double it.
               const customExt = (customPdfUri || customPdfUrl || '').match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/)?.[1]?.toLowerCase() || (customIsPdf ? 'pdf' : 'jpg');
-              const safeNum = finalNumber.replace(/[^a-zA-Z0-9]/g, '') || 'invoice';
+              const cleaned = finalNumber.replace(/[\/\\?%*:|"<>\x00-\x1F]/g, '').replace(/\s+/g, ' ').trim() || 'invoice';
+              const pdfFileName = isCustomMode
+                ? (/\.[a-zA-Z0-9]+$/.test(cleaned) ? cleaned : `${cleaned}.${customExt}`)
+                : `${cleaned}.pdf`;
               await sendEmail(managerId, 'invoice_received', {
                 artistName,
                 venueName,
@@ -337,7 +342,7 @@ export default function InvoicePreviewScreen() {
                 amount: Math.round(totalAmount).toLocaleString(),
                 invoiceNumber: finalNumber,
                 pdfBase64,
-                pdfFileName: isCustomMode ? `${safeNum}.${customExt}` : `${safeNum}.pdf`,
+                pdfFileName,
               });
             })();
 
@@ -405,7 +410,7 @@ export default function InvoicePreviewScreen() {
       const yyyy = now.getFullYear();
       const safeName = (artistName || 'Artist').replace(/[^a-zA-Z0-9]/g, '');
       const safeVenue = (venueName || 'Venue').replace(/[^a-zA-Z0-9]/g, '');
-      const pdfFileName = `${invoiceNumber.replace(/[^a-zA-Z0-9]/g, '')}.pdf`;
+      const pdfFileName = `${invoiceNumber.replace(/[\/\\?%*:|"<>\x00-\x1F]/g, '').replace(/\s+/g, ' ').trim() || 'invoice'}.pdf`;
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       const FileSystem = await import('expo-file-system/legacy');
       const namedUri = `${FileSystem.cacheDirectory}${pdfFileName}`;
