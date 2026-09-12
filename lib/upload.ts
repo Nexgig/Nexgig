@@ -125,16 +125,20 @@ export async function uploadImageAsync(
 
 /**
  * Pick a single PDF from the Files app / on-device storage. Returns the local
- * uri (or null if cancelled). `copyToCacheDirectory: true` is REQUIRED so the
- * file is copied where FileSystem.readAsStringAsync can read it.
+ * `uri` AND the original `name` (or null if cancelled). `copyToCacheDirectory: true`
+ * is REQUIRED so the file is copied where FileSystem.readAsStringAsync can read it —
+ * but that copy is a random cache name, so the display name MUST come from
+ * `asset.name` (the file's real name), never from the uri.
  */
-export async function pickDocument(): Promise<string | null> {
+export async function pickDocument(): Promise<{ uri: string; name: string } | null> {
   const result = await DocumentPicker.getDocumentAsync({
     type: 'application/pdf',
     copyToCacheDirectory: true,
     multiple: false,
   });
-  return !result.canceled && result.assets[0] ? result.assets[0].uri : null;
+  if (result.canceled || !result.assets[0]) return null;
+  const asset = result.assets[0];
+  return { uri: asset.uri, name: (asset.name || 'invoice.pdf').trim() };
 }
 
 /**

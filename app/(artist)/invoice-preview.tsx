@@ -69,12 +69,23 @@ export default function InvoicePreviewScreen() {
   const handlePickCustom = async (kind: 'image' | 'pdf') => {
     if (uploadingPdf) return;
     try {
-      // Photo: no crop, quality 0.7 keeps it legible without a huge upload. PDF: straight from Files.
-      const uri = kind === 'pdf' ? await pickDocument() : await pickImage({ allowsEditing: false, quality: 0.7 });
-      if (!uri) return;
+      // PDF: use the file's REAL name from the picker (its cache uri is a random name). Photo: no
+      // crop, quality 0.7; a camera-roll photo has no meaningful file name, so give it a clean label.
+      let uri: string | null;
+      let name: string;
+      if (kind === 'pdf') {
+        const picked = await pickDocument();
+        if (!picked) return;
+        uri = picked.uri;
+        name = picked.name;
+      } else {
+        uri = await pickImage({ allowsEditing: false, quality: 0.7 });
+        if (!uri) return;
+        name = 'Invoice photo';
+      }
       setCustomKind(kind);
       setCustomPdfUri(uri);
-      setCustomPdfName(uri.split('/').pop()?.replace(/%20/g, ' ') ?? (kind === 'pdf' ? 'invoice.pdf' : 'invoice.jpg'));
+      setCustomPdfName(name);
       setUploadingPdf(true);
       const url = kind === 'pdf'
         ? await uploadDocumentAsync(uri, `invoice-${currentUser?.id ?? 'artist'}`)
