@@ -101,9 +101,10 @@ const rowsTable = (pairs: [string, string][]) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${BODY_FONT};">` +
   pairs.map(([l, v]) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:7px 16px 7px 0; white-space:nowrap;">${l}</td><td align="right" valign="top" style="font-size:14px; color:${BRAND.ink}; font-weight:500; padding:7px 0;">${v}</td></tr>`).join('') +
   `</table>`;
-const stepsTable = (items: string[]) =>
+// A simple left-aligned bulleted list (matches the in-app Welcome card).
+const bulletList = (items: string[]) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:${BODY_FONT};">` +
-  items.map((desc, i) => `<tr><td align="left" valign="top" style="font-size:14px; color:${BRAND.muted}; padding:9px 16px 9px 0; white-space:nowrap;">Step ${i + 1}</td><td align="right" valign="top" style="font-size:15px; color:${BRAND.ink}; font-weight:500; padding:9px 0;">${desc}</td></tr>`).join('') +
+  items.map((desc) => `<tr><td align="left" valign="top" style="font-size:15px; color:${BRAND.ink}; padding:7px 12px 7px 0; line-height:1.5;">&bull;</td><td align="left" valign="top" style="font-size:15px; color:${BRAND.body}; padding:7px 0; line-height:1.5;">${desc}</td></tr>`).join('') +
   `</table>`;
 const pdfChip = (filename: string, sizeLabel: string) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.surface}; border-radius:12px; margin:22px 0;"><tr><td style="padding:14px 16px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="middle"><div style="width:36px; height:36px; background:${BRAND.ink}; border-radius:8px; color:#fff; font-size:10px; font-weight:700; text-align:center; line-height:36px; font-family:${BODY_FONT};">PDF</div></td><td valign="middle" style="padding-left:12px;"><div style="font-family:${BODY_FONT}; font-size:14px; font-weight:500; color:${BRAND.ink};">${filename}</div><div style="font-family:${BODY_FONT}; font-size:12px; color:${BRAND.muted}; margin-top:2px;">Attached to this email${sizeLabel ? ` &middot; ${sizeLabel}` : ''}</div></td></tr></table></td></tr></table>`;
@@ -255,7 +256,7 @@ function renderTemplate(
       };
     }
 
-    // Welcome email — artist variant.
+    // Welcome email — artist variant. Mirrors the in-app Welcome card copy.
     case 'welcome_artist': {
       return {
         subject: 'Welcome to Nexgig',
@@ -263,19 +264,21 @@ function renderTemplate(
           greet(escapeHtml(name || 'there')) +
           cardTitle('Welcome to Nexgig') +
           hr() +
-          stepsTable([
-            'Complete your artist profile',
-            'Get added to venue rosters, or add your own private gigs',
-            "Block the dates and times you're unavailable",
+          p("Here's how to start getting booked:") +
+          bulletList([
+            'Complete your profile to get found by venues looking for your sound.',
+            'Venues send you gig requests: accept or decline, with the fee up front.',
+            'Track your monthly earnings as gigs get confirmed.',
+            'Turn your gigs into an invoice in a tap.',
+            'Create your own bookings to keep track of them too.',
           ]) +
-          ctaButton('Open Nexgig', APP_STORE_URL) +
-          footnote('A complete profile gets you found by venues looking for your sound.'),
+          ctaButton('Open Nexgig', APP_STORE_URL),
           { category: 'WELCOME', reason: 'You get this because you have an artist profile on Nexgig.' },
         ),
       };
     }
 
-    // Welcome email — manager variant.
+    // Welcome email — manager variant. Mirrors the in-app Welcome card copy.
     case 'welcome_manager': {
       return {
         subject: 'Welcome to Nexgig',
@@ -283,13 +286,14 @@ function renderTemplate(
           greet(escapeHtml(name || 'there')) +
           cardTitle('Welcome to Nexgig') +
           hr() +
-          stepsTable([
-            'Create your venues',
-            'Invite artists to your roster',
-            'Send your first booking request',
+          p("Here's how to book your first artist:") +
+          bulletList([
+            'Create your first venue.',
+            'Build your roster — add artists from your Profile tab.',
+            'Create sets on the calendar and send booking requests.',
+            'Stay on budget: track spend and get invoices from your artists automatically.',
           ]) +
-          ctaButton('Open Nexgig', APP_STORE_URL) +
-          footnote('Book, Play, Manage — everything for the night in one place.'),
+          ctaButton('Open Nexgig', APP_STORE_URL),
           { category: 'WELCOME', reason: 'You get this because you created a manager account on Nexgig.' },
         ),
       };
