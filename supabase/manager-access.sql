@@ -86,3 +86,21 @@ create trigger trg_enforce_manager_allowlist
 insert into public.manager_allowlist (email)
 select distinct lower(trim(email)) from public.managers where email is not null
 on conflict (email) do nothing;
+
+-- 6. Pre-fill for a returning APPROVED manager: their name + phone from the request they already
+--    submitted, so signup doesn't ask again. Gated on the allow-list so it can't leak a random
+--    email's details — only an APPROVED email with a prior request returns anything.
+create or replace function public.get_manager_request_prefill(check_email text)
+returns table(full_name text, phone text)
+language sql security definer stable set search_path = public as $$
+  select r.full_name, r.phone
+  from public.manager_requests r
+  where lower(r.email) = lower(trim(check_email))
+    and exists (
+      select 1 from public.manager_allowlist a
+      where lower(a.email) = lower(trim(check_email))
+    )
+  order by r.created_at desc
+  limit 1;
+$$;
+grant execute on function public.get_manager_request_prefill(text) to anon, authenticated;

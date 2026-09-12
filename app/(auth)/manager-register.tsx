@@ -21,7 +21,7 @@ import { AvatarPicker } from '@/components/ui/avatar-picker';
 import { defaultAvatarId } from '@/lib/avatars';
 import { validateEmail } from '@/lib/validate-email';
 import { EmailOtpModal } from '@/components/email-otp-modal';
-import { isManagerAllowed } from '@/lib/manager-access';
+import { isManagerAllowed, getManagerRequestPrefill } from '@/lib/manager-access';
 
 const TOTAL_STEPS = 3;
 const ANIM_DURATION = 350;
@@ -105,12 +105,36 @@ export default function ManagerRegisterScreen() {
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
   // Manager signup is invite-only: when the email isn't on the approved list, send the person to
-  // the request-access screen (with name + email carried over) instead of creating an account.
+  // the request-access screen. Carry name + email + PHONE over (already entered in step 1) so the
+  // request screen doesn't ask for any of them again — it only needs the venues.
   const goToManagerRequest = () => {
     const params = new URLSearchParams();
     if (form.fullName.trim()) params.set('name', form.fullName.trim());
     if (form.email.trim()) params.set('email', form.email.trim());
+    if (form.phone.trim()) params.set('phone', form.phone.trim());
     router.replace(`/(auth)/manager-request?${params.toString()}` as Href);
+  };
+
+  // A returning APPROVED manager already gave their name + phone when they requested access — so
+  // when they type that email here, pre-fill both (only into still-empty fields, once) instead of
+  // making them re-enter it. Debounced; only fires for a valid, non-OAuth email.
+  const prefillTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prefilledRef = useRef(false);
+  const maybePrefillFromRequest = (emailValue: string) => {
+    if (hasSession || prefilledRef.current) return;
+    const e = emailValue.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return;
+    if (prefillTimer.current) clearTimeout(prefillTimer.current);
+    prefillTimer.current = setTimeout(async () => {
+      const pre = await getManagerRequestPrefill(e);
+      if (!pre) return;
+      prefilledRef.current = true;
+      setForm((f) => ({
+        ...f,
+        fullName: f.fullName.trim() ? f.fullName : (pre.fullName ?? f.fullName),
+        phone: f.phone.trim() ? f.phone : (pre.phone ?? f.phone),
+      }));
+    }, 500);
   };
 
   const handleNext = async () => {
@@ -126,6 +150,10 @@ export default function ManagerRegisterScreen() {
           Alert.alert('Required', 'Please enter your full name.');
           return;
         }
+        if (!form.phone.trim()) {
+          Alert.alert('Required', 'Please enter your phone number.');
+          return;
+        }
         // Manager signup is invite-only. If this email isn't approved, divert to the
         // request-access flow instead of creating a manager profile.
         setIsLoading(true);
@@ -136,8 +164,8 @@ export default function ManagerRegisterScreen() {
         return;
       }
 
-      if (!form.fullName.trim() || !form.email.trim() || !form.password.trim()) {
-        Alert.alert('Required', 'Please fill in all fields.');
+      if (!form.fullName.trim() || !form.email.trim() || !form.password.trim() || !form.phone.trim()) {
+        Alert.alert('Required', 'Please fill in all fields, including your phone number.');
         return;
       }
       const emailErr = validateEmail(form.email);
@@ -363,7 +391,7 @@ export default function ManagerRegisterScreen() {
                 <InputField
                   label="Email Address"
                   value={form.email}
-                  onChangeText={(v) => { update('email', v); setEmailError(''); }}
+                  onChangeText={(v) => { update('email', v); setEmailError(''); maybePrefillFromRequest(v); }}
                   placeholder="alex@example.com"
                   keyboardType="email-address"
                   colors={colors}

@@ -16,9 +16,9 @@ export default function ManagerRequestScreen() {
   const router = useRouter();
   const colors = useColors();
   const keyboardHeight = useKeyboardHeight();
-  const { name, email } = useLocalSearchParams<{ name?: string; email?: string }>();
+  // name / email / phone are carried over from step 1 of the signup — we don't re-ask for them.
+  const { name, email, phone } = useLocalSearchParams<{ name?: string; email?: string; phone?: string }>();
 
-  const [phone, setPhone] = useState('');
   const [venues, setVenues] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -27,7 +27,6 @@ export default function ManagerRequestScreen() {
 
   const submit = async () => {
     if (sending) return;
-    if (!phone.trim()) { Alert.alert('Required', 'Please add a phone number so we can reach you.'); return; }
     if (!venues.trim()) { Alert.alert('Required', 'Please tell us which venues or events you manage.'); return; }
     setSending(true);
     const ok = await submitManagerRequest({ name, email: email ?? '', phone, venues });
@@ -76,16 +75,6 @@ export default function ManagerRequestScreen() {
           <View style={[styles.readonly, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             <Text style={[styles.readonlyText, { color: colors.foreground }]} numberOfLines={1}>{email || '—'}</Text>
           </View>
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: colors.muted }]}>Phone number</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
-            placeholder="e.g. +971 50 123 4567" placeholderTextColor={colors.muted}
-            value={phone} onChangeText={setPhone}
-            keyboardType="phone-pad" returnKeyType="next"
-          />
         </View>
 
         <View style={styles.fieldGroup}>

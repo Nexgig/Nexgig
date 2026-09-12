@@ -23,6 +23,24 @@ export async function isManagerAllowed(email: string): Promise<boolean> {
 }
 
 /**
+ * For a returning APPROVED manager: their name + phone from the request they already submitted, so
+ * signup doesn't ask again. Returns null unless the email is BOTH approved and has a prior request
+ * (the RPC gates on the allow-list, so it can't leak details for a random/unapproved email).
+ */
+export async function getManagerRequestPrefill(email: string): Promise<{ fullName?: string; phone?: string } | null> {
+  const e = email.trim().toLowerCase();
+  if (!e) return null;
+  try {
+    const { data, error } = await supabase.rpc('get_manager_request_prefill', { check_email: e });
+    if (error || !Array.isArray(data) || data.length === 0) return null;
+    const row = data[0] as { full_name?: string | null; phone?: string | null };
+    return { fullName: row.full_name ?? undefined, phone: row.phone ?? undefined };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Record a manager-access request + email admin@nexgigapp.com. Goes through the send-email edge
  * function (session-less `manager_access_request` template): the function inserts the row (service
  * role) and sends the admin email. Returns false on failure so the screen can tell the user.
