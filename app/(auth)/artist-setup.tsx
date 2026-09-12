@@ -84,7 +84,7 @@ export default function DJSetupScreen() {
     primaryGenre: '' as GenreType | '',
     secondaryGenres: [] as GenreType[],
     instruments: [] as InstrumentType[],
-    soundcloud: '', mixcloud: '', instagram: '', spotify: '',
+    soundcloud: '', instagram: '',
   });
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -298,8 +298,8 @@ export default function DJSetupScreen() {
       avatar_id: resolvedAvatarId,
       instagram_url: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : null,
       soundcloud_url: form.soundcloud || null,
-      mixcloud_url: form.mixcloud || null,
-      spotify_url: form.spotify || null,
+      mixcloud_url: null,
+      spotify_url: null,
     };
     let artistInsertError: any = null;
     for (let attempt = 0; attempt < 4; attempt++) {
@@ -359,8 +359,8 @@ export default function DJSetupScreen() {
       nationality: form.nationality || undefined,
       instagramUrl: form.instagram ? `https://instagram.com/${form.instagram.replace(/^@/, '')}` : undefined,
       soundcloudUrl: form.soundcloud || undefined,
-      mixcloudUrl: form.mixcloud || undefined,
-      spotifyUrl: form.spotify || undefined,
+      mixcloudUrl: undefined,
+      spotifyUrl: undefined,
     });
 
     // Welcome email (transactional, fire-and-forget — never blocks signup).
@@ -580,15 +580,13 @@ export default function DJSetupScreen() {
                   />
                 </View>
               </View>
-              {(['soundcloud', 'spotify', 'mixcloud'] as const).map((platform) => (
-                <View key={platform} style={styles.fieldGroup}>
-                  <Text style={[styles.label, { color: colors.foreground }]}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</Text>
-                  <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
-                    placeholder={`https://${platform}.com/yourprofile`} placeholderTextColor={colors.muted}
-                    value={form[platform]} onChangeText={(v) => update(platform, v)}
-                    autoCapitalize="none" keyboardType="url" returnKeyType="done" />
-                </View>
-              ))}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Share a soundtrack link that best describes you (Soundcloud mix, Spotify playlist, etc)</Text>
+                <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground }]}
+                  placeholder="Paste your link" placeholderTextColor={colors.muted}
+                  value={form.soundcloud} onChangeText={(v) => update('soundcloud', v)}
+                  autoCapitalize="none" keyboardType="url" returnKeyType="done" />
+              </View>
             </View>
           )}
 
