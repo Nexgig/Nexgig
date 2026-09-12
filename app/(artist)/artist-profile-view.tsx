@@ -135,7 +135,6 @@ export default function ArtistProfileViewScreen() {
   const mediaLinks = {
     instagram: profile?.instagramUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.instagram,
     soundcloud: profile?.soundcloudUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.soundcloud,
-    spotify: profile?.spotifyUrl ?? (profile?.mediaLinks as Record<string, string> | undefined)?.spotify,
   };
 
   return (
@@ -213,11 +212,10 @@ export default function ArtistProfileViewScreen() {
           ) : null}
 
           {/* Links — text-only rows, no trailing separator on the last */}
-          {(mediaLinks.instagram || mediaLinks.soundcloud || mediaLinks.spotify) && (() => {
+          {(mediaLinks.instagram || mediaLinks.soundcloud) && (() => {
             const links = [
               mediaLinks.instagram && { key: 'instagram', label: 'Instagram', url: mediaLinks.instagram },
               mediaLinks.soundcloud && { key: 'soundcloud', label: 'Music that best describes me', url: mediaLinks.soundcloud },
-              mediaLinks.spotify && { key: 'spotify', label: 'Spotify', url: mediaLinks.spotify },
             ].filter(Boolean) as { key: string; label: string; url: string }[];
 
             return (
