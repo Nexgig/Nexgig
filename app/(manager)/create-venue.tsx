@@ -14,6 +14,7 @@ import { ScheduleEditor } from '@/components/schedule-editor';
 import { BudgetEditor } from '@/components/budget-editor';
 import { CycleDayPicker } from '@/components/cycle-day-picker';
 import { normalizeBudgets } from '@/lib/venue-budget';
+import { saveVenuePrivate } from '@/lib/venue-private';
 import { ensureScheduleSlots } from '@/lib/venue-schedule-sync';
 import { todayLocalStr, addDaysStr } from '@/lib/utils';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
@@ -247,8 +248,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
     billing_company_address: form.billingCompanyAddress || null,
     billing_trn_number: form.billingTrnNumber || null,
     billing_cycle_end_day: form.billingCycleEndDay,
-    billing_emails: cleanBillingEmails,
-    monthly_budgets: normalizeBudgets(form.monthlyBudgets),
     schedule: form.schedule,
     is_hidden: false,
   }).select().single();
@@ -273,6 +272,12 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
       await supabase.from('venues').update({ admin_photo_url: adminPhotoUrl }).eq('id', venueData.id);
     } catch { adminPhotoUrl = null; }
   }
+
+  // Budgets + billing emails go into the manager-only venue_private table, not the venue row.
+  await saveVenuePrivate(venueData.id, user.id, {
+    monthlyBudgets: normalizeBudgets(form.monthlyBudgets),
+    billingEmails: cleanBillingEmails,
+  });
 
   // ✅ Also add to local store so it shows immediately without refetch
   const newVenue: Venue = {

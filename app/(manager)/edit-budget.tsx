@@ -8,6 +8,7 @@ import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { BudgetEditor } from '@/components/budget-editor';
 import { normalizeBudgets } from '@/lib/venue-budget';
+import { saveVenuePrivate } from '@/lib/venue-private';
 import type { VenueMonthlyBudget } from '@/lib/types';
 
 export default function EditBudget() {
@@ -47,10 +48,8 @@ export default function EditBudget() {
     setSaving(true);
     const clean = normalizeBudgets(budgets);
     updateVenue(venue.id, { monthlyBudgets: clean });
-    const { error } = await supabase
-      .from('venues')
-      .update({ monthly_budgets: clean, updated_at: new Date().toISOString() })
-      .eq('id', venue.id);
+    // Budgets live in the manager-only venue_private table, not on the venue row.
+    const { error } = await saveVenuePrivate(venue.id, venue.managerId, { monthlyBudgets: clean });
     if (error) {
       setSaving(false);
       Alert.alert('Could not save', 'Please try again.');

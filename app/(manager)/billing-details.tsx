@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
+import { saveVenuePrivate } from '@/lib/venue-private';
 import { CycleDayPicker } from '@/components/cycle-day-picker';
 
 export default function BillingDetails() {
@@ -70,10 +71,11 @@ export default function BillingDetails() {
       billing_company_address: companyAddress.trim() || null,
       billing_trn_number: trnNumber.trim() || null,
       billing_cycle_end_day: cycleDay,
-      billing_emails: cleanEmails,
       updated_at: new Date().toISOString(),
     }).eq('id', venue.id);
-    if (error) {
+    // Billing emails live in the manager-only venue_private table, not on the venue row.
+    const { error: privErr } = await saveVenuePrivate(venue.id, venue.managerId, { billingEmails: cleanEmails });
+    if (error || privErr) {
       setSaving(false);
       Alert.alert('Could not save', 'Please try again.');
       return;

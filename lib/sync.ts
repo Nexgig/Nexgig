@@ -5,6 +5,7 @@ import { useBookingStore } from './store';
 import { useLineupStore } from './store';
 import { useNotificationStore } from './store';
 import type { Venue, Slot, Booking, AppNotification } from './types';
+import { mergeVenuePrivate } from './venue-private';
 
 // ─── Load all data for a user from Supabase into Zustand stores ──────────────
 
@@ -81,7 +82,9 @@ async function fetchVenues(managerId: string): Promise<Venue[] | null> {
     updatedAt: v.updated_at,
   }));
 
-  return venues;
+  // Budgets + billing emails live in the manager-only venue_private table, not on the
+  // venue row — merge them back onto the manager's own venues.
+  return await mergeVenuePrivate(venues);
 }
 
 // ─── Sync slots ──────────────────────────────────────────────────────────────

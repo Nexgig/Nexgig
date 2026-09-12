@@ -529,9 +529,9 @@ serve(async (req) => {
       const venueId = typeof d.venueId === 'string' ? d.venueId : null;
       if (venueId && isUuid(venueId)) {
         const { data: venueRow } = await admin
-          .from('venues')
+          .from('venue_private')
           .select('billing_emails, manager_id')
-          .eq('id', venueId)
+          .eq('venue_id', venueId)
           .maybeSingle();
         if (venueRow?.manager_id === to_user_id && Array.isArray(venueRow.billing_emails)) {
           const billed = (venueRow.billing_emails as unknown[])

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import type { Venue, Slot, Booking } from '@/lib/types';
 import { useVenueStore, useSlotStore, useBookingStore, useLineupStore, useInvoiceStore, useNotificationStore, useAuthStore, loadNotificationsFromSupabase, useArtistDirectoryStore, mapVenueRow } from '@/lib/store';
 import { refreshCurrentUserProfile } from '@/lib/roles';
+import { mergeVenuePrivate } from '@/lib/venue-private';
 
 export default function ManagerLayout() {
   const colors = useColors();
@@ -35,6 +36,8 @@ export default function ManagerLayout() {
             trnNumber: v.billing_trn_number,
           } : undefined,
         }));
+        // Budgets + billing emails come from the manager-only venue_private table.
+        await mergeVenuePrivate(venues);
         useVenueStore.setState({ venues });
       }
 
