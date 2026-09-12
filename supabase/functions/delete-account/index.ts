@@ -82,13 +82,49 @@ serve(async (req) => {
 
     const nowIso = new Date().toISOString();
 
+    // Only UPCOMING gigs get cancelled — a gig that was already PLAYED must be left intact so it
+    // stays a record and can still be invoiced by the other party. A just-ended gig can still sit
+    // as `confirmed` (the completion job runs hourly), so we can't cancel by status alone; we
+    // recompute the gig's END in Dubai wall-clock, mirroring isPastEnd()/slotEndDateTimeStr()
+    // (lib/utils.ts) and complete_past_bookings() — end < start ⇒ overnight, ends next day; no
+    // end_time ⇒ falls back to start. We read the booking's own snapshot columns, exactly like the
+    // client dashboard sweep. (Keep this in lockstep with those.)
+    const DUBAI_OFFSET_MS = 4 * 60 * 60 * 1000; // UTC+4, no DST in the UAE
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map((n) => parseInt(n, 10));
+      return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+    };
+    const isUpcoming = (date: string | null, start: string | null, end: string | null): boolean => {
+      if (!date) return false; // no date → can't place it in time; leave it (matches the admin SQL)
+      const [y, mo, d] = date.split('-').map((n) => parseInt(n, 10));
+      if (!y || !mo || !d) return false;
+      const startMin = start && start.trim() ? toMin(start) : 0;
+      const hasEnd = !!(end && end.trim());
+      const endMin = hasEnd ? toMin(end) : startMin;          // legacy no-end → falls back to start
+      const rollDay = hasEnd && endMin < startMin ? 1 : 0;    // overnight roll: ends next day
+      const endWallMs = Date.UTC(y, mo - 1, d + rollDay, Math.floor(endMin / 60), endMin % 60);
+      return endWallMs > Date.now() + DUBAI_OFFSET_MS;        // still in the future ⇒ upcoming
+    };
+    // Cancel only this role's active gigs whose end is still in the future.
+    const cancelUpcoming = async (label: string, roleColumn: 'artist_id' | 'manager_id') => {
+      const { data: rows, error } = await admin.from('bookings')
+        .select('id, slot_date, slot_start_time, slot_end_time')
+        .eq(roleColumn, userId)
+        .in('status', ['requested', 'past_confirmation', 'confirmed']);
+      if (error) { errors.push(`${label}.fetch: ${error.message}`); return; }
+      const ids = (rows ?? [])
+        .filter((b) => isUpcoming(b.slot_date, b.slot_start_time, b.slot_end_time))
+        .map((b) => b.id);
+      if (ids.length === 0) return;
+      await run(label, admin.from('bookings')
+        .update({ status: 'cancelled', cancelled_at: nowIso })
+        .in('id', ids));
+    };
+
     // 4. Role-scoped cleanup. Everything here touches ONLY the departing role's columns, so
     //    a surviving profile on the same userId is never affected.
     if (roleToDelete === 'artist') {
-      await run('bookings.cancel_active_as_artist', admin.from('bookings')
-        .update({ status: 'cancelled', cancelled_at: nowIso })
-        .eq('artist_id', userId)
-        .in('status', ['requested', 'past_confirmation', 'confirmed']));
+      await cancelUpcoming('bookings.cancel_upcoming_as_artist', 'artist_id');
       await run('bookings.artist_name', admin.from('bookings').update({ artist_name: 'Former Artist' }).eq('artist_id', userId));
       await run('global_lineup.artist_name', admin.from('global_lineup').update({ artist_name: 'Former Artist' }).eq('artist_id', userId));
       await run('venue_assignments.artist_name', admin.from('venue_assignments').update({ artist_name: 'Former Artist' }).eq('artist_id', userId));
@@ -96,10 +132,7 @@ serve(async (req) => {
       await run('delete applications.artist', admin.from('applications').delete().eq('artist_id', userId));
       await run('delete draft_assignments.artist', admin.from('draft_assignments').delete().eq('artist_id', userId));
     } else {
-      await run('bookings.cancel_active_as_manager', admin.from('bookings')
-        .update({ status: 'cancelled', cancelled_at: nowIso })
-        .eq('manager_id', userId)
-        .in('status', ['requested', 'past_confirmation', 'confirmed']));
+      await cancelUpcoming('bookings.cancel_upcoming_as_manager', 'manager_id');
       await run('bookings.manager_name', admin.from('bookings').update({ manager_name: 'Former Manager' }).eq('manager_id', userId));
       await run('global_lineup.manager_name', admin.from('global_lineup').update({ manager_name: 'Former Manager' }).eq('manager_id', userId));
       await run('venue_assignments.manager_name', admin.from('venue_assignments').update({ manager_name: 'Former Manager' }).eq('manager_id', userId));
