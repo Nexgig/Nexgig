@@ -54,7 +54,10 @@ export default function InvoicePreviewScreen() {
   // a sent custom invoice. The uploaded file's public URL is stored on the invoice (Invoice.pdfUrl /
   // invoices.pdf_url — the column is generic and holds a photo OR pdf URL).
   const isCustomMode = mode === 'custom' || !!existingInvoice?.pdfUrl;
-  const [customPdfName, setCustomPdfName] = useState<string | null>(null); // display name of the picked file
+  // Display name of the picked file. For an ALREADY-SENT invoice, seed it from the stored reference
+  // (an uploaded invoice's `invoiceNumber` IS its file name), so viewing it shows the real name
+  // instead of a generic fallback.
+  const [customPdfName, setCustomPdfName] = useState<string | null>(existingInvoice?.pdfUrl ? (existingInvoice.invoiceNumber ?? null) : null);
   const [customPdfUri, setCustomPdfUri] = useState<string | null>(null);   // local file:// (this session, for the email attachment)
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(existingInvoice?.pdfUrl ?? null); // uploaded public URL
   // 'pdf' | 'image' — what the current file is, so we preview it correctly. Seeded from an existing
@@ -88,7 +91,7 @@ export default function InvoicePreviewScreen() {
       setCustomPdfName(name);
       setUploadingPdf(true);
       const url = kind === 'pdf'
-        ? await uploadDocumentAsync(uri, `invoice-${currentUser?.id ?? 'artist'}`)
+        ? await uploadDocumentAsync(uri, `invoice-${currentUser?.id ?? 'artist'}`, name)
         : await uploadImageAsync(uri, 'invoices', `invoice-${currentUser?.id ?? 'artist'}`);
       setCustomPdfUrl(url);
     } catch (e) {

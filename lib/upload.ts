@@ -144,13 +144,20 @@ export async function pickDocument(): Promise<{ uri: string; name: string } | nu
 /**
  * Upload a local PDF to the public 'invoices' bucket and return its public URL.
  * If `localUri` is already an http(s) URL it's returned unchanged.
- * @param pathPrefix filename prefix, e.g. `invoice-<artistId>`.
+ * @param pathPrefix folder prefix, e.g. `invoice-<artistId>`.
+ * @param displayName the file's REAL name — the object is stored under it (uniqueness goes in the
+ *   folder), so the URL's last segment is the real name. That's the name a browser / the Files app
+ *   uses when someone saves or shares the PDF.
  */
-export async function uploadDocumentAsync(localUri: string, pathPrefix: string): Promise<string> {
+export async function uploadDocumentAsync(localUri: string, pathPrefix: string, displayName?: string): Promise<string> {
   if (/^https?:\/\//i.test(localUri)) return localUri;
   const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
   const bytes = base64ToBytes(base64);
-  const path = `${pathPrefix}-${Date.now()}.pdf`;
+  const raw = (displayName || 'invoice.pdf').trim();
+  const named = /\.pdf$/i.test(raw) ? raw : `${raw}.pdf`;
+  // Strip characters that aren't valid in a storage key / URL path; keep spaces (they encode fine).
+  const safeName = named.replace(/[\/\\?%*:|"<>\x00-\x1F]/g, '_').replace(/\s+/g, ' ').trim() || 'invoice.pdf';
+  const path = `${pathPrefix}/${Date.now()}/${safeName}`;
   const { error } = await supabase.storage.from('invoices').upload(path, bytes, {
     contentType: 'application/pdf',
     upsert: true,
