@@ -9,6 +9,30 @@
         "dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8081"
+      ],
+      "port": 8081
+    },
+    {
+      "name": "webdist",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "-y",
+        "serve",
+        "dist",
+        "-l",
+        "8082"
+      ],
+      "port": 8082
     }
   ]
 }

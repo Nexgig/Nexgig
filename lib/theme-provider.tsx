@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Appearance, View } from "react-native";
+import { Appearance, Platform, View } from "react-native";
 import { colorScheme as nativewindColorScheme, vars } from "nativewind";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -21,6 +21,9 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 // Resolve the OS theme at call time (no React hook caching in between).
 function readSystemScheme(): ColorScheme {
+  // Web is dark-only for now: the dark theme renders cleanly on web, while the light theme
+  // comes out washed-out (foreground tokens don't apply well). Native is unchanged.
+  if (Platform.OS === "web") return "dark";
   return (Appearance.getColorScheme() ?? "light") as ColorScheme;
 }
 
