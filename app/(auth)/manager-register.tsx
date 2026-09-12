@@ -18,6 +18,7 @@ import { markWhatsNewSeen } from '@/lib/whats-new';
 import { markWelcomePending } from '@/lib/welcome';
 import { AvatarImage } from '@/components/ui/avatar-image';
 import { AvatarPicker } from '@/components/ui/avatar-picker';
+import { pickImage, uploadImageAsync } from '@/lib/upload';
 import { defaultAvatarId } from '@/lib/avatars';
 import { validateEmail } from '@/lib/validate-email';
 import { EmailOtpModal } from '@/components/email-otp-modal';
@@ -62,10 +63,11 @@ export default function ManagerRegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [showOtp, setShowOtp] = useState(false);
-  // Avatar (optional, chosen on step 2). Managers upload a real photo later, from
-  // Edit Profile — signup is avatar-only.
+  // Avatar (optional, chosen on step 2). Managers can upload their own photo here
+  // (like artists) or pick a bundled avatar; either is optional.
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   // The signed-in user's id, captured as soon as a session exists (signUp at step 1, OTP
   // verify, or an OAuth/resume session already present on mount). The avatar step's default
   // preview is seeded by THIS id so it matches the id-seeded default the profile renders
@@ -268,9 +270,13 @@ export default function ManagerRegisterScreen() {
       return;
     }
 
-    // Managers pick a bundled avatar at signup; no photo upload here. They can
-    // still upload one later from Edit Profile.
-    const photoUrl: string | null = null;
+    // Upload the manager's own photo if they picked one on the Profile Photo step; otherwise fall
+    // back to the avatar. Never block signup on an upload hiccup — the avatar always covers it.
+    let photoUrl: string | null = null;
+    if (photoUri) {
+      try { photoUrl = await uploadImageAsync(photoUri, 'profile-photos', `manager-${user.id}`); }
+      catch { photoUrl = null; }
+    }
     // Always persist a CONCRETE avatar: an explicit pick, or the deterministic default
     // seeded by the user id (the same seed every display screen uses). Never leave it null —
     // a null makes each screen recompute its own default, and those can differ.
@@ -438,11 +444,23 @@ export default function ManagerRegisterScreen() {
           {displayStep === 2 && (
             <View style={styles.form}>
               <View style={styles.photoStep}>
-                <AvatarImage avatarId={avatarId ?? undefined} seed={authUserId ?? form.fullName} name={form.fullName} size={120} variant="manager" />
+                <AvatarImage uri={photoUri ?? undefined} avatarId={avatarId ?? undefined} seed={authUserId ?? form.fullName} name={form.fullName} size={120} variant="manager" />
+                <Pressable
+                  onPress={async () => { const uri = await pickImage({ aspect: [1, 1] }); if (uri) setPhotoUri(uri); }}
+                  style={({ pressed }) => [styles.photoSecondaryBtn, { backgroundColor: colors.primary, borderColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <MaterialIcons name="photo-camera" size={18} color="#fff" />
+                  <Text style={[styles.photoSecondaryBtnText, { color: '#fff' }]}>{photoUri ? 'Change photo' : 'Upload a photo'}</Text>
+                </Pressable>
                 <Pressable onPress={() => setShowAvatarPicker(true)} style={({ pressed }) => [styles.photoSecondaryBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                   <MaterialIcons name="face" size={18} color={colors.foreground} />
                   <Text style={[styles.photoSecondaryBtnText, { color: colors.foreground }]}>Choose an Avatar</Text>
                 </Pressable>
+                {photoUri && (
+                  <Pressable onPress={() => setPhotoUri(null)} hitSlop={8} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+                    <Text style={[styles.photoSecondaryBtnText, { color: colors.muted }]}>Remove photo</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           )}
@@ -482,7 +500,7 @@ export default function ManagerRegisterScreen() {
       <AvatarPicker
         visible={showAvatarPicker}
         selectedId={avatarId}
-        onSelect={(id) => { setAvatarId(id); setShowAvatarPicker(false); }}
+        onSelect={(id) => { setAvatarId(id); setPhotoUri(null); setShowAvatarPicker(false); }}
         onClose={() => setShowAvatarPicker(false)}
       />
 
