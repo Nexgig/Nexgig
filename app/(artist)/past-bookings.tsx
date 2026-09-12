@@ -88,7 +88,7 @@ export default function PastBookings() {
                           <Text style={[styles.venueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
                         </View>
                         <Text style={[styles.venueAmount, { color: colors.foreground }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
-                        <MaterialIcons name={vOpen ? 'expand-less' : 'chevron-right'} size={22} color={colors.muted} />
+                        <MaterialIcons name={vOpen ? 'expand-less' : 'chevron-right'} size={16} color={colors.muted} />
                       </Pressable>
                       {vOpen && v.gigs.map((g) => (
                         <Pressable
@@ -130,16 +130,16 @@ const styles = StyleSheet.create({
   monthSub: { fontSize: 14 },
   monthTotal: { fontSize: 18, fontWeight: '800' },
 
-  venueDivider: { height: StyleSheet.hairlineWidth, marginLeft: 60 },
-  venueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  thumb: { width: 48, height: 48, borderRadius: 12 },
+  venueDivider: { height: StyleSheet.hairlineWidth, marginLeft: 42 },
+  venueRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
+  thumb: { width: 34, height: 34, borderRadius: 9 },
   privateThumb: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  pbText: { fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
-  venueName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
-  venueGigs: { fontSize: 14 },
-  venueAmount: { fontSize: 16, fontWeight: '700' },
+  pbText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  venueName: { fontSize: 12, fontWeight: '700', marginBottom: 1 },
+  venueGigs: { fontSize: 11 },
+  venueAmount: { fontSize: 12, fontWeight: '700' },
 
-  gigRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingLeft: 60, paddingVertical: 8 },
+  gigRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingLeft: 42, paddingVertical: 8 },
   gigDate: { flex: 1, fontSize: 14 },
   gigAmount: { fontSize: 14, fontWeight: '500' },
 });
