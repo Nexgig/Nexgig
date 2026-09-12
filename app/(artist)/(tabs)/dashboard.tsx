@@ -460,7 +460,7 @@ export default function DJHomeScreen() {
             ) : b.privateEventLocation ? (
               <Pressable hitSlop={6} onPress={() => openPrivateEventMaps(b.privateEventLocation!)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
                 <MaterialIcons name="place" size={13} color={colors.muted} />
-                <Text style={[styles.gigMapsText, { color: colors.muted }]} numberOfLines={1}>{b.privateEventLocation}</Text>
+                <Text style={[styles.gigMapsText, { color: colors.muted }]}>Maps</Text>
               </Pressable>
             ) : null}
           </Pressable>

@@ -87,11 +87,15 @@ export default function NetworkScreen() {
     const last = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : (inv.sentAt ?? '').slice(0, 10);
     return last.slice(0, 7); // 'YYYY-MM'
   }, []);
+  // The shared venue filter also scopes the per-artist amounts + the Total: with a venue selected,
+  // only that venue's invoices count; "All Venues" (null) counts every venue.
+  const sharedVenueId = useVenueFilterStore((s) => s.venueId);
   const monthInvoices = useCallback((artistId: string) =>
     allInvoices.filter((inv) =>
       inv.managerId === currentUser?.id && inv.artistId === artistId &&
-      inv.status !== 'cancelled' && invoiceMonth(inv) === monthPrefix),
-    [allInvoices, currentUser?.id, monthPrefix, invoiceMonth]);
+      inv.status !== 'cancelled' && invoiceMonth(inv) === monthPrefix &&
+      (!sharedVenueId || inv.venueId === sharedVenueId)),
+    [allInvoices, currentUser?.id, monthPrefix, invoiceMonth, sharedVenueId]);
   // Per-artist for the picked month: total gigs across those invoices, and their total amount.
   const gigCount = useCallback((artistId: string) =>
     monthInvoices(artistId).reduce((sum, inv) => sum + (inv.gigs?.length ?? 0), 0),
@@ -361,8 +365,7 @@ export default function NetworkScreen() {
   );
 
   // Roster respects the shared venue filter: with a venue selected, show only artists
-  // assigned to that venue's lineup ('All Venues' => everyone).
-  const sharedVenueId = useVenueFilterStore((s) => s.venueId);
+  // assigned to that venue's lineup ('All Venues' => everyone). sharedVenueId is read above.
   const venueArtistIds = useMemo(
     () => sharedVenueId
       ? new Set(venueAssignments.filter((a) => a.venueId === sharedVenueId && a.status === 'active').map((a) => a.artistId))
