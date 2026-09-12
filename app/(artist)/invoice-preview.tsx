@@ -438,7 +438,7 @@ export default function InvoicePreviewScreen() {
           <View style={[styles.invoiceCard, { backgroundColor: colors.surface, borderColor: colors.border, gap: 0 }]}>
             <Text style={[styles.invoiceTitle, { color: colors.foreground }]}>YOUR INVOICE</Text>
             <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 6, marginBottom: 16 }}>
-              Send a photo of your own invoice for {venueName} — it covers the {gigs.length} gig{gigs.length !== 1 ? 's' : ''} you picked (AED {Math.round(totalAmount).toLocaleString()}) and goes to the venue in place of our layout.
+              Upload your own invoice, make sure it covers the completed bookings that you already chose in the previous page.
             </Text>
             {(customPdfUrl || customPdfUri) ? (
               <View style={{ gap: 12 }}>
