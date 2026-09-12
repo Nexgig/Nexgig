@@ -24,18 +24,6 @@ import { Image } from '@/lib/rn';
 const VENUE_TYPES: VenueType[] = [
   'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Rooftop', 'Live Music Venue',
 ];
-const VENUE_COLORS = [
-  { hex: '#2563EB', label: 'Blue' },
-  { hex: '#8B5CF6', label: 'Purple' },
-  { hex: '#22C55E', label: 'Green' },
-  { hex: '#F59E0B', label: 'Amber' },
-  { hex: '#EF4444', label: 'Red' },
-  { hex: '#EC4899', label: 'Pink' },
-  { hex: '#06B6D4', label: 'Cyan' },
-  { hex: '#F97316', label: 'Orange' },
-  { hex: '#14B8A6', label: 'Teal' },
-  { hex: '#A855F7', label: 'Violet' },
-];
 const ENERGY_TYPES: VenueEnergy[] = ['Lounge', 'Warm-up', 'Sunset', 'Peak Time', 'Closing', 'All Night Long'];
 const VENUE_ENERGY_OPTIONS = ['Low', 'High', 'Mixed'] as const;
 type VenueEnergyOption = typeof VENUE_ENERGY_OPTIONS[number];
@@ -112,6 +100,8 @@ export default function CreateVenueScreen() {
     monthlyBudgets: [] as VenueMonthlyBudget[],
   });
   const [isLoading, setIsLoading] = useState(false);
+  // The extra profile fields (energy, vibe, genres, etc.) live behind a Show more toggle on step 1.
+  const [showMore, setShowMore] = useState(false);
 
   // Animation shared value: 0 = centered, negative = slide left (forward), positive = slide right (back)
   const translateX = useSharedValue(0);
@@ -201,11 +191,17 @@ export default function CreateVenueScreen() {
   if (isAnimating) return;
 
   if (step === 1) {
+    if (!photoUri) {
+      Alert.alert('Photo required', 'Please add a venue photo.'); return;
+    }
     if (!form.name.trim() || !form.venueType) {
       Alert.alert('Required', 'Please enter venue name and type.'); return;
     }
     if (!form.address.trim() || !selectedPlaceId || !addressCoords) {
       Alert.alert('Select your venue', 'Please search and tap your venue from the Google list.'); return;
+    }
+    if (!form.instagramUrl.trim()) {
+      Alert.alert('Instagram required', "Please add the venue's Instagram handle."); return;
     }
   }
 
@@ -396,31 +392,29 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
 
           {displayStep === 1 && (
             <View style={styles.form}>
-              {/* Optional venue photo — tap to add now, or skip and the app uses the venue-type artwork. */}
-              <Pressable
-                onPress={async () => { const uri = await pickImage({ aspect: [16, 9] }); if (uri) setPhotoUri(uri); }}
-                style={({ pressed }) => [styles.photoBanner, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
-              >
-                {photoUri ? (
-                  <>
-                    <Image source={{ uri: photoUri }} style={styles.photoBannerImg} resizeMode="cover" />
-                    <View style={styles.photoBannerEdit}>
-                      <MaterialIcons name="photo-camera" size={16} color="#fff" />
-                      <Text style={styles.photoBannerEditText}>Change photo</Text>
+              {/* Venue photo (required) — tap to add. Used as the venue banner everywhere. */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Venue Photo *</Text>
+                <Pressable
+                  onPress={async () => { const uri = await pickImage({ aspect: [16, 9] }); if (uri) setPhotoUri(uri); }}
+                  style={({ pressed }) => [styles.photoBanner, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.85 : 1 }]}
+                >
+                  {photoUri ? (
+                    <>
+                      <Image source={{ uri: photoUri }} style={styles.photoBannerImg} resizeMode="cover" />
+                      <View style={styles.photoBannerEdit}>
+                        <MaterialIcons name="photo-camera" size={16} color="#fff" />
+                        <Text style={styles.photoBannerEditText}>Change photo</Text>
+                      </View>
+                    </>
+                  ) : (
+                    <View style={styles.photoBannerEmpty}>
+                      <MaterialIcons name="add-a-photo" size={26} color={colors.muted} />
+                      <Text style={[styles.photoBannerHint, { color: colors.muted }]}>Add a venue photo</Text>
                     </View>
-                  </>
-                ) : (
-                  <View style={styles.photoBannerEmpty}>
-                    <MaterialIcons name="add-a-photo" size={26} color={colors.muted} />
-                    <Text style={[styles.photoBannerHint, { color: colors.muted }]}>Add a venue photo (optional)</Text>
-                  </View>
-                )}
-              </Pressable>
-              {photoUri && (
-                <Pressable onPress={() => setPhotoUri(null)} hitSlop={8} style={({ pressed }) => [{ alignSelf: 'center', opacity: pressed ? 0.6 : 1, marginBottom: 10 }]}>
-                  <Text style={[styles.label, { color: colors.muted }]}>Remove photo</Text>
+                  )}
                 </Pressable>
-              )}
+              </View>
               <View style={styles.fieldGroup}>
                 <Text style={[styles.label, { color: colors.foreground }]}>Venue Name *</Text>
                 <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. Space Dubai" placeholderTextColor={colors.muted} value={form.name} onChangeText={(v) => update('name', v)} returnKeyType="done" />
@@ -482,11 +476,7 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                 </View>
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Capacity (optional)</Text>
-                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 500" placeholderTextColor={colors.muted} value={form.capacity} onChangeText={(v) => update('capacity', v)} keyboardType="number-pad" returnKeyType="done" />
-              </View>
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.foreground }]}>Instagram (optional)</Text>
+                <Text style={[styles.label, { color: colors.foreground }]}>Instagram *</Text>
                 <View style={[styles.instagramRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <Text style={[styles.instagramAt, { color: colors.muted, borderRightColor: colors.border }]}>@</Text>
                   <TextInput
@@ -501,6 +491,86 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                   />
                 </View>
               </View>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.foreground }]}>Capacity (optional)</Text>
+                <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="e.g. 500" placeholderTextColor={colors.muted} value={form.capacity} onChangeText={(v) => update('capacity', v)} keyboardType="number-pad" returnKeyType="done" />
+              </View>
+
+              {/* Show more — the optional profile details (also editable later from Edit Venue). */}
+              <Pressable onPress={() => setShowMore((v) => !v)} style={({ pressed }) => [styles.showMoreBtn, { opacity: pressed ? 0.6 : 1 }]}>
+                <Text style={[styles.label, { color: colors.primary }]}>{showMore ? 'Show less' : 'Show more'}</Text>
+                <MaterialIcons name={showMore ? 'expand-less' : 'expand-more'} size={20} color={colors.primary} />
+              </Pressable>
+
+              {showMore && (
+                <>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Preferred Energy</Text>
+                    <View style={styles.chipGrid}>
+                      {VENUE_ENERGY_OPTIONS.map((e) => {
+                        const selected = form.preferredEnergy.includes(e);
+                        return (
+                          <Pressable key={e} style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]} onPress={() => toggleItem('preferredEnergy', e, form.preferredEnergy)}>
+                            <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{e}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Vibe Description</Text>
+                    <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="Describe the venue vibe..." placeholderTextColor={colors.muted} value={form.vibeDescription} onChangeText={(v) => update('vibeDescription', v)} multiline textAlignVertical="top" />
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Audience Type</Text>
+                    <View style={styles.chipGrid}>
+                      {AUDIENCE_TYPES.map((a) => {
+                        const selected = form.audienceType.includes(a);
+                        return (
+                          <Pressable key={a} style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]} onPress={() => toggleItem('audienceType', a, form.audienceType)}>
+                            <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{a}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Genre Preferences</Text>
+                    <View style={styles.chipGrid}>
+                      {GENRE_PREFS.map((g) => {
+                        const selected = form.genrePreferences.includes(g);
+                        return (
+                          <Pressable key={g} style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]} onPress={() => toggleItem('genrePreferences', g, form.genrePreferences)}>
+                            <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{g}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Sub-Vibe</Text>
+                    <View style={styles.chipGrid}>
+                      {SUB_VIBES.map((v) => {
+                        const selected = form.subVibe.includes(v);
+                        return (
+                          <Pressable key={v} style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]} onPress={() => toggleItem('subVibe', v, form.subVibe)}>
+                            <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{v}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Rules Template</Text>
+                    <Text style={{ fontSize: 12, color: colors.muted, marginTop: -2, marginBottom: 4, lineHeight: 16 }}>Rules are sent to artists when they join your roster or accept a booking at this venue.</Text>
+                    <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="House rules for artists..." placeholderTextColor={colors.muted} value={form.rulesTemplate} onChangeText={(v) => update('rulesTemplate', v)} multiline textAlignVertical="top" />
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Music Link</Text>
+                    <TextInput style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="SoundCloud, Spotify, YouTube..." placeholderTextColor={colors.muted} value={form.musicLink} onChangeText={(v) => update('musicLink', v)} autoCapitalize="none" keyboardType="url" returnKeyType="done" />
+                  </View>
+                </>
+              )}
             </View>
           )}
 
@@ -597,7 +667,7 @@ const styles = StyleSheet.create({
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8 },
   chipText: { fontSize: 13, fontWeight: '500' },
-  colorSwatch: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  showMoreBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 2 },
   fixedBtnContainer: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth },
   nextBtn: { backgroundColor: '#E2674A', borderRadius: 14, padding: 16, alignItems: 'center' },
   nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

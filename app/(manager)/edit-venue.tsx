@@ -16,18 +16,6 @@ import { placesAutocomplete, placeDetails, newPlacesSessionToken, type PlaceSugg
 const VENUE_TYPES: VenueType[] = [
   'Dance Club', 'Beach Club', 'Lounge', 'Cocktail Bar', 'Rooftop', 'Live Music Venue',
 ];
-const VENUE_COLORS = [
-  { hex: '#2563EB', label: 'Blue' },
-  { hex: '#8B5CF6', label: 'Purple' },
-  { hex: '#22C55E', label: 'Green' },
-  { hex: '#F59E0B', label: 'Amber' },
-  { hex: '#EF4444', label: 'Red' },
-  { hex: '#EC4899', label: 'Pink' },
-  { hex: '#06B6D4', label: 'Cyan' },
-  { hex: '#F97316', label: 'Orange' },
-  { hex: '#14B8A6', label: 'Teal' },
-  { hex: '#A855F7', label: 'Violet' },
-];
 const VENUE_ENERGY_OPTIONS = ['Low', 'High', 'Mixed'] as const;
 type VenueEnergyOption = typeof VENUE_ENERGY_OPTIONS[number];
 const GENRE_PREFS: GenreType[] = [
@@ -401,23 +389,6 @@ export default function EditVenueScreen() {
                   </Pressable>
                 );
               })}
-            </View>
-          </View>
-
-          {/* Venue Color */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Venue Color</Text>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 4 }}>This color identifies your venue on the calendar</Text>
-            <View style={styles.chipRow}>
-              {VENUE_COLORS.map((c) => (
-                <Pressable
-                  key={c.hex}
-                  style={[styles.colorSwatch, { backgroundColor: c.hex, borderColor: form.color === c.hex ? '#fff' : 'transparent', borderWidth: form.color === c.hex ? 2.5 : 0 }]}
-                  onPress={() => setForm((f) => ({ ...f, color: c.hex }))}
-                >
-                  {form.color === c.hex && <MaterialIcons name="check" size={16} color="#fff" />}
-                </Pressable>
-              ))}
             </View>
           </View>
 
