@@ -179,6 +179,9 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // Also sync the shared users row so server-side reads (e.g. the welcome email) stay current.
+    await supabase.from('users').update({ phone: newPhone.trim() }).eq('id', currentUser.id);
+
     // Reflect locally + keep the form baseline in sync so the back-guard won't fire.
     updateProfile({ phone: newPhone.trim() });
     setForm((f) => ({ ...f, phone: newPhone.trim() }));
@@ -210,7 +213,7 @@ export default function EditProfileScreen() {
     if (currentUser) {
       const { error: usersErr } = await supabase
         .from('users')
-        .update({ profile_photo_url: photoUrl ?? null })
+        .update({ full_name: form.fullName.trim(), phone: form.phone.trim(), profile_photo_url: photoUrl ?? null })
         .eq('id', currentUser.id);
 
       const { data: managerRows, error: managersErr } = await supabase

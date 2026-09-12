@@ -256,7 +256,7 @@ export default function DJEditProfileScreen() {
       // written to the users row so any surface reading from users stays in sync.
       const { error: usersErr } = await supabase
         .from('users')
-        .update({ profile_photo_url: photoUrl ?? null })
+        .update({ full_name: form.fullName.trim(), profile_photo_url: photoUrl ?? null })
         .eq('id', currentUser.id);
 
       const { data: artistRows, error: artistErr } = await supabase
