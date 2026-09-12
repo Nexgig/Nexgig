@@ -313,22 +313,6 @@ export default function EditVenueScreen() {
             />
           </View>
 
-          {/* Venue Type */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Venue Type</Text>
-            <View style={styles.chipRow}>
-              {VENUE_TYPES.map((vt) => (
-                <Pressable
-                  key={vt}
-                  style={[styles.chip, { borderColor: form.venueType === vt ? colors.primary : colors.border, backgroundColor: form.venueType === vt ? colors.primary : colors.surface }]}
-                  onPress={() => setForm((f) => ({ ...f, venueType: vt }))}
-                >
-                  <Text style={[styles.chipText, { color: form.venueType === vt ? '#fff' : colors.foreground }]}>{vt}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
           {/* Address */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Address *</Text>
@@ -373,22 +357,37 @@ export default function EditVenueScreen() {
             )}
           </View>
 
-          {/* Preferred Energy */}
+          {/* Venue Type */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Energy</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Venue Type</Text>
             <View style={styles.chipRow}>
-              {VENUE_ENERGY_OPTIONS.map((e) => {
-                const selected = form.preferredEnergy.includes(e);
-                return (
-                  <Pressable
-                    key={e}
-                    style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]}
-                    onPress={() => toggleEnergy(e)}
-                  >
-                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{e}</Text>
-                  </Pressable>
-                );
-              })}
+              {VENUE_TYPES.map((vt) => (
+                <Pressable
+                  key={vt}
+                  style={[styles.chip, { borderColor: form.venueType === vt ? colors.primary : colors.border, backgroundColor: form.venueType === vt ? colors.primary : colors.surface }]}
+                  onPress={() => setForm((f) => ({ ...f, venueType: vt }))}
+                >
+                  <Text style={[styles.chipText, { color: form.venueType === vt ? '#fff' : colors.foreground }]}>{vt}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Instagram */}
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Instagram</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, borderColor: colors.border, backgroundColor: colors.surface }}>
+              <Text style={{ paddingLeft: 12, color: colors.muted, fontSize: 15 }}>instagram.com/</Text>
+              <TextInput
+                style={{ flex: 1, padding: 12, fontSize: 15, color: colors.foreground }}
+                placeholder="username"
+                placeholderTextColor={colors.muted}
+                value={form.instagramUrl?.replace('https://www.instagram.com/', '').replace('https://instagram.com/', '') ?? ''}
+                onChangeText={(v) => setForm((f) => ({ ...f, instagramUrl: v.replace('@', '').replace(/\s/g, '').toLowerCase() }))}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+              />
             </View>
           </View>
 
@@ -406,19 +405,23 @@ export default function EditVenueScreen() {
             />
           </View>
 
-          {/* Vibe Description */}
+          {/* Preferred Energy */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Vibe Description</Text>
-            <TextInput
-              style={[styles.fieldInputMulti, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="Describe the venue vibe..."
-              placeholderTextColor={colors.muted}
-              value={form.vibeDescription}
-              onChangeText={(v) => setForm((f) => ({ ...f, vibeDescription: v }))}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Energy</Text>
+            <View style={styles.chipRow}>
+              {VENUE_ENERGY_OPTIONS.map((e) => {
+                const selected = form.preferredEnergy.includes(e);
+                return (
+                  <Pressable
+                    key={e}
+                    style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]}
+                    onPress={() => toggleEnergy(e)}
+                  >
+                    <Text style={[styles.chipText, { color: selected ? '#fff' : colors.foreground }]}>{e}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           {/* Audience Type */}
@@ -478,6 +481,21 @@ export default function EditVenueScreen() {
             </View>
           </View>
 
+          {/* Vibe Description */}
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Vibe Description</Text>
+            <TextInput
+              style={[styles.fieldInputMulti, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="Describe the venue vibe..."
+              placeholderTextColor={colors.muted}
+              value={form.vibeDescription}
+              onChangeText={(v) => setForm((f) => ({ ...f, vibeDescription: v }))}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+
           {/* Rules Template */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Rules Template</Text>
@@ -495,22 +513,6 @@ export default function EditVenueScreen() {
               textAlignVertical="top"
             />
           </View>
-
-          {/* Instagram */}
-<Text style={[styles.fieldLabel, { color: colors.foreground }]}>Instagram</Text>
-<View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, borderColor: colors.border, backgroundColor: colors.surface }}>
-  <Text style={{ paddingLeft: 12, color: colors.muted, fontSize: 15 }}>instagram.com/</Text>
-  <TextInput
-    style={{ flex: 1, padding: 12, fontSize: 15, color: colors.foreground }}
-    placeholder="username"
-    placeholderTextColor={colors.muted}
-    value={form.instagramUrl?.replace('https://www.instagram.com/', '').replace('https://instagram.com/', '') ?? ''}
-    onChangeText={(v) => setForm((f) => ({ ...f, instagramUrl: v.replace('@', '').replace(/\s/g, '').toLowerCase() }))}
-    autoCapitalize="none"
-    autoCorrect={false}
-    returnKeyType="done"
-  />
-</View>
 
 
           {/* Music Link */}

@@ -518,10 +518,6 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                     </View>
                   </View>
                   <View style={styles.fieldGroup}>
-                    <Text style={[styles.label, { color: colors.foreground }]}>Vibe Description</Text>
-                    <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="Describe the venue vibe..." placeholderTextColor={colors.muted} value={form.vibeDescription} onChangeText={(v) => update('vibeDescription', v)} multiline textAlignVertical="top" />
-                  </View>
-                  <View style={styles.fieldGroup}>
                     <Text style={[styles.label, { color: colors.foreground }]}>Audience Type</Text>
                     <View style={styles.chipGrid}>
                       {AUDIENCE_TYPES.map((a) => {
@@ -559,6 +555,10 @@ music_link: form.musicLink ? (form.musicLink.startsWith('http') ? form.musicLink
                         );
                       })}
                     </View>
+                  </View>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>Vibe Description</Text>
+                    <TextInput style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} placeholder="Describe the venue vibe..." placeholderTextColor={colors.muted} value={form.vibeDescription} onChangeText={(v) => update('vibeDescription', v)} multiline textAlignVertical="top" />
                   </View>
                   <View style={styles.fieldGroup}>
                     <Text style={[styles.label, { color: colors.foreground }]}>Rules Template</Text>
