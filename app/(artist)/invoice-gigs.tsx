@@ -192,8 +192,8 @@ export default function InvoiceGigsScreen() {
     [activeRows]
   );
 
-  // mode 'preview' = app-generated invoice; 'custom' = artist uploads their own (a photo of their
-  // invoice). Both carry the SAME selected gigs + total (so the gigs get marked invoiced either way).
+  // mode 'preview' = app-generated invoice; 'custom' = artist uploads their own (a photo OR a PDF).
+  // Both carry the SAME selected gigs + total (so the gigs get marked invoiced either way).
   const goToPreview = (mode: 'preview' | 'custom') => {
     if (selectedGigs.length === 0) {
       Alert.alert('No Gigs Selected', 'Please select at least one gig to invoice.');

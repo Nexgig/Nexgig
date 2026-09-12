@@ -51,7 +51,7 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 const FORM_SCREENS = [
   'create-venue', 'edit-venue', 'edit-profile', 'billing-details', 'edit-budget',
-  'add-slot', 'add-block', 'assign-artist', 'send-feedback', 'invoice-gigs', 'booking-detail',
+  'add-slot', 'add-block', 'assign-artist', 'send-feedback', 'invoice-gigs', 'invoice-preview', 'booking-detail',
 ];
 function onFormScreen(path: string | null): boolean {
   if (!path) return false;

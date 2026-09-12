@@ -10,6 +10,7 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from './supabase';
 
 export type UploadBucket = 'profile-photos' | 'venue-photos' | 'invoices';
@@ -115,4 +116,41 @@ export async function uploadImageAsync(
   if (error) throw error;
 
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+// ─── PDF (document) upload — artist-uploaded invoices ──────────────────────
+// `expo-document-picker` is a NATIVE module — only works in a build that bundles it (an OTA
+// alone can't add it). Used so an artist can send their OWN invoice PDF instead of a photo or
+// the app-generated one.
+
+/**
+ * Pick a single PDF from the Files app / on-device storage. Returns the local
+ * uri (or null if cancelled). `copyToCacheDirectory: true` is REQUIRED so the
+ * file is copied where FileSystem.readAsStringAsync can read it.
+ */
+export async function pickDocument(): Promise<string | null> {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: 'application/pdf',
+    copyToCacheDirectory: true,
+    multiple: false,
+  });
+  return !result.canceled && result.assets[0] ? result.assets[0].uri : null;
+}
+
+/**
+ * Upload a local PDF to the public 'invoices' bucket and return its public URL.
+ * If `localUri` is already an http(s) URL it's returned unchanged.
+ * @param pathPrefix filename prefix, e.g. `invoice-<artistId>`.
+ */
+export async function uploadDocumentAsync(localUri: string, pathPrefix: string): Promise<string> {
+  if (/^https?:\/\//i.test(localUri)) return localUri;
+  const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
+  const bytes = base64ToBytes(base64);
+  const path = `${pathPrefix}-${Date.now()}.pdf`;
+  const { error } = await supabase.storage.from('invoices').upload(path, bytes, {
+    contentType: 'application/pdf',
+    upsert: true,
+  });
+  if (error) throw error;
+  return supabase.storage.from('invoices').getPublicUrl(path).data.publicUrl;
 }

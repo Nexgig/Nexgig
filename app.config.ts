@@ -61,11 +61,11 @@ const config: ExpoConfig = {
   version: "1.2",
   // runtimeVersion is the OTA "lane" — INDEPENDENT of the marketing version above. Bump it BY
   // HAND only for a NATIVE change (new native module / permission / icon); JS/OTA changes leave
-  // it alone. It went 1.1 → 1.2 when photo upload (expo-image-picker) landed in build 28, so
-  // every runtime-1.2 binary (builds 28/29/30…) shares one OTA lane. Marketing version and
-  // runtime both read "1.2" now, but they move independently — a version bump alone must NOT
-  // touch this, or it strands users on a lane they can't reach.
-  runtimeVersion: "1.2",
+  // it alone. 1.1 → 1.2 was photo upload (expo-image-picker, build 28); 1.2 → 1.3 is invoice-PDF
+  // upload (expo-document-picker, the App Store 1.2 build). So the marketing version is "1.2" but
+  // the runtime lane is "1.3" — they move independently; a version bump alone must NOT touch this,
+  // and production OTAs for this build must publish to runtime 1.3.
+  runtimeVersion: "1.3",
   updates: {
     url: "https://u.expo.dev/eae9c0e4-5f95-4c8b-ba5f-09303b81ecbe",
   },

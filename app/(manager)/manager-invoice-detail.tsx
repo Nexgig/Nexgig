@@ -11,6 +11,10 @@ import { openBrowserAsync } from 'expo-web-browser';
 import type { InvoiceGig } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 
+// A custom-invoice URL points at a photo or a PDF — a PDF can't render inline, so show a tap-to-open
+// tile instead of a broken image.
+const isPdfUrl = (u?: string | null) => !!u && /\.pdf(?:[?#]|$)/i.test(u);
+
 function formatTime(t: string): string {
   if (!t) return '';
   const [h, m] = t.split(':').map(Number);
@@ -241,7 +245,7 @@ export default function ManagerInvoiceDetailScreen() {
           onPress={invoice.pdfUrl ? () => openBrowserAsync(invoice.pdfUrl!) : handleDownloadPDF}
           hitSlop={8}
         >
-          <MaterialIcons name={invoice.pdfUrl ? 'image' : 'picture-as-pdf'} size={22} color={colors.primary} />
+          <MaterialIcons name={invoice.pdfUrl && !isPdfUrl(invoice.pdfUrl) ? 'image' : 'picture-as-pdf'} size={22} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -257,15 +261,22 @@ export default function ManagerInvoiceDetailScreen() {
             </View>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19 }}>{invoice.artistLegalName || 'The artist'} sent their own invoice for {invoice.venueName}.</Text>
-            {/* The uploaded invoice photo, shown inline. Tap "View full size" to open it big. */}
-            <Image source={{ uri: invoice.pdfUrl! }} style={[styles.photoPreview, { borderColor: colors.border, backgroundColor: colors.background }]} resizeMode="contain" />
+            {/* A photo shows inline; a PDF can't render inline, so it shows a tap-to-open tile. */}
+            {isPdfUrl(invoice.pdfUrl) ? (
+              <Pressable onPress={() => openBrowserAsync(invoice.pdfUrl!)} style={({ pressed }) => [styles.pdfTile, { borderColor: colors.border, backgroundColor: colors.background, opacity: pressed ? 0.85 : 1 }]}>
+                <MaterialIcons name="picture-as-pdf" size={40} color={colors.primary} />
+                <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: '600', marginTop: 8 }}>Tap to open the PDF invoice</Text>
+              </Pressable>
+            ) : (
+              <Image source={{ uri: invoice.pdfUrl! }} style={[styles.photoPreview, { borderColor: colors.border, backgroundColor: colors.background }]} resizeMode="contain" />
+            )}
             <View style={[styles.totalRow, { borderColor: colors.primary, marginTop: 4 }]}>
               <Text style={[styles.totalLabel, { color: colors.foreground }]}>TOTAL</Text>
               <Text style={[styles.totalValue, { color: colors.primary }]}>AED {Math.round(invoice.totalAmount).toLocaleString()}</Text>
             </View>
             <Pressable onPress={() => openBrowserAsync(invoice.pdfUrl!)} style={({ pressed }) => [styles.openPdfBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
-              <MaterialIcons name="image" size={18} color="#fff" />
-              <Text style={styles.openPdfText}>View full size</Text>
+              <MaterialIcons name={isPdfUrl(invoice.pdfUrl) ? 'open-in-new' : 'image'} size={18} color="#fff" />
+              <Text style={styles.openPdfText}>{isPdfUrl(invoice.pdfUrl) ? 'Open PDF' : 'View full size'}</Text>
             </Pressable>
           </View>
         ) : (
@@ -362,6 +373,7 @@ const styles = StyleSheet.create({
   openPdfBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 15, marginTop: 4 },
   openPdfText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   photoPreview: { width: '100%', height: 340, borderRadius: 12, borderWidth: 1 },
+  pdfTile: { alignItems: 'center', justifyContent: 'center', height: 160, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed' },
   invoiceCard: {
     borderRadius: 16,
     borderWidth: 1,

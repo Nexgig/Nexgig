@@ -14,26 +14,25 @@ type Role = 'artist' | 'manager';
  * it when there's genuinely something to tell users.
  */
 export const RELEASE_NOTES = {
-  version: 7,
+  version: 8,
   // Shown to everyone:
   both: [] as string[],
   // Shown only to artists:
   artist: [
-    "Upload your own profile photo instead of only picking an avatar.",
+    "Upload your own profile photo.",
+    "Invoicing: Upload your own invoice or use our invoice system.",
+    "See your fee up front — Gig requests now show the fee put by the manager.",
+    "Choose which calendar your gigs sync to — iCloud, Google, work, whichever.",
     "Earnings, all in one place — this month and every past month, with a per-venue breakdown.",
-    "See your fee up front — requests now show what you'll be paid. Older ones without a fee fill in once you invoice them.",
-    "Your invoices have their own tab.",
-    "Small touches — a refreshed dashboard.",
   ] as string[],
   // Shown only to managers:
   manager: [
     "Guest DJs — book someone who isn't on Nexgig straight from the assign page: name, fee, done.",
-    "Add a default fee for your slots right in your venue's schedule. You can still tweak an artist's fee before or after sending (they're notified).",
-    "Your invoices have their own tab.",
+    "Set a default fee for a venue's slots in the schedule; tweak any artist's fee anytime (they're notified).",
     "Add artists and create venues right from your Profile.",
-    "Upload your own photo for venues.",
-    "A cleaner calendar: venue and time on one line, one tag or button per row, and tap any row to open the gig.",
-    "Keep an eye on spend with the new Monthly Budget on your calendar.",
+    "Upload your own venue's profile photo.",
+    "Set your own venue's monthly budget and billing cycle.",
+    "Request invoices from artists, based on each venue's billing cycle.",
   ] as string[],
 };
 

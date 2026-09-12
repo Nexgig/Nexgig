@@ -12,8 +12,12 @@ import { fonts } from '@/lib/fonts';
 import { formatDate, formatTime, useFormatTime } from '@/lib/conflict-detection';
 import { firstName } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { pickImage, uploadImageAsync } from '@/lib/upload';
+import { pickImage, uploadImageAsync, pickDocument, uploadDocumentAsync } from '@/lib/upload';
 import { openBrowserAsync } from 'expo-web-browser';
+
+// A stored custom-invoice URL points at either a photo or a PDF — tell them apart by extension so
+// the right preview (inline image vs "open PDF") and the right email attachment name are used.
+const isPdfUrl = (u?: string | null) => !!u && /\.pdf(?:[?#]|$)/i.test(u);
 import type { Invoice, InvoiceGig, Venue } from '@/lib/types';
 import { CLASH_DISPLAY_BOLD_BASE64 } from '@/lib/clash-display-base64';
 
@@ -45,36 +49,54 @@ export default function InvoicePreviewScreen() {
   const isReadOnly = readOnly === '1';
   const existingInvoice = invoiceId ? invoices.find((inv) => inv.id === invoiceId) : null;
 
-  // Custom invoice = the artist uploads their OWN invoice (a photo of it) instead of the generated
-  // one. Active when creating via the "Upload my own" button (mode==='custom') or viewing a sent
-  // custom invoice. The uploaded file's public URL is stored on the invoice (Invoice.pdfUrl /
-  // invoices.pdf_url — the column is generic and holds an image URL on this version).
+  // Custom invoice = the artist uploads their OWN invoice — a PHOTO or a PDF — instead of the
+  // generated one. Active when creating via the "Upload my own" button (mode==='custom') or viewing
+  // a sent custom invoice. The uploaded file's public URL is stored on the invoice (Invoice.pdfUrl /
+  // invoices.pdf_url — the column is generic and holds a photo OR pdf URL).
   const isCustomMode = mode === 'custom' || !!existingInvoice?.pdfUrl;
   const [customPdfName, setCustomPdfName] = useState<string | null>(null); // display name of the picked file
   const [customPdfUri, setCustomPdfUri] = useState<string | null>(null);   // local file:// (this session, for the email attachment)
   const [customPdfUrl, setCustomPdfUrl] = useState<string | null>(existingInvoice?.pdfUrl ?? null); // uploaded public URL
+  // 'pdf' | 'image' — what the current file is, so we preview it correctly. Seeded from an existing
+  // invoice's stored URL; set fresh when a new file is picked.
+  const [customKind, setCustomKind] = useState<'pdf' | 'image' | null>(
+    existingInvoice?.pdfUrl ? (isPdfUrl(existingInvoice.pdfUrl) ? 'pdf' : 'image') : null
+  );
   const [uploadingPdf, setUploadingPdf] = useState(false);
 
-  const pickCustomPdf = async () => {
+  // Pick + upload a photo (from the library) or a PDF (from Files), then keep its local uri for the
+  // email attachment and its public URL for the record.
+  const handlePickCustom = async (kind: 'image' | 'pdf') => {
     if (uploadingPdf) return;
     try {
-      // No crop editing — a whole invoice photo, not a square avatar. quality 0.7 keeps it legible
-      // without a huge upload.
-      const uri = await pickImage({ allowsEditing: false, quality: 0.7 });
+      // Photo: no crop, quality 0.7 keeps it legible without a huge upload. PDF: straight from Files.
+      const uri = kind === 'pdf' ? await pickDocument() : await pickImage({ allowsEditing: false, quality: 0.7 });
       if (!uri) return;
+      setCustomKind(kind);
       setCustomPdfUri(uri);
-      setCustomPdfName(uri.split('/').pop()?.replace(/%20/g, ' ') ?? 'invoice.jpg');
+      setCustomPdfName(uri.split('/').pop()?.replace(/%20/g, ' ') ?? (kind === 'pdf' ? 'invoice.pdf' : 'invoice.jpg'));
       setUploadingPdf(true);
-      const url = await uploadImageAsync(uri, 'invoices', `invoice-${currentUser?.id ?? 'artist'}`);
+      const url = kind === 'pdf'
+        ? await uploadDocumentAsync(uri, `invoice-${currentUser?.id ?? 'artist'}`)
+        : await uploadImageAsync(uri, 'invoices', `invoice-${currentUser?.id ?? 'artist'}`);
       setCustomPdfUrl(url);
     } catch (e) {
-      Alert.alert('Upload failed', 'Could not read that photo — please try another one.');
-      setCustomPdfUri(null); setCustomPdfName(null); setCustomPdfUrl(null);
+      Alert.alert('Upload failed', kind === 'pdf' ? 'Could not read that PDF — please try another file.' : 'Could not read that photo — please try another one.');
+      setCustomPdfUri(null); setCustomPdfName(null); setCustomPdfUrl(null); setCustomKind(null);
     } finally {
       setUploadingPdf(false);
     }
   };
+  // Ask photo or PDF, then pick. Used for the first upload and for "Replace".
+  const chooseCustom = () => {
+    Alert.alert('Upload your invoice', 'Choose a photo from your library, or a PDF file.', [
+      { text: 'Photo', onPress: () => handlePickCustom('image') },
+      { text: 'PDF', onPress: () => handlePickCustom('pdf') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
   const openCustomPdf = () => { const u = customPdfUrl ?? existingInvoice?.pdfUrl; if (u) openBrowserAsync(u); };
+  const customIsPdf = customKind === 'pdf';
 
   // When creating a new invoice for a venue that's no longer in the local store
   // (manager hid/deleted it, or the artist left it), fetch the still-existing venue
@@ -159,7 +181,7 @@ export default function InvoicePreviewScreen() {
       return;
     }
     if (isCustomMode && !customPdfUrl) {
-      Alert.alert('No photo chosen', uploadingPdf ? 'Still uploading your photo — give it a second.' : 'Add a photo of your invoice first, then send.');
+      Alert.alert('No file chosen', uploadingPdf ? 'Still uploading your invoice — give it a second.' : 'Upload a photo or PDF of your invoice first, then send.');
       return;
     }
     Alert.alert(
@@ -272,8 +294,8 @@ export default function InvoicePreviewScreen() {
               let pdfBase64: string | undefined;
               try {
                 if (isCustomMode && customPdfUri) {
-                  // Custom invoice: attach the artist's UPLOADED photo (read the local copy as
-                  // base64) rather than generating a PDF.
+                  // Custom invoice: attach the artist's UPLOADED file — a photo or a PDF — (read the
+                  // local copy as base64) rather than generating one.
                   const FS = await import('expo-file-system/legacy');
                   pdfBase64 = await FS.readAsStringAsync(customPdfUri, { encoding: 'base64' });
                 } else if (!isCustomMode && Platform.OS !== 'web') {
@@ -290,9 +312,9 @@ export default function InvoicePreviewScreen() {
               } catch (e) {
                 console.log('[invoice email] PDF attach/generate failed; sending without attachment:', e);
               }
-              // A custom invoice is a photo — name the attachment with its real extension so the
-              // manager's mail client shows it as an image, not a broken ".pdf".
-              const customExt = (customPdfUri || customPdfUrl || '').match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/)?.[1]?.toLowerCase() || 'jpg';
+              // A custom invoice is a photo OR a PDF — name the attachment with its real extension
+              // (.jpg / .pdf) so the manager's mail client opens it correctly.
+              const customExt = (customPdfUri || customPdfUrl || '').match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/)?.[1]?.toLowerCase() || (customIsPdf ? 'pdf' : 'jpg');
               const safeNum = finalNumber.replace(/[^a-zA-Z0-9]/g, '') || 'invoice';
               await sendEmail(managerId, 'invoice_received', {
                 artistName,
@@ -425,7 +447,7 @@ export default function InvoicePreviewScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>{isCustomMode ? 'Your Invoice' : 'Invoice Preview'}</Text>
         {isReadOnly ? (
           <Pressable onPress={isCustomMode ? openCustomPdf : handleDownloadPDF} style={({ pressed }) => [styles.pdfBtn, { opacity: pressed ? 0.7 : 1 }]}>
-            <MaterialIcons name={isCustomMode ? 'image' : 'picture-as-pdf'} size={22} color={colors.primary} />
+            <MaterialIcons name={isCustomMode && !customIsPdf ? 'image' : 'picture-as-pdf'} size={22} color={colors.primary} />
           </Pressable>
         ) : (
           <View style={{ width: 40 }} />
@@ -442,22 +464,23 @@ export default function InvoicePreviewScreen() {
             </Text>
             {(customPdfUrl || customPdfUri) ? (
               <View style={{ gap: 12 }}>
-                {/* Inline thumbnail so they can see the photo without leaving the screen. */}
-                {(customPdfUri || customPdfUrl) ? (
+                {/* Inline preview without leaving the screen — a photo renders as an image; a PDF
+                    can't render inline, so it shows just the file chip + "Open PDF". */}
+                {!customIsPdf && (customPdfUri || customPdfUrl) ? (
                   <Image source={{ uri: (customPdfUri || customPdfUrl)! }} style={[styles.photoPreview, { borderColor: colors.border, backgroundColor: colors.background }]} resizeMode="contain" />
                 ) : null}
                 <View style={[styles.pdfChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <MaterialIcons name="image" size={22} color={colors.primary} />
-                  <Text style={[styles.pdfChipName, { color: colors.foreground }]} numberOfLines={1}>{customPdfName ?? 'invoice.jpg'}</Text>
+                  <MaterialIcons name={customIsPdf ? 'picture-as-pdf' : 'image'} size={22} color={colors.primary} />
+                  <Text style={[styles.pdfChipName, { color: colors.foreground }]} numberOfLines={1}>{customPdfName ?? (customIsPdf ? 'invoice.pdf' : 'invoice.jpg')}</Text>
                   {uploadingPdf ? <Text style={{ color: colors.muted, fontSize: 12 }}>Uploading…</Text> : <MaterialIcons name="check-circle" size={18} color={colors.success} />}
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <Pressable onPress={openCustomPdf} disabled={!customPdfUrl} style={({ pressed }) => [styles.pdfActionBtn, { borderColor: colors.border, opacity: pressed || !customPdfUrl ? 0.5 : 1 }]}>
-                    <MaterialIcons name="visibility" size={17} color={colors.foreground} />
-                    <Text style={[styles.pdfActionText, { color: colors.foreground }]}>View full size</Text>
+                    <MaterialIcons name={customIsPdf ? 'open-in-new' : 'visibility'} size={17} color={colors.foreground} />
+                    <Text style={[styles.pdfActionText, { color: colors.foreground }]}>{customIsPdf ? 'Open PDF' : 'View full size'}</Text>
                   </Pressable>
                   {!isReadOnly && (
-                    <Pressable onPress={pickCustomPdf} style={({ pressed }) => [styles.pdfActionBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
+                    <Pressable onPress={chooseCustom} style={({ pressed }) => [styles.pdfActionBtn, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}>
                       <MaterialIcons name="autorenew" size={17} color={colors.foreground} />
                       <Text style={[styles.pdfActionText, { color: colors.foreground }]}>Replace</Text>
                     </Pressable>
@@ -465,9 +488,9 @@ export default function InvoicePreviewScreen() {
                 </View>
               </View>
             ) : (
-              <Pressable onPress={pickCustomPdf} style={({ pressed }) => [styles.pickPdfBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}>
-                <MaterialIcons name="add-a-photo" size={20} color={colors.primary} />
-                <Text style={[styles.pickPdfText, { color: colors.primary }]}>Choose a photo</Text>
+              <Pressable onPress={chooseCustom} style={({ pressed }) => [styles.pickPdfBtn, { borderColor: colors.primary, opacity: pressed ? 0.6 : 1 }]}>
+                <MaterialIcons name="upload-file" size={20} color={colors.primary} />
+                <Text style={[styles.pickPdfText, { color: colors.primary }]}>Upload photo or PDF</Text>
               </Pressable>
             )}
           </View>
