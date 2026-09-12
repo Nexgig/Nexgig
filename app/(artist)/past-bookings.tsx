@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore, useBookingStore, useSlotStore, useVenueStore } from '@/lib/store';
 import { useColors } from '@/hooks/use-colors';
 import { computePastMonths } from '@/lib/artist-past-months';
+import { formatDate, formatTime } from '@/lib/conflict-detection';
 
 export default function PastBookings() {
   const router = useRouter();
@@ -25,6 +26,12 @@ export default function PastBookings() {
   const toggleMonth = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpenMonths((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  };
+  // Second level: expand a venue (within a month) to see each individual gig. Keyed `month:venue`.
+  const [openVenues, setOpenVenues] = useState<Set<string>>(new Set());
+  const toggleVenue = (key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenVenues((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   };
 
   return (
@@ -58,13 +65,32 @@ export default function PastBookings() {
                 </Pressable>
                 {isOpen && (
                   <>
-                    {m.venues.map((v) => (
-                      <View key={v.key} style={styles.histVenueRow}>
-                        <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
-                        <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
-                        <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
-                      </View>
-                    ))}
+                    {m.venues.map((v) => {
+                      const vKey = m.key + ':' + v.key;
+                      const vOpen = openVenues.has(vKey);
+                      return (
+                        <View key={v.key}>
+                          <Pressable style={({ pressed }) => [styles.histVenueRow, { opacity: pressed ? 0.6 : 1 }]} onPress={() => toggleVenue(vKey)}>
+                            <Text style={[styles.histVenueName, { color: colors.foreground }]} numberOfLines={1}>{v.name}</Text>
+                            <Text style={[styles.histVenueGigs, { color: colors.muted }]}>{v.gigCount} gig{v.gigCount !== 1 ? 's' : ''}</Text>
+                            <Text style={[styles.histVenueAmount, { color: colors.muted }]}>{v.earnings > 0 ? `AED ${v.earnings.toLocaleString()}` : '—'}</Text>
+                            <MaterialIcons name={vOpen ? 'expand-more' : 'chevron-right'} size={18} color={colors.muted} />
+                          </Pressable>
+                          {vOpen && v.gigs.map((g) => (
+                            <Pressable
+                              key={g.id}
+                              style={({ pressed }) => [styles.histGigRow, { opacity: pressed ? 0.6 : 1 }]}
+                              onPress={() => router.push(('/(artist)/booking-detail?id=' + g.id) as any)}
+                            >
+                              <Text style={[styles.histGigDate, { color: colors.foreground }]} numberOfLines={1}>
+                                {g.date ? formatDate(g.date) : 'Date unknown'}{g.startTime ? ` · ${formatTime(g.startTime)}–${formatTime(g.endTime)}` : ''}
+                              </Text>
+                              <Text style={[styles.histGigAmount, { color: colors.muted }]}>{g.earnings > 0 ? `AED ${g.earnings.toLocaleString()}` : '—'}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      );
+                    })}
                     <View style={[styles.histTotalRow, { borderTopColor: colors.border }]}>
                       <Text style={[styles.histTotalLabel, { color: colors.muted }]}>Total</Text>
                       <Text style={[styles.histTotalAmount, { color: hasFee ? colors.foreground : colors.muted }]}>{hasFee ? `AED ${m.earnings.toLocaleString()}` : '—'}</Text>
@@ -97,6 +123,9 @@ const styles = StyleSheet.create({
   histVenueName: { flex: 1, fontSize: 14 },
   histVenueGigs: { fontSize: 13 },
   histVenueAmount: { fontSize: 14, fontWeight: '600', marginLeft: 12 },
+  histGigRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingLeft: 18, paddingTop: 10 },
+  histGigDate: { flex: 1, fontSize: 13 },
+  histGigAmount: { fontSize: 13, fontWeight: '600' },
   histTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
   histTotalLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase' },
   histTotalAmount: { fontSize: 16, fontWeight: '800' },

@@ -1,7 +1,8 @@
 import type { Booking, Slot, Venue } from '@/lib/types';
 import { bookingVenueName } from '@/lib/utils';
 
-export type PastVenue = { key: string; name: string; earnings: number; gigCount: number };
+export type PastGig = { id: string; date: string; startTime: string; endTime: string; earnings: number };
+export type PastVenue = { key: string; name: string; earnings: number; gigCount: number; gigs: PastGig[] };
 export type PastMonth = { key: string; label: string; earnings: number; gigCount: number; venues: PastVenue[] };
 
 /**
@@ -17,8 +18,11 @@ export function computePastMonths(bookings: Booking[], slots: Slot[], venues: Ve
   for (const b of bookings) {
     const isDone = b.status === 'completed' || b.isCompleted;
     if (!isDone) continue;
-    const date = slots.find((s) => s.id === b.slotId)?.date ?? b.slotDate ?? '';
+    const slot = slots.find((s) => s.id === b.slotId);
+    const date = slot?.date ?? b.slotDate ?? '';
     if (!date) continue;
+    const startTime = slot?.startTime ?? b.slotStartTime ?? '';
+    const endTime = slot?.endTime ?? b.slotEndTime ?? '';
     const mKey = date.slice(0, 7); // YYYY-MM
     let m = months.get(mKey);
     if (!m) {
@@ -33,8 +37,9 @@ export function computePastMonths(bookings: Booking[], slots: Slot[], venues: Ve
     const vKey = b.isArtistCreated ? '__private__' : (b.venueId ?? '__unknown__');
     const vName = b.isArtistCreated ? 'Private events' : bookingVenueName(b, venue?.name);
     let v = m.venues.get(vKey);
-    if (!v) { v = { key: vKey, name: vName, earnings: 0, gigCount: 0 }; m.venues.set(vKey, v); }
+    if (!v) { v = { key: vKey, name: vName, earnings: 0, gigCount: 0, gigs: [] }; m.venues.set(vKey, v); }
     const price = b.price ?? 0;
+    v.gigs.push({ id: b.id, date, startTime, endTime, earnings: price });
     v.earnings += price; v.gigCount++;
     m.earnings += price; m.gigCount++;
   }
@@ -42,6 +47,8 @@ export function computePastMonths(bookings: Booking[], slots: Slot[], venues: Ve
     .sort((a, b) => (a.key < b.key ? 1 : -1)) // newest month first
     .map((m) => ({
       key: m.key, label: m.label, earnings: m.earnings, gigCount: m.gigCount,
-      venues: Array.from(m.venues.values()).sort((x, y) => y.earnings - x.earnings),
+      venues: Array.from(m.venues.values())
+        .map((v) => ({ ...v, gigs: v.gigs.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)) })) // newest gig first
+        .sort((x, y) => y.earnings - x.earnings),
     }));
 }
