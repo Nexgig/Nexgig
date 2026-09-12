@@ -388,6 +388,17 @@ export default function NetworkScreen() {
   // + search automatically, since it sums the same list the rows render (and gigCost is month-scoped).
   const monthTotal = useMemo(() => filteredArtists.reduce((sum, u) => sum + gigCost(u.id), 0), [filteredArtists, gigCost]);
 
+  // Hero subtitle counts, over the same filtered list: how many artists have any invoice this month
+  // ("invoiced"), and how many still have completed-but-unbilled gigs this month ("still owing").
+  const summaryStats = useMemo(() => {
+    let invoiced = 0, owing = 0;
+    filteredArtists.forEach((u) => {
+      if (gigCount(u.id) > 0) invoiced++;
+      if (owedVenuesInMonth(u.id, monthPrefix).length > 0) owing++;
+    });
+    return { invoiced, owing };
+  }, [filteredArtists, gigCount, owedVenuesInMonth, monthPrefix]);
+
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbVenues]
@@ -598,21 +609,22 @@ export default function NetworkScreen() {
         <VenueFilterHeader />
       </View>
 
-      {/* ROSTER label + month picker (the per-artist gig count is for this month) */}
-      <View style={styles.rosterBar}>
-        <Text style={[styles.rosterLabel, { color: colors.muted }]}>INVOICES</Text>
-        <Pressable style={styles.monthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
-          <Text style={[styles.monthBtnText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
-          <MaterialIcons name="expand-more" size={18} color={colors.muted} />
-        </Pressable>
-      </View>
-
-      {monthTotal > 0 && (
-        <View style={styles.totalBar}>
-          <Text style={[styles.totalLabel, { color: colors.muted }]}>Total</Text>
-          <Text style={[styles.totalAmount, { color: colors.foreground }]}>AED {monthTotal.toLocaleString()}</Text>
+      {/* Invoiced-total hero for the selected month — month picker inline, invoiced/owing counts below */}
+      <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
+        <View style={styles.summaryTop}>
+          <Text style={[styles.summaryLabel, { color: colors.muted }]}>INVOICED IN</Text>
+          <Pressable style={styles.summaryMonthBtn} onPress={() => setMonthPickerOpen(true)} hitSlop={8}>
+            <Text style={[styles.summaryMonthText, { color: colors.foreground }]}>{MONTHS[monthAnchor.month]}</Text>
+            <MaterialIcons name="expand-more" size={20} color={colors.muted} />
+          </Pressable>
         </View>
-      )}
+        <Text style={[styles.summaryAmount, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit>
+          AED {monthTotal.toLocaleString()}
+        </Text>
+        <Text style={[styles.summarySub, { color: colors.muted }]}>
+          {summaryStats.invoiced} artist{summaryStats.invoiced === 1 ? '' : 's'} invoiced{summaryStats.owing > 0 ? ` · ${summaryStats.owing} still owing` : ''}
+        </Text>
+      </View>
 
       {artistsLoading ? (
         <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
@@ -650,7 +662,7 @@ export default function NetworkScreen() {
                 onPress={() => router.push(('/(manager)/artist-profile-view?artistId=' + user.id + '&name=' + encodeURIComponent(user.fullName ?? '') + '&photo=' + encodeURIComponent(user.profilePhotoUrl ?? '') + '&genre=' + encodeURIComponent(profile?.primaryGenre ?? '') + (newInv > 0 ? '&tab=invoices' : '')) as Href)}
               >
                 <View style={styles.cardLeft}>
-                  <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId ?? undefined} seed={user.id} name={user.fullName} size={48} />
+                  <AvatarImage uri={user.profilePhotoUrl || undefined} avatarId={(user as any).avatarId ?? undefined} seed={user.id} name={user.fullName} size={52} />
                   <View style={styles.cardInfo}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Text style={[styles.cardTitle, { color: colors.foreground, flexShrink: 1 }]} numberOfLines={1}>{user.fullName}</Text>
@@ -674,14 +686,13 @@ export default function NetworkScreen() {
                       <Pressable
                         onPress={() => handleRequestInvoice(user, owedVenues, monthPrefix)}
                         hitSlop={6}
-                        style={({ pressed }) => [styles.requestPill, { borderColor: colors.primary, backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
+                        style={({ pressed }) => [styles.requestPill, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
                       >
-                        <MaterialIcons name="receipt-long" size={15} color={colors.primary} />
-                        <Text style={[styles.requestText, { color: colors.primary }]}>Request</Text>
+                        <Text style={[styles.requestText, { color: '#fff' }]}>Request</Text>
                       </Pressable>
                     )
                   ) : (
-                    <Text style={[styles.gigAmount, { color: colors.muted }]}>
+                    <Text style={[styles.gigAmount, { color: count > 0 ? colors.foreground : colors.muted }]}>
                       {count > 0 ? `AED ${cost.toLocaleString()}` : '—'}
                     </Text>
                   )}
@@ -716,17 +727,18 @@ export default function NetworkScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
-  rosterBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 },
-  rosterLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
-  totalBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  totalLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
-  totalAmount: { fontSize: 16, fontWeight: '800' },
-  monthBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  monthBtnText: { fontSize: 15, fontWeight: '600' },
-  rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },
+  // Invoiced-total hero card.
+  summaryCard: { marginHorizontal: 20, marginTop: 2, marginBottom: 16, borderRadius: 22, paddingHorizontal: 22, paddingTop: 18, paddingBottom: 20 },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  summaryLabel: { fontSize: 12.5, fontWeight: '700', letterSpacing: 0.8 },
+  summaryMonthBtn: { flexDirection: 'row', alignItems: 'center', gap: 1 },
+  summaryMonthText: { fontSize: 17, fontWeight: '700' },
+  summaryAmount: { fontSize: 42, fontWeight: '800', letterSpacing: -1.2, marginBottom: 6 },
+  summarySub: { fontSize: 14 },
+  rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 64 },
   gigWrap: { alignItems: 'flex-end', paddingLeft: 10 },
-  requestPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
-  requestText: { fontSize: 13, fontWeight: '700' },
+  requestPill: { alignItems: 'center', justifyContent: 'center', borderRadius: 999, paddingHorizontal: 20, paddingVertical: 10 },
+  requestText: { fontSize: 14, fontWeight: '700' },
   requestedPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, paddingVertical: 7 },
   requestedText: { fontSize: 13, fontWeight: '600' },
   gigNum: { fontSize: 18, fontWeight: '800' },
@@ -746,20 +758,20 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: 'row', borderBottomWidth: 0.5 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabText: { fontSize: 13, fontWeight: '600' },
-  list: { paddingHorizontal: 16, paddingVertical: 8, flexGrow: 1 },
+  list: { paddingHorizontal: 20, paddingVertical: 4, flexGrow: 1 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 14, fontWeight: '600', marginBottom: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
   verifiedPillText: { fontSize: 10, fontWeight: '700' },
   // Copied from the old my-venues so the pending/rejected pill looks the same as it did.
   verifyPill: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
   verifyPillText: { fontSize: 10, fontWeight: '700' },
-  cardSub: { fontSize: 13, marginBottom: 0 },
+  cardSub: { fontSize: 14, marginBottom: 0 },
   cardMeta: { fontSize: 12 },
   cardVenue: { fontSize: 13, fontWeight: '600' },
   thumb: { width: 48, height: 48, borderRadius: 24, borderWidth: 1 },
