@@ -1639,9 +1639,6 @@ export default function CalendarScreen() {
                   );
                 })}
               </View>
-              <Text style={[styles.lineupSettingsHint, { color: colors.muted }]}>
-                The billing cycle is set per venue — change it in the venue’s ⋯ → Edit profile → Billing Details.
-              </Text>
             </Pressable>
           </Pressable>
         </Modal>
@@ -2055,7 +2052,6 @@ const styles = StyleSheet.create({
   lineupGear: { marginRight: 6, marginTop: 1 },
   lineupSettings: { paddingHorizontal: 20, paddingTop: 2, paddingBottom: 2 },
   lineupSettingsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 8 },
-  lineupSettingsHint: { fontSize: 12, lineHeight: 17, marginTop: 14 },
   lineupChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   lineupChip: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   lineupChipText: { fontSize: 13, fontWeight: '600' },

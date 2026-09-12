@@ -381,6 +381,10 @@ export default function NetworkScreen() {
       .sort((a, b) => (a.fullName ?? '').toLowerCase().localeCompare((b.fullName ?? '').toLowerCase()));
   }, [sbArtists, currentUser?.id, search, isInMyLineup, venueArtistIds]);
 
+  // Total invoiced (selected month) across the artists currently shown — follows the venue filter
+  // + search automatically, since it sums the same list the rows render (and gigCost is month-scoped).
+  const monthTotal = useMemo(() => filteredArtists.reduce((sum, u) => sum + gigCost(u.id), 0), [filteredArtists, gigCost]);
+
   const filteredVenues = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...sbVenues]
@@ -600,6 +604,13 @@ export default function NetworkScreen() {
         </Pressable>
       </View>
 
+      {monthTotal > 0 && (
+        <View style={styles.totalBar}>
+          <Text style={[styles.totalLabel, { color: colors.muted }]}>Total</Text>
+          <Text style={[styles.totalAmount, { color: colors.foreground }]}>AED {monthTotal.toLocaleString()}</Text>
+        </View>
+      )}
+
       {artistsLoading ? (
         <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
@@ -704,6 +715,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, minHeight: 72 },
   rosterBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10 },
   rosterLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  totalBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
+  totalLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.3, textTransform: 'uppercase' },
+  totalAmount: { fontSize: 16, fontWeight: '800' },
   monthBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   monthBtnText: { fontSize: 15, fontWeight: '600' },
   rowSep: { height: StyleSheet.hairlineWidth, marginLeft: 76 },

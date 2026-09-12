@@ -629,34 +629,48 @@ export default function DJBookingDetailScreen() {
             </>
           ) : null}
 
-          {/* Artist Review — read-only for manager */}
-          {booking.status === 'completed' && (() => {
-            const review = allReviews.find((r) => r.bookingId === booking.id);
-            if (!review) return (
-              <>
-                <Section label="Review">
-                  <Text style={[styles.reviewTitle, { color: colors.foreground }]}>No review yet</Text>
-                  <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4 }}>The artist hasn&apos;t reviewed this gig yet.</Text>
-                </Section>
-                <Divider />
-              </>
-            );
+          {/* Artist review(s) — read-only for the manager. One block PER completed artist on this
+              slot (a set can have several), attributed by name, so co-artists' reviews aren't hidden
+              and "No review yet" is only shown for the artist who actually hasn't reviewed. */}
+          {(() => {
+            const completed = slotBookings.filter((b) => b.status === 'completed' || b.isCompleted);
+            if (completed.length === 0) return null;
+            const multi = completed.length > 1;
             return (
               <>
-                <Section label="Artist Review">
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <MaterialIcons
-                        key={star}
-                        name="star"
-                        size={28}
-                        color={star <= review.rating ? colors.warning : colors.border}
-                      />
-                    ))}
-                  </View>
-                  {review.text ? (
-                    <Text style={[styles.bodyText, { color: colors.foreground, marginTop: 12 }]}>{review.text}</Text>
-                  ) : null}
+                <Section label={multi ? 'Artist reviews' : 'Artist review'}>
+                  {completed.map((b, i) => {
+                    const review = allReviews.find((r) => r.bookingId === b.id);
+                    const rArtist = getArtistUser(b.artistId);
+                    const name = b.guestName ?? rArtist?.fullName ?? 'Former Artist';
+                    return (
+                      <View
+                        key={b.id}
+                        style={i > 0 ? { marginTop: 18, paddingTop: 18, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border } : undefined}
+                      >
+                        {multi && <Text style={[styles.reviewArtistName, { color: colors.foreground }]} numberOfLines={1}>{name}</Text>}
+                        {review ? (
+                          <>
+                            <View style={styles.starsRow}>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <MaterialIcons key={star} name="star" size={28} color={star <= review.rating ? colors.warning : colors.border} />
+                              ))}
+                            </View>
+                            {review.text ? (
+                              <Text style={[styles.bodyText, { color: colors.foreground, marginTop: 12 }]}>{review.text}</Text>
+                            ) : null}
+                          </>
+                        ) : multi ? (
+                          <Text style={{ fontSize: 13, color: colors.muted }}>No review yet</Text>
+                        ) : (
+                          <>
+                            <Text style={[styles.reviewTitle, { color: colors.foreground }]}>No review yet</Text>
+                            <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4 }}>The artist hasn&apos;t reviewed this gig yet.</Text>
+                          </>
+                        )}
+                      </View>
+                    );
+                  })}
                 </Section>
                 <Divider />
               </>
@@ -735,6 +749,7 @@ const styles = StyleSheet.create({
   feeEditText: { fontSize: 12, fontWeight: '700' },
   feeInvoiced: { fontSize: 12, fontWeight: '600' },
   reviewTitle: { fontSize: 16, fontWeight: '700' },
+  reviewArtistName: { fontSize: 15, fontWeight: '700', marginBottom: 8 },
   starsRow: { flexDirection: 'row', gap: 6 },
   actions: { gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
   acceptBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14 },

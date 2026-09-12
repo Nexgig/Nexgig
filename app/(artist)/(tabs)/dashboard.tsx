@@ -445,23 +445,23 @@ export default function DJHomeScreen() {
             )}
             <View style={styles.gigInfo}>
               <Text style={[styles.gigName, { color: colors.foreground }]} numberOfLines={1}>{venueName}</Text>
-              {!b.isArtistCreated ? (
-                <Pressable hitSlop={6} onPress={() => openVenueMaps(b)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
-                  <MaterialIcons name="place" size={13} color={colors.muted} />
-                  <Text style={[styles.gigMapsText, { color: colors.muted }]}>Maps</Text>
-                </Pressable>
-              ) : b.privateEventLocation ? (
-                <Pressable hitSlop={6} onPress={() => openPrivateEventMaps(b.privateEventLocation!)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
-                  <MaterialIcons name="place" size={13} color={colors.muted} />
-                  <Text style={[styles.gigMapsText, { color: colors.muted }]} numberOfLines={1}>{b.privateEventLocation}</Text>
-                </Pressable>
+              {startTime ? (
+                <View style={styles.gigTimeRow}>
+                  <MaterialIcons name="schedule" size={13} color={colors.muted} />
+                  <Text style={[styles.gigTime, { color: colors.muted }]}>{fmtTime(startTime)}</Text>
+                </View>
               ) : null}
             </View>
-            {startTime ? (
-              <View style={styles.gigTimeRow}>
-                <MaterialIcons name="schedule" size={13} color={colors.muted} />
-                <Text style={[styles.gigTime, { color: colors.muted }]}>{fmtTime(startTime)}</Text>
-              </View>
+            {!b.isArtistCreated ? (
+              <Pressable hitSlop={6} onPress={() => openVenueMaps(b)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
+                <MaterialIcons name="place" size={13} color={colors.muted} />
+                <Text style={[styles.gigMapsText, { color: colors.muted }]}>Maps</Text>
+              </Pressable>
+            ) : b.privateEventLocation ? (
+              <Pressable hitSlop={6} onPress={() => openPrivateEventMaps(b.privateEventLocation!)} style={({ pressed }) => [styles.gigMapsRow, { opacity: pressed ? 0.5 : 1 }]}>
+                <MaterialIcons name="place" size={13} color={colors.muted} />
+                <Text style={[styles.gigMapsText, { color: colors.muted }]} numberOfLines={1}>{b.privateEventLocation}</Text>
+              </Pressable>
             ) : null}
           </Pressable>
         );
@@ -615,7 +615,7 @@ export default function DJHomeScreen() {
           <View style={[styles.aboutCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Text style={[styles.aboutTitle, { color: colors.foreground }]}>Your bookings</Text>
             <Text style={[styles.aboutText, { color: colors.muted }]}>
-              This month's earnings, your upcoming bookings, and completed gigs — all in one place.
+              This month's earnings, your upcoming bookings, and past bookings — all in one place.
             </Text>
           </View>
         </Pressable>
@@ -747,9 +747,9 @@ const styles = StyleSheet.create({
   gigInfo: { flex: 1 },
   gigName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },   // matches the manager dashboard's booking-row name
   gigTime: { fontSize: 13, fontWeight: '500' },
-  gigTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  gigMapsRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1, alignSelf: 'flex-start' },
-  gigMapsText: { fontSize: 12, fontWeight: '500' },
+  gigTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
+  gigMapsRow: { flexDirection: 'row', alignItems: 'center', gap: 3, maxWidth: 140, flexShrink: 1 },
+  gigMapsText: { fontSize: 12, fontWeight: '500', flexShrink: 1 },
 
   // Legend popover
 });
