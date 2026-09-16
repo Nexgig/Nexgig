@@ -1,7 +1,7 @@
 import { RoleSwitcher } from '@/components/ui/role-switcher';
 import { useRoleSwitching } from '@/lib/roles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl } from '@/lib/rn';
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Alert, Linking, Image, RefreshControl, Platform } from '@/lib/rn';
 import { openLink } from '@/lib/open-link';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
@@ -147,13 +147,20 @@ export default function ArtistProfileScreen() {
   }, [currentUser?.id]);
 
   const handleSignOut = () => {
+    const doSignOut = async () => {
+      const uid = currentUser?.id;
+      if (uid) await clearPushToken(uid);
+      resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href);
+    };
+    // Alert.alert is a no-op in the browser, so the confirm never shows and sign-out never
+    // fires. On web use the native browser confirm; keep the RN Alert on iOS/Android.
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to sign out?')) doSignOut();
+      return;
+    }
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: async () => {
-        const uid = currentUser?.id;
-        if (uid) await clearPushToken(uid);
-        resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href);
-      } },
+      { text: 'Sign Out', style: 'destructive', onPress: doSignOut },
     ]);
   };
 
