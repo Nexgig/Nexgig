@@ -150,6 +150,9 @@ export default function ArtistProfileScreen() {
     const doSignOut = async () => {
       const uid = currentUser?.id;
       if (uid) await clearPushToken(uid);
+      // End the Supabase session too — the store's signOut only clears local state, so on web
+      // the lingering session made the auth effect route straight back in (sign-out loop).
+      await supabase.auth.signOut();
       resetAllStores(); signOut(); router.replace('/(auth)/welcome' as Href);
     };
     // Alert.alert is a no-op in the browser, so the confirm never shows and sign-out never
