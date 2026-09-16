@@ -105,6 +105,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: Platform.OS !== 'web' ? ExpoSecureStoreAdapter : undefined,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Web Google login uses an OAuth *redirect* (browser → Google → Supabase callback →
+    // back here). On return, the session arrives in the URL, so it must be detected/parsed
+    // on web. Native uses the ID-token flow (no URL redirect), so it stays off there.
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

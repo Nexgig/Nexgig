@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet, Platform, Alert } from '@/lib/rn';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -124,6 +124,26 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
     router.replace(`/(auth)/choose-account-type?${params.toString()}` as Href);
   };
 
+  // Web-only: Google sign-in on web is a page REDIRECT, so it can't route inline like
+  // native does. When the browser returns from Google (or if a web session is already
+  // present), the session reappears here — route the user then. Native is unaffected.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let handled = false;
+    const go = (user: User | null | undefined) => {
+      if (handled || !user) return;
+      handled = true;
+      const name = (user.user_metadata?.full_name ?? user.user_metadata?.name) as string | undefined;
+      routeAfter(user, name);
+    };
+    supabase.auth.getSession().then(({ data }) => go(data.session?.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) go(session.user);
+    });
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleApple = async () => {
     if (busy) return;
     setBusy('apple');
@@ -144,12 +164,24 @@ export function OAuthButtons({ variant = 'onLight' }: { variant?: 'onLight' | 'o
     if (busy) return;
     setBusy('google');
     try {
+      if (Platform.OS === 'web') {
+        // The browser can't use the native Google module — use Supabase's OAuth
+        // REDIRECT flow instead: bounce to Google, back to Supabase's callback, then
+        // back to this page. The return is picked up by the web session effect above,
+        // which routes the user. We keep 'busy' set because the page is navigating away.
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin },
+        });
+        if (error) throw error;
+        return;
+      }
       const result = await signInWithGoogle();
       if (result) await routeAfter(result.user, result.fullName);
     } catch (e: any) {
       Alert.alert('Google Sign In Failed', e?.message ?? 'Something went wrong.');
     } finally {
-      setBusy(null);
+      if (Platform.OS !== 'web') setBusy(null);
     }
   };
 
