@@ -16,7 +16,7 @@ echo "▸ Exporting web bundle…"
 npx expo export --platform web
 
 echo "▸ Applying import.meta band-aid (prevents the blank-page crash)…"
-find dist -name '*.js' -exec sed -i '' 's/import\.meta/({})/g' {} +
+sed -i '' 's/import\.meta/({})/g' dist/_expo/static/js/web/*.js
 
 echo "▸ Deploying to production (nexgig.expo.app)…"
 eas deploy --prod

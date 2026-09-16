@@ -105,11 +105,31 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: Platform.OS !== 'web' ? ExpoSecureStoreAdapter : undefined,
     autoRefreshToken: true,
     persistSession: true,
-    // Web Google login uses an OAuth *redirect* (browser → Google → Supabase callback →
-    // back here). On return, the session arrives in the URL, so it must be detected/parsed
-    // in the browser. Guard on `typeof window` too: during Expo's static web export the
-    // pages are pre-rendered in Node (no window), and turning this on there crashes the
-    // pre-render (blank page / React #418). Native uses the ID-token flow (no URL redirect).
-    detectSessionInUrl: Platform.OS === 'web' && typeof window !== 'undefined',
+    // Off on purpose: we exchange the OAuth code MANUALLY below (web only). Supabase's
+    // built-in auto-detect is async, and the router rewrites the URL (→ /welcome) — dropping
+    // the ?code — before it can read it, so the session never gets set. Native uses the
+    // ID-token flow (no URL redirect), so this stays off there too.
+    detectSessionInUrl: false,
   },
 });
+
+// ─── Web Google login: exchange the returned OAuth code for a session ─────────
+// Google → Supabase callback → sends the browser back to `…/?code=<code>` (PKCE). The
+// router navigates to /welcome on load and strips that query before Supabase's own async
+// auto-detect can use it. So capture the code HERE, at module load (this runs before the
+// router mounts, while the ?code is still in the URL), and exchange it ourselves. On
+// success the session persists and onAuthStateChange('SIGNED_IN') fires, which routes the
+// user (see components/oauth-buttons.tsx). Browser-only: native + the static pre-render
+// (Node, no window) skip it entirely.
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const code = new URLSearchParams(window.location.search).get('code');
+  if (code) {
+    supabase.auth.exchangeCodeForSession(code).finally(() => {
+      // Strip ?code (+ ?state) so it isn't reprocessed and doesn't linger in history.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('code');
+      url.searchParams.delete('state');
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+    });
+  }
+}
