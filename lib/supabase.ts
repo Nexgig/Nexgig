@@ -113,23 +113,40 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// ─── Web Google login: exchange the returned OAuth code for a session ─────────
-// Google → Supabase callback → sends the browser back to `…/?code=<code>` (PKCE). The
-// router navigates to /welcome on load and strips that query before Supabase's own async
-// auto-detect can use it. So capture the code HERE, at module load (this runs before the
-// router mounts, while the ?code is still in the URL), and exchange it ourselves. On
-// success the session persists and onAuthStateChange('SIGNED_IN') fires, which routes the
-// user (see components/oauth-buttons.tsx). Browser-only: native + the static pre-render
-// (Node, no window) skip it entirely.
+// ─── Web Google login: establish the session from the OAuth return ────────────
+// Google → Supabase callback → sends the browser back to nexgig.expo.app with the session
+// in the URL — as `#access_token=…&refresh_token=…` in the HASH (implicit) or, in some
+// setups, `?code=…` in the query (PKCE). The router navigates to /welcome on load and
+// strips the URL before Supabase's own async auto-detect can use it, so we capture the
+// tokens/code HERE at module load (this runs before the router mounts, while they're still
+// in the URL) and set the session ourselves. On success onAuthStateChange('SIGNED_IN')
+// fires, which routes the user (see components/oauth-buttons.tsx). Browser-only: native +
+// the static pre-render (Node, no window) skip it entirely.
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  const hashParams = new URLSearchParams(
+    window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+  );
+  const access_token = hashParams.get('access_token');
+  const refresh_token = hashParams.get('refresh_token');
   const code = new URLSearchParams(window.location.search).get('code');
-  if (code) {
-    supabase.auth.exchangeCodeForSession(code).finally(() => {
-      // Strip ?code (+ ?state) so it isn't reprocessed and doesn't linger in history.
-      const url = new URL(window.location.href);
-      url.searchParams.delete('code');
-      url.searchParams.delete('state');
-      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
-    });
+
+  const cleanup = () => {
+    // Strip the tokens/code from the URL so they aren't reprocessed or left in history.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('code');
+    url.searchParams.delete('state');
+    window.history.replaceState({}, '', url.pathname + url.search); // also drops the hash
+  };
+
+  if (access_token && refresh_token) {
+    supabase.auth
+      .setSession({ access_token, refresh_token })
+      .then(({ error }) => { if (error) console.warn('[nexgig oauth] setSession error:', error.message); })
+      .finally(cleanup);
+  } else if (code) {
+    supabase.auth
+      .exchangeCodeForSession(code)
+      .then(({ error }) => { if (error) console.warn('[nexgig oauth] exchange error:', error.message); })
+      .finally(cleanup);
   }
 }
